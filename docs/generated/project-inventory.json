@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "03a5493498369a4606829d3b11ae85be43c155b1",
-  "snapshotFingerprint": "43714e28ee5422e533d7e9c0eb95523c57a9df1b8cdd77d31e481dbb3c4521a2",
-  "generatedAt": "2026-08-15T03:36:40.608Z",
+  "commit": "f3407d46f198c6a054eee6cd6b16deaea8622666",
+  "snapshotFingerprint": "eed5751db95b0769d16d9331b303f4f01e4d534c7f0f2102a48ab5ef1c753db4",
+  "generatedAt": "2026-08-15T04:07:21.622Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.348"
+    "version": "10.5.349"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -42,6 +42,7 @@
     "nutrition",
     "settings",
     "sport",
+    "subscriptions",
     "testing",
     "transactions",
     "trip",
@@ -60,6 +61,7 @@
     "nutrition",
     "settings",
     "sport",
+    "subscriptions",
     "testing",
     "transactions",
     "trip",
@@ -133,6 +135,7 @@
     "notifications",
     "nutrition",
     "sport",
+    "subscriptions",
     "trip",
     "work"
   ],
@@ -156,6 +159,7 @@
     "src/core/sportLibraryRules.js",
     "src/core/sportProgressionRules.js",
     "src/core/sportRules.js",
+    "src/core/subscriptionRules.js",
     "src/core/transactionGuards.js",
     "src/core/transactionRpcPayload.js",
     "src/core/transactionRules.js",
@@ -184,6 +188,7 @@
     "nutrition",
     "settings",
     "sport",
+    "subscriptions",
     "testing",
     "transactions",
     "trip",
@@ -224,6 +229,7 @@
     "src/features/sport/sportTimerController.js",
     "src/features/sport/sportTimerView.js",
     "src/features/sport/sportView.js",
+    "src/features/subscriptions/subscriptionView.js",
     "src/features/testing/testCampaignController.js",
     "src/features/testing/testCampaignRules.js",
     "src/features/testing/testCampaignView.js",
@@ -254,6 +260,7 @@
     "tests/core/recurringRules.test.js",
     "tests/core/sportLibraryRules.test.js",
     "tests/core/sportRules.test.js",
+    "tests/core/subscriptionRules.test.js",
     "tests/core/transactionGuards.test.js",
     "tests/core/transactionRpcPayload.test.js",
     "tests/core/transactionRules.test.js",
@@ -269,6 +276,7 @@
     "tests/data/recurringRuleReconciliationMigration.test.js",
     "tests/data/sportRepository.test.js",
     "tests/data/storageQuota.test.js",
+    "tests/data/subscriptionsMigration.test.js",
     "tests/data/supabaseRepository.test.js",
     "tests/data/testCampaignRepository.test.js",
     "tests/data/tripRepository.test.js",
@@ -302,6 +310,7 @@
     "tests/features/sport/sportTimerController.test.js",
     "tests/features/sport/sportTimerPersistence.test.js",
     "tests/features/sport/sportViews.test.js",
+    "tests/features/subscriptions/subscriptionView.test.js",
     "tests/features/testing/testCampaignRules.test.js",
     "tests/features/testing/testCampaignView.test.js",
     "tests/features/transactions/transactionView.test.js",
@@ -348,6 +357,7 @@
     "tests/ui/sportTimerControllerContract.test.js",
     "tests/ui/sportViewsContract.test.js",
     "tests/ui/standaloneHealthNavigation.test.js",
+    "tests/ui/subscriptionsModuleContract.test.js",
     "tests/ui/syntaxLintContract.test.js",
     "tests/ui/testCampaignContract.test.js",
     "tests/ui/transactionModalContract.test.js",
@@ -397,6 +407,7 @@
     "tests/ui/sportStoreContract.test.js",
     "tests/ui/sportTimerControllerContract.test.js",
     "tests/ui/sportViewsContract.test.js",
+    "tests/ui/subscriptionsModuleContract.test.js",
     "tests/ui/syntaxLintContract.test.js",
     "tests/ui/testCampaignContract.test.js",
     "tests/ui/transactionModalContract.test.js",
@@ -547,7 +558,9 @@
     "supabase/migrations/20260815014936_sport_sections_10_5_345.sql",
     "supabase/migrations/20260815023941_sport_canonical_exercises_progression_10_5_346.sql",
     "supabase/migrations/20260815030103_sport_session_progress_chart_10_5_347.sql",
-    "supabase/migrations/20260815033222_work_sections_10_5_348.sql"
+    "supabase/migrations/20260815033222_work_sections_10_5_348.sql",
+    "supabase/migrations/20260815034127_subscriptions_module_10_5_349.sql",
+    "supabase/migrations/20260815035227_harden_subscription_link_rpc_10_5_349.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",
@@ -709,6 +722,42 @@
         "verifiedBy": "Codex repository inspection"
       },
       "document": "docs/features/daily-budget.md"
+    },
+    {
+      "id": "budget.subscription",
+      "dependencies": [
+        "budget.transaction",
+        "analysis.budget-actual",
+        "wallet.balance",
+        "sync.offline"
+      ],
+      "impacts": {
+        "wallet": "possible",
+        "dailyBudget": "possible",
+        "analysis": "required",
+        "trip": "none",
+        "offline": "required",
+        "android": "required"
+      },
+      "files": [
+        "src/core/subscriptionRules.js",
+        "src/features/subscriptions/subscriptionView.js",
+        "public/legacy/js/15_recurring_rules_ui.js",
+        "public/legacy/js/16_modal_add_edit_via_rpc.js",
+        "supabase/migrations/20260815034127_subscriptions_module_10_5_349.sql"
+      ],
+      "tests": [
+        "tests/core/subscriptionRules.test.js",
+        "tests/features/subscriptions/subscriptionView.test.js",
+        "tests/ui/subscriptionsModuleContract.test.js",
+        "tests/data/subscriptionsMigration.test.js"
+      ],
+      "validation": {
+        "commit": "f3407d46f198",
+        "date": "2026-08-15",
+        "verifiedBy": "Codex repository inspection"
+      },
+      "document": "docs/features/subscriptions.md"
     },
     {
       "id": "budget.transaction",

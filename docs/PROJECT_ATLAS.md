@@ -6,7 +6,7 @@ L'Atlas est une couche mince de navigation, d'inventaire et d'analyse d'impact a
 
 1. Indexer les sources de connaissance existantes depuis [README.md](README.md).
 2. Générer les faits volatils dans [project-inventory.md](generated/project-inventory.md) et [project-inventory.json](generated/project-inventory.json).
-3. Documenter les dépendances et conséquences à vérifier pour dix fonctions critiques dans [features/](features/).
+3. Documenter les dépendances et conséquences à vérifier pour onze fonctions critiques dans [features/](features/).
 
 ## Règles de non-duplication
 

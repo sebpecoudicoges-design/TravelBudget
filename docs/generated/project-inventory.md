@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `03a5493498369a4606829d3b11ae85be43c155b1`
-> Empreinte du snapshot : `43714e28ee5422e533d7e9c0eb95523c57a9df1b8cdd77d31e481dbb3c4521a2`
-> Généré le : `2026-08-15T03:36:40.608Z`
+> Commit analysé : `f3407d46f198c6a054eee6cd6b16deaea8622666`
+> Empreinte du snapshot : `eed5751db95b0769d16d9331b303f4f01e4d534c7f0f2102a48ab5ef1c753db4`
+> Généré le : `2026-08-15T04:07:21.622Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.348` |
-| Écrans déclarés | 16 |
+| Version | `10.5.349` |
+| Écrans déclarés | 17 |
 | Scripts legacy référencés | 56 |
-| Modules core | 26 |
+| Modules core | 27 |
 | Modules data | 8 |
-| Modules features | 44 |
-| Fichiers de tests | 122 |
-| Migrations Supabase | 136 |
+| Modules features | 45 |
+| Fichiers de tests | 126 |
+| Migrations Supabase | 138 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -61,6 +61,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `nutrition`
 - `settings`
 - `sport`
+- `subscriptions`
 - `testing`
 - `transactions`
 - `trip`
@@ -80,6 +81,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `nutrition`
 - `settings`
 - `sport`
+- `subscriptions`
 - `testing`
 - `transactions`
 - `trip`
@@ -96,6 +98,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `notifications`
 - `nutrition`
 - `sport`
+- `subscriptions`
 - `trip`
 - `work`
 
@@ -179,6 +182,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `src/core/sportLibraryRules.js`
 - `src/core/sportProgressionRules.js`
 - `src/core/sportRules.js`
+- `src/core/subscriptionRules.js`
 - `src/core/transactionGuards.js`
 - `src/core/transactionRpcPayload.js`
 - `src/core/transactionRules.js`
@@ -211,6 +215,7 @@ Domaines :
 - `nutrition`
 - `settings`
 - `sport`
+- `subscriptions`
 - `testing`
 - `transactions`
 - `trip`
@@ -252,6 +257,7 @@ Modules :
 - `src/features/sport/sportTimerController.js`
 - `src/features/sport/sportTimerView.js`
 - `src/features/sport/sportView.js`
+- `src/features/subscriptions/subscriptionView.js`
 - `src/features/testing/testCampaignController.js`
 - `src/features/testing/testCampaignRules.js`
 - `src/features/testing/testCampaignView.js`
@@ -304,6 +310,7 @@ Modules :
 - `tests/ui/sportStoreContract.test.js`
 - `tests/ui/sportTimerControllerContract.test.js`
 - `tests/ui/sportViewsContract.test.js`
+- `tests/ui/subscriptionsModuleContract.test.js`
 - `tests/ui/syntaxLintContract.test.js`
 - `tests/ui/testCampaignContract.test.js`
 - `tests/ui/transactionModalContract.test.js`
@@ -339,6 +346,7 @@ Modules :
 - `tests/core/recurringRules.test.js`
 - `tests/core/sportLibraryRules.test.js`
 - `tests/core/sportRules.test.js`
+- `tests/core/subscriptionRules.test.js`
 - `tests/core/transactionGuards.test.js`
 - `tests/core/transactionRpcPayload.test.js`
 - `tests/core/transactionRules.test.js`
@@ -354,6 +362,7 @@ Modules :
 - `tests/data/recurringRuleReconciliationMigration.test.js`
 - `tests/data/sportRepository.test.js`
 - `tests/data/storageQuota.test.js`
+- `tests/data/subscriptionsMigration.test.js`
 - `tests/data/supabaseRepository.test.js`
 - `tests/data/testCampaignRepository.test.js`
 - `tests/data/tripRepository.test.js`
@@ -387,6 +396,7 @@ Modules :
 - `tests/features/sport/sportTimerController.test.js`
 - `tests/features/sport/sportTimerPersistence.test.js`
 - `tests/features/sport/sportViews.test.js`
+- `tests/features/subscriptions/subscriptionView.test.js`
 - `tests/features/testing/testCampaignRules.test.js`
 - `tests/features/testing/testCampaignView.test.js`
 - `tests/features/transactions/transactionView.test.js`
@@ -433,6 +443,7 @@ Modules :
 - `tests/ui/sportTimerControllerContract.test.js`
 - `tests/ui/sportViewsContract.test.js`
 - `tests/ui/standaloneHealthNavigation.test.js`
+- `tests/ui/subscriptionsModuleContract.test.js`
 - `tests/ui/syntaxLintContract.test.js`
 - `tests/ui/testCampaignContract.test.js`
 - `tests/ui/transactionModalContract.test.js`
@@ -599,6 +610,8 @@ Modules :
 - `supabase/migrations/20260815023941_sport_canonical_exercises_progression_10_5_346.sql`
 - `supabase/migrations/20260815030103_sport_session_progress_chart_10_5_347.sql`
 - `supabase/migrations/20260815033222_work_sections_10_5_348.sql`
+- `supabase/migrations/20260815034127_subscriptions_module_10_5_349.sql`
+- `supabase/migrations/20260815035227_harden_subscription_link_rpc_10_5_349.sql`
 
 ## Android et budgets de modules
 
@@ -631,13 +644,14 @@ Modules :
 
 ## Matrice d'impact déclarée
 
-Cette matrice est générée à partir des impacts validés humainement dans les dix fiches critiques. Le script ne les infère pas depuis le code.
+Cette matrice est générée à partir des impacts validés humainement dans les onze fiches critiques. Le script ne les infère pas depuis le code.
 
 | Fonction critique | Wallet | Budget journalier | Analyse | Trip | Offline | Android |
 |---|---|---|---|---|---|---|
 | [`analysis.budget-actual`](../features/budget-analysis.md) | — | ✓ | ✓ | ✓ | Possible | ✓ |
 | [`assets.movement`](../features/asset-movement.md) | ✓ | ✓ | ✓ | Possible | ✓ | ✓ |
 | [`budget.daily`](../features/daily-budget.md) | Possible | ✓ | ✓ | ✓ | ✓ | ✓ |
+| [`budget.subscription`](../features/subscriptions.md) | Possible | Possible | ✓ | — | ✓ | ✓ |
 | [`budget.transaction`](../features/transactions.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [`nutrition.meal`](../features/nutrition-meal.md) | — | — | KPI | — | ✓ | ✓ |
 | [`sport.session`](../features/sport-session.md) | — | — | KPI | — | ✓ | ✓ |

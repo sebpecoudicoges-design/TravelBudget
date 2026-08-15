@@ -1,15 +1,15 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "version": "10.5.348",
-  "commit": "03a5493498369a4606829d3b11ae85be43c155b1",
-  "generatedAt": "2026-08-15T03:36:40.608Z",
+  "version": "10.5.349",
+  "commit": "f3407d46f198c6a054eee6cd6b16deaea8622666",
+  "generatedAt": "2026-08-15T04:07:21.622Z",
   "counts": {
-    "screens": 16,
-    "criticalFeatures": 10,
-    "tests": 122,
-    "migrations": 136,
-    "featureModules": 44,
-    "coreModules": 26,
+    "screens": 17,
+    "criticalFeatures": 11,
+    "tests": 126,
+    "migrations": 138,
+    "featureModules": 45,
+    "coreModules": 27,
     "dataModules": 8,
     "edgeFunctions": 12
   },
@@ -23,6 +23,7 @@
     "nutrition",
     "settings",
     "sport",
+    "subscriptions",
     "testing",
     "transactions",
     "trip",
@@ -64,6 +65,18 @@
         "android": "required"
       },
       "document": "docs/features/daily-budget.md"
+    },
+    {
+      "id": "budget.subscription",
+      "impacts": {
+        "wallet": "possible",
+        "dailyBudget": "possible",
+        "analysis": "required",
+        "trip": "none",
+        "offline": "required",
+        "android": "required"
+      },
+      "document": "docs/features/subscriptions.md"
     },
     {
       "id": "budget.transaction",
