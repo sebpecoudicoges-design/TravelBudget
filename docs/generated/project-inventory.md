@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `6bb4c2e18e21e0dd8a63187afa17383cd04c05f4`
-> Empreinte du snapshot : `23b7db2b592efd06b37a2ce7dd2d674cb4d57da8c7a8758202123a3fa46faab5`
-> Généré le : `2026-08-15T08:45:16.981Z`
+> Commit analysé : `407a943dafe67db7a629b1d6a73f14b1412f5360`
+> Empreinte du snapshot : `91d60141e05be4c400b2e1c9a2acc36d1974df9b970d3138bf1fa3b8d5e49f35`
+> Généré le : `2026-08-22T00:29:11.451Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.352` |
+| Version | `10.5.353` |
 | Écrans déclarés | 17 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 45 |
 | Fichiers de tests | 126 |
-| Migrations Supabase | 143 |
+| Migrations Supabase | 144 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -617,6 +617,7 @@ Modules :
 - `supabase/migrations/20260815074159_allow_safe_generated_subscription_relink_10_5_351.sql`
 - `supabase/migrations/20260815075831_extend_subscription_cash_summary_test_10_5_351.sql`
 - `supabase/migrations/20260815083326_allow_all_travel_subscription_links_10_5_352.sql`
+- `supabase/migrations/20260816100004_fix_subscription_cash_summary_10_5_353.sql`
 
 ## Android et budgets de modules
 
@@ -638,6 +639,7 @@ Modules :
 - `docs/PROJECT_PAGE_CHECKLIST.md`
 - `docs/README.md`
 - `docs/STABILIZATION_CHECKLIST_10.5.316.md`
+- `docs/SUBSCRIPTIONS_NEXT_CHECKLIST.md`
 - `docs/V11_ARCHITECTURE.md`
 - `docs/V11_DATA_LAYER.md`
 - `docs/V11_PERFORMANCE_BUDGETS.md`

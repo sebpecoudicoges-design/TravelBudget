@@ -5,7 +5,7 @@
   "impacts": { "wallet": "possible", "dailyBudget": "possible", "analysis": "required", "trip": "none", "offline": "required", "android": "required" },
   "files": ["src/core/subscriptionRules.js", "src/features/subscriptions/subscriptionView.js", "public/legacy/js/13_transactions_view.js", "public/legacy/js/15_recurring_rules_ui.js", "public/legacy/js/16_modal_add_edit_via_rpc.js", "supabase/migrations/20260815034127_subscriptions_module_10_5_349.sql", "supabase/migrations/20260815054038_subscription_tracking_and_bulk_link_10_5_350.sql", "supabase/migrations/20260815055028_harden_subscription_save_rpc_10_5_350.sql", "supabase/migrations/20260815074159_allow_safe_generated_subscription_relink_10_5_351.sql", "supabase/migrations/20260815075831_extend_subscription_cash_summary_test_10_5_351.sql", "supabase/migrations/20260815083326_allow_all_travel_subscription_links_10_5_352.sql", "supabase/migrations/20260816100004_fix_subscription_cash_summary_10_5_353.sql"],
   "tests": ["tests/core/subscriptionRules.test.js", "tests/features/subscriptions/subscriptionView.test.js", "tests/ui/subscriptionsModuleContract.test.js", "tests/ui/transactionModalContract.test.js", "tests/ui/transactionsViewContract.test.js", "tests/ui/visualSystemContract.test.js", "tests/data/subscriptionsMigration.test.js"],
-  "validation": { "commit": "pending", "date": "2026-08-16", "verifiedBy": "Codex automated tests, live association audit and visual review" }
+  "validation": { "commit": "407a943", "date": "2026-08-22", "verifiedBy": "Codex automated tests, live association audit and visual review" }
 }
 -->
 # budget.subscription — Abonnements

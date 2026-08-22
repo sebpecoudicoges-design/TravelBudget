@@ -9,7 +9,7 @@ Version de cadrage : `10.5.353`.
 - Le proprietaire authentifie et le voyage commun restent obligatoires.
 - Une echeance generee peut etre reclassee seulement apres confirmation; elle devient alors manuelle et ne peut plus etre reecrite par sa regle d origine.
 - Les devises et les flux differents sont autorises apres avertissement. Le prevu garde les caracteristiques de la regle et le reel celles de la transaction.
-- La base active compte 264 transactions liees : 233 generees et 31 manuelles. Aucun lien orphelin, inter-compte ou inter-voyage n a ete detecte le 16/08/2026.
+- La base active compte 264 transactions liees : 233 generees et 31 manuelles. Aucun lien orphelin, inter-compte ou inter-voyage n a ete detecte lors du controle confirme le 22/08/2026.
 - Les 15 regles actives ont toutes au moins une transaction. Trois regles ont deja des paiements dans une autre devise; aucune ne melange entree et sortie.
 - La cle etrangere utilise `ON DELETE SET NULL`; les index couvrent la chronologie et l unicite regle/date.
 
