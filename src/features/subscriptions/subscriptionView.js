@@ -19,9 +19,9 @@ const statusMeta = Object.freeze({
   modified: ['Modifiée', 'warning'], linked: ['Liée manuellement', 'info'], skipped: ['Ignorée', 'muted'],
 });
 
-function totals(comparison, key) {
-  if (!comparison?.length) return '—';
-  return comparison.map((row) => money(row[key], row.currency)).join(' · ');
+function stackedTotals(comparison, key) {
+  if (!comparison?.length) return '<span>—</span>';
+  return comparison.map((row) => `<span>${esc(money(row[key], row.currency))}</span>`).join('');
 }
 
 function moneyList(rows) {
@@ -48,9 +48,9 @@ function flowSummary(analysis, flow) {
   if (!rows.length) return '';
   return `<article class="tb-subscription-flow tb-subscription-flow--${flow}">
     <div class="tb-subscription-flow__title"><span>${isIncome ? 'Entrées' : 'Sorties'}</span><small>${isIncome ? 'Encaissements' : 'Paiements'}</small></div>
-    <div><small>Prévu</small><strong>${esc(totals(rows, 'planned'))}</strong></div>
-    <div><small>${isIncome ? 'Encaissé' : 'Payé'}</small><strong>${esc(totals(rows, 'actual'))}</strong></div>
-    <div><small>Différence</small><strong>${esc(totals(rows, 'delta'))}</strong></div>
+    <div><small>Prévu</small><strong class="tb-subscription-flow__amounts">${stackedTotals(rows, 'planned')}</strong></div>
+    <div><small>${isIncome ? 'Encaissé' : 'Payé'}</small><strong class="tb-subscription-flow__amounts">${stackedTotals(rows, 'actual')}</strong></div>
+    <div><small>Différence</small><strong class="tb-subscription-flow__amounts">${stackedTotals(rows, 'delta')}</strong></div>
   </article>`;
 }
 
@@ -59,9 +59,9 @@ function actualTotalsSummary(analysis) {
   if (!rows.length) return '';
   return `<article class="tb-subscription-flow tb-subscription-flow--balance">
     <div class="tb-subscription-flow__title"><span>Bilan réel</span><small>Flux encaissés et débités</small></div>
-    <div><small>Total dépenses</small><strong>${esc(totals(rows, 'expenses'))}</strong></div>
-    <div><small>Total revenus</small><strong>${esc(totals(rows, 'income'))}</strong></div>
-    <div><small>Différence</small><strong>${esc(totals(rows, 'delta'))}</strong></div>
+    <div><small>Total dépenses</small><strong class="tb-subscription-flow__amounts">${stackedTotals(rows, 'expenses')}</strong></div>
+    <div><small>Total revenus</small><strong class="tb-subscription-flow__amounts">${stackedTotals(rows, 'income')}</strong></div>
+    <div><small>Différence</small><strong class="tb-subscription-flow__amounts">${stackedTotals(rows, 'delta')}</strong></div>
   </article>`;
 }
 

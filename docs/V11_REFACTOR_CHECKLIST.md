@@ -55,6 +55,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
   - [x] Etendre Abonnements en `10.5.350` : suivi manuel nom seul, analyse par abonnement et rattachement/detachement atomique de la selection Transactions.
   - [x] Clarifier Abonnements en `10.5.351` : resume unique Prevu/Reel/Difference par flux, heroes compacts et reclassification securisee des echeances generees.
   - [x] Finaliser Abonnements en `10.5.352` : listes Transaction completes, avertissement inter-flux/inter-devise, heroes vraiment compacts et rail admin entierement visible.
+  - [x] Stabiliser le resume multidevise en `10.5.353` et cadrer la suite Association assistee / fiche abonnement / design.
 
 ## Chantier 1 - Budget journalier et transactions
 

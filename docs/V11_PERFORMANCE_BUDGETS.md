@@ -178,6 +178,8 @@ En 10.5.351, le calcul separe Entrees et Sorties, la vue fusionne Prevu/Reel/Dif
 
 En 10.5.352, les trois parcours Transaction partagent une liste complete des abonnements du voyage et avertissent avant un rattachement inter-flux ou inter-devise. Les cartes d analyse deviennent des lignes compactes et le rail admin tient entierement dans le premier ecran. Le domaine reste a 67.5 / 69 KiB, l initial a 262.1 / 263 KiB, le lazy a 441.0 / 442 KiB et le total JS a 703.1 / 704 KiB. Le CSS atteint 55.5 / 56 KiB; seul ce plafond suit le palier entier mesure.
 
+En 10.5.353, le resume Abonnements empile les devises et redistribue ses indicateurs sans ajouter de dependance. Le domaine reste sous son plafond a 67.8 / 69 KiB, l initial a 262.1 / 263 KiB, le lazy a 441.2 / 442 KiB et le total JS a 703.3 / 704 KiB. Le CSS atteint 55.7 / 56 KiB et le gzip principal reste a 74.8 / 110 KiB; aucun plafond n est releve.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

@@ -9,6 +9,7 @@ describe('subscriptions migration', () => {
   const relinkSql = fs.readFileSync('supabase/migrations/20260815074159_allow_safe_generated_subscription_relink_10_5_351.sql', 'utf8');
   const cashSummaryTestSql = fs.readFileSync('supabase/migrations/20260815075831_extend_subscription_cash_summary_test_10_5_351.sql', 'utf8');
   const openLinkingSql = fs.readFileSync('supabase/migrations/20260815083326_allow_all_travel_subscription_links_10_5_352.sql', 'utf8');
+  const visualFixSql = fs.readFileSync('supabase/migrations/20260816100004_fix_subscription_cash_summary_10_5_353.sql', 'utf8');
 
   it('secures manual transaction linkage by ownership and domain compatibility', () => {
     expect(sql).toContain('create or replace function public.link_transaction_to_recurring_rule');
@@ -61,5 +62,11 @@ describe('subscriptions migration', () => {
     expect(openLinkingSql).not.toContain('must use the same type');
     expect(openLinkingSql).not.toContain('must use the same currency');
     expect(openLinkingSql).toContain('Liste complete des abonnements 10.5.352');
+  });
+
+  it('turns the multi-currency overflow into an explicit 10.5.353 retest', () => {
+    expect(visualFixSql).toContain('Lisibilite Abonnements multidevise 10.5.353');
+    expect(visualFixSql).toContain('Aucun montant ne deborde');
+    expect(visualFixSql).toContain("app_version = '10.5.353'");
   });
 });

@@ -16,7 +16,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.352`.
+- Version cible de campagne : `10.5.353`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
 - 60 resultats et 16 revues de module traitees sont archives avec date de test, date de traitement, version et note.
 - Le retest Categories Settings valide est clos globalement en `10.5.342`. Quatre retests sont ajoutes avec filiation : actions internes Wallet, scopes KPI/courbe, sous-categories des regles recurrentes et connexion sans gel. Les autres retours ouverts gardent leur scenario d origine.
@@ -215,7 +215,9 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 - [x] Empecher le dernier onglet admin de remonter dans une seconde colonne du rail.
 - [x] Afficher toutes les regles actives du voyage dans les trois listes Transaction, avec avertissement si type ou devise different.
 - [x] Compacter encore les heroes et conserver Tests puis Membres visibles dans le rail initial en `10.5.352`.
-- [ ] Faire executer les neuf retests Abonnements `10.5.352`.
+- [x] Corriger en `10.5.353` le debordement multidevise du resume et reutiliser le retest visuel existant.
+- [x] Cadrer le prochain chantier dans `docs/SUBSCRIPTIONS_NEXT_CHECKLIST.md`.
+- [ ] Faire executer les neuf retests Abonnements `10.5.353`.
 
 ## Reprise Play Store
 

@@ -20,6 +20,7 @@ describe('subscription view', () => {
     expect(html).toContain('Différence');
     expect(html).toContain('Total dépenses');
     expect(html).toContain('Total revenus');
+    expect(html).toContain('tb-subscription-flow__amounts');
     expect(html).toContain('904,00 $AU');
     expect(html).toContain('id="subscriptions-range"');
     expect(html).toMatch(/200,00\s\$AU/);

@@ -49,4 +49,12 @@ describe('visual system contract', () => {
     expect(theme).toContain('grid-template-columns:minmax(180px,1fr) minmax(150px,.72fr) minmax(260px,1.15fr)');
     expect(theme).toContain('padding:10px 13px');
   });
+
+  it('keeps the subscription cash summary inside each flow card', () => {
+    expect(theme).toContain('.tb-subscription-flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))');
+    expect(theme).toContain('.tb-subscription-flow__title{grid-column:1/-1');
+    expect(theme).toContain('.tb-subscription-flow__amounts span{min-width:0;white-space:nowrap}');
+    expect(theme).toContain('.tb-subscription-flow>div:nth-child(4){grid-column:1/-1');
+    expect(theme).not.toContain('minmax(110px,1fr) repeat(3,minmax(92px,.8fr))');
+  });
 });

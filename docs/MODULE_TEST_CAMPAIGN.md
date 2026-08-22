@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.352`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.353`.
 
 ## Objectif
 
@@ -112,6 +112,8 @@ En `10.5.350`, un abonnement peut etre cree avec son seul nom en **suivi manuel*
 En `10.5.351`, Prevu, Reel et Difference sont reunis dans un seul resume qui ne compense jamais Entrees et Sorties. Le meme hero ajoute le bilan reel Total depenses, Total revenus et Difference, filtrable sur la periode du voyage, le mois civil precedent, la semaine civile precedente ou des dates personnalisees. Les heroes par abonnement deviennent plus compacts et utilisent une nuance corail pour les sorties, lagon pour les entrees. Une echeance generee peut changer d abonnement apres confirmation explicite; elle est alors detachee de son automatisme d origine et devient manuelle avant le rattachement. Le meme garde couvre la selection multiple. Le rail admin reste sur une colonne et garde Membres en bas. Deux descendants portent le total a huit retests Abonnements a faire.
 
 En `10.5.352`, les trois listes de rattachement Transaction partagent la meme source et affichent toutes les regles actives du voyage. Les differences de type ou devise restent possibles apres un avertissement explicite; l analyse conserve alors le flux et la devise de chaque transaction reelle sans contaminer le prevu de la regle. Les heroes par abonnement sont ramenes a des lignes de 73 px sur desktop et 159 px sur mobile. Tests et Membres restent visibles dans le rail admin initial. Un descendant porte le total a neuf retests Abonnements a faire.
+
+En `10.5.353`, le retour multidevise du resume financier est traite sans creer un dixieme scenario : le retest visuel existant poursuit sa filiation. Le titre occupe toute la largeur de chaque carte, les trois indicateurs utilisent des colonnes flexibles et chaque devise sa propre ligne. Sur mobile, Difference passe sous Prevu et Paye/Encaisse. La checklist `docs/SUBSCRIPTIONS_NEXT_CHECKLIST.md` cadre ensuite association assistee, fiche abonnement, ecarts et design sans autoriser de liaison silencieuse.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 
