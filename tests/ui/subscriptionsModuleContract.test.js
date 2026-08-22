@@ -29,5 +29,8 @@ describe('Abonnements module contract', () => {
     expect(recurring).toContain('save_subscription_rule_v3');
     expect(transactions).toContain('applyBulkTxSubscription');
     expect(transactions).toContain('link_transactions_to_recurring_rule');
+    expect(recurring).toContain('data-subscription-link-transaction');
+    expect(recurring).toContain('_rrLinkTransaction');
+    expect(recurring).toContain('Cette validation sera mémorisée');
   });
 });

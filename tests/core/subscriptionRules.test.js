@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildSubscriptionAnalysis,
+  buildSubscriptionAssociationQueue,
   computeFirstSubscriptionDueDate,
   subscriptionDateRange,
   subscriptionOccurrenceStatus,
@@ -113,5 +114,59 @@ describe('subscription rules', () => {
     expect(subscriptionDateRange({ preset: 'last-month', today: '2026-08-15' })).toEqual({ startDate: '2026-07-01', endDate: '2026-07-31' });
     expect(subscriptionDateRange({ preset: 'last-week', today: '2026-08-15' })).toEqual({ startDate: '2026-08-03', endDate: '2026-08-09' });
     expect(subscriptionDateRange({ preset: 'period', today: '2026-08-15', periodStart: '2026-05-08', periodEnd: '2026-11-22' })).toEqual({ startDate: '2026-05-08', endDate: '2026-11-22' });
+  });
+
+  it('suggests an explainable association without mutating the transaction', () => {
+    const transaction = { id: 'tx-new', travelId: 't1', type: 'expense', label: 'NETFLIX.COM', amount: 19.99, currency: 'AUD', dateStart: '2026-08-16' };
+    const queue = buildSubscriptionAssociationQueue({
+      travelId: 't1',
+      rules: [{ id: 'netflix', travelId: 't1', type: 'expense', label: 'Netflix', amount: 19.99, currency: 'AUD' }],
+      transactions: [transaction],
+    });
+    expect(queue).toHaveLength(1);
+    expect(queue[0].suggestion.rule.id).toBe('netflix');
+    expect(queue[0].suggestion.confidence).toBe('high');
+    expect(queue[0].suggestion.reasons).toEqual(expect.arrayContaining(['Même devise', 'Libellé très proche', 'Montant quasi identique']));
+    expect(transaction).not.toHaveProperty('recurringRuleId');
+  });
+
+  it('learns only from a prior confirmed link and flags a nearby generated duplicate', () => {
+    const queue = buildSubscriptionAssociationQueue({
+      travelId: 't1',
+      rules: [{ id: 'stream', travelId: 't1', type: 'expense', label: 'Streaming', amount: 20, currency: 'AUD' }],
+      transactions: [
+        { id: 'confirmed', travelId: 't1', recurringRuleId: 'stream', type: 'expense', label: 'ACME MEDIA 123', amount: 20, currency: 'AUD', dateStart: '2026-07-15' },
+        { id: 'generated', travelId: 't1', recurringRuleId: 'stream', generatedByRule: true, type: 'expense', amount: 20, currency: 'AUD', occurrenceDate: '2026-08-15' },
+        { id: 'imported', travelId: 't1', type: 'expense', label: 'ACME MEDIA 456', amount: 20, currency: 'AUD', dateStart: '2026-08-16' },
+      ],
+    });
+    expect(queue).toHaveLength(1);
+    expect(queue[0].suggestion.reasons).toContain('Libellé déjà confirmé');
+    expect(queue[0].suggestion.duplicateCandidate.id).toBe('generated');
+  });
+
+  it('does not treat a rule-generated label as confirmed learning', () => {
+    const queue = buildSubscriptionAssociationQueue({
+      travelId: 't1',
+      rules: [{ id: 'rule', travelId: 't1', type: 'expense', label: 'Unrelated', amount: 99, currency: 'AUD' }],
+      transactions: [
+        { id: 'generated', travelId: 't1', recurringRuleId: 'rule', generatedByRule: true, type: 'expense', label: 'MERCHANT SECRET', amount: 99, currency: 'AUD', occurrenceDate: '2026-07-01' },
+        { id: 'candidate', travelId: 't1', type: 'expense', label: 'MERCHANT SECRET', amount: 10, currency: 'EUR', dateStart: '2026-08-20' },
+      ],
+    });
+    expect(queue[0].suggestion).toBeNull();
+  });
+
+  it('excludes linked, internal, archived and other-travel rows from assisted association', () => {
+    const queue = buildSubscriptionAssociationQueue({
+      travelId: 't1',
+      rules: [{ id: 'active', travelId: 't1', type: 'expense', label: 'A', amount: 10 }, { id: 'archived', travelId: 't1', archived: true, type: 'expense' }],
+      transactions: [
+        { id: 'linked', travelId: 't1', recurringRuleId: 'active', type: 'expense' },
+        { id: 'internal', travelId: 't1', isInternal: true, type: 'expense' },
+        { id: 'other', travelId: 't2', type: 'expense' },
+      ],
+    });
+    expect(queue).toEqual([]);
   });
 });

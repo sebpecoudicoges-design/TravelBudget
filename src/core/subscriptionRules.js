@@ -13,6 +13,46 @@ function number(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function normalizedWords(value) {
+  return text(value)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ')
+    .split(' ').filter((word) => word.length > 1);
+}
+
+function dayDistance(a, b) {
+  const left = Date.parse(`${dateOnly(a)}T00:00:00Z`);
+  const right = Date.parse(`${dateOnly(b)}T00:00:00Z`);
+  return Number.isFinite(left) && Number.isFinite(right) ? Math.abs(left - right) / 86400000 : Infinity;
+}
+
+function transactionDate(row) {
+  return dateOnly(row?.occurrenceDate || row?.occurrence_date || row?.dateStart || row?.date_start || row?.date);
+}
+
+function sameTransactionTravel(row, travelId) {
+  return !travelId || text(row?.travelId || row?.travel_id) === text(travelId);
+}
+
+function isInternalTransaction(row) {
+  return bool(row, 'isInternal', 'is_internal') || !!(row?.internalTransferId || row?.internal_transfer_id);
+}
+
+function labelAffinity(left, right) {
+  const a = normalizedWords(left);
+  const b = normalizedWords(right);
+  if (!a.length || !b.length) return 0;
+  const sa = new Set(a);
+  const sb = new Set(b);
+  const common = [...sa].filter((word) => sb.has(word)).length;
+  const union = new Set([...sa, ...sb]).size;
+  const joinedA = a.join(' ');
+  const joinedB = b.join(' ');
+  if (joinedA === joinedB) return 1;
+  if (joinedA.includes(joinedB) || joinedB.includes(joinedA)) return Math.max(0.8, common / union);
+  return common / union;
+}
+
 function bool(row, camel, snake) {
   if (row?.[camel] !== undefined) return !!row[camel];
   return !!row?.[snake];
@@ -139,6 +179,78 @@ function buildRuleInsights(rules, occurrences, today) {
   });
 }
 
+export function buildSubscriptionAssociationQueue({ rules = [], transactions = [], travelId = '', type = 'all' } = {}) {
+  const wantedTravel = text(travelId);
+  const scopedRules = rules
+    .filter((rule) => !rule?.archived)
+    .filter((rule) => !wantedTravel || text(rule?.travelId || rule?.travel_id) === wantedTravel)
+    .filter((rule) => type === 'all' || text(rule?.type).toLowerCase() === text(type).toLowerCase());
+  const linkedByRule = new Map(scopedRules.map((rule) => [text(rule.id), []]));
+  for (const row of transactions) {
+    const ruleId = recurringRuleId(row);
+    if (linkedByRule.has(ruleId)) linkedByRule.get(ruleId).push(row);
+  }
+  const confirmedByRule = new Map([...linkedByRule].map(([ruleId, rows]) => [ruleId, rows.filter((row) => !bool(row, 'generatedByRule', 'generated_by_rule'))]));
+  const generatedByRule = new Map([...linkedByRule].map(([ruleId, rows]) => [ruleId, rows.filter((row) => bool(row, 'generatedByRule', 'generated_by_rule'))]));
+  const candidates = transactions
+    .filter((row) => sameTransactionTravel(row, wantedTravel))
+    .filter((row) => !recurringRuleId(row) && !isInternalTransaction(row))
+    .filter((row) => type === 'all' || text(row?.type).toLowerCase() === text(type).toLowerCase())
+    .filter((row) => text(row?.id));
+
+  return candidates.map((transaction) => {
+    const txType = text(transaction?.type).toLowerCase();
+    const txCurrency = text(transaction?.currency).toUpperCase();
+    const txAmount = Math.abs(number(transaction?.amount));
+    const txDate = transactionDate(transaction);
+    const txLabel = text(transaction?.label || transaction?.description || transaction?.category);
+    const ranked = scopedRules
+      .filter((rule) => !txType || text(rule?.type).toLowerCase() === txType)
+      .map((rule) => {
+        let score = 0;
+        const reasons = [];
+        const ruleCurrency = text(rule?.currency).toUpperCase();
+        if (txCurrency && ruleCurrency === txCurrency) { score += 15; reasons.push('Même devise'); }
+        const directAffinity = labelAffinity(txLabel, rule?.label || rule?.name);
+        const learnedAffinity = Math.max(0, ...(confirmedByRule.get(text(rule.id)) || []).map((row) => labelAffinity(txLabel, row?.label || row?.description || row?.category)));
+        const affinity = Math.max(directAffinity, learnedAffinity);
+        if (affinity >= 0.8) { score += 38; reasons.push(learnedAffinity > directAffinity ? 'Libellé déjà confirmé' : 'Libellé très proche'); }
+        else if (affinity >= 0.4) { score += 24; reasons.push(learnedAffinity > directAffinity ? 'Libellé déjà confirmé' : 'Libellé proche'); }
+        else if (affinity > 0) { score += 10; reasons.push('Mot commun'); }
+        const planned = Math.abs(number(rule?.amount));
+        if (planned > 0 && txAmount > 0) {
+          const gap = Math.abs(txAmount - planned) / planned;
+          if (gap <= 0.03) { score += 27; reasons.push('Montant quasi identique'); }
+          else if (gap <= 0.1) { score += 19; reasons.push('Montant proche'); }
+          else if (gap <= 0.25) { score += 8; reasons.push('Montant compatible'); }
+        }
+        const nearGenerated = (generatedByRule.get(text(rule.id)) || [])
+          .filter((row) => transactionDate(row) && dayDistance(txDate, transactionDate(row)) <= 5)
+          .filter((row) => {
+            const generatedAmount = Math.abs(number(row?.amount || rule?.amount));
+            return !generatedAmount || !txAmount || Math.abs(generatedAmount - txAmount) / generatedAmount <= 0.1;
+          })
+          .sort((a, b) => dayDistance(txDate, transactionDate(a)) - dayDistance(txDate, transactionDate(b)))[0] || null;
+        if (nearGenerated) { score += 25; reasons.push('Échéance générée proche'); }
+        else if (dayDistance(txDate, rule?.nextDueAt || rule?.next_due_at) <= 5) { score += 10; reasons.push('Date proche de l’échéance'); }
+        return { rule, score, reasons, duplicateCandidate: nearGenerated };
+      })
+      .filter((row) => row.score >= 25)
+      .sort((a, b) => b.score - a.score || text(a.rule?.label).localeCompare(text(b.rule?.label)));
+    const best = ranked[0] || null;
+    return {
+      transaction,
+      suggestion: best ? {
+        rule: best.rule,
+        score: Math.min(100, best.score),
+        confidence: best.score >= 75 ? 'high' : best.score >= 50 ? 'medium' : 'low',
+        reasons: best.reasons,
+        duplicateCandidate: best.duplicateCandidate,
+      } : null,
+    };
+  }).sort((a, b) => transactionDate(b.transaction).localeCompare(transactionDate(a.transaction)) || text(a.transaction?.label).localeCompare(text(b.transaction?.label)));
+}
+
 export function computeFirstSubscriptionDueDate({ ruleType = '', startDate = '', weekday = null, monthday = null, intervalCount = 1 } = {}) {
   const iso = dateOnly(startDate);
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
@@ -246,6 +358,7 @@ export function buildSubscriptionAnalysis({ rules = [], transactions = [], trave
     modified: occurrences.filter((row) => row.status === 'modified'),
     manuallyLinked: occurrences.filter((row) => !row.generated),
     ruleInsights: buildRuleInsights(scopedRules, allOccurrences, day),
+    associationQueue: buildSubscriptionAssociationQueue({ rules: scopedRules, transactions, travelId: wantedTravel, type }),
   };
 }
 

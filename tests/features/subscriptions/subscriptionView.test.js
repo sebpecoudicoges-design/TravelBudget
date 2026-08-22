@@ -10,6 +10,7 @@ describe('subscription view', () => {
     rules: [{ id: 'r1', label: 'Loyer', amount: 200, currency: 'AUD', type: 'expense', isActive: true }],
     activeRules: [{ id: 'r1' }], paid: [{ id: 'tx1' }], overdue: [], modified: [], manuallyLinked: [],
     ruleInsights: [{ rule: { id: 'r1', label: 'Netflix', type: 'expense' }, trackingOnly: true, paid: [{ id: 'tx1' }], monthly: [{ currency: 'AUD', amount: 19.99, source: 'actual-average' }], totalSpent: [{ currency: 'AUD', amount: 119.94 }], nextDueAt: '2026-09-10', nextDueEstimated: true }],
+    associationQueue: [{ transaction: { id: 'tx2', label: 'NETFLIX.COM', amount: 19.99, currency: 'AUD', dateStart: '2026-08-16' }, suggestion: { rule: { id: 'r1', label: 'Netflix' }, confidence: 'high', reasons: ['Même devise', 'Libellé très proche'], duplicateCandidate: null } }],
   };
 
   it('renders the overview with per-currency planned and actual totals', () => {
@@ -29,6 +30,26 @@ describe('subscription view', () => {
     expect(html).toContain('Netflix');
     expect(html).toContain('Prochaine échéance estimée');
     expect(html).toContain('tb-subscription-spotlight--expense');
+    expect(html).toContain('data-subscription-detail="r1"');
+    expect(html).toContain('data-subscription-tab="associations"');
+  });
+
+  it('renders the assisted association queue with explicit confirmation hooks', () => {
+    const html = renderSubscriptionsModule({ analysis, tab: 'associations' });
+    expect(html).toContain('Transactions sans abonnement');
+    expect(html).toContain('Confiance forte');
+    expect(html).toContain('Même devise · Libellé très proche');
+    expect(html).toContain('data-subscription-link-transaction="tx2"');
+    expect(html).toContain('data-subscription-link-rule="r1"');
+  });
+
+  it('renders a detailed subscription sheet with history and contextual actions', () => {
+    const html = renderSubscriptionsModule({ analysis: { ...analysis, ruleInsights: [{ ...analysis.ruleInsights[0], linked: analysis.occurrences }] }, detailRuleId: 'r1' });
+    expect(html).toContain('data-subscription-detail-panel="r1"');
+    expect(html).toContain('Prévu par mois');
+    expect(html).toContain('Transactions liées');
+    expect(html).toContain('data-rr-act="edit"');
+    expect(html).toContain('data-subscription-detail-close');
   });
 
   it('visually distinguishes income and labels its actual amount as received', () => {

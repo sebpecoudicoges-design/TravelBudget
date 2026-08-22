@@ -15,6 +15,16 @@
     return window.supabase || window.sb || null;
   }
 
+  async function _rrLinkTransaction(transactionId, ruleId) {
+    const client = _rrGetSB();
+    if (!client) throw new Error("Supabase non prêt.");
+    const { error } = await client.rpc(TB_CONST.RPCS.link_transaction_to_recurring_rule || "link_transaction_to_recurring_rule", {
+      p_transaction_id: transactionId,
+      p_recurring_rule_id: ruleId,
+    });
+    if (error) throw error;
+  }
+
   function _rrParseISODate(iso) {
     const s = String(iso || "");
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
@@ -815,7 +825,7 @@
     const endFallback = String(travel?.end || travel?.end_date || travel?.dateEnd || "").slice(0, 10);
     window.__tbSubscriptionsFilters = window.__tbSubscriptionsFilters || {};
     const filters = window.__tbSubscriptionsFilters;
-    filters.tab = ["overview", "occurrences", "rules"].includes(filters.tab) ? filters.tab : "overview";
+    filters.tab = ["overview", "occurrences", "associations", "rules"].includes(filters.tab) ? filters.tab : "overview";
     filters.rangePreset = ["period", "last-month", "last-week", "custom"].includes(filters.rangePreset) ? filters.rangePreset : "period";
     filters.startDate = filters.startDate || startFallback;
     filters.endDate = filters.endDate || endFallback;
@@ -832,6 +842,7 @@
     host.innerHTML = view.renderSubscriptionsModule({
       analysis,
       tab: filters.tab,
+      detailRuleId: filters.detailRuleId || "",
       startDate: filters.startDate,
       endDate: filters.endDate,
       type: filters.type,
@@ -845,8 +856,32 @@
     host.querySelector("#tb-recurring-add-btn-hero")?.addEventListener("click", () => safeCall(rrT("recurring.modal.new"), window.openRecurringRuleModal));
     host.querySelectorAll("[data-subscription-tab]").forEach((button) => button.addEventListener("click", () => {
       filters.tab = String(button.dataset.subscriptionTab || "overview");
+      filters.detailRuleId = "";
       window.renderRecurringRules();
     }));
+    host.querySelectorAll("[data-subscription-detail]").forEach((button) => button.addEventListener("click", () => {
+      filters.detailRuleId = String(button.dataset.subscriptionDetail || "");
+      window.renderRecurringRules();
+      host.querySelector("[data-subscription-detail-panel]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }));
+    host.querySelector("[data-subscription-detail-close]")?.addEventListener("click", () => {
+      filters.detailRuleId = "";
+      window.renderRecurringRules();
+    });
+    host.querySelectorAll("[data-subscription-link-transaction]").forEach((button) => button.addEventListener("click", (event) => safeCall("Rattacher la transaction", async () => {
+      const el = event.currentTarget;
+      const transactionId = String(el?.dataset?.subscriptionLinkTransaction || "");
+      const ruleId = String(el?.dataset?.subscriptionLinkRule || "");
+      const tx = (state?.transactions || []).find((row) => String(row?.id || "") === transactionId);
+      const rule = (state?.recurringRules || []).find((row) => String(row?.id || "") === ruleId);
+      if (!transactionId || !ruleId || !tx || !rule) throw new Error("Transaction ou abonnement introuvable.");
+      if (!confirm(`Rattacher « ${String(tx.label || tx.category || "Transaction")} » à « ${String(rule.label || rule.name || "Abonnement")} » ?\n\nCette validation sera mémorisée pour améliorer les prochaines suggestions.`)) return;
+      await _rrLinkTransaction(transactionId, ruleId);
+      if (typeof window.refreshFromServer === "function") await window.refreshFromServer();
+      else if (typeof refreshFromServer === "function") await refreshFromServer();
+      window.renderRecurringRules();
+      _tbToastOk("Transaction rattachée. La suggestion a été confirmée.");
+    })));
     host.querySelector("#subscriptions-start")?.addEventListener("change", (event) => {
       filters.rangePreset = "custom";
       filters.startDate = event.currentTarget.value;

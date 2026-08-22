@@ -3,9 +3,9 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 263,
-    "lazyJsMaxKiB": 442,
-    "totalJsMaxKiB": 704,
-    "totalCssMaxKiB": 56,
+    "lazyJsMaxKiB": 450,
+    "totalJsMaxKiB": 712,
+    "totalCssMaxKiB": 59,
     "mainJsGzipMaxKiB": 110
   },
   "sourceGroups": [
@@ -55,7 +55,7 @@
     },
     {
       "name": "subscriptions-domain",
-      "maxKiB": 69,
+      "maxKiB": 82,
       "paths": [
         "public/legacy/js/15_recurring_rules_ui.js",
         "src/core/subscriptionRules.js",

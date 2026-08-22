@@ -1,6 +1,6 @@
 # Abonnements — prochaine checklist
 
-Version de cadrage : `10.5.353`.
+Version de cadrage : `10.5.354`.
 
 ## Etat de l association
 
@@ -25,24 +25,26 @@ Version de cadrage : `10.5.353`.
 
 ## Etape 2 — association assistee
 
-- [ ] Proposer, sans enregistrer automatiquement, les abonnements probables selon libelle, montant, devise et proximite de date.
-- [ ] Afficher un niveau de confiance et les raisons de chaque suggestion.
-- [ ] Creer une file **Transactions sans abonnement** avec validation unitaire ou multiple.
-- [ ] Memoriser uniquement les associations confirmees par l utilisateur pour ameliorer les suggestions suivantes.
-- [ ] Detecter les doublons probables entre une echeance generee et une transaction importee avant tout rattachement.
+- [x] Proposer, sans enregistrer automatiquement, les abonnements probables selon libelle, montant, devise et proximite de date.
+- [x] Afficher un niveau de confiance et les raisons de chaque suggestion.
+- [x] Creer une file **Transactions sans abonnement** avec validation unitaire.
+- [ ] Ajouter la selection multiple apres validation du scoring unitaire en conditions reelles.
+- [x] Memoriser uniquement les associations confirmees par l utilisateur pour ameliorer les suggestions suivantes.
+- [x] Detecter les doublons probables entre une echeance generee et une transaction importee avant tout rattachement.
 
 ## Etape 3 — fiche abonnement et ecarts
 
-- [ ] Ouvrir une fiche detaillee depuis chaque ligne : prevu, reel, historique, prochaine echeance et transactions liees.
+- [x] Ouvrir une fiche detaillee depuis chaque ligne : prevu, reel, historique, prochaine echeance et transactions liees.
 - [ ] Montrer les ecarts de montant, de date et de devise sans convertir implicitement.
-- [ ] Distinguer clairement generee, confirmee, modifiee, detachee et rattachee manuellement.
-- [ ] Ajouter les actions contextuelles Modifier la regle, Rattacher, Detacher et Ouvrir la transaction.
+- [x] Distinguer clairement generee, confirmee, modifiee, detachee et rattachee manuellement dans l historique existant.
+- [ ] Completer la fiche avec les actions Detacher et une lecture d ecarts montant/date/devise.
 - [ ] Signaler un abonnement sans paiement recent ou une hausse inhabituelle, sans modifier les donnees.
 
 ## Etape 4 — design et accessibilite
 
 - [ ] Remplacer les longs formulaires par un panneau progressif **Essentiel / Planification / Classement**.
-- [ ] Conserver le resume en trois cartes compactes sur desktop et une pile lisible sur mobile.
+- [x] Conserver le resume en trois cartes compactes sur desktop et une pile lisible sur mobile.
+- [x] Afficher les quatre onglets Abonnements en grille 2 x 2 a 390 px.
 - [ ] Ajouter une legende textuelle aux nuances Entree, Sortie, Retard et Modification.
 - [ ] Concevoir les etats vide, chargement, erreur, hors ligne et aucune association suggeree.
 - [ ] Verifier clavier, focus visible, lecteurs d ecran, cibles tactiles et contraste clair/sombre.

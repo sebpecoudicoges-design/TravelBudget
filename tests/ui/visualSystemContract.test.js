@@ -46,6 +46,9 @@ describe('visual system contract', () => {
 
   it('renders subscription insights as compact rows on desktop', () => {
     expect(theme).toContain('.tb-subscription-spotlights__grid{display:grid;grid-template-columns:1fr;gap:9px}');
+    expect(theme).toContain('.tb-subscriptions-toolbar nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;width:100%}');
+    expect(theme).toContain('.tb-subscription-association');
+    expect(theme).toContain('.tb-subscription-detail__metrics');
     expect(theme).toContain('grid-template-columns:minmax(180px,1fr) minmax(150px,.72fr) minmax(260px,1.15fr)');
     expect(theme).toContain('padding:10px 13px');
   });

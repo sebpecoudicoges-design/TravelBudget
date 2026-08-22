@@ -10,6 +10,7 @@ describe('subscriptions migration', () => {
   const cashSummaryTestSql = fs.readFileSync('supabase/migrations/20260815075831_extend_subscription_cash_summary_test_10_5_351.sql', 'utf8');
   const openLinkingSql = fs.readFileSync('supabase/migrations/20260815083326_allow_all_travel_subscription_links_10_5_352.sql', 'utf8');
   const visualFixSql = fs.readFileSync('supabase/migrations/20260816100004_fix_subscription_cash_summary_10_5_353.sql', 'utf8');
+  const assistedLinkingSql = fs.readFileSync('supabase/migrations/20260822003936_subscriptions_assisted_linking_10_5_354.sql', 'utf8');
 
   it('secures manual transaction linkage by ownership and domain compatibility', () => {
     expect(sql).toContain('create or replace function public.link_transaction_to_recurring_rule');
@@ -68,5 +69,14 @@ describe('subscriptions migration', () => {
     expect(visualFixSql).toContain('Lisibilite Abonnements multidevise 10.5.353');
     expect(visualFixSql).toContain('Aucun montant ne deborde');
     expect(visualFixSql).toContain("app_version = '10.5.353'");
+  });
+
+  it('adds assisted-linking and mobile-detail retests without bypassing the secured RPC', () => {
+    expect(assistedLinkingSql).toContain('Associations assistées et doublons 10.5.354');
+    expect(assistedLinkingSql).toContain('Fiche abonnement et onglets mobiles 10.5.354');
+    expect(assistedLinkingSql).toContain('Doublon possible');
+    expect(assistedLinkingSql).toContain('grille 2 x 2');
+    expect(assistedLinkingSql).not.toContain('create or replace function public.link_transaction_to_recurring_rule');
+    expect(assistedLinkingSql).toContain("app_version = '10.5.354'");
   });
 });

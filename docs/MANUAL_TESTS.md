@@ -6,7 +6,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version web à valider : `10.5.353`.
+- Version web à valider : `10.5.354`.
 - APK : `travelbudget-10.5.341-20260810-192605-debug.apk` publie dans Supabase Storage ; SHA-256 `3CC0F8597939B3F47AD9F325AD21C0C5E9C5DC3319B4B408E26F023FCAEDE37D`.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
@@ -46,6 +46,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Abonnements `10.5.351` : verifier Vue d ensemble, Echeances et Regles en clair/sombre a 1440/390 px. Le resume unique doit separer Entrees et Sorties et afficher Prevu, Paye/Encaisse et Difference; `1 050 AUD` prevus et `1 094 AUD` encaisses donnent `44 AUD`. Le bilan reel affiche Total depenses, Total revenus et leur difference revenus moins depenses. Tester Periode du voyage, Mois dernier, Semaine derniere puis des dates personnalisees : resume et lignes doivent suivre la meme plage. Les heroes par abonnement doivent etre compacts et nuances selon le flux. Ouvrir ensuite une echeance generee, changer son abonnement, lire la confirmation puis valider : elle devient manuelle et l ancienne regle ne doit plus la modifier. Refaire le geste en selection multiple, puis ouvrir le rail admin et confirmer que Membres reste en bas.
 - Abonnements `10.5.352` : depuis une transaction, sa modification et la selection multiple, verifier que toutes les regles actives du voyage remontent, meme si leur type ou leur devise differe. Dans ce cas, lire l avertissement avant de confirmer. Le prevu doit rester dans le flux et la devise de la regle, le reel dans ceux de la transaction. A 1440 px, les cartes par abonnement forment des lignes compactes; a 390 px elles restent lisibles sans debordement. Sur un ecran de 810 px de haut, Tests puis Membres doivent rester visibles en bas du rail admin.
 - Abonnements `10.5.353` : avec au moins deux devises, verifier que chaque montant du resume Prevu/Reel/Difference reste dans sa carte. Chaque devise occupe une ligne. A 390 px, Prevu et Paye/Encaisse restent cote a cote puis Difference passe dessous. Refaire en theme sombre; aucun texte ni montant ne doit etre coupe.
+- Abonnements `10.5.354` : ouvrir **A associer**, verifier niveau de confiance et raisons, confirmer une liaison puis tester un doublon probable. Ouvrir ensuite **Voir la fiche**. A 390 px, les quatre onglets forment une grille 2 x 2 et toutes les actions restent tactiles en clair/sombre.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés
