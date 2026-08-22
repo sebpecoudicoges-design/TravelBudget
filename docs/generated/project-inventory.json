@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "b217aae36dea7cff955a401388a7038647979d82",
-  "snapshotFingerprint": "9e452a42003eba4aa770f5405647d952a7a13a2e01734a5cde0ab24a29facd1b",
-  "generatedAt": "2026-08-22T00:49:44.106Z",
+  "commit": "d7c1d293c436b60ea4c72c9ea2442921b3477843",
+  "snapshotFingerprint": "30a72f811e7fb58b0e9b56dced5cc41a63cf358ac5c2d1000e4cdf47c97fec0c",
+  "generatedAt": "2026-08-22T00:50:03.807Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.354"
@@ -772,7 +772,7 @@
         "tests/data/subscriptionsMigration.test.js"
       ],
       "validation": {
-        "commit": "b217aae",
+        "commit": "d7c1d29",
         "date": "2026-08-22",
         "verifiedBy": "Codex automated tests, live test campaign update and responsive visual review"
       },
