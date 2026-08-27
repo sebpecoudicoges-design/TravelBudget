@@ -1035,10 +1035,10 @@ async function _txDocCreateSignedUrl(doc){
   return res.data && res.data.signedUrl;
 }
 
-async function _txDocUploadAndLink(txId, files){
+async function _txDocUploadAndLink(txId, files, txFallback){
   const list = Array.from(files || []);
   if (!list.length) return;
-  const tx = _txDocFindTx(txId);
+  const tx = _txDocFindTx(txId) || txFallback;
   if (!tx) throw new Error(_txDocT('transactions.error.not_found'));
 
   const c = _txDocClient();
@@ -1084,6 +1084,8 @@ async function _txDocUploadAndLink(txId, files){
     if (insLink.error) throw insLink.error;
   }
 }
+
+window.tbTxDocUploadAndLink = _txDocUploadAndLink;
 
 async function _txDocUnlink(linkId){
   const c = _txDocClient();

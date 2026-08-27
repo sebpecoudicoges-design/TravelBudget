@@ -6,6 +6,7 @@ describe('Analysis view extraction contract', () => {
   const runtime = fs.readFileSync('src/features/analysis/analysisRuntime.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/33_budget_analysis.js', 'utf8');
   const filterView = fs.readFileSync('public/legacy/js/33_analysis_filter_view.js', 'utf8');
+  const cashBreakdown = fs.readFileSync('src/features/analysis/analysisCashBreakdown.js', 'utf8');
 
   it('exposes the Analysis view module to the legacy runtime on demand', () => {
     expect(main).toContain("import('./features/analysis/analysisRuntime.js')");
@@ -78,9 +79,20 @@ describe('Analysis view extraction contract', () => {
   it('builds pure cashflow only from received income and paid expenses', () => {
     expect(legacy).toContain('const { real: incomeReal, planned: incomePlanned } = _incomeSplit(incomeTxs);');
     expect(legacy).toContain('if (_txAnalysisPaid(tx)) paidSpent += alloc.amount;');
-    expect(legacy).toContain('incomeReal.forEach(tx => {');
-    expect(legacy).toContain('if (!_txAnalysisPaid(tx)) return;');
+    expect(legacy).toContain('window.TBAnalysisCashBreakdown?.buildCashBreakdown');
+    expect(cashBreakdown).toContain('income.forEach((row) => add(row');
+    expect(cashBreakdown).toContain('expenses.filter((row) => isPaid(row))');
     expect(legacy).toContain('deltaReal: incomeRealAmount - paidSpent');
+  });
+
+  it('nets expense-category income into budget spend and exposes real-cash subcategories', () => {
+    expect(legacy).toContain('const expenseOffsets = incomeTxs.filter');
+    expect(cashBreakdown).toContain('const visibleAmount = -alloc.amount;');
+    expect(legacy).toContain('window.TBAnalysisCashBreakdown?.buildCashBreakdown');
+    expect(filterView).toContain('window.TBAnalysisCashBreakdown?.renderCashSubcategoryGrids');
+    expect(cashBreakdown).toContain("scope === 'budget' && mode === 'expenses'");
+    expect(cashBreakdown).toContain('Entrées par sous-catégorie');
+    expect(cashBreakdown).toContain('Sorties par sous-catégorie');
   });
 
   it('keeps the Analysis unpaid panel delegated out of the legacy file', () => {

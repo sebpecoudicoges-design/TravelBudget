@@ -20,6 +20,7 @@ Nutrition > ajout rapide ou détaillé, favoris, portions, hydratation, sommeil 
 - Persistance et déduplication : `src/data/nutritionRepository.js`.
 - État optimiste et vues : `src/features/nutrition`.
 - Orchestration et compatibilité restantes : `public/legacy/js/48_nutrition_ui.js`.
+- La sélection rapide met à jour seulement les contrôles concernés ; les rendus complets après ajout ou favori sont regroupés à la frame suivante avant la synchronisation différée.
 
 ## Données
 
@@ -34,6 +35,7 @@ Nutrition > ajout rapide ou détaillé, favoris, portions, hydratation, sommeil 
 - Création optimiste confirmée sans conserver un doublon local.
 - Rejeu offline et conflit serveur idempotents.
 - Ajout, édition et suppression utilisables sur Android.
+- Sélection, quantité et navigation restent réactives pendant l'écriture locale et la réconciliation distante.
 
 ## Risques connus
 

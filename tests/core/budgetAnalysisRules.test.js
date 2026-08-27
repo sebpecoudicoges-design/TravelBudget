@@ -64,4 +64,5 @@ describe('budget analysis rules core', () => {
     expect(affectsBudgetAnalysisDataset({ type: 'expense', affectsBudget: false })).toBe(false);
     expect(affectsBudgetAnalysisDataset({ type: 'income', affects_budget: true })).toBe(false);
   });
+
 });

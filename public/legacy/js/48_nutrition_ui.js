@@ -1210,6 +1210,13 @@
     const t = Math.max(1, n(target, 0));
     return Math.max(0, Math.min(160, (n(current, 0) / t) * 100));
   }
+  function scheduleNutritionRender(reason) {
+    if (CACHE.nutritionRenderFrame) cancelAnimationFrame(CACHE.nutritionRenderFrame);
+    CACHE.nutritionRenderFrame = requestAnimationFrame(() => {
+      CACHE.nutritionRenderFrame = null;
+      if ((window.activeView || "") === "nutrition") renderNutrition(reason || "scheduled");
+    });
+  }
   function mealMomentTargets(needsKcal, typeTotals, day) {
     if (rules().mealMomentTargets) {
       const today = todayISO();
@@ -1710,7 +1717,13 @@
         CACHE.foodQuery = food?.name || "";
         CACHE.foodCategory = "all";
         rememberFoodRecent(key);
-        renderNutrition("food-pick");
+        const search = root.querySelector("#nutrition-search");
+        if (search) search.value = CACHE.foodQuery;
+        renderFoodOptions(root, key);
+        const quantity = root.querySelector("#nutrition-quantity");
+        if (quantity) quantity.value = "1";
+        updateNutritionPreview(root);
+        (quantity || root.querySelector("#nutrition-grams"))?.focus();
       };
     });
     root.querySelectorAll("[data-nutrition-save-meal-fav]").forEach(btn => {
@@ -1886,7 +1899,7 @@
         try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
       }
       try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
-      renderNutrition("save");
+      scheduleNutritionRender("save");
       if (queuedLocalAddition) requestNutritionSync("save");
       else setTimeout(() => loadNutrition({ force: true }).then(() => {
         if ((window.activeView || "") === "nutrition") renderNutrition("save-refresh");
@@ -1927,7 +1940,7 @@
       saveLocalNutritionRowsOnce(rows);
       rows.forEach(row => upsertOptimisticNutritionRow(row, { publish: false }));
       publishNutrition("meal-favorite-local");
-      renderNutrition("meal-favorite");
+      scheduleNutritionRender("meal-favorite");
       requestNutritionSync("meal-favorite");
     } finally {
       CACHE.applyingFavoriteMeal = false;

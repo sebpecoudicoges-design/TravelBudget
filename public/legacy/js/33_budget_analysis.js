@@ -830,6 +830,8 @@ function _sumTxArray(txs, base){
     const base = _resolveAnalysisCurrency(start, end);
     const incomeTxs = _filteredIncomeTransactions();
     const { real: incomeReal, planned: incomePlanned } = _incomeSplit(incomeTxs);
+    const expenseCats = [...new Set(txs.map(_txCategory).filter(Boolean))];
+    const expenseOffsets = incomeTxs.filter((tx) => window.TBAnalysisCashBreakdown?.isExpenseOffsetIncome?.(tx, expenseCats));
 
     const incomeRealAmount = _sumTxArray(incomeReal, base);
     const incomePlannedAmount = _sumTxArray(incomePlanned, base);
@@ -923,6 +925,11 @@ if (sub) {
 }
     }
 
+    spent += window.TBAnalysisCashBreakdown?.applyBudgetOffsets?.({
+      offsets: expenseOffsets, allocate: _txAmountInVisibleWindow, category: _txCategory, subcategory: _txSubcategory, dailyMap,
+      categoryMap: catMap, categoryRows: categoryTxMap, subcategoryMap: subcatMap, subcategoryRows: subcategoryTxMap,
+    }) || 0;
+
     const targetDaily = days.map(d => _dailyBudgetForDate(d, base));
     const coveredDays = [];
     const referenceDaily = days.map((d) => {
@@ -982,6 +989,15 @@ if (sub) {
         (comparableCategoryMap.get(mapping.bucket) || 0) + amt
       );
     }
+    const refundComparison = window.TBAnalysisCashBreakdown?.applyComparableOffsets?.({
+      offsets: expenseOffsets, days: comparableDaySet,
+      budgetDays: (tx) => _daysInclusive(_txBudgetStart(tx), _txBudgetEnd(tx)), cashDate: _txCashDate, category: _txCategory,
+      convert: (tx, date) => _convert(tx?.amount, tx?.currency || base, date || _txBudgetStart(tx), base), mapping: _mapToSourcedBucket,
+      comparableCategoryMap, unmappedCategoryMap,
+    }) || {};
+    comparableIncludedSpent += _safeNum(refundComparison.included);
+    comparableMappedSpent += _safeNum(refundComparison.mapped);
+    comparableExcludedSpent += _safeNum(refundComparison.excluded);
     const totalBudget = targetDaily.reduce((a,b)=>a+b,0);
     const totalReferencePeriod = referenceDaily.reduce((a,b)=>a+b,0);
     const totalReferenceElapsed = referenceDaily
@@ -1193,19 +1209,16 @@ const deltaProjectedWithBudget =
   expenseRemaining -
   budgetRemaining;
 
-const cashIncomeByCategory = new Map();
-const cashExpenseByCategory = new Map();
-incomeReal.forEach(tx => {
-  const key = _txCategory(tx) || 'Revenu';
-  cashIncomeByCategory.set(key, (cashIncomeByCategory.get(key) || 0) + _convert(tx?.amount, tx?.currency || base, _txCashDate(tx), base));
-});
-txs.forEach(tx => {
-  if (!_txAnalysisPaid(tx)) return;
-  const key = _txCategory(tx);
-  cashExpenseByCategory.set(key, (cashExpenseByCategory.get(key) || 0) + _convert(tx?.amount, tx?.currency || base, _txCashDate(tx), base));
-});
-const cashIncomeCategories = [...cashIncomeByCategory.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 5);
-const cashExpenseCategories = [...cashExpenseByCategory.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 5);
+const cashBreakdown = window.TBAnalysisCashBreakdown?.buildCashBreakdown?.({
+  income: incomeReal,
+  expenses: txs,
+  convert: (tx) => _convert(tx?.amount, tx?.currency || base, _txCashDate(tx), base),
+  category: _txCategory,
+  subcategory: _txSubcategory,
+  isPaid: _txAnalysisPaid,
+  scope: cashflowScope,
+  mode: cashflowMode,
+}) || {};
 
 return {
   base, start, end, days, txs, spent, paidSpent,
@@ -1236,7 +1249,7 @@ deltaProjectedWithBudget,
   nightCoveredCount, nightCoveredPotentialSavings, nightCoveredAverageSaving,
   nightCoveredTransportSpent, nightCoveredShareOfSpent, nightCoveredRows,
 categoryTxMap, subcategoryTxMap
-  , cashIncomeCategories, cashExpenseCategories,
+  , ...cashBreakdown,
   unpaidTxDetails: unpaidTxDetails
     .slice()
     .sort((a,b) => String(a?.budgetStart || a?.cashDate || '').localeCompare(String(b?.budgetStart || b?.cashDate || '')))

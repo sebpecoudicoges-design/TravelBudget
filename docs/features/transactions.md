@@ -21,11 +21,12 @@ Transactions > Ajouter, modifier, dupliquer ou supprimer une transaction.
 - Synchronisation différée : file de mutations offline et clé d'idempotence transmise au serveur.
 - Autorisation : RLS et fonctions Supabase.
 - Affichage et orchestration historique : modale et liste Transactions legacy.
+- Les documents sélectionnés à la création restent locaux jusqu'au succès de `apply_transaction_v2`, puis utilisent le même stockage, dossier Factures et lien `transaction_documents` que l'action Facture existante.
 
 ## Données
 
 - Tables principales : `transactions`, `wallets`, `periods`, `budget_segments`, `categories`.
-- Liaisons possibles : `trip_expense_budget_links`, `asset_transaction_links`, documents.
+- Liaisons possibles : `trip_expense_budget_links`, `asset_transaction_links`, `transaction_documents` et `documents`.
 - Cache local : état applicatif et file de mutations offline.
 
 ## Conséquences à vérifier
@@ -36,6 +37,7 @@ Transactions > Ajouter, modifier, dupliquer ou supprimer une transaction.
 - Conservation ou suppression des liaisons Trip et Patrimoine.
 - Rejeu offline sans double création.
 - Modale utilisable sur Android/Capacitor.
+- Création avec plusieurs documents sans double transaction ; blocage explicite de l'envoi hors ligne.
 
 ## Risques connus
 

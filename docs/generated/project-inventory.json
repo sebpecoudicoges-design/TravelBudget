@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "d7c1d293c436b60ea4c72c9ea2442921b3477843",
-  "snapshotFingerprint": "30a72f811e7fb58b0e9b56dced5cc41a63cf358ac5c2d1000e4cdf47c97fec0c",
-  "generatedAt": "2026-08-22T00:50:03.807Z",
+  "commit": "712c556c5f17cd037b897bc32fe3a1bcbbd250b1",
+  "snapshotFingerprint": "b748a9909116efe187ce8e0afb7ec8a21c7e792201985c5b7acccaa579744ba4",
+  "generatedAt": "2026-08-27T08:21:00.535Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.354"
+    "version": "10.5.355"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -195,6 +195,7 @@
     "work"
   ],
   "featureModules": [
+    "src/features/analysis/analysisCashBreakdown.js",
     "src/features/analysis/analysisChartOptions.js",
     "src/features/analysis/analysisRuntime.js",
     "src/features/analysis/analysisView.js",
@@ -281,6 +282,7 @@
     "tests/data/testCampaignRepository.test.js",
     "tests/data/tripRepository.test.js",
     "tests/e2e/critical-flows.spec.js",
+    "tests/features/analysis/analysisCashBreakdown.test.js",
     "tests/features/analysis/analysisChartOptions.test.js",
     "tests/features/analysis/analysisView.test.js",
     "tests/features/assets/assetView.test.js",
@@ -567,7 +569,8 @@
     "supabase/migrations/20260815075831_extend_subscription_cash_summary_test_10_5_351.sql",
     "supabase/migrations/20260815083326_allow_all_travel_subscription_links_10_5_352.sql",
     "supabase/migrations/20260816100004_fix_subscription_cash_summary_10_5_353.sql",
-    "supabase/migrations/20260822003936_subscriptions_assisted_linking_10_5_354.sql"
+    "supabase/migrations/20260822003936_subscriptions_assisted_linking_10_5_354.sql",
+    "supabase/migrations/20260827075944_transaction_documents_nutrition_analysis_10_5_355.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",
@@ -636,6 +639,7 @@
         "src/features/analysis/analysisRuntime.js",
         "src/features/analysis/analysisView.js",
         "src/features/analysis/analysisChartOptions.js",
+        "src/features/analysis/analysisCashBreakdown.js",
         "public/legacy/js/33_budget_analysis.js",
         "public/legacy/js/33_analysis_filter_view.js",
         "public/legacy/js/33_analysis_drilldown_view.js"
@@ -644,6 +648,7 @@
         "tests/core/budgetAnalysisRules.test.js",
         "tests/features/analysis/analysisView.test.js",
         "tests/features/analysis/analysisChartOptions.test.js",
+        "tests/features/analysis/analysisCashBreakdown.test.js",
         "tests/ui/analysisViewContract.test.js",
         "tests/ui/analysisFilterViewContract.test.js",
         "tests/ui/analysisDrilldownViewContract.test.js"

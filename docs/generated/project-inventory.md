@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `d7c1d293c436b60ea4c72c9ea2442921b3477843`
-> Empreinte du snapshot : `30a72f811e7fb58b0e9b56dced5cc41a63cf358ac5c2d1000e4cdf47c97fec0c`
-> Généré le : `2026-08-22T00:50:03.807Z`
+> Commit analysé : `712c556c5f17cd037b897bc32fe3a1bcbbd250b1`
+> Empreinte du snapshot : `b748a9909116efe187ce8e0afb7ec8a21c7e792201985c5b7acccaa579744ba4`
+> Généré le : `2026-08-27T08:21:00.535Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.354` |
+| Version | `10.5.355` |
 | Écrans déclarés | 17 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
-| Modules features | 45 |
-| Fichiers de tests | 126 |
-| Migrations Supabase | 145 |
+| Modules features | 46 |
+| Fichiers de tests | 127 |
+| Migrations Supabase | 146 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -223,6 +223,7 @@ Domaines :
 
 Modules :
 
+- `src/features/analysis/analysisCashBreakdown.js`
 - `src/features/analysis/analysisChartOptions.js`
 - `src/features/analysis/analysisRuntime.js`
 - `src/features/analysis/analysisView.js`
@@ -367,6 +368,7 @@ Modules :
 - `tests/data/testCampaignRepository.test.js`
 - `tests/data/tripRepository.test.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/features/analysis/analysisCashBreakdown.test.js`
 - `tests/features/analysis/analysisChartOptions.test.js`
 - `tests/features/analysis/analysisView.test.js`
 - `tests/features/assets/assetView.test.js`
@@ -619,6 +621,7 @@ Modules :
 - `supabase/migrations/20260815083326_allow_all_travel_subscription_links_10_5_352.sql`
 - `supabase/migrations/20260816100004_fix_subscription_cash_summary_10_5_353.sql`
 - `supabase/migrations/20260822003936_subscriptions_assisted_linking_10_5_354.sql`
+- `supabase/migrations/20260827075944_transaction_documents_nutrition_analysis_10_5_355.sql`
 
 ## Android et budgets de modules
 

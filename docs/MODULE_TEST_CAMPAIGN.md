@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.354`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.355`.
 
 ## Objectif
 
@@ -116,6 +116,8 @@ En `10.5.352`, les trois listes de rattachement Transaction partagent la meme so
 En `10.5.353`, le retour multidevise du resume financier est traite sans creer un dixieme scenario : le retest visuel existant poursuit sa filiation. Le titre occupe toute la largeur de chaque carte, les trois indicateurs utilisent des colonnes flexibles et chaque devise sa propre ligne. Sur mobile, Difference passe sous Prevu et Paye/Encaisse. La checklist `docs/SUBSCRIPTIONS_NEXT_CHECKLIST.md` cadre ensuite association assistee, fiche abonnement, ecarts et design sans autoriser de liaison silencieuse.
 
 En `10.5.354`, Abonnements ajoute l espace **A associer**. Les transactions non liees recoivent une suggestion expliquee par libelle, montant, devise et date; seul un clic confirme appelle le RPC securise existant. Les libelles deja lies servent de memoire, sans table ni association silencieuse. Une echeance generee proche devient un **Doublon possible** et bloque le rattachement direct. **Voir la fiche** expose prevu mensuel, total reel, prochaine echeance et historique. A 390 px, Vue d ensemble, Echeances, A associer et Regles occupent une grille 2 x 2. Deux retests sont ajoutes.
+
+En `10.5.355`, Transactions accepte plusieurs documents directement dans la création et les relie seulement après obtention de l'identifiant serveur. Alimentation remplace les rerendus complets au clic sur un aliment par une mise à jour ciblée et regroupe les rendus optimistes à la frame suivante. Analyse impute une entrée dans une catégorie de dépense comme un avoir budgétaire, sans perdre son flux brut de trésorerie, et détaille les sous-catégories des entrées/sorties uniquement en périmètre Budget + Flux réel. Quatre retests sont ouverts.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

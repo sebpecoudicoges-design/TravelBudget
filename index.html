@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="BudgetPacker">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.354";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.355";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -3869,6 +3869,13 @@
         <label for="m-recurring-rule">Abonnement lié <span class="tb-help" title="Les échéances créées par une règle sont liées automatiquement. Pour une transaction manuelle, choisis ici l'abonnement correspondant.">?</span></label>
         <select id="m-recurring-rule"><option value="">Aucun abonnement</option></select>
         <small id="m-recurring-rule-help" class="muted">Optionnel pour une transaction créée manuellement.</small>
+      </div>
+
+      <div class="field tb-tx-create-docs" id="m-documents-block" style="grid-column:1/-1;">
+        <label for="m-documents">Documents <span class="tb-help" title="Ajoute une ou plusieurs factures, photos ou pièces justificatives. Elles seront enregistrées après la création de la transaction.">?</span></label>
+        <input id="m-documents" type="file" multiple accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
+        <div id="m-documents-list" class="tb-tx-create-docs__list muted" aria-live="polite">Aucun document sélectionné.</div>
+        <small class="muted">Optionnel · plusieurs fichiers possibles · connexion requise pour l’envoi.</small>
       </div>
 
       <div class="field">

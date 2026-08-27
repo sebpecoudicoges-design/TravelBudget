@@ -83,6 +83,11 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('if (!loadLocalMeals().length) return false;');
     expect(legacy).toContain('nutritionQuickAddHasFocus()');
     expect(legacy).toContain('requestNutritionRefreshWhenIdle(reason || "mutation")');
+    expect(legacy).toContain('function scheduleNutritionRender(reason)');
+    expect(legacy).toContain('scheduleNutritionRender("save")');
+    expect(legacy).toContain('scheduleNutritionRender("meal-favorite")');
+    expect(legacy).toContain('renderFoodOptions(root, key)');
+    expect(legacy).not.toContain('renderNutrition("food-pick")');
     expect(legacy).toContain('ev?.detail?.offline === false && loadLocalMeals().length');
     expect(offlineState).toContain('const wasUnavailable = Boolean(');
     expect(offlineState).toContain('if (wasUnavailable) {');

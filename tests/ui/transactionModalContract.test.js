@@ -5,6 +5,7 @@ describe('transaction shared modal migration', () => {
   const html = fs.readFileSync('index.html', 'utf8');
   const source = fs.readFileSync('public/legacy/js/16_modal_add_edit_via_rpc.js', 'utf8');
   const pwa = fs.readFileSync('src/app/pwa.js', 'utf8');
+  const transactions = fs.readFileSync('public/legacy/js/13_transactions_view.js', 'utf8');
 
   it('mounts the stable transaction form template in the shared modal', () => {
     expect(html).toContain('id="tx-modal-template"');
@@ -57,5 +58,15 @@ describe('transaction shared modal migration', () => {
     expect(source).toContain('transactions.subscription.mismatch_confirm');
     expect(source).toContain('tous les abonnements actifs du voyage sont proposés');
     expect(source).not.toContain('if (!trackingOnly && type');
+  });
+
+  it('stages several documents and uploads them only after transaction creation', () => {
+    expect(html).toContain('id="m-documents" type="file" multiple');
+    expect(html).toContain('id="m-documents-list"');
+    expect(source).toContain('let txPendingDocuments = [];');
+    expect(source).toContain('const createdId = _txCreatedId(data);');
+    expect(source).toContain('await window.tbTxDocUploadAndLink(createdId, txPendingDocuments');
+    expect(source).toContain('L’envoi de documents nécessite une connexion');
+    expect(transactions).toContain('window.tbTxDocUploadAndLink = _txDocUploadAndLink;');
   });
 });

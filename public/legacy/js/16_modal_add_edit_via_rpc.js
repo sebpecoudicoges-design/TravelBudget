@@ -11,6 +11,7 @@ function _txModalText(fr, en) {
 }
 
 let txModalHandle = null;
+let txPendingDocuments = [];
 
 function _txSaveButton() {
   return txModalHandle?.root?.querySelector("[data-tx-save]") || null;
@@ -31,6 +32,7 @@ function _mountTxModal(title, saveLabel) {
     contentHTML: template.innerHTML,
     actionsHTML: `<button class="btn" type="button" data-tx-cancel>${_txModalText("Annuler", "Cancel")}</button><button id="m-resnap" class="btn" type="button" data-tx-resnap hidden>↻ Re-snapshot</button><button class="btn primary" type="submit" data-tx-save form="tx-modal-form">${escapeHTML(saveLabel || _txModalText("Enregistrer", "Save"))}</button>`,
     onClose: () => {
+      txPendingDocuments = [];
       _setTxModalReadOnly(false);
       _setTxModalLock(false);
       txModalHandle = null;
@@ -43,7 +45,53 @@ function _mountTxModal(title, saveLabel) {
     event.preventDefault();
     saveModal();
   });
+  _wireTxPendingDocuments();
   return txModalHandle;
+}
+
+function _renderTxPendingDocuments() {
+  const list = document.getElementById("m-documents-list");
+  if (!list) return;
+  if (!txPendingDocuments.length) {
+    list.textContent = _txModalText("Aucun document sélectionné.", "No document selected.");
+    return;
+  }
+  list.innerHTML = txPendingDocuments.map((file, index) => `
+    <span class="pill tb-tx-create-docs__item">
+      <span>${escapeHTML(file?.name || _txModalText("Document", "Document"))}</span>
+      <button type="button" class="btn small" data-tx-remove-document="${index}" aria-label="${escapeHTML(_txModalText("Retirer le document", "Remove document"))}">×</button>
+    </span>`).join("");
+  list.querySelectorAll("[data-tx-remove-document]").forEach((button) => {
+    button.onclick = () => {
+      txPendingDocuments.splice(Number(button.getAttribute("data-tx-remove-document")), 1);
+      _renderTxPendingDocuments();
+    };
+  });
+}
+
+function _wireTxPendingDocuments() {
+  txPendingDocuments = [];
+  const input = document.getElementById("m-documents");
+  if (input) input.onchange = () => {
+    const additions = Array.from(input.files || []);
+    const existing = new Set(txPendingDocuments.map((file) => `${file.name}|${file.size}|${file.lastModified}`));
+    additions.forEach((file) => {
+      const key = `${file.name}|${file.size}|${file.lastModified}`;
+      if (!existing.has(key)) {
+        existing.add(key);
+        txPendingDocuments.push(file);
+      }
+    });
+    input.value = "";
+    _renderTxPendingDocuments();
+  };
+  _renderTxPendingDocuments();
+}
+
+function _txCreatedId(data) {
+  if (typeof data === "string") return data;
+  if (Array.isArray(data)) return _txCreatedId(data[0]);
+  return String(data?.id || data?.transaction_id || data?.transactionId || data?.tx_id || "").trim();
 }
 
 function fillModalSelects(includeWalletId) {
@@ -348,6 +396,8 @@ function openTxEditModal(txId) {
 
   editingTxId = txId;
   _mountTxModal(_txModalT("transactions.modal.edit"), _txModalText("Sauvegarder", "Save"));
+  const documentsBlock = document.getElementById("m-documents-block");
+  if (documentsBlock) documentsBlock.hidden = true;
   fillModalSelects(tx.walletId || tx.wallet_id);
 
   const lockState = _txGetLockState(tx);
@@ -1098,6 +1148,7 @@ async function saveModal() {
   if (btn) btn.disabled = true;
 
   const wasEditing = !!editingTxId;
+  let documentWarning = "";
   try {
     await window.tbWithBusy(async () => {
       await safeCall("Sauvegarde", async () => {
@@ -1176,6 +1227,9 @@ async function saveModal() {
       const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
         ? await window.tbShouldUseOfflineMode(editingTxId ? "tx:edit" : "tx:create")
         : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
+      if (!editingTxId && offlineNow && txPendingDocuments.length) {
+        throw new Error(_txModalText("L’envoi de documents nécessite une connexion. Retire-les ou réessaie en ligne.", "Uploading documents requires a connection. Remove them or try again online."));
+      }
       const currentRecurringRuleId = String(currentTx?.recurringRuleId || currentTx?.recurring_rule_id || "").trim() || null;
       const generatedByRule = !!(currentTx?.generatedByRule || currentTx?.generated_by_rule);
       const recurringRuleChanged = recurringRuleId !== currentRecurringRuleId;
@@ -1331,7 +1385,23 @@ async function saveModal() {
             rpcArgs
           );
           if (error) throw error;
-          if (recurringRuleId) await _txLinkToRecurringRule(data, recurringRuleId);
+          const createdId = _txCreatedId(data);
+          if (recurringRuleId) await _txLinkToRecurringRule(createdId || data, recurringRuleId);
+          if (txPendingDocuments.length) {
+            try {
+              if (!createdId) throw new Error(_txModalText("Identifiant de transaction introuvable.", "Transaction identifier missing."));
+              if (typeof window.tbTxDocUploadAndLink !== "function") throw new Error(_txModalText("Service Documents indisponible.", "Document service unavailable."));
+              await window.tbTxDocUploadAndLink(createdId, txPendingDocuments, {
+                label,
+                category,
+                amount,
+                currency: wallet.currency,
+                dateStart: cashDate,
+              });
+            } catch (documentError) {
+              documentWarning = documentError?.message || String(documentError);
+            }
+          }
         }
       }
 
@@ -1342,6 +1412,13 @@ async function saveModal() {
       } else if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:save");
       else await refreshFromServer();
       try { if (typeof toastOk === "function") toastOk(wasEditing ? "Transaction modifiée." : "Transaction enregistrée."); } catch (_) {}
+      if (documentWarning) {
+        const message = _txModalText(
+          `Transaction enregistrée, mais les documents n’ont pas tous été ajoutés : ${documentWarning}`,
+          `Transaction saved, but not all documents were added: ${documentWarning}`
+        );
+        try { if (typeof toastWarn === "function") toastWarn(message); else alert(message); } catch (_) {}
+      }
       });
     }, editingTxId ? "Mise à jour en cours…" : "Enregistrement en cours…");
   } finally {

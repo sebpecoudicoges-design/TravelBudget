@@ -3,8 +3,8 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 263,
-    "lazyJsMaxKiB": 450,
-    "totalJsMaxKiB": 712,
+    "lazyJsMaxKiB": 454,
+    "totalJsMaxKiB": 716,
     "totalCssMaxKiB": 59,
     "mainJsGzipMaxKiB": 110
   },
@@ -80,6 +80,13 @@
         "src/features/analysis/analysisChartOptions.js",
         "src/features/analysis/analysisRuntime.js",
         "src/features/analysis/analysisView.js"
+      ]
+    },
+    {
+      "name": "analysis-cash-breakdown",
+      "maxKiB": 8,
+      "paths": [
+        "src/features/analysis/analysisCashBreakdown.js"
       ]
     },
     {
