@@ -1,3 +1,5 @@
+import { isBudgetOffsetIncome, isTripBudgetIncomeShare } from '../../core/dailyBudgetRules.js';
+
 function num(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -7,25 +9,11 @@ function entries(map, limit) {
   return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
 }
 
-function key(value) {
-  return String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
 export function isExpenseOffsetIncome(tx = {}, expenseCategories = []) {
-  const category = key(tx?.category);
-  return String(tx?.type || '').toLowerCase() === 'income' && Boolean(category)
-    && (isTripBudgetIncomeShare(tx) || expenseCategories.some((value) => key(value) === category));
+  return isBudgetOffsetIncome(tx, expenseCategories);
 }
 
-export function isTripBudgetIncomeShare(tx = {}) {
-  if (String(tx?.type || '').toLowerCase() !== 'income') return false;
-  const affectsBudget = tx?.affectsBudget ?? tx?.affects_budget;
-  const outOfBudget = tx?.outOfBudget ?? tx?.out_of_budget;
-  const internal = tx?.isInternal ?? tx?.is_internal;
-  const label = String(tx?.label || '').trim();
-  return affectsBudget !== false && outOfBudget !== true && internal === true
-    && /^\[trip\]\s*part entree\s*-/i.test(label.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
-}
+export { isTripBudgetIncomeShare };
 
 export function isTripCashIncome(tx = {}) {
   if (String(tx?.type || '').toLowerCase() !== 'income') return false;

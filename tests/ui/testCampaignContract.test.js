@@ -144,4 +144,15 @@ describe('tester campaign contract', () => {
     expect(migration).toContain('montant intégral réellement encaissé');
     expect(migration).toContain("set app_version = '10.5.356'");
   });
+
+  it('retests income offsets from the shared daily budget in 10.5.357', () => {
+    const migration = read('supabase/migrations/20260828070523_daily_budget_income_offsets_10_5_357.sql');
+
+    expect(migration).toContain("module.module_key in ('dashboard', 'analysis')");
+    expect(migration).toContain("module.module_key = 'dashboard'");
+    expect(migration).toContain('parent.sort_order = 4');
+    expect(migration).toContain('Avoirs dans le budget journalier 10.5.357');
+    expect(migration).toContain('Un revenu ordinaire comme Salaire ne réduit jamais les dépenses');
+    expect(migration).toContain("set app_version = '10.5.357'");
+  });
 });

@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "905ca94aa02e56bcd4471829ec0b673fcd1acbd6",
-  "snapshotFingerprint": "f00df4e3a42208fcea6047184716bf86ec1192c3ebd28652b8b9e4cd44b510b8",
-  "generatedAt": "2026-08-28T03:40:46.838Z",
+  "commit": "d3592b43cf4c954198996d402ce9438dba4a4567",
+  "snapshotFingerprint": "88333ee71e5615683a09f263eb9bd16451438eca2124eeef750b6a22a5daf294",
+  "generatedAt": "2026-08-28T07:11:31.102Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.356"
+    "version": "10.5.357"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -571,7 +571,8 @@
     "supabase/migrations/20260816100004_fix_subscription_cash_summary_10_5_353.sql",
     "supabase/migrations/20260822003936_subscriptions_assisted_linking_10_5_354.sql",
     "supabase/migrations/20260827075944_transaction_documents_nutrition_analysis_10_5_355.sql",
-    "supabase/migrations/20260828032002_analysis_trip_cash_budget_breakdown_10_5_356.sql"
+    "supabase/migrations/20260828032002_analysis_trip_cash_budget_breakdown_10_5_356.sql",
+    "supabase/migrations/20260828070523_daily_budget_income_offsets_10_5_357.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

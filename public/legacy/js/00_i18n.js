@@ -77,7 +77,7 @@
       "dashboard.analysis.body": "Le dashboard reste centre sur l'etat actuel. L'espace Analyse porte la trajectoire, les categories, la cadence et les ecarts budget vs reel.",
       "dashboard.analysis.open": "Ouvrir Analyse",
       "dashboard.analysis.trip": "Voir Partage",
-      "dashboard.daily.used": "Budget utilise",
+      "dashboard.daily.used": "Budget net utilise",
       "dashboard.daily.target": "Objectif",
       "dashboard.daily.no_allocation": "Aucune allocation",
       "dashboard.daily.display": "Affichage",

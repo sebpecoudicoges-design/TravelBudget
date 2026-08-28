@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildDailyBudgetAllocations,
+  isBudgetOffsetIncome,
   isInternalMovement,
+  isTripBudgetIncomeShare,
   isTripBudgetShare,
   summarizeDailyBudget,
   transactionAffectsCash,
@@ -40,6 +42,31 @@ describe('daily budget rules core', () => {
     expect(isInternalMovement(share)).toBe(false);
     expect(transactionAffectsDailyBudget(share)).toBe(true);
     expect(transactionAffectsCash(share)).toBe(false);
+  });
+
+  it('treats category-matched and Trip income as negative budget consumption', () => {
+    const refund = {
+      id: 'refund', type: 'income', amount: 25, currency: 'AUD', category: 'Transport',
+      subcategory: 'Essence', budgetDateStart: '2026-08-28', affectsBudget: true,
+    };
+    const tripShare = {
+      id: 'trip-income', type: 'income', label: '[Trip] Part entree - Voiture', amount: 48.5,
+      currency: 'AUD', category: 'Transport', subcategory: 'Essence', budgetDateStart: '2026-08-28',
+      payNow: false, affectsBudget: true, outOfBudget: false, isInternal: true,
+    };
+    const salary = {
+      id: 'salary', type: 'income', amount: 2000, category: 'Revenu',
+      budgetDateStart: '2026-08-28', affectsBudget: true,
+    };
+    const options = { expenseCategories: ['Transport'], baseCurrencyForDate: () => 'AUD' };
+
+    expect(isBudgetOffsetIncome(refund, ['Transport'])).toBe(true);
+    expect(isTripBudgetIncomeShare(tripShare)).toBe(true);
+    expect(isInternalMovement(tripShare)).toBe(false);
+    expect(transactionAffectsDailyBudget(tripShare)).toBe(true);
+    expect(buildDailyBudgetAllocations(refund, options)[0].amountBase).toBe(-25);
+    expect(buildDailyBudgetAllocations(tripShare, options)[0].amountBase).toBe(-48.5);
+    expect(buildDailyBudgetAllocations(salary, options)).toEqual([]);
   });
 
   it('distributes an expense evenly using timezone-safe ISO dates', () => {
@@ -96,6 +123,19 @@ describe('daily budget rules core', () => {
       remaining: 63,
     });
     expect(result.rows).toHaveLength(2);
+  });
+
+  it('nets expense allocations and refunds into the daily remaining budget', () => {
+    const result = summarizeDailyBudget({
+      dailyBudget: 100,
+      allocations: [
+        { amountBase: 33.37, label: 'Transport' },
+        { amountBase: -48.5, label: '[Trip] Parts reçues' },
+      ],
+    });
+
+    expect(result.used).toBeCloseTo(-15.13);
+    expect(result.remaining).toBeCloseTo(115.13);
   });
 
   it('includes global rows and rows from the active travel only', () => {

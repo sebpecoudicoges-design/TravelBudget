@@ -436,7 +436,7 @@ function renderDailyBudget() {
     const info = (typeof getDailyBudgetInfoForDate === "function") ? getDailyBudgetInfoForDate(dateStr) : { remaining: 0, daily: 0, used: 0, rows: [], baseCurrency: state.period.baseCurrency };
     const baseDay = String(info.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
     const budget = Number(info.remaining) || 0;
-    const spentBudget = Math.max(0, Number(info.used) || 0);
+    const spentBudget = Number(info.used) || 0;
     const details = Array.isArray(info.rows) ? info.rows : [];
 
     const div = document.createElement("div");

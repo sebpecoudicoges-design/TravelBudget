@@ -7,6 +7,10 @@ function firstDefined(...values) {
   return values.find((value) => value !== undefined && value !== null);
 }
 
+function normalizedKey(value) {
+  return String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function cleanISODate(value) {
   const iso = String(value || '').slice(0, 10);
   return ISO_DATE_RE.test(iso) ? iso : null;
@@ -55,13 +59,33 @@ export function isTripBudgetShare(tx) {
   );
 }
 
-export function isInternalMovement(tx) {
-  const internal = !!firstDefined(tx?.isInternal, tx?.is_internal, false);
-  return internal && !isTripBudgetShare(tx);
+export function isTripBudgetIncomeShare(tx) {
+  if (String(tx?.type || '').toLowerCase() !== 'income') return false;
+  const label = normalizedKey(tx?.label);
+  return !!(
+    tx?.tripShareLinkId ||
+    tx?.trip_share_link_id ||
+    /^\[trip\]\s*part entree\s*-/.test(label)
+  );
 }
 
-export function transactionAffectsDailyBudget(tx) {
-  if (String(tx?.type || '').toLowerCase() !== 'expense') return false;
+export function isBudgetOffsetIncome(tx, expenseCategories = []) {
+  if (String(tx?.type || '').toLowerCase() !== 'income') return false;
+  if (firstDefined(tx?.affectsBudget, tx?.affects_budget, true) === false) return false;
+  if (firstDefined(tx?.outOfBudget, tx?.out_of_budget, false)) return false;
+  if (isTripBudgetIncomeShare(tx)) return true;
+  const category = normalizedKey(tx?.category);
+  return !!category && expenseCategories.some((value) => normalizedKey(value) === category);
+}
+
+export function isInternalMovement(tx) {
+  const internal = !!firstDefined(tx?.isInternal, tx?.is_internal, false);
+  return internal && !isTripBudgetShare(tx) && !isTripBudgetIncomeShare(tx);
+}
+
+export function transactionAffectsDailyBudget(tx, { expenseCategories = [] } = {}) {
+  const type = String(tx?.type || '').toLowerCase();
+  if (type !== 'expense' && !isBudgetOffsetIncome(tx, expenseCategories)) return false;
   if (isInternalMovement(tx)) return false;
   if (firstDefined(tx?.affectsBudget, tx?.affects_budget, true) === false) return false;
   return !firstDefined(tx?.outOfBudget, tx?.out_of_budget, false);
@@ -97,7 +121,7 @@ export function transactionAmountForDate(tx, dateISO) {
 }
 
 export function buildDailyBudgetAllocations(tx, options = {}) {
-  if (!transactionAffectsDailyBudget(tx)) return [];
+  if (!transactionAffectsDailyBudget(tx, options)) return [];
 
   const start = transactionBudgetStart(tx);
   const end = transactionBudgetEnd(tx);
@@ -112,7 +136,8 @@ export function buildDailyBudgetAllocations(tx, options = {}) {
     const dateStr = new Date((startDay + offset) * DAY_MS).toISOString().slice(0, 10);
     if (options.includesDate && !options.includesDate(dateStr)) continue;
     const baseCurrency = String(options.baseCurrencyForDate?.(dateStr, tx) || tx?.currency || 'EUR').toUpperCase();
-    const perDay = amount / days;
+    const direction = String(tx?.type || '').toLowerCase() === 'income' ? -1 : 1;
+    const perDay = (amount / days) * direction;
     const converted = options.convertAmount
       ? options.convertAmount(perDay, tx?.currency, dateStr, tx, baseCurrency)
       : perDay;
@@ -145,4 +170,3 @@ export function summarizeDailyBudget({ dailyBudget = 0, allocations = [], assetA
     rows: [...transactionRows, ...assetRows],
   };
 }
-

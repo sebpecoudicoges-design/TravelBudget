@@ -58,10 +58,11 @@ function tbGetNightCoveredInsightForTx(tx, targetCurrency) {
   };
 }
 
-function buildAllocationsForTx(tx) {
+function buildAllocationsForTx(tx, options = {}) {
   const rules = window.Core?.dailyBudgetRules;
   if (!rules) return [];
   return rules.buildDailyBudgetAllocations(tx, {
+    expenseCategories: options.expenseCategories || [],
     idFactory: () => uid("a"),
     includesDate: (dateStr) => periodContains(dateStr),
     baseCurrencyForDate: (dateStr) => {
@@ -85,6 +86,11 @@ function buildAllocationsForTx(tx) {
 
 function recomputeAllocations() {
   state.allocations = [];
-  for (const tx of state.transactions) state.allocations.push(...buildAllocationsForTx(tx));
+  const rules = window.Core?.dailyBudgetRules;
+  const expenseCategories = [...new Set((state.transactions || [])
+    .filter((tx) => String(tx?.type || '').toLowerCase() === 'expense' && rules?.transactionAffectsDailyBudget?.(tx))
+    .map((tx) => String(tx?.category || '').trim())
+    .filter(Boolean))];
+  for (const tx of state.transactions) state.allocations.push(...buildAllocationsForTx(tx, { expenseCategories }));
   try { if (typeof window.tbClearBudgetCaches === "function") window.tbClearBudgetCaches(); } catch (_) {}
 }

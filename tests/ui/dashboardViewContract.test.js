@@ -9,6 +9,7 @@ describe('dashboard view extraction contract', () => {
   const kpiView = fs.readFileSync('src/features/kpi/kpiView.js', 'utf8');
   const kpiLegacy = fs.readFileSync('public/legacy/js/11_kpi_render_micro_animation.js', 'utf8');
   const dashboardView = fs.readFileSync('src/features/dashboard/dashboardView.js', 'utf8');
+  const allocations = fs.readFileSync('public/legacy/js/06_allocations.js', 'utf8');
   const premiumTheme = fs.readFileSync('src/ui/premium-theme.css', 'utf8');
 
   it('keeps a clear colored emoji for every dashboard module tab', () => {
@@ -212,6 +213,14 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).not.toContain('function _dbClampISO');
     expect(legacy).not.toContain('function _dbLoadView');
     expect(legacy).not.toContain('travelbudget_daily_budget_view_v1');
+  });
+
+  it('feeds category refunds and Trip income shares into the shared daily budget', () => {
+    expect(allocations).toContain('const expenseCategories = [...new Set');
+    expect(allocations).toContain('buildAllocationsForTx(tx, { expenseCategories })');
+    expect(allocations).toContain('expenseCategories: options.expenseCategories || []');
+    expect(legacy).toContain('const spentBudget = Number(info.used) || 0;');
+    expect(legacy).not.toContain('const spentBudget = Math.max(0, Number(info.used) || 0);');
   });
 
   it('keeps wallet dialog rendering delegated and style injection side-effect free', () => {

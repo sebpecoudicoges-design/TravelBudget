@@ -67,7 +67,7 @@
       "dashboard.analysis.body": "The dashboard stays focused on the current state. Analysis handles trajectory, categories, pace and budget vs actual gaps.",
       "dashboard.analysis.open": "Open Analysis",
       "dashboard.analysis.trip": "View Split",
-      "dashboard.daily.used": "Budget used",
+      "dashboard.daily.used": "Net budget used",
       "dashboard.daily.target": "Target",
       "dashboard.daily.no_allocation": "No allocation",
       "dashboard.daily.display": "Display",

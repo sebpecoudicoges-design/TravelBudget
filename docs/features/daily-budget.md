@@ -26,11 +26,13 @@ Dashboard, notifications quotidiennes et écrans qui affichent le budget utilis�
 - Entrées : transactions, périodes, segments, budget par jour, allocations Trip et Patrimoine.
 - Sorties : montant quotidien, utilisé, restant et lignes contributrices.
 - Le calcul n'est pas persisté comme un solde autonome : il dépend des données du contexte actif.
+- Une entrée dans une catégorie qui porte aussi des dépenses est un avoir budgétaire : son allocation quotidienne est négative. Une quote-part personnelle reçue depuis Trip suit toujours cette règle, tandis qu'un revenu ordinaire (`Revenu`, salaire, chômage) ne réduit pas les dépenses.
 
 ## Conséquences à vérifier
 
 - Même résultat dans les KPI, les lignes journalières et les notifications.
 - Une dépense Trip ne compte que selon la politique de part personnelle.
+- Une dépense Transport de 33,37 et des quote-parts Trip reçues de 48,50 donnent une consommation nette de -15,13 pour le jour; le restant peut donc dépasser l'objectif quotidien.
 - Les revenus Travail et allocations Patrimoine suivent leur politique budgétaire.
 - Les périodes et segments utilisent la bonne devise et les bonnes bornes.
 - Résultat identique après hydratation offline et sur Android.

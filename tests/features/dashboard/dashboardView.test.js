@@ -296,6 +296,16 @@ describe('Dashboard view helpers', () => {
     expect(empty).toContain('dashboard.daily.no_allocation');
   });
 
+  it('keeps a negative net use visible when refunds exceed expenses', () => {
+    const html = renderDailyBudgetDay({
+      date: '2026-08-28', budget: 115.13, used: -15.13, daily: 100,
+      baseCurrency: 'AUD', details: [{ label: '[Trip] Parts reçues', amountBase: -48.5, baseCurrency: 'AUD' }], t,
+    });
+
+    expect(html).toContain('-15 AUD');
+    expect(html).toContain('[Trip] Parts reçues : -49 AUD');
+  });
+
   it('renders wallet create and edit dialogs with stable field ids', () => {
     const createHtml = renderWalletCreateDialog();
     const editHtml = renderWalletEditDialog({

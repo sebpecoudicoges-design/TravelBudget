@@ -34,6 +34,7 @@ Analyse > vue d'ensemble, catégories, sous-catégories, tendances, références
 - Exemple contractuel : sortie Essence 100 + entrée Essence 25 = dépense budgétaire nette 75, mais trésorerie brute 100 sorti / 25 entré / -75 net.
 - En périmètre Budget, la trésorerie pure garde côte à côte les catégories et sous-catégories des entrées et sorties, y compris lorsque le filtre général affiche les flux planifiés ; les autres périmètres gardent la lecture agrégée.
 - Pour Trip, l'avance et l'encaissement complets alimentent uniquement la trésorerie réelle. La quote-part personnelle générée par Trip réduit uniquement le budget de sa catégorie et de sa sous-catégorie.
+- La qualification des avoirs vient du moteur partagé `dailyBudgetRules` afin que Dashboard, budget journalier, courbe et Analyse appliquent le même signe.
 - Exclusions hors budget, parts Trip et allocations d'actifs appliquées une seule fois, sans compenser le montant cash intégral par une quote-part personnelle.
 - Drilldown égal au total agrégé.
 - Filtres, graphiques et vue mobile Android restent exploitables.

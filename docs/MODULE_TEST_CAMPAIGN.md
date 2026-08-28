@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.356`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.357`.
 
 ## Objectif
 
@@ -120,6 +120,8 @@ En `10.5.354`, Abonnements ajoute l espace **A associer**. Les transactions non 
 En `10.5.355`, Transactions accepte plusieurs documents directement dans la création et les relie seulement après obtention de l'identifiant serveur. Alimentation remplace les rerendus complets au clic sur un aliment par une mise à jour ciblée et regroupe les rendus optimistes à la frame suivante. Analyse impute une entrée dans une catégorie de dépense comme un avoir budgétaire, sans perdre son flux brut de trésorerie, et détaille les sous-catégories des entrées/sorties uniquement en périmètre Budget + Flux réel. Quatre retests sont ouverts.
 
 En `10.5.356`, Analyse sépare les flux Trip réellement encaissés ou débités de leurs quote-parts personnelles. La trésorerie pure affiche les montants cash intégraux sous la catégorie et la sous-catégorie Trip; seul le montant personnel généré par Trip réduit la consommation budgétaire correspondante. Catégories et sous-catégories restent côte à côte dans tout le périmètre Budget. Le scénario 10.5.355 est précisé et un retest descendant Trip est ouvert.
+
+En `10.5.357`, la règle des avoirs remonte dans le moteur du budget journalier partagé. Une entrée affectée à une catégorie de dépense, dont les quote-parts personnelles Trip, génère une allocation négative; les salaires et autres revenus ordinaires restent hors consommation. Dashboard, courbe et Analyse partagent ainsi le même net. Un retest descendant du budget journalier rouvre Dashboard et Analyse.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 
