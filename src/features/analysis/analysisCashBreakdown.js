@@ -14,7 +14,78 @@ function key(value) {
 export function isExpenseOffsetIncome(tx = {}, expenseCategories = []) {
   const category = key(tx?.category);
   return String(tx?.type || '').toLowerCase() === 'income' && Boolean(category)
-    && expenseCategories.some((value) => key(value) === category);
+    && (isTripBudgetIncomeShare(tx) || expenseCategories.some((value) => key(value) === category));
+}
+
+export function isTripBudgetIncomeShare(tx = {}) {
+  if (String(tx?.type || '').toLowerCase() !== 'income') return false;
+  const affectsBudget = tx?.affectsBudget ?? tx?.affects_budget;
+  const outOfBudget = tx?.outOfBudget ?? tx?.out_of_budget;
+  const internal = tx?.isInternal ?? tx?.is_internal;
+  const label = String(tx?.label || '').trim();
+  return affectsBudget !== false && outOfBudget !== true && internal === true
+    && /^\[trip\]\s*part entree\s*-/i.test(label.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+}
+
+export function isTripCashIncome(tx = {}) {
+  if (String(tx?.type || '').toLowerCase() !== 'income') return false;
+  const linked = tx?.tripExpenseId || tx?.trip_expense_id || tx?.tripShareLinkId || tx?.trip_share_link_id;
+  const label = String(tx?.label || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return Boolean(linked) || /^\[trip\]\s*entree recue\s*-/i.test(label);
+}
+
+export function isTripCashExpense(tx = {}) {
+  if (String(tx?.type || '').toLowerCase() !== 'expense') return false;
+  const linked = tx?.tripExpenseId || tx?.trip_expense_id || tx?.tripShareLinkId || tx?.trip_share_link_id;
+  return Boolean(linked) || /^\[trip\]\s*avance\s*-/i.test(String(tx?.label || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+}
+
+export function filterCashTransactions({ rows = [], scope = 'budget', paid, internal, out, category, subcategory, tripCash, excluded = new Set(), categoryFilter = 'all', subcategoryFilter = 'all' } = {}) {
+  return rows.filter((tx) => {
+    const cat = category(tx);
+    const sub = subcategory(tx);
+    if (!paid(tx) || internal(tx)) return false;
+    if ((scope === 'budget' && out(tx) && !tripCash(tx)) || (scope === 'out' && !out(tx))) return false;
+    if (categoryFilter && categoryFilter !== 'all' && categoryFilter !== '__income' && cat !== categoryFilter) return false;
+    if ((subcategoryFilter === '__none__' && sub) || (subcategoryFilter && subcategoryFilter !== 'all' && subcategoryFilter !== '__none__' && sub !== subcategoryFilter)) return false;
+    return !(excluded.size && excluded.has(cat));
+  });
+}
+
+export function filterTransactionsInRange({ rows = [], type, travelId, start, end, rowType, rowTravelId, budgetStart, budgetEnd } = {}) {
+  return rows.filter((tx) => {
+    const txTravelId = String(rowTravelId(tx) || '');
+    if (travelId && txTravelId && txTravelId !== String(travelId)) return false;
+    if (rowType(tx) !== type) return false;
+    const from = budgetStart(tx);
+    const to = budgetEnd(tx);
+    return Boolean(from && to && (!start || to >= start) && (!end || from <= end));
+  });
+}
+
+export function selectCashFlows(options = {}) {
+  const ranged = (type) => filterTransactionsInRange({ ...options, type });
+  const common = {
+    scope: options.scope, paid: options.paid, internal: options.internal, out: options.out,
+    category: options.category, subcategory: options.subcategory, excluded: options.excluded,
+    categoryFilter: options.categoryFilter, subcategoryFilter: options.subcategoryFilter,
+  };
+  return {
+    income: filterCashTransactions({ ...common, rows: ranged('income'), tripCash: isTripCashIncome }),
+    expenses: filterCashTransactions({ ...common, rows: ranged('expense'), tripCash: isTripCashExpense }),
+  };
+}
+
+export function applyPaidBudgetOffsets({ offsets = [], allocate, paidMap, isReal } = {}) {
+  let delta = 0;
+  for (const tx of offsets) {
+    if (!isReal(tx)) continue;
+    const alloc = allocate(tx);
+    if (!alloc.visibleBudgetDays.length) continue;
+    delta -= alloc.amount;
+    alloc.visibleBudgetDays.forEach((day) => paidMap[day] = num(paidMap[day]) - alloc.perDay);
+  }
+  return delta;
 }
 
 export function applyBudgetOffsets({ offsets = [], allocate, category, subcategory, dailyMap, categoryMap, categoryRows, subcategoryMap, subcategoryRows } = {}) {
@@ -69,7 +140,6 @@ export function buildCashBreakdown({
   subcategory,
   isPaid,
   scope = 'budget',
-  mode = 'planned',
 } = {}) {
   const incomeCategories = new Map();
   const expenseCategories = new Map();
@@ -90,12 +160,19 @@ export function buildCashBreakdown({
     cashExpenseCategories: entries(expenseCategories, 5),
     cashIncomeSubcategories: entries(incomeSubcategories, 8),
     cashExpenseSubcategories: entries(expenseSubcategories, 8),
-    cashBreakdownBySubcategory: scope === 'budget' && mode === 'expenses',
+    cashBreakdownBySubcategory: scope === 'budget',
   };
 }
 
-export function renderCashSubcategoryGrids({ model, renderRows, t, escape, formatCurrency } = {}) {
-  if (!model?.cashBreakdownBySubcategory) return '';
-  const card = (title, rows, tone) => `<div class="analysis-stat" style="min-height:auto;padding:14px;"><div class="analysis-stat-label" style="margin-bottom:8px;">${escape(title)}</div><div style="display:flex;flex-direction:column;gap:6px;">${renderRows(rows, tone, { formatCurrency, currency: model.base, emptyLabel: t('Aucune sous-catégorie', 'No subcategory') })}</div></div>`;
-  return `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px;">${card(t('Entrées par sous-catégorie', 'Income by subcategory'), model.cashIncomeSubcategories, '#10b981')}${card(t('Sorties par sous-catégorie', 'Outflows by subcategory'), model.cashExpenseSubcategories, '#f43f5e')}</div>`;
+export function renderCashBreakdownGrids({ model, renderRows, t, escape, formatCurrency } = {}) {
+  const card = (title, rows, tone, emptyLabel) => `<div class="analysis-stat" style="min-height:auto;padding:14px;"><div class="analysis-stat-label" style="margin-bottom:8px;">${escape(title)}</div><div style="display:flex;flex-direction:column;gap:6px;">${renderRows(rows, tone, { formatCurrency, currency: model.base, emptyLabel })}</div></div>`;
+  const noData = t('Aucune donnée', 'No data');
+  const noSubcategory = t('Aucune sous-catégorie', 'No subcategory');
+  const blocks = [
+    card(t('Entrées par catégorie', 'Income by category'), model.cashIncomeCategories, '#10b981', noData),
+    model?.cashBreakdownBySubcategory ? card(t('Entrées par sous-catégorie', 'Income by subcategory'), model.cashIncomeSubcategories, '#10b981', noSubcategory) : '',
+    card(t('Sorties par catégorie', 'Outflows by category'), model.cashExpenseCategories, '#f43f5e', noData),
+    model?.cashBreakdownBySubcategory ? card(t('Sorties par sous-catégorie', 'Outflows by subcategory'), model.cashExpenseSubcategories, '#f43f5e', noSubcategory) : '',
+  ].filter(Boolean);
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:12px;">${blocks.join('')}</div>`;
 }

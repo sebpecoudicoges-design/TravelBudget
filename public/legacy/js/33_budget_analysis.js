@@ -413,7 +413,7 @@
   function _isInternalMovement(tx){ return String(tx?.category || '').trim().toLowerCase() === 'mouvement interne'; }
   function _isInternalTransferLinked(tx){ return !!(tx?.internal_transfer_id || tx?.internalTransferId); }
   function _isAnalysisInternalMovement(tx) {
-    if (_isTripBudgetShare(tx)) return false;
+    if (_isTripBudgetShare(tx) || window.TBAnalysisCashBreakdown?.isTripBudgetIncomeShare?.(tx)) return false;
     if (_isInternalTransferLinked(tx)) return true;
     if (tx?.is_internal === true || tx?.isInternal === true) return true;
     return typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : _isInternalMovement(tx);
@@ -543,7 +543,7 @@ function _analysisBucketOrder(){
     (Array.isArray(state?.categories) ? state.categories : []).forEach(add);
     _analysisTransactions().forEach(tx => {
       if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return;
-      if (_txType(tx) === 'income') add('Revenu');
+      if (_txType(tx) === 'income') { add('Revenu'); add(tx?.category); }
       else if (_txType(tx) === 'expense' && _txAffectsAnalysisDataset(tx)) add(tx?.category);
     });
     return out.sort((a,b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
@@ -707,22 +707,10 @@ function _analysisBucketOrder(){
   function _baseIncomeTransactions(){
   const travelId = _getSelectedTravelId();
   const { start, end } = _analysisRange();
-
-  return (Array.isArray(state?.transactions) ? state.transactions : []).filter(tx => {
-    const txTravelId = String(tx?.travel_id || tx?.travelId || '');
-    if (travelId && txTravelId && txTravelId !== String(travelId)) return false;
-
-    if (_txType(tx) !== 'income') return false;
-
-    const bs = _txBudgetStart(tx);
-    const be = _txBudgetEnd(tx);
-    if (!bs || !be) return false;
-
-    if (start && be < start) return false;
-    if (end && bs > end) return false;
-
-    return true;
-  });
+  return window.TBAnalysisCashBreakdown?.filterTransactionsInRange?.({
+    rows: Array.isArray(state?.transactions) ? state.transactions : [], type: 'income', travelId, start, end,
+    rowType: _txType, rowTravelId: (tx) => tx?.travel_id || tx?.travelId, budgetStart: _txBudgetStart, budgetEnd: _txBudgetEnd,
+  }) || [];
 }
 function _incomeSplit(txs){
   const real = [];
@@ -755,7 +743,7 @@ function _sumTxArray(txs, base){
 
     if (scope === 'budget' && _txOut(tx)) return false;
     if (scope === 'out' && !_txOut(tx)) return false;
-    if (mode === 'expenses' && !_txPaid(tx)) return false;
+    if (mode === 'expenses' && !_txPaid(tx) && !window.TBAnalysisCashBreakdown?.isTripBudgetIncomeShare?.(tx)) return false;
     if (catFilter && catFilter !== 'all' && catFilter !== '__income' && cat !== catFilter) return false;
     if (subFilter === '__none__' && sub) return false;
     if (subFilter && subFilter !== 'all' && subFilter !== '__none__' && sub !== subFilter) return false;
@@ -829,11 +817,21 @@ function _sumTxArray(txs, base){
     const cutoffEnd = _analysisCutoffEnd();
     const base = _resolveAnalysisCurrency(start, end);
     const incomeTxs = _filteredIncomeTransactions();
-    const { real: incomeReal, planned: incomePlanned } = _incomeSplit(incomeTxs);
+    const cashFlows = window.TBAnalysisCashBreakdown?.selectCashFlows?.({
+      rows: _analysisTransactions(), scope: _el('analysis-scope')?.value || 'budget', travelId: _getSelectedTravelId(), start, end,
+      rowType: _txType, rowTravelId: (tx) => tx?.travel_id || tx?.travelId, budgetStart: _txBudgetStart, budgetEnd: _txBudgetEnd,
+      paid: _txPaid, internal: _isAnalysisInternalMovement, out: _txOut, category: _txCategory, subcategory: _txSubcategory,
+      excluded: _excludedCategorySet(), categoryFilter: _selectedCategoryFilter(), subcategoryFilter: _selectedSubcategoryFilter(),
+    }) || {};
+    const cashIncomeReal = cashFlows.income || [];
+    const cashExpenseReal = cashFlows.expenses || [];
+    const incomeCashCandidates = incomeTxs.filter((tx) => !window.TBAnalysisCashBreakdown?.isTripBudgetIncomeShare?.(tx));
+    const { planned: incomePlanned } = _incomeSplit(incomeCashCandidates);
     const expenseCats = [...new Set(txs.map(_txCategory).filter(Boolean))];
     const expenseOffsets = incomeTxs.filter((tx) => window.TBAnalysisCashBreakdown?.isExpenseOffsetIncome?.(tx, expenseCats));
 
-    const incomeRealAmount = _sumTxArray(incomeReal, base);
+    const incomeRealAmount = _sumTxArray(cashIncomeReal, base);
+    const cashExpenseRealAmount = _sumTxArray(cashExpenseReal, base);
     const incomePlannedAmount = _sumTxArray(incomePlanned, base);
     const days = _daysInclusive(start, end);
     const daySet = new Set(days);
@@ -928,6 +926,10 @@ if (sub) {
     spent += window.TBAnalysisCashBreakdown?.applyBudgetOffsets?.({
       offsets: expenseOffsets, allocate: _txAmountInVisibleWindow, category: _txCategory, subcategory: _txSubcategory, dailyMap,
       categoryMap: catMap, categoryRows: categoryTxMap, subcategoryMap: subcatMap, subcategoryRows: subcategoryTxMap,
+    }) || 0;
+    paidSpent += window.TBAnalysisCashBreakdown?.applyPaidBudgetOffsets?.({
+      offsets: expenseOffsets, allocate: _txAmountInVisibleWindow, paidMap,
+      isReal: (tx) => _txPaid(tx) || !!window.TBAnalysisCashBreakdown?.isTripBudgetIncomeShare?.(tx),
     }) || 0;
 
     const targetDaily = days.map(d => _dailyBudgetForDate(d, base));
@@ -1204,20 +1206,19 @@ const expenseUnpaid = Math.max(0, spent - paidSpent);
 const expenseRemaining = expenseUnpaid;
 
 const deltaProjectedWithBudget =
-  (incomeRealAmount - paidSpent) +
+  (incomeRealAmount - cashExpenseRealAmount) +
   incomePlannedAmount -
   expenseRemaining -
   budgetRemaining;
 
 const cashBreakdown = window.TBAnalysisCashBreakdown?.buildCashBreakdown?.({
-  income: incomeReal,
-  expenses: txs,
+  income: cashIncomeReal,
+  expenses: cashExpenseReal,
   convert: (tx) => _convert(tx?.amount, tx?.currency || base, _txCashDate(tx), base),
   category: _txCategory,
   subcategory: _txSubcategory,
-  isPaid: _txAnalysisPaid,
+  isPaid: () => true,
   scope: cashflowScope,
-  mode: cashflowMode,
 }) || {};
 
 return {
@@ -1226,15 +1227,15 @@ return {
   incomeReal: incomeRealAmount,
   incomeToDate: incomeRealAmount,
   incomePlanned: incomePlannedAmount,
-  expenseReal: paidSpent,
+  expenseReal: cashExpenseRealAmount,
 expenseToDate: spentToToday,
 budgetRemaining,
 
 expensePlanned: expenseRemaining,
 
-deltaReal: incomeRealAmount - paidSpent,
+deltaReal: incomeRealAmount - cashExpenseRealAmount,
 deltaPlanned: -expenseRemaining,
-deltaProjected: (incomeRealAmount - paidSpent) + incomePlannedAmount - expenseRemaining,
+deltaProjected: (incomeRealAmount - cashExpenseRealAmount) + incomePlannedAmount - expenseRemaining,
 deltaProjectedWithBudget,
   totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod,
   remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay,

@@ -77,22 +77,28 @@ describe('Analysis view extraction contract', () => {
   });
 
   it('builds pure cashflow only from received income and paid expenses', () => {
-    expect(legacy).toContain('const { real: incomeReal, planned: incomePlanned } = _incomeSplit(incomeTxs);');
+    expect(legacy).toContain('const cashFlows = window.TBAnalysisCashBreakdown?.selectCashFlows?.({');
+    expect(legacy).toContain('const { planned: incomePlanned } = _incomeSplit(incomeCashCandidates);');
     expect(legacy).toContain('if (_txAnalysisPaid(tx)) paidSpent += alloc.amount;');
     expect(legacy).toContain('window.TBAnalysisCashBreakdown?.buildCashBreakdown');
     expect(cashBreakdown).toContain('income.forEach((row) => add(row');
     expect(cashBreakdown).toContain('expenses.filter((row) => isPaid(row))');
-    expect(legacy).toContain('deltaReal: incomeRealAmount - paidSpent');
+    expect(legacy).toContain('deltaReal: incomeRealAmount - cashExpenseRealAmount');
   });
 
   it('nets expense-category income into budget spend and exposes real-cash subcategories', () => {
     expect(legacy).toContain('const expenseOffsets = incomeTxs.filter');
     expect(cashBreakdown).toContain('const visibleAmount = -alloc.amount;');
     expect(legacy).toContain('window.TBAnalysisCashBreakdown?.buildCashBreakdown');
-    expect(filterView).toContain('window.TBAnalysisCashBreakdown?.renderCashSubcategoryGrids');
-    expect(cashBreakdown).toContain("scope === 'budget' && mode === 'expenses'");
+    expect(filterView).toContain('window.TBAnalysisCashBreakdown?.renderCashBreakdownGrids');
+    expect(cashBreakdown).toContain("scope === 'budget'");
     expect(cashBreakdown).toContain('Entrées par sous-catégorie');
     expect(cashBreakdown).toContain('Sorties par sous-catégorie');
+    expect(legacy).toContain('isTripBudgetIncomeShare?.(tx)');
+    expect(cashBreakdown).toContain('filterCashTransactions({ ...common');
+    expect(cashBreakdown).toContain('!tripCash(tx)');
+    expect(legacy).toContain('const cashExpenseReal = cashFlows.expenses || [];');
+    expect(legacy).toContain('applyPaidBudgetOffsets?.({');
   });
 
   it('keeps the Analysis unpaid panel delegated out of the legacy file', () => {

@@ -184,11 +184,7 @@
           <div style="padding:14px;border-radius:18px;background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.16);"><div style="display:flex;justify-content:space-between;gap:10px;font-weight:850;"><span>${escapeHTML(tr("Sorties payees", "Paid outflows"))}</span><span style="color:#f43f5e;">${escapeHTML(money(cashOut))}</span></div><div class="bar" style="height:9px;margin-top:12px;background:rgba(15,23,42,.08);border-radius:999px;overflow:hidden;"><i style="display:block;height:100%;width:${cashOutPct.toFixed(0)}%;background:linear-gradient(90deg,#fb7185,#f59e0b);border-radius:inherit;"></i></div></div>
           <div style="padding:14px;border-radius:18px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.16);"><div style="font-size:12px;color:rgba(15,23,42,.58);">${escapeHTML(tr("Couverture entrees/sorties", "Income/outflow coverage"))}</div><div style="margin-top:6px;font-size:23px;font-weight:950;color:#2563eb;">${Number.isFinite(cashCoverage) ? cashCoverage.toFixed(0) : "0"}%</div><div style="margin-top:4px;font-size:12px;color:rgba(15,23,42,.52);">${escapeHTML(model.start)} - ${escapeHTML(model.end)}</div></div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px;">
-          <div class="analysis-stat" style="min-height:auto;padding:14px;"><div class="analysis-stat-label" style="margin-bottom:8px;">${escapeHTML(tr("Entrées par catégorie", "Income by category"))}</div><div style="display:flex;flex-direction:column;gap:6px;">${renderCashRows(model.cashIncomeCategories, "#10b981", { formatCurrency, currency: model.base, emptyLabel: tr("Aucune donnée", "No data") })}</div></div>
-          <div class="analysis-stat" style="min-height:auto;padding:14px;"><div class="analysis-stat-label" style="margin-bottom:8px;">${escapeHTML(tr("Sorties par catégorie", "Outflows by category"))}</div><div style="display:flex;flex-direction:column;gap:6px;">${renderCashRows(model.cashExpenseCategories, "#f43f5e", { formatCurrency, currency: model.base, emptyLabel: tr("Aucune donnée", "No data") })}</div></div>
-        </div>
-        ${window.TBAnalysisCashBreakdown?.renderCashSubcategoryGrids?.({ model, renderRows: renderCashRows, t: tr, escape: escapeHTML, formatCurrency }) || ""}
+        ${window.TBAnalysisCashBreakdown?.renderCashBreakdownGrids?.({ model, renderRows: renderCashRows, t: tr, escape: escapeHTML, formatCurrency }) || ""}
       </div>`;
   }
 

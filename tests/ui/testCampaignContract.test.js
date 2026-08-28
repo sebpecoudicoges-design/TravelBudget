@@ -133,4 +133,15 @@ describe('tester campaign contract', () => {
     expect(migration).toContain("module.module_key = 'assets'");
     expect(migration).toContain("set app_version = '10.5.331'");
   });
+
+  it('keeps the Trip cash and personal budget retest in the Analysis lineage in 10.5.356', () => {
+    const migration = read('supabase/migrations/20260828032002_analysis_trip_cash_budget_breakdown_10_5_356.sql');
+
+    expect(migration).toContain("module.module_key = 'analysis'");
+    expect(migration).toContain("'35600000-0000-4000-8000-000000000001'::uuid");
+    expect(migration).toContain("'35500000-0000-4000-8000-000000000003'::uuid");
+    expect(migration).toContain('Trip : trésorerie et budget 10.5.356');
+    expect(migration).toContain('montant intégral réellement encaissé');
+    expect(migration).toContain("set app_version = '10.5.356'");
+  });
 });
