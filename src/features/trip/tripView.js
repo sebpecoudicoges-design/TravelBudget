@@ -712,7 +712,6 @@ export function renderTripSplitBox({
             </td>
           </tr>`;
     }).join('');
-
     return `
           <table class="trip-split-table">
             <thead><tr><th>Participant</th><th>Montant</th></tr></thead>

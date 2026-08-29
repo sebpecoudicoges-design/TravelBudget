@@ -110,11 +110,13 @@ export function validateTripLinkedEdit(next, current) {
 }
 
 export function isTripLinkedTransaction(tx) {
+  const label = String(tx?.label || '').trim().toLowerCase();
   return !!(
     tx?.tripExpenseId ||
     tx?.trip_expense_id ||
     tx?.tripShareLinkId ||
-    tx?.trip_share_link_id
+    tx?.trip_share_link_id ||
+    label.startsWith('[trip] ')
   );
 }
 

@@ -302,8 +302,16 @@ describe('Dashboard view helpers', () => {
       baseCurrency: 'AUD', details: [{ label: '[Trip] Parts reçues', amountBase: -48.5, baseCurrency: 'AUD' }], t,
     });
 
-    expect(html).toContain('-15 AUD');
+    expect(html).toContain('+15 AUD');
     expect(html).toContain('[Trip] Parts reçues : -49 AUD');
+    expect(html).toContain('pill good');
+    expect(html).toContain('+15 AUD');
+  });
+
+  it('shows a negative budget marker when expenses consume the daily target', () => {
+    const html = renderDailyBudgetDay({ date: '2026-08-29', budget: 42, used: 58, daily: 100, baseCurrency: 'AUD', t });
+    expect(html).toContain('pill bad');
+    expect(html).toContain('−58 AUD');
   });
 
   it('renders wallet create and edit dialogs with stable field ids', () => {

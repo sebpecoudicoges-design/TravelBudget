@@ -35,6 +35,8 @@ Transactions > Ajouter, modifier, dupliquer ou supprimer une transaction.
 - Attribution à la bonne période et au bon segment.
 - Budget journalier, KPI Dashboard et Analyse budget/réel.
 - Conservation ou suppression des liaisons Trip et Patrimoine.
+- Une ligne gérée par Trip reste verrouillée même si une ancienne liaison technique manque : le libellé canonique Trip suffit à retirer Payer, Dupliquer, Edit et Del, puis à renvoyer vers le module source.
+- Le statut `Confirmée` n'est visible que pour une vraie occurrence récurrente, jamais pour une transaction manuelle ou une ombre Trip.
 - Rejeu offline sans double création.
 - Modale utilisable sur Android/Capacitor.
 - Création avec plusieurs documents sans double transaction ; blocage explicite de l'envoi hors ligne.

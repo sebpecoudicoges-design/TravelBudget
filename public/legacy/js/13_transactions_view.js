@@ -1380,13 +1380,14 @@ if (isBudgetOnlyInternalTransferFee) return false;
     const isInternalTransfer = !!internalTransferId;
     const w = findWallet(tx.walletId);
     const recurringTags = [];
-    if (tx.generatedByRule || tx.recurringRuleId) recurringTags.push(_txT("transactions.tag.recurring"));
+    const isRecurring = !!(tx.generatedByRule || tx.recurringRuleId);
+    if (isRecurring) recurringTags.push(_txT("transactions.tag.recurring"));
 
     const st = String(tx.recurringInstanceStatus || "").toLowerCase();
-    if (st === "generated") recurringTags.push(_txT("transactions.tag.generated"));
-    if (st === "confirmed") recurringTags.push(_txT("transactions.tag.confirmed"));
-    if (st === "detached") recurringTags.push(_txT("transactions.tag.detached"));
-    if (st === "skipped") recurringTags.push(_txT("transactions.tag.skipped"));
+    if (isRecurring && st === "generated") recurringTags.push(_txT("transactions.tag.generated"));
+    if (isRecurring && st === "confirmed") recurringTags.push(_txT("transactions.tag.confirmed"));
+    if (isRecurring && st === "detached") recurringTags.push(_txT("transactions.tag.detached"));
+    if (isRecurring && st === "skipped") recurringTags.push(_txT("transactions.tag.skipped"));
 
     const tags = [
       tx.type === "expense" ? (tx.payNow ? _txT("transactions.tag.paid") : _txT("transactions.tag.unpaid")) : _txT("transactions.tag.income"),
@@ -1404,6 +1405,12 @@ if (isBudgetOnlyInternalTransferFee) return false;
     const txChecked = TB_TX_BULK.selectedIds.has(String(tx.id));
     const linkedExpenseId = String(tx.tripExpenseId || tx.trip_expense_id || "");
     const linkedTripShareId = String(tx.tripShareLinkId || tx.trip_share_link_id || "");
+    const sourceLock = window.Core?.transactionGuards?.getTransactionLockState?.(tx, {
+      walletAdjustmentCategory: TB_CONST?.CATS?.wallet_adjustment || 'Ajustement wallet',
+    }) || { locked: false, kind: null };
+    const tripLinkByTransaction = (state.tripBudgetLinks || []).find((link) => String(link?.transactionId || link?.transaction_id || '') === String(tx.id || ''));
+    const sourceTripExpenseId = linkedExpenseId || String(tripLinkByTransaction?.expenseId || tripLinkByTransaction?.expense_id || '');
+    const isTripManaged = sourceLock.kind === 'trip_linked';
     const tripBudgetLink = linkedExpenseId
       ? (state.tripBudgetLinks || []).find((link) => String(link?.expenseId || link?.expense_id || "") === linkedExpenseId && (link?.transactionId || link?.transaction_id))
       : null;
@@ -1455,21 +1462,23 @@ if (isBudgetOnlyInternalTransferFee) return false;
       </div>
 
       <div class="tx-actions" style="display:flex; gap:8px; align-items:center;">
-        ${linkedExpenseId
-          ? `<button class="btn small" type="button" onclick="tbOpenTripExpenseFromTransaction('${escapeHTML(linkedExpenseId)}')">${escapeHTML(_txT("transactions.action.open_trip"))}</button>`
-          : linkedTripShareId
+        ${sourceTripExpenseId
+          ? `<button class="btn small" type="button" onclick="tbOpenTripExpenseFromTransaction('${escapeHTML(sourceTripExpenseId)}')">${escapeHTML(_txT("transactions.action.open_trip"))}</button>`
+          : linkedTripShareId || isTripManaged
             ? `<button class="btn small" type="button" onclick="showView('trip')">${escapeHTML(_txT("transactions.action.open_trip"))}</button>`
           : ""
         }
-        ${(!tx.payNow && (tx.type === "expense" || tx.type === "income"))
+        ${(!sourceLock.locked && !tx.payNow && (tx.type === "expense" || tx.type === "income"))
           ? `<button class="btn small primary" onclick="markTxAsPaid(\'${tx.id}\')">${tx.type === "income" ? _txT("transactions.action.received") : _txT("transactions.action.pay")}</button>`
           : ""
         }
         <button class="btn small" type="button" data-tx-doc-btn="${escapeHTML(String(tx.id))}" onclick="window.tbTxDocOpen('${escapeHTML(String(tx.id))}')">${escapeHTML(_txT("transactions.action.invoice"))}</button>
-        <button class="btn small" type="button" onclick="openTxDuplicateModal('${escapeHTML(String(tx.id))}')">Dupliquer</button>
-        <button class="btn small" onclick="openTxEditModal('${tx.id}')">Edit</button>
+        ${sourceLock.locked ? '' : `<button class="btn small" type="button" onclick="openTxDuplicateModal('${escapeHTML(String(tx.id))}')">Dupliquer</button>`}
+        ${sourceLock.locked ? '' : `<button class="btn small" onclick="openTxEditModal('${tx.id}')">Edit</button>`}
         ${
-  isInternalTransfer
+  sourceLock.locked && !isInternalTransfer
+    ? ''
+    : isInternalTransfer
     ? `<button class="btn small danger" onclick="deleteInternalTransfer('${escapeHTML(String(internalTransferId))}')">Del</button>`
     : `<button class="btn small danger" onclick="deleteTx('${tx.id}')">Del</button>`
 }

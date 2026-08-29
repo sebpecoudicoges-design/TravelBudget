@@ -439,14 +439,15 @@ export function renderDailyBudgetDay({
   const tr = typeof t === 'function' ? t : fallbackT;
   const base = String(baseCurrency || 'EUR').toUpperCase();
   const detailRows = Array.isArray(details) ? details : [];
+  const netUsed = Number(used) || 0;
   return `
     <div class="top">
       <div><strong>${esc(date)}</strong></div>
       <div class="pill ${esc(budgetClassName)}"><span class="dot"></span>${esc((Number(budget) || 0).toFixed(0))} ${esc(base)}</div>
     </div>
-    <div style="margin-top:6px; color:#6b7280; font-size:12px; display:flex; justify-content:space-between; gap:10px;">
-      <div>${esc(tr('dashboard.daily.used'))} : <b style="color:#111827;">${esc((Number(used) || 0).toFixed(0))} ${esc(base)}</b></div>
-      <div>${esc(tr('dashboard.daily.target'))} : <b style="color:#111827;">${esc((Number(daily) || 0).toFixed(0))} ${esc(base)}</b></div>
+    <div class="row" style="margin-top:8px;color:var(--tb-muted);font-size:12px;justify-content:space-between">
+      <div>${esc(tr('dashboard.daily.used'))} : <b class="pill ${netUsed < 0 ? 'good' : netUsed > 0 ? 'bad' : ''}">${netUsed < 0 ? '+' : netUsed > 0 ? '−' : ''}${esc(Math.abs(netUsed).toFixed(0))} ${esc(base)}</b></div>
+      <div>${esc(tr('dashboard.daily.target'))} : <b>${esc((Number(daily) || 0).toFixed(0))} ${esc(base)}</b></div>
     </div>
     ${detailRows.length
       ? `<div class="details">${detailRows.map((item) => `&bull; ${esc(item?.label || '')} : ${esc((Number(item?.amountBase) || 0).toFixed(0))} ${esc(item?.baseCurrency || base)}`).join('<br>')}</div>`

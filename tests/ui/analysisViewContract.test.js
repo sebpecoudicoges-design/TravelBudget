@@ -88,6 +88,10 @@ describe('Analysis view extraction contract', () => {
 
   it('nets expense-category income into budget spend and exposes real-cash subcategories', () => {
     expect(legacy).toContain('const expenseOffsets = incomeTxs.filter');
+    expect(legacy).toContain('const bd = window.TBAnalysisCashBreakdown?.applyBudgetOffsets');
+    expect(legacy).toContain('credits: -bd');
+    expect(legacy).toContain("Budget net vs projection");
+    expect(legacy).toContain("_fmtMoney(model.credits, model.base)");
     expect(cashBreakdown).toContain('const visibleAmount = -alloc.amount;');
     expect(legacy).toContain('window.TBAnalysisCashBreakdown?.buildCashBreakdown');
     expect(filterView).toContain('window.TBAnalysisCashBreakdown?.renderCashBreakdownGrids');

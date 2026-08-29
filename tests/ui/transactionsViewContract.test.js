@@ -51,4 +51,13 @@ describe('transactions view extraction contract', () => {
     expect(legacy).not.toContain('_txBulkCompatibleSubscriptions');
     expect(legacy).not.toContain('generated_blocked');
   });
+
+  it('does not offer payment or editing actions for source-managed Trip rows', () => {
+    expect(legacy).toContain("const sourceLock = window.Core?.transactionGuards?.getTransactionLockState");
+    expect(legacy).toContain("const isTripManaged = sourceLock.kind === 'trip_linked'");
+    expect(legacy).toContain('!sourceLock.locked && !tx.payNow');
+    expect(legacy).toContain("sourceLock.locked ? '' : `<button class=\"btn small\" type=\"button\" onclick=\"openTxDuplicateModal");
+    expect(legacy).toContain('if (isRecurring && st === "confirmed")');
+    expect(legacy).not.toContain('if (st === "confirmed") recurringTags.push');
+  });
 });

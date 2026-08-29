@@ -123,6 +123,8 @@ En `10.5.356`, Analyse sépare les flux Trip réellement encaissés ou débités
 
 En `10.5.357`, la règle des avoirs remonte dans le moteur du budget journalier partagé. Une entrée affectée à une catégorie de dépense, dont les quote-parts personnelles Trip, génère une allocation négative; les salaires et autres revenus ordinaires restent hors consommation. Dashboard, courbe et Analyse partagent ainsi le même net. Un retest descendant du budget journalier rouvre Dashboard et Analyse.
 
+En `10.5.358`, la lecture devient explicite : Analyse nomme le budget net et précise les entrées déduites, tandis que le budget journalier affiche un marqueur plus vert ou moins rouge. L'audit d'une ligne de 75,94 EUR révèle une ancienne ombre Trip orpheline à côté de sa quote-part liée; elle est neutralisée sans suppression lorsqu'un remplacement lié strictement identique existe. Les transactions gérées par Trip ne proposent plus les actions de paiement ou de modification, et `Confirmée` reste réservé aux règles récurrentes. La répartition Trip par montants affiche en direct le reste à attribuer, la complétion ou le dépassement; la première saisie manuelle libère les autres valeurs automatiques pour permettre une attribution progressive. Quatre retests descendants rouvrent Dashboard, Analyse, Transactions et Trip.
+
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 
 ## Historique et cloture

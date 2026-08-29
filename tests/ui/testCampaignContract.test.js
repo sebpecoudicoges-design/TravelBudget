@@ -155,4 +155,26 @@ describe('tester campaign contract', () => {
     expect(migration).toContain('Un revenu ordinaire comme Salaire ne réduit jamais les dépenses');
     expect(migration).toContain("set app_version = '10.5.357'");
   });
+
+  it('clarifies net budget signs and repairs only replaced Trip shadows in 10.5.358', () => {
+    const migration = read('supabase/migrations/20260829025542_clarify_net_budget_and_repair_trip_shadow_10_5_358.sql');
+
+    expect(migration).toContain("module.module_key in ('dashboard', 'analysis', 'transactions')");
+    expect(migration).toContain('not exists (');
+    expect(migration).toContain('join public.trip_expense_budget_links replacement_link');
+    expect(migration).toContain('replacement.amount = orphan.amount');
+    expect(migration).toContain("'35800000-0000-4000-8000-000000000001'::uuid");
+    expect(migration).toContain("'35800000-0000-4000-8000-000000000002'::uuid");
+    expect(migration).toContain("'35800000-0000-4000-8000-000000000003'::uuid");
+    expect(migration).toContain("set app_version = '10.5.358'");
+  });
+
+  it('opens the progressive Trip amount split retest in 10.5.358', () => {
+    const migration = read('supabase/migrations/20260829031015_trip_split_remaining_10_5_358.sql');
+
+    expect(migration).toContain("module.module_key = 'trip'");
+    expect(migration).toContain('Reste à attribuer par participant 10.5.358');
+    expect(migration).toContain('Reste à attribuer : 32 AUD');
+    expect(migration).toContain("parent.title = 'Depense partagee'");
+  });
 });

@@ -8,6 +8,15 @@ import {
 export function getTransactionLockState(tx, options = {}) {
   if (!tx) return { locked: false, readonly: false, kind: null, reason: null };
 
+  if (isTripLinkedTransaction(tx)) {
+    return {
+      locked: true,
+      readonly: true,
+      kind: 'trip_linked',
+      reason: "Transaction geree par Trip : modification verrouillee. Modifie la depense depuis l'onglet Trip.",
+    };
+  }
+
   if (isInternalTransferTransaction(tx)) {
     return {
       locked: true,
@@ -23,15 +32,6 @@ export function getTransactionLockState(tx, options = {}) {
       readonly: true,
       kind: 'wallet_adjustment',
       reason: "Transaction d'ajustement wallet : modification verrouillee. Utilise l'action Ajuster solde pour creer un nouvel ajustement.",
-    };
-  }
-
-  if (isTripLinkedTransaction(tx)) {
-    return {
-      locked: true,
-      readonly: true,
-      kind: 'trip_linked',
-      reason: "Transaction liee a une depense Trip : modification verrouillee. Modifie la depense depuis l'onglet Trip.",
     };
   }
 

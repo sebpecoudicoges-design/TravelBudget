@@ -21,6 +21,14 @@ describe('transaction guards', () => {
     expect(lock.kind).toBe('trip_linked');
   });
 
+  it('locks legacy Trip rows from their canonical source label', () => {
+    const tx = { label: '[Trip] Dépense partagée', payNow: false };
+    const lock = getTransactionLockState(tx);
+    expect(lock.locked).toBe(true);
+    expect(lock.kind).toBe('trip_linked');
+    expect(validateTransactionAction(tx, 'mark_paid').ok).toBe(false);
+  });
+
   it('locks internal transfers before the generic edit RPC', () => {
     const tx = { id: 'tx-internal', internalTransferId: 'transfer-1' };
     const lock = getTransactionLockState(tx);

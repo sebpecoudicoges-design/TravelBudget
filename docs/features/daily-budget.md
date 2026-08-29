@@ -33,6 +33,7 @@ Dashboard, notifications quotidiennes et écrans qui affichent le budget utilis�
 - Même résultat dans les KPI, les lignes journalières et les notifications.
 - Une dépense Trip ne compte que selon la politique de part personnelle.
 - Une dépense Transport de 33,37 et des quote-parts Trip reçues de 48,50 donnent une consommation nette de -15,13 pour le jour; le restant peut donc dépasser l'objectif quotidien.
+- Le rendu journalier accompagne le montant net d'un marqueur signé : moins lorsque la journée consomme le budget, plus lorsqu'un avoir le recrédite.
 - Les revenus Travail et allocations Patrimoine suivent leur politique budgétaire.
 - Les périodes et segments utilisent la bonne devise et les bonnes bornes.
 - Résultat identique après hydratation offline et sur Android.

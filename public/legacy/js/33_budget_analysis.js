@@ -923,10 +923,11 @@ if (sub) {
 }
     }
 
-    spent += window.TBAnalysisCashBreakdown?.applyBudgetOffsets?.({
+    const bd = window.TBAnalysisCashBreakdown?.applyBudgetOffsets?.({
       offsets: expenseOffsets, allocate: _txAmountInVisibleWindow, category: _txCategory, subcategory: _txSubcategory, dailyMap,
       categoryMap: catMap, categoryRows: categoryTxMap, subcategoryMap: subcatMap, subcategoryRows: subcategoryTxMap,
     }) || 0;
+    spent += bd;
     paidSpent += window.TBAnalysisCashBreakdown?.applyPaidBudgetOffsets?.({
       offsets: expenseOffsets, allocate: _txAmountInVisibleWindow, paidMap,
       isReal: (tx) => _txPaid(tx) || !!window.TBAnalysisCashBreakdown?.isTripBudgetIncomeShare?.(tx),
@@ -1240,7 +1241,7 @@ deltaProjectedWithBudget,
   totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod,
   remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay,
   referenceMiscPerDay, comparablePerDay, unmappedPerDay, excludedPerDay,
-  projection, cumSpent, cumTarget, cumReference, velocity, heat,
+  projection, credits: -bd, cumSpent, cumTarget, cumReference, velocity, heat,
   topCategories, categorySeries, subcategorySeries, referenceCategorySeries,
   referenceComparisonSeries, unmappedCategorySeries, outAmount,
   spentToToday, targetToToday, referenceToToday, referenceGap,
@@ -1385,10 +1386,10 @@ categoryTxMap, subcategoryTxMap
         haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(236,253,245,.40))'
       },
       {
-        label: trA('Budget consommé vs projection', 'Budget used vs projection'),
-        title: trA('Consommé vs projection', 'Used vs projection'),
+        label: trA('Budget net vs projection', 'Net budget vs projection'),
+        title: trA('Net vs final', 'Net vs final'),
         value: ratioText(model.spentToToday, model.projection),
-        hint: trA('Dates analysées vs final.', 'Analyzed dates vs final.'),
+        hint: trA('Avoirs déduits : ', 'Credits: ') + _fmtMoney(model.credits, model.base),
         pct: model.projection > 0 ? clampPct((model.spentToToday / model.projection) * 100) : 0,
         footer: model.projection > model.totalBudget ? trA('Tendance finale au-dessus du budget app', 'Final trend above app budget') : trA('Tendance finale contenue dans le budget app', 'Final trend within app budget'),
         tint:'blue',

@@ -4569,12 +4569,13 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
       // Preserve current inputs if re-rendering
       const prevPct = {};
       const prevAmt = {};
+      let hadManualAmount = false;
       members.forEach(m => {
         const p = _el(`trip-split-pct-${m.id}`)?.value;
         const amtInput = _el(`trip-split-amt-${m.id}`);
         const a = amtInput && amtInput.dataset.auto !== "1" ? amtInput.value : undefined;
         if (p !== undefined) prevPct[m.id] = p;
-        if (a !== undefined) prevAmt[m.id] = a;
+        if (a !== undefined) { prevAmt[m.id] = a; hadManualAmount = true; }
       });
 
       const seedAmounts = members.reduce((acc, m) => {
@@ -4588,7 +4589,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
       }
 
       if (mode === "amount") {
-        box.dataset.auto = "1";
+        box.dataset.auto = hadManualAmount ? "0" : "1";
         autoParts = _computeSplitParts(amt, members, {
           mode: "amount_auto",
           selectedMemberIds: selectedIds,
@@ -4610,14 +4611,40 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
       }) || "";
 
       if (mode === "amount") {
+        box.insertAdjacentHTML("afterbegin", '<div id="trip-split-amount-status" class="pill" role="status" aria-live="polite"></div>');
+        const updateStatus = () => {
+          const statusEl = _el("trip-split-amount-status");
+          const total = Number(_el("trip-exp-amount")?.value || 0);
+          const assigned = members.reduce((sum, member) => {
+              const input = _el(`trip-split-amt-${member.id}`);
+              return sum + (!input?.disabled ? Number(input?.value || 0) : 0);
+            }, 0);
+          const remaining = Math.round((total - assigned) * 100) / 100;
+          const currency = _tripResolveExpenseCurrency();
+          if (!statusEl) return;
+          statusEl.className = `pill ${remaining ? (remaining > 0 ? "warn" : "bad") : "good"}`;
+          statusEl.textContent = remaining
+            ? `${remaining > 0 ? "Reste à attribuer" : "Dépassement"} : ${Math.abs(remaining)}${currency ? ` ${currency}` : ""}`
+            : "Répartition complète";
+        };
         members.forEach(m => {
           const input = _el(`trip-split-amt-${m.id}`);
           if (input && !input.disabled) {
-            input.oninput = () => { input.dataset.auto = "0"; };
+            input.oninput = () => {
+              if (input.dataset.auto === "1") {
+                box.querySelectorAll('input[id^="trip-split-amt-"][data-auto="1"]').forEach(other => {
+                  if (other !== input) { other.value = ""; other.dataset.auto = "0"; }
+                });
+              }
+              input.dataset.auto = "0";
+              box.dataset.auto = "0";
+              updateStatus();
+            };
             input.onchange = _renderSplitBox;
             input.onblur = _renderSplitBox;
           }
         });
+        updateStatus();
         return;
       }
       return;

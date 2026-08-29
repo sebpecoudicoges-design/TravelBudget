@@ -29,11 +29,15 @@ describe('Trip shared modal migration', () => {
     expect(tripView).toContain('for="tripSettleAmount"');
   });
 
-  it('keeps the visible amount mode while delegating smart remaining split to rules', () => {
+  it('keeps the visible amount mode and switches from auto to guided manual attribution', () => {
     expect(source).toContain('mode: "amount_auto"');
-    expect(source).toContain('box.dataset.auto = "1"');
+    expect(source).toContain('box.dataset.auto = hadManualAmount ? "0" : "1"');
+    expect(source).toContain('box.dataset.auto = "0"');
     expect(source).toContain('tripView?.renderTripSplitBox');
+    expect(source).toContain('Math.round((total - assigned) * 100) / 100');
     expect(tripView).toContain('data-auto="1"');
+    expect(source).toContain('Reste à attribuer');
+    expect(source).toContain('statusEl.className = `pill ${remaining ?');
     expect(source).toContain('mode: mode === "amount" && _el("trip-split-box")?.dataset?.auto === "1" ? "amount_auto" : mode');
   });
 

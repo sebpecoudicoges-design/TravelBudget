@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `d3592b43cf4c954198996d402ce9438dba4a4567`
-> Empreinte du snapshot : `88333ee71e5615683a09f263eb9bd16451438eca2124eeef750b6a22a5daf294`
-> Généré le : `2026-08-28T07:11:31.102Z`
+> Commit analysé : `eb29f472ca79efff8374b14e2c43d3de23b2e7c8`
+> Empreinte du snapshot : `37ddbfc132894b1186953c613d3e17d15265ed0b1bcf08d52437c54dff9598ba`
+> Généré le : `2026-08-29T03:26:25.626Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.357` |
+| Version | `10.5.358` |
 | Écrans déclarés | 17 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 46 |
 | Fichiers de tests | 127 |
-| Migrations Supabase | 148 |
+| Migrations Supabase | 150 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -624,6 +624,8 @@ Modules :
 - `supabase/migrations/20260827075944_transaction_documents_nutrition_analysis_10_5_355.sql`
 - `supabase/migrations/20260828032002_analysis_trip_cash_budget_breakdown_10_5_356.sql`
 - `supabase/migrations/20260828070523_daily_budget_income_offsets_10_5_357.sql`
+- `supabase/migrations/20260829025542_clarify_net_budget_and_repair_trip_shadow_10_5_358.sql`
+- `supabase/migrations/20260829031015_trip_split_remaining_10_5_358.sql`
 
 ## Android et budgets de modules
 

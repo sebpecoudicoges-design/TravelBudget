@@ -221,6 +221,7 @@ describe('dashboard view extraction contract', () => {
     expect(allocations).toContain('expenseCategories: options.expenseCategories || []');
     expect(legacy).toContain('const spentBudget = Number(info.used) || 0;');
     expect(legacy).not.toContain('const spentBudget = Math.max(0, Number(info.used) || 0);');
+    expect(dashboardView).toContain("class=\"pill ${netUsed < 0 ? 'good' : netUsed > 0 ? 'bad' : ''}\"");
   });
 
   it('keeps wallet dialog rendering delegated and style injection side-effect free', () => {

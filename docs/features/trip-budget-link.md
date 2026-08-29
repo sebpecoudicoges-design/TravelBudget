@@ -27,6 +27,7 @@ Partage > créer ou modifier une dépense, choisir le payeur, les parts, le wall
 - `trip_expenses`, `trip_expense_shares`, `trip_expense_budget_links`, `transactions`, `wallets`.
 - Une avance peut débiter le wallet du total tout en n'affectant le budget personnel que selon la part retenue.
 - Les IDs de synchronisation protègent le rejeu mobile/offline.
+- En répartition `Montants`, la première saisie manuelle remplace le préremplissage automatique. Un statut vivant annonce le reste à attribuer, la complétion ou le dépassement dans la devise de la dépense.
 
 ## Conséquences à vérifier
 
@@ -35,6 +36,7 @@ Partage > créer ou modifier une dépense, choisir le payeur, les parts, le wall
 - Édition et suppression cohérentes des deux côtés de la liaison.
 - Remboursements et settlements inchangés.
 - Rejeu offline idempotent et parcours Android complet.
+- Répartition progressive exacte au centime, lisible en clair/sombre sur desktop et mobile.
 
 ## Risques connus
 
