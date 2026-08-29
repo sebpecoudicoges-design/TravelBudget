@@ -18,7 +18,6 @@ describe('public project page visual contract', () => {
     expect(page).toContain('data-project-theme="system"');
     expect(page).toContain('data-project-theme="dark"');
     expect(page).toContain('budgetpacker_project_theme_v1');
-    expect(page).toContain(':root[data-theme-resolved="dark"] .project-strip');
     expect(page).toContain(':root[data-theme-resolved="dark"] .control-card');
     expect(page).toContain(':root[data-theme-resolved="dark"] .release-spotlight');
     expect(page).toContain(':root[data-theme-resolved="dark"] .mock-side');
@@ -49,5 +48,34 @@ describe('public project page visual contract', () => {
     expect(enhancements).not.toContain('checklistStorageKey');
     expect(styles).not.toContain('.project-checklist');
     expect(styles).not.toContain('.checklist-item');
+  });
+
+  it('keeps the redesigned first fold compact, bilingual and mobile-safe', () => {
+    const page = read('public/projet.html');
+    const styles = read('public/project-enhancements.css');
+
+    expect(page).toContain('Ton budget, tes documents et tes objectifs. Un seul cockpit.');
+    expect(page).toContain('Your budget, documents and goals. One cockpit.');
+    expect(page).toContain('class="hero-status"');
+    expect(page).toContain('data-i18n="status.release"');
+    expect(page).toContain('data-i18n="status.mobile"');
+    expect(page).toContain('class="hero-status-item owner"');
+    expect(page).not.toContain('class="metrics"');
+    expect(page).not.toContain('class="trust-strip"');
+    expect(page).not.toContain('.project-strip');
+    expect(page).not.toContain('.project-badge');
+    expect(styles).toContain('/* 10.5.359 — Project page hierarchy and responsive first fold. */');
+    expect(styles).toContain('.hero-status {');
+    expect(styles).toContain('.nav-actions > .btn { display: none; }');
+    expect(styles).toContain('.floating-lang { display: none; }');
+  });
+
+  it('opens one focused Project page retest for 10.5.359', () => {
+    const migration = read('supabase/migrations/20260829082147_project_page_visual_10_5_359.sql');
+
+    expect(migration).toContain("module.module_key = 'project'");
+    expect(migration).toContain('Page Projet compacte et responsive 10.5.359');
+    expect(migration).toContain("lower('seb.pecoud@gmail.com')");
+    expect(migration).toContain("set app_version = '10.5.359'");
   });
 });

@@ -217,75 +217,6 @@
       line-height: 1.45;
       font-weight: 760;
     }
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 28px;
-    }
-    .metric {
-      border: 1px solid rgba(15, 23, 42, .08);
-      border-radius: 18px;
-      padding: 14px;
-      background: rgba(255,255,255,.76);
-      box-shadow: 0 14px 38px rgba(15, 23, 42, .05);
-    }
-    .metric strong { display: block; font-size: 20px; line-height: 1.1; }
-    .metric span { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; font-weight: 780; }
-    .trust-strip {
-      margin-top: 20px;
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .trust-item {
-      border: 1px solid rgba(15, 23, 42, .08);
-      border-radius: 18px;
-      padding: 13px;
-      background: rgba(255,255,255,.72);
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.42;
-      font-weight: 760;
-    }
-    .trust-item strong {
-      display: block;
-      color: var(--ink);
-      font-size: 13px;
-      margin-bottom: 4px;
-    }
-    .project-strip {
-      margin-top: 18px;
-      padding: 14px;
-      border: 1px solid rgba(37, 99, 235, .18);
-      border-radius: 18px;
-      background: linear-gradient(135deg, rgba(37,99,235,.10), rgba(20,184,166,.10)), rgba(255,255,255,.72);
-      display: grid;
-      grid-template-columns: minmax(0,1fr) auto;
-      gap: 12px;
-      align-items: center;
-      box-shadow: 0 18px 44px rgba(15, 23, 42, .08);
-    }
-    .project-strip strong {
-      display: block;
-      color: var(--tb-coral-strong);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0;
-      margin-bottom: 4px;
-    }
-    .project-strip b { display: block; font-size: 26px; line-height: 1.1; }
-    .project-strip span { display: block; color: var(--muted); font-size: 13px; margin-top: 5px; line-height: 1.45; font-weight: 760; }
-    .project-badge {
-      min-width: 116px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: var(--tb-ink);
-      color: #fff;
-      text-align: center;
-      font-weight: 950;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
-    }
     .auth-entry {
       margin-top: 18px;
       border: 1px solid rgba(15, 23, 42, .10);
@@ -1278,8 +1209,6 @@
     :root[data-theme-resolved="dark"] .nav-links a:hover { background: var(--tb-surface-soft); }
     :root[data-theme-resolved="dark"] .lang-switch,
     :root[data-theme-resolved="dark"] .theme-switch,
-    :root[data-theme-resolved="dark"] .metric,
-    :root[data-theme-resolved="dark"] .trust-item,
     :root[data-theme-resolved="dark"] .auth-entry,
     :root[data-theme-resolved="dark"] .product-frame,
     :root[data-theme-resolved="dark"] .mock-bar,
@@ -1310,14 +1239,9 @@
     :root[data-theme-resolved="dark"] .lab-head,
     :root[data-theme-resolved="dark"] .release-pulse-head,
     :root[data-theme-resolved="dark"] .trust-head { color: var(--tb-ink); }
-    :root[data-theme-resolved="dark"] .project-strip,
     :root[data-theme-resolved="dark"] .module-panel,
     :root[data-theme-resolved="dark"] .cta { border-color: var(--tb-line); }
-    :root[data-theme-resolved="dark"] .project-strip {
-      background: linear-gradient(135deg, color-mix(in srgb, var(--tb-coral) 10%, transparent), color-mix(in srgb, var(--tb-lagoon) 10%, transparent)), var(--tb-surface);
-    }
     :root[data-theme-resolved="dark"] .mock-side,
-    :root[data-theme-resolved="dark"] .project-badge,
     :root[data-theme-resolved="dark"] .lang-btn.active { background: #102229; color: #fff; border-color: var(--tb-line); }
     :root[data-theme-resolved="dark"] .release-filter { color: var(--tb-ink); }
     :root[data-theme-resolved="dark"] .release-filter.active { color: #fff; background: linear-gradient(135deg, #102229, var(--tb-coral)); }
@@ -1327,7 +1251,6 @@
       .nav-links { display: none; }
       .hero, .interactive, .modules-layout { grid-template-columns: 1fr; }
       .hero { min-height: auto; }
-      .metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
       .mock-screen { grid-template-columns: 1fr; }
       .mock-screen { grid-template-columns: 1fr; }
       .mock-side {
@@ -1342,8 +1265,6 @@
       .atlas-shell { grid-template-columns: 1fr; }
       .atlas-stage { min-height: 560px; border-right: 0; border-bottom: 1px solid rgba(148, 163, 184, .11); }
       .atlas-panel { min-height: 380px; }
-      .trust-strip { grid-template-columns: 1fr; }
-      .project-strip { grid-template-columns: 1fr; }
       .release-command, .release-spotlight { grid-template-columns: 1fr; }
       .release-filters { justify-content: flex-start; }
       .section-head { display: block; }
@@ -1354,7 +1275,7 @@
       .nav { align-items: flex-start; padding: 12px 0; }
       .nav-actions { flex-wrap: wrap; justify-content: flex-end; }
       .product-frame { padding: 8px; border-radius: 22px; }
-      .mock-grid, .result-kpis, .module-proof, .metrics { grid-template-columns: 1fr; }
+      .mock-grid, .result-kpis, .module-proof { grid-template-columns: 1fr; }
       .hero-actions .btn { width: 100%; }
       .auth-entry { grid-template-columns: 1fr; }
       .auth-entry-actions { justify-content: flex-start; }
@@ -1439,7 +1360,7 @@
     <section class="shell hero" id="top">
       <div>
         <span class="eyebrow" data-i18n="hero.eyebrow">BudgetPacker V2 - demo publique, donnees fictives</span>
-        <h1 data-i18n="hero.title">BudgetPacker, le cockpit personnel budget, documents et objectifs.</h1>
+        <h1 data-i18n="hero.title">Ton budget, tes documents et tes objectifs. Un seul cockpit.</h1>
         <p class="lead" data-i18n="hero.lead">
           Une app modulaire pour relier cashflow, transactions, taux de change, documents, patrimoine, sport, alimentation, sommeil et charge de travail dans une lecture simple.
         </p>
@@ -1458,24 +1379,10 @@
             <a class="btn compact" href="/" data-i18n="auth.login">Se connecter</a>
           </div>
         </div>
-        <div class="metrics">
-          <div class="metric"><strong data-i18n="metric.fx.title">Analyse FX</strong><span data-i18n="metric.fx.body">Taux, opportunites et conversions</span></div>
-          <div class="metric"><strong data-i18n="metric.docs.title">Documents Hub</strong><span data-i18n="metric.docs.body">Tags, dossiers, preuves liees</span></div>
-          <div class="metric"><strong data-i18n="metric.trip.title">Vie mobile</strong><span data-i18n="metric.trip.body">Budget, split, remboursements</span></div>
-          <div class="metric"><strong data-i18n="metric.safe.title">App + offline</strong><span data-i18n="metric.safe.body">Actions en attente et lecture hors ligne</span></div>
-        </div>
-        <div class="trust-strip" aria-label="Points de confiance">
-          <div class="trust-item"><strong data-i18n="trust.private.title">Donnees privees</strong><span data-i18n="trust.private.body">Supabase Auth, RLS et stockage separent les comptes de chaque utilisateur.</span></div>
-          <div class="trust-item"><strong data-i18n="trust.mobile.title">Mobile en test</strong><span data-i18n="trust.mobile.body">APK versionnee, flow de build nettoye et lien public de telechargement.</span></div>
-          <div class="trust-item"><strong data-i18n="trust.offline.title">Usage terrain</strong><span data-i18n="trust.offline.body">Lecture hors ligne, file d'attente et synchronisation au retour reseau.</span></div>
-        </div>
-        <div class="project-strip" aria-label="Projet actif">
-          <div>
-            <strong data-i18n="project.kicker">Projet ajoute</strong>
-            <b>BudgetTravel</b>
-            <span data-i18n="project.body">Cockpit personnel budget, voyage, documents, sport, alimentation, sommeil, travail et patrimoine.</span>
-          </div>
-          <div class="project-badge">BudgetTravel</div>
+        <div class="hero-status" aria-label="Statut du projet">
+          <div class="hero-status-item"><small data-i18n="status.release">Version actuelle</small><strong>10.5.359</strong></div>
+          <div class="hero-status-item"><small data-i18n="status.mobile">Android</small><strong data-i18n="status.mobile.value">APK de test</strong></div>
+          <a class="hero-status-item owner" href="https://pecloud.fr/" target="_blank" rel="noopener noreferrer"><small data-i18n="status.owner">Projet par</small><strong>Pecloud ↗</strong></a>
         </div>
       </div>
 
@@ -1680,7 +1587,7 @@
               <div class="atlas-fact"><strong id="atlasTests">101</strong><span data-i18n="atlas.tests">Fichiers de tests</span></div>
               <div class="atlas-fact"><strong id="atlasMigrations">90</strong><span data-i18n="atlas.migrations">Migrations</span></div>
             </div>
-            <div class="atlas-source" id="atlasSource">public/project-atlas.json // snapshot 10.5.335</div>
+            <div class="atlas-source" id="atlasSource">public/project-atlas.json // snapshot 10.5.359</div>
           </aside>
         </div>
       </div>
@@ -1693,9 +1600,9 @@
           <p data-i18n="app.lead">La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.</p>
         </div>
         <div class="app-grid">
-          <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105341">APK debug 10.5.341 prete pour le retest Evolution composition Sport.</p></article>
+          <article class="app-card app-card-primary"><strong>10.5.359</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105359">APK debug 10.5.359 avec la page Projet revue et les derniers chantiers fonctionnels.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.</p></article>
-          <article class="app-card"><strong>10.5.358</strong><h3>Budget net et partage guidé</h3><p>Analyse détaille les avoirs déduits, le budget quotidien affiche ses signes et Trip montre le reste à attribuer entre participants.</p></article>
+          <article class="app-card"><strong>Projet vivant</strong><h3 data-i18n="app.project.title">Atlas et fresque synchronises</h3><p data-i18n="app.project.body">La version, l inventaire du depot, les preuves de validation et l APK restent lisibles au meme endroit.</p></article>
         </div>
         <div class="release-pulse">
           <div class="release-pulse-head">
@@ -1714,6 +1621,7 @@
           <div class="release-spotlight" id="releaseSpotlight"></div>
           <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
           <div class="release-list" id="releaseSource" hidden>
+            <div class="release-row"><strong>10.5.359</strong><span>Page Projet : premier ecran raccourci, hierarchie clarifiee, statut version Android et proprietaire regroupes, navigation et cartes harmonisees en clair comme en sombre. L Atlas, la fresque et le lien APK sont synchronises apres validations. APK debug 10.5.359 publie.</span></div>
             <div class="release-row"><strong>10.5.358</strong><span>Budget, Transactions et Trip : la carte Analyse devient Budget net vs projection et précise les entrées budget déduites. Chaque journée affiche un signe moins rouge quand elle consomme le budget ou plus vert lorsqu elle est recréditée. L ancienne ombre de la dépense partagée du 25/08 est neutralisée sans suppression; les lignes Trip ne proposent plus d actions comptables interdites et le faux badge Confirmée disparaît hors récurrence. La répartition Trip par montants affiche désormais le reste à attribuer, la complétion ou le dépassement en direct. Quatre retests sont ouverts; aucun nouvel APK.</span></div>
             <div class="release-row"><strong>10.5.357</strong><span>Budget : la prise en compte des entrees affectees a une categorie de depense remonte dans le moteur journalier partage. Depenses et remboursements produisent des allocations de signes opposes; une depense Transport de 33,37 AUD face a 48,50 AUD de quote-parts Trip donne ainsi -15,13 AUD de consommation nette et 115,13 AUD restant pour une cible de 100 AUD. Les salaires et revenus ordinaires ne compensent pas les depenses. Dashboard, courbe et Analyse partagent le meme calcul. Un retest descendant rouvre Dashboard et Analyse; aucun nouvel APK.</span></div>
             <div class="release-row"><strong>10.5.356</strong><span>Analyse : les flux issus de Trip sont separes selon leur sens metier. Une entree recue ou une avance alimente la tresorerie pure pour son montant cash integral, meme si Trip la marque hors budget. La quote-part personnelle generee par Trip reste un avoir budgetaire et reduit uniquement Transport / Essence, sans double comptage. En perimetre Budget, categories et sous-categories des entrees et sorties restent visibles cote a cote dans les modes Flux reel et Planifie. Le retest 10.5.355 est precise et un descendant Trip est ouvert; aucun nouvel APK.</span></div>
@@ -2095,9 +2003,9 @@
         <div class="cta">
           <div>
             <h2 data-i18n="app.cta.title">App Android en test interne.</h2>
-            <p data-i18n="app.cta.body.105341">Telecharge l'APK versionnee 10.5.341 depuis Supabase Storage pour le retest Evolution composition Sport.</p>
+            <p data-i18n="app.cta.body.105359">Telecharge l'APK versionnee 10.5.359, issue du chantier Projet et des derniers correctifs fonctionnels.</p>
           </div>
-          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.341-20260810-192605-debug.apk" download data-i18n="app.cta.button.105341">Telecharger l'APK 10.5.341</a>
+          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.359-20260829-182109-debug.apk" download data-latest-apk data-i18n="app.cta.button.105359">Telecharger l'APK 10.5.359</a>
         </div>
       </div>
     </section>
@@ -2179,19 +2087,12 @@
         fr: {
           "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.lab": "Lab", "nav.atlas": "Atlas", "nav.app": "App", "nav.privacy": "Confidentialite", "nav.tech": "Technique", "nav.cta": "Tester la demo",
           "hero.eyebrow": "BudgetPacker V2 - demo publique, donnees fictives",
-          "hero.title": "BudgetPacker, le cockpit personnel budget, documents et objectifs.",
+          "hero.title": "Ton budget, tes documents et tes objectifs. Un seul cockpit.",
           "hero.lead": "Une app modulaire pour relier cashflow, transactions, taux de change, documents, patrimoine, sport, alimentation, sommeil et charge de travail dans une lecture simple.",
           "hero.primary": "Ouvrir la demo", "hero.secondary": "Telecharger l'APK", "hero.apk": "App Android",
           "hero.note": "La page ci-dessous ne charge aucune donnee personnelle : elle montre le produit, les modules et la logique technique.",
           "auth.title": "Acceder a l'app complete", "auth.body": "La demo est publique. Pour synchroniser tes donnees, cree un compte ou connecte-toi.", "auth.signup": "Creer un compte", "auth.login": "Se connecter",
-          "metric.fx.title": "Analyse FX", "metric.fx.body": "Taux, opportunites et conversions",
-          "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, dossiers, preuves liees",
-          "metric.trip.title": "Vie mobile", "metric.trip.body": "Budget, split, remboursements",
-          "metric.safe.title": "App + offline", "metric.safe.body": "Actions en attente et lecture hors ligne",
-          "trust.private.title": "Donnees privees", "trust.private.body": "Supabase Auth, RLS et stockage separent les comptes de chaque utilisateur.",
-          "trust.mobile.title": "Mobile en test", "trust.mobile.body": "APK versionnee, flow de build nettoye et lien public de telechargement.",
-          "trust.offline.title": "Usage terrain", "trust.offline.body": "Lecture hors ligne, file d'attente et synchronisation au retour reseau.",
-          "project.kicker": "Projet ajoute", "project.body": "Cockpit personnel budget, voyage, documents, sport, alimentation, sommeil, travail et patrimoine.",
+          "status.release": "Version actuelle", "status.mobile": "Android", "status.mobile.value": "APK de test", "status.owner": "Projet par",
           "mock.cashflow": "Cashflow estime", "mock.signal": "Signal du jour", "mock.projection": "Projection", "mock.feed": "Flux recent",
           "demo.title": "Analyse taux & conversions, sans le limiter a un pays.",
           "demo.lead": "Les valeurs sont fictives. Change le scenario, ajuste le montant source, la reserve et le taux cible : la lecture se met a jour comme une mini-version du moteur d'analyse.",
@@ -2212,7 +2113,8 @@
           "atlas.title": "L'Atlas vivant du projet.", "atlas.lead": "Explore les onze fonctions critiques, leurs domaines et les impacts a verifier avant chaque evolution.", "atlas.status": "Architecture V11 indexee", "atlas.impacts": "Impacts a verifier", "atlas.screens": "Ecrans", "atlas.critical": "Fonctions critiques", "atlas.tests": "Fichiers de tests", "atlas.migrations": "Migrations",
           "app.title": "App Android de test, lien direct et version lisible.",
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
-          "app.apk.body.105341": "APK debug 10.5.341 prete pour le retest Evolution composition Sport.",
+          "app.apk.body.105359": "APK debug 10.5.359 avec la page Projet revue et les derniers chantiers fonctionnels.",
+          "app.project.title": "Atlas et fresque synchronises", "app.project.body": "La version, l inventaire du depot, les preuves de validation et l APK restent lisibles au meme endroit.",
           "app.version.title.105353": "Flux multidevises nets", "app.version.body.105353": "Chaque montant reste dans sa carte et chaque devise conserve sa propre ligne.",
           "app.version.title.105352": "Abonnements partout accessibles", "app.version.body.105352": "Les listes Transaction sont completes, les cartes compactes et le rail admin entierement visible.",
           "app.version.title.105351": "Flux recurrents lisibles", "app.version.body.105351": "Entrees et sorties separent leur prevu, leur reel et leur difference; le bilan net suit la plage choisie.",
@@ -2234,7 +2136,7 @@
           "release.105319": "Stabilisation : choix clair/sombre/systeme sur la page Projet, premier rendu Dashboard fiabilise, Cautions retire de l interface et retours traites archives avec leurs dates.",
           "release.105318": "Interface generale : la page Projet adopte la palette corail/lagon, retire ses panneaux de suivi internes et l ecran de chargement devient plus clair, rassurant et compatible theme sombre.",
           "release.105317": "Stabilisation Dashboard : le Hero premium respecte maintenant le theme sombre, la courbe se recree au changement de theme et les mutations wallet reverifient la connexion avant Supabase.",
-          "app.cta.body.105341": "Telecharge l'APK versionnee 10.5.341 depuis Supabase Storage pour le retest Evolution composition Sport.", "app.cta.button.105341": "Telecharger l'APK 10.5.341",
+          "app.cta.body.105359": "Telecharge l'APK versionnee 10.5.359, issue du chantier Projet et des derniers correctifs fonctionnels.", "app.cta.button.105359": "Telecharger l'APK 10.5.359",
           "app.apk.body.105316": "APK debug 10.5.316 prete pour la campagne de tests modules.",
           "app.version.title.105316": "Stabilisation", "app.version.body.105316": "Campagne module par module ouverte.",
           "release.105316": "Stabilisation : les modules sont figes pour les utilisateurs standards. Le nouveau role test donne acces aux modules et a une campagne integree de 45 scenarios avec resultat OK, Pas OK, notes et cloture par module.",
@@ -2376,19 +2278,12 @@
         en: {
           "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Journeys", "nav.lab": "Lab", "nav.atlas": "Atlas", "nav.app": "App", "nav.privacy": "Privacy", "nav.tech": "Tech", "nav.cta": "Try the demo",
           "hero.eyebrow": "BudgetPacker V2 - public demo, fictional data",
-          "hero.title": "BudgetPacker, the personal cockpit for budget, documents and goals.",
+          "hero.title": "Your budget, documents and goals. One cockpit.",
           "hero.lead": "A modular app connecting cashflow, transactions, exchange-rate analysis, conversions, documents, assets, sport, nutrition, sleep and work load.",
           "hero.primary": "Open the demo", "hero.secondary": "Download APK", "hero.apk": "Android app",
           "hero.note": "This page loads no personal data: it presents the product, modules and technical logic.",
           "auth.title": "Open the full app", "auth.body": "The demo is public. To sync your own data, create an account or sign in.", "auth.signup": "Create account", "auth.login": "Sign in",
-          "metric.fx.title": "FX analysis", "metric.fx.body": "Rates, opportunities and conversions",
-          "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, folders, linked proofs",
-          "metric.trip.title": "Mobile life", "metric.trip.body": "Budget, split, reimbursements",
-          "metric.safe.title": "App + offline", "metric.safe.body": "Pending actions and offline reading",
-          "trust.private.title": "Private data", "trust.private.body": "Supabase Auth, RLS and storage keep each user's account separated.",
-          "trust.mobile.title": "Mobile testing", "trust.mobile.body": "Versioned APK, cleaned build flow and public download link.",
-          "trust.offline.title": "Field use", "trust.offline.body": "Offline reading, action queue and sync when the network returns.",
-          "project.kicker": "Added project", "project.body": "Personal cockpit for budget, travel, documents, sport, nutrition, sleep, work and assets.",
+          "status.release": "Current version", "status.mobile": "Android", "status.mobile.value": "Test APK", "status.owner": "A project by",
           "mock.cashflow": "Estimated cashflow", "mock.signal": "Today's signal", "mock.projection": "Projection", "mock.feed": "Recent feed",
           "demo.title": "FX and conversion analysis, without tying it to one country.",
           "demo.lead": "Values are fictional. Switch scenario, adjust the source amount, reserve and target rate: the page updates like a mini version of the analysis engine.",
@@ -2409,7 +2304,8 @@
           "atlas.title": "The project's living Atlas.", "atlas.lead": "Explore eleven critical capabilities, their domains and the impacts to verify before every change.", "atlas.status": "V11 architecture indexed", "atlas.impacts": "Impacts to verify", "atlas.screens": "Screens", "atlas.critical": "Critical capabilities", "atlas.tests": "Test files", "atlas.migrations": "Migrations",
           "app.title": "Android test app, direct link and readable version.",
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
-          "app.apk.body.105341": "Debug APK 10.5.341 is ready for the Sport composition trend retest.",
+          "app.apk.body.105359": "Debug APK 10.5.359 includes the redesigned Project page and the latest functional work.",
+          "app.project.title": "Synced Atlas and timeline", "app.project.body": "Version, repository inventory, validation evidence and APK stay readable in one place.",
           "app.version.title.105353": "Clean multi-currency flows", "app.version.body.105353": "Every amount stays inside its card and each currency keeps its own line.",
           "app.version.title.105352": "Subscriptions available everywhere", "app.version.body.105352": "Transaction lists are complete, cards are compact and the full admin rail stays visible.",
           "app.version.title.105351": "Clear recurring cash flow", "app.version.body.105351": "Income and expenses keep their own forecast, actual amount and difference; the net balance follows the selected range.",
@@ -2428,7 +2324,7 @@
           "release.105319": "Stabilization: light, dark and system choices on the Project page, reliable first Dashboard render, Cautions removed from the interface, and treated feedback archived with its dates.",
           "release.105318": "General interface: the Project page adopts the coral and lagoon palette, removes internal tracking panels, and the loading screen becomes clearer, reassuring and dark-mode compatible.",
           "release.105317": "Dashboard stabilization: the premium Hero now follows dark mode, the cashflow chart is recreated when the theme changes, and wallet mutations recheck connectivity before Supabase.",
-          "app.cta.body.105341": "Download versioned APK 10.5.341 from Supabase Storage for the Sport composition trend retest.", "app.cta.button.105341": "Download APK 10.5.341",
+          "app.cta.body.105359": "Download versioned APK 10.5.359 from the Project redesign and latest functional work.", "app.cta.button.105359": "Download APK 10.5.359",
           "app.apk.body.105316": "Debug APK 10.5.316 is ready for the module testing campaign.",
           "app.version.title.105316": "Stabilization", "app.version.body.105316": "The module-by-module campaign is open.",
           "release.105316": "Stabilization: modules are frozen for standard users. The new test role can access modules and an integrated 45-scenario campaign with OK, Not OK, notes and per-module completion.",
