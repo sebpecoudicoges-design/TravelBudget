@@ -123,6 +123,12 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('deleteWaterEntry');
     expect(legacy).toContain('.select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,consumed_time,created_at")');
     expect(view).toContain('renderGoalCockpit');
+    expect(legacy).toContain('cookingEditorOpen');
+    expect(legacy).toContain('id="nutrition-cook-start"');
+    expect(legacy).toContain('id="nutrition-cook-editor"');
+    expect(legacy).toContain('id="nutrition-cook-save"');
+    expect(legacy).toContain('saveCookingPortion(root)');
+    expect(legacy).toContain('publishNutrition("cooking-portion-local")');
     expect(legacy).not.toContain('Synchro alimentation en attente", "Pending nutrition sync');
     expect(legacy).not.toContain('rows.slice(0, 8).map((row, index)');
     expect(legacy).not.toContain('<section class="tb-nutrition-shell">');

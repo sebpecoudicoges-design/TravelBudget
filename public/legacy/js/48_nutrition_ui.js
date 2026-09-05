@@ -4,7 +4,7 @@
    ========================= */
 (function () {
   const NUTRITION_STORE = window.Data?.nutritionStore || null;
-  const CACHE = NUTRITION_STORE?.state || { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], sleep: {}, localRows: [], error: "", syncStatus: "", syncPhase: "", foodQuery: "", foodCategory: "all", selectedMealType: "", selectedDate: "", activeSection: "today", expandedHistory: "", editingItemId: "" };
+  const CACHE = NUTRITION_STORE?.state || { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], sleep: {}, localRows: [], error: "", syncStatus: "", syncPhase: "", foodQuery: "", foodCategory: "all", selectedMealType: "", selectedDate: "", activeSection: "today", expandedHistory: "", editingItemId: "", cookingEditorOpen: false, cookingPortionG: 545 };
   const FALLBACK_FOODS = [
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
@@ -190,10 +190,40 @@
       ],
     });
   }
+  function cookingFoodFromBatch(batch) {
+    const per100 = batch?.per100g || {};
+    return {
+      key: "recipe_demo_beef_vegetable_pasta",
+      name: batch?.name || txt("Preparation cuisinee", "Cooked preparation"),
+      servingGrams: Math.max(1, Math.round(n(batch?.perServingWeightG, 0) || n(batch?.finalWeightG, 0) / Math.max(1, n(batch?.servings, 1)) || 100)),
+      kcalPer100g: n(per100.kcal, 0),
+      proteinPer100g: n(per100.protein, 0),
+      carbsPer100g: n(per100.carbs, 0),
+      fatPer100g: n(per100.fat, 0),
+      fiberPer100g: n(per100.fiber, 0),
+      tags: ["recipe_batch", "cooking_v1", "snapshot_demo"],
+    };
+  }
   function renderCookingPanel() {
     const batch = sampleCookingBatch();
+    const recipeFood = cookingFoodFromBatch(batch);
     const total = batch?.total || {};
     const per100 = batch?.per100g || {};
+    const defaultPortionG = Math.round(n(CACHE.cookingPortionG, 0) || n(recipeFood.servingGrams, 0) || 100);
+    const activeCookMealType = CACHE.cookingMealType || CACHE.selectedMealType || currentMealType();
+    const preview = nutritionForGrams(recipeFood, defaultPortionG);
+    const editorHtml = CACHE.cookingEditorOpen ? `<div id="nutrition-cook-editor" class="tb-nutrition-cook-editor" style="margin-top:12px;border:1px solid var(--border);border-radius:8px;padding:12px;background:rgba(15,23,42,.05);display:grid;gap:10px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
+          <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Recette", "Recipe"))}</span><input id="nutrition-cook-name" type="text" value="${esc(recipeFood.name)}" readonly></label>
+          <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Portion consommee (g)", "Consumed portion (g)"))}</span><input id="nutrition-cook-portion-g" type="number" min="1" step="1" value="${esc(String(defaultPortionG))}"></label>
+          <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Moment", "Moment"))}</span><select id="nutrition-cook-meal-type"><option value="breakfast" ${activeCookMealType === "breakfast" ? "selected" : ""}>${esc(mealTypeLabel("breakfast"))}</option><option value="morning_snack" ${activeCookMealType === "morning_snack" ? "selected" : ""}>${esc(mealTypeLabel("morning_snack"))}</option><option value="lunch" ${activeCookMealType === "lunch" ? "selected" : ""}>${esc(mealTypeLabel("lunch"))}</option><option value="afternoon_snack" ${activeCookMealType === "afternoon_snack" ? "selected" : ""}>${esc(mealTypeLabel("afternoon_snack"))}</option><option value="dinner" ${activeCookMealType === "dinner" ? "selected" : ""}>${esc(mealTypeLabel("dinner"))}</option><option value="snack" ${activeCookMealType === "snack" ? "selected" : ""}>${esc(mealTypeLabel("snack"))}</option></select></label>
+        </div>
+        <div id="nutrition-cook-preview" class="muted" style="font-size:12px;">${Math.round(n(preview.kcal, 0))} kcal · P ${fmtMacro(preview.protein)} · G ${fmtMacro(preview.carbs)} · L ${fmtMacro(preview.fat)} · ${Math.round(n(per100.kcal, 0))} kcal/100g</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn small primary" type="button" id="nutrition-cook-save">${esc(txt("Ajouter la portion", "Add portion"))}</button>
+          <button class="btn small" type="button" id="nutrition-cook-close">${esc(txt("Fermer", "Close"))}</button>
+        </div>
+      </div>` : "";
     return `<section class="tb-nutrition-subcard">
       <div class="tb-nutrition-subcard-heading">
         <div><h3>${esc(txt("Je cuisine", "I cook"))}</h3><p>${esc(txt("V1 recettes : ingredients crus, cuisson, rendement, poids final, portions et reste.", "V1 recipes: raw ingredients, cooking, yield, final weight, servings and leftovers."))}</p></div>
@@ -205,7 +235,8 @@
         <div class="tb-sport-stat"><span>${esc(txt("Poids final", "Final weight"))}</span><strong>${Math.round(n(batch?.finalWeightG, 0))}g</strong></div>
       </div>
       <div class="muted" style="font-size:12px;">${esc(txt("Le poids final mesure modifie la densite /100g, pas les nutriments totaux. Les batchs seront figes par snapshot.", "Measured final weight changes per-100g density, not total nutrients. Batches will be frozen by snapshot."))}</div>
-      <button class="btn small primary" type="button" id="nutrition-cook-start" style="margin-top:10px;">+ ${esc(txt("Je cuisine", "I cook"))}</button>
+      <button class="btn small primary" type="button" id="nutrition-cook-start" style="margin-top:10px;">+ ${esc(CACHE.cookingEditorOpen ? txt("Modifier la portion", "Edit portion") : txt("Je cuisine", "I cook"))}</button>
+      ${editorHtml}
     </section>`;
   }
   function loadNutritionGoal() {
@@ -1678,8 +1709,31 @@
     const cookStart = root.querySelector("#nutrition-cook-start");
     if (cookStart) cookStart.onclick = () => {
       CACHE.activeSection = "meals";
-      CACHE.syncStatus = txt("Recettes V1 pretes cote moteur/base. Prochaine passe : editeur ingredients et sauvegarde batch.", "Recipes V1 ready in engine/database. Next pass: ingredient editor and batch save.");
+      CACHE.cookingEditorOpen = true;
+      CACHE.syncStatus = txt("Cuisine ouverte : ajuste la portion puis ajoute-la au journal.", "Cooking opened: adjust the portion, then add it to the journal.");
       renderNutrition("cook-start");
+    };
+    const cookPortion = root.querySelector("#nutrition-cook-portion-g");
+    const updateCookPreview = () => {
+      const batch = sampleCookingBatch();
+      const food = cookingFoodFromBatch(batch);
+      const grams = Math.max(1, Math.round(n(cookPortion?.value, food.servingGrams || 100)));
+      CACHE.cookingPortionG = grams;
+      const nut = nutritionForGrams(food, grams);
+      const out = root.querySelector("#nutrition-cook-preview");
+      if (out) out.textContent = `${Math.round(n(nut.kcal, 0))} kcal · P ${fmtMacro(nut.protein)} · G ${fmtMacro(nut.carbs)} · L ${fmtMacro(nut.fat)} · ${Math.round(n(food.kcalPer100g, 0))} kcal/100g`;
+    };
+    if (cookPortion) cookPortion.oninput = updateCookPreview;
+    const cookMealType = root.querySelector("#nutrition-cook-meal-type");
+    if (cookMealType) cookMealType.onchange = () => {
+      CACHE.cookingMealType = cookMealType.value || currentMealType();
+    };
+    const cookSave = root.querySelector("#nutrition-cook-save");
+    if (cookSave) cookSave.onclick = () => saveCookingPortion(root);
+    const cookClose = root.querySelector("#nutrition-cook-close");
+    if (cookClose) cookClose.onclick = () => {
+      CACHE.cookingEditorOpen = false;
+      renderNutrition("cook-close");
     };
     const syncPending = root.querySelector("#nutrition-sync-pending");
     if (syncPending) syncPending.onclick = async () => {
@@ -1876,6 +1930,38 @@
     CACHE.editingItemId = String(id || "");
     CACHE.foodQuery = "";
     renderNutrition("edit");
+  }
+  function saveCookingPortion(root) {
+    if (CACHE.savingCookingPortion) return;
+    CACHE.savingCookingPortion = true;
+    const saveBtn = root?.querySelector("#nutrition-cook-save");
+    if (saveBtn) saveBtn.disabled = true;
+    try {
+      const batch = sampleCookingBatch();
+      const food = cookingFoodFromBatch(batch);
+      const grams = Math.max(1, Math.round(n(root?.querySelector("#nutrition-cook-portion-g")?.value, food.servingGrams || 100)));
+      CACHE.cookingPortionG = grams;
+      const mealType = String(root?.querySelector("#nutrition-cook-meal-type")?.value || CACHE.cookingMealType || selectedMealType(root));
+      CACHE.cookingMealType = mealType;
+      const nut = nutritionForGrams(food, grams);
+      const syncId = `nutrition_cook_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      const label = `${food.name} · ${grams}g`;
+      const localRow = makeLocalNutritionRow({ food, grams, nut, waterMl: n(nut.waterMl, 0), mealType, label, syncId });
+      saveLocalNutritionRowsOnce([localRow]);
+      upsertOptimisticNutritionRow(localRow, { publish: false });
+      publishNutrition("cooking-portion-local");
+      CACHE.syncStatus = txt("Portion cuisine ajoutee au journal. Synchro en attente si hors ligne.", "Cooked portion added to the journal. Sync pending if offline.");
+      CACHE.syncPhase = "queued";
+      CACHE.cookingEditorOpen = false;
+      scheduleNutritionRender("cooking-portion");
+      requestNutritionSync("cooking-portion");
+    } catch (e) {
+      CACHE.error = e?.message || String(e);
+      renderNutrition("cooking-portion-error");
+    } finally {
+      CACHE.savingCookingPortion = false;
+      try { if (saveBtn) saveBtn.disabled = false; } catch (_) {}
+    }
   }
   async function saveNutritionMeal(root) {
     if (CACHE.savingMeal) return;
