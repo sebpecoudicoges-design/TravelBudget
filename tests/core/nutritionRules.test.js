@@ -3,6 +3,8 @@ import {
   alcoholForGrams,
   buildDailyNutritionSummaries,
   buildTypeTotalsForDay,
+  calculateRecipeBatch,
+  calculateRecipeIngredient,
   energyBalance,
   filterCatalogFoods,
   foodCategory,
@@ -41,6 +43,32 @@ describe('nutrition rules core', () => {
     const total = sumNutrition([{ food: rice, grams: 200 }, { food: chicken, grams: 120 }]);
     expect(Math.round(total.kcal)).toBe(458);
     expect(Math.round(total.protein)).toBe(43);
+  });
+
+  it('separates cooking yield from total nutrients when calculating a recipe ingredient', () => {
+    const pasta = { key: 'dry_pasta', name: 'Pates seches', servingGrams: 100, kcalPer100g: 350, proteinPer100g: 12, carbsPer100g: 70, fatPer100g: 2 };
+    const row = calculateRecipeIngredient({ food: pasta, initialWeightG: 500, cookingMethod: 'boiled', yieldFactor: 2.3 });
+
+    expect(row.estimatedCookedWeightG).toBe(1150);
+    expect(row.nutrition.kcal).toBe(1750);
+  });
+
+  it('uses measured final batch weight for per-100g density without changing total nutrients', () => {
+    const batch = calculateRecipeBatch({
+      name: 'Pates boeuf legumes',
+      measuredFinalWeightG: 2183,
+      servings: 4,
+      ingredients: [
+        { food: { key: 'dry_pasta', name: 'Pates', servingGrams: 100, kcalPer100g: 350, proteinPer100g: 12, carbsPer100g: 70, fatPer100g: 2 }, initialWeightG: 500, yieldFactor: 2.3, cookingMethod: 'boiled' },
+        { food: { key: 'olive_oil', name: 'Huile olive', servingGrams: 10, kcalPer100g: 884, proteinPer100g: 0, carbsPer100g: 0, fatPer100g: 100 }, initialWeightG: 15, yieldFactor: 1, cookingMethod: 'raw' },
+      ],
+      consumedWeightsG: [520, 610],
+    });
+
+    expect(batch.finalWeightSource).toBe('measured');
+    expect(Math.round(batch.total.kcal)).toBe(1883);
+    expect(Math.round(batch.per100g.kcal)).toBe(86);
+    expect(batch.remainingWeightG).toBe(1053);
   });
 
   it('computes consumed versus daily spent calories', () => {

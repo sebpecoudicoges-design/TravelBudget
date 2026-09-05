@@ -66,6 +66,48 @@ describe('sport rules core', () => {
     });
   });
 
+  it('keeps hypertrophy load when top reps are reached at failure RIR', () => {
+    const result = analyzeExerciseLoadProgression({
+      sets: [
+        { weightKg: 110, reps: 10, rir: 2 },
+        { weightKg: 110, reps: 10, rir: 1 },
+        { weightKg: 110, reps: 10, rir: 0 },
+      ],
+      repMin: 8,
+      repMax: 10,
+      plannedSets: 3,
+      incrementKg: 5,
+      weekType: 'HYPERTROPHY',
+      progressionType: 'MAIN_COMPOUND',
+      targetRirMin: 1,
+      targetRirMax: 3,
+    });
+
+    expect(result).toMatchObject({
+      recommendedWeightKg: 110,
+      reasonCode: 'RIR_TOO_LOW_AT_TOP',
+      totalReps: 30,
+      totalVolumeKg: 3300,
+    });
+  });
+
+  it('marks a template exercise without load history as calibration instead of hard-coding a load', () => {
+    const result = analyzeExerciseLoadProgression({
+      sets: [],
+      repMin: 8,
+      repMax: 10,
+      plannedSets: 3,
+      weekType: 'HYPERTROPHY',
+      progressionType: 'SECONDARY_COMPOUND',
+    });
+
+    expect(result).toMatchObject({
+      recommendedWeightKg: 0,
+      reasonCode: 'CALIBRATION_REQUIRED',
+      confidence: 'medium',
+    });
+  });
+
   it('excludes warmups, failed and invalid sets from the reference load', () => {
     const result = analyzeExerciseLoadProgression({
       sets: [

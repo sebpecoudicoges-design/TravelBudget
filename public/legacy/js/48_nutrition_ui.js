@@ -175,6 +175,39 @@
   function normalizeFood(row) { return rules().normalizeFoodRow ? rules().normalizeFoodRow(row) : row; }
   function nutritionForGrams(food, grams) { return rules().nutritionForGrams ? rules().nutritionForGrams(food, grams) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
   function sumNutrition(items) { return rules().sumNutrition ? rules().sumNutrition(items) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
+  function sampleCookingBatch() {
+    if (typeof rules().calculateRecipeBatch !== "function") return null;
+    const byKey = new Map((CACHE.foods || []).map(food => [String(food.key || ""), food]));
+    const food = (key, fallback) => byKey.get(key) || fallback;
+    return rules().calculateRecipeBatch({
+      name: txt("Pates boeuf legumes", "Beef vegetable pasta"),
+      measuredFinalWeightG: 2183,
+      servings: 4,
+      ingredients: [
+        { food: food("pasta_dry", { key: "pasta_dry", name: "Pates seches", servingGrams: 100, kcalPer100g: 350, proteinPer100g: 12, carbsPer100g: 70, fatPer100g: 2 }), initialWeightG: 500, cookingMethod: "boiled", yieldFactor: 2.3 },
+        { food: food("carrot", { key: "carrot", name: "Carotte", servingGrams: 100, kcalPer100g: 41, proteinPer100g: 0.9, carbsPer100g: 10, fatPer100g: 0.2, fiberPer100g: 2.8 }), initialWeightG: 400, cookingMethod: "roasted", yieldFactor: 0.9 },
+        { food: food("olive_oil", { key: "olive_oil", name: "Huile olive", servingGrams: 10, kcalPer100g: 884, proteinPer100g: 0, carbsPer100g: 0, fatPer100g: 100 }), initialWeightG: 15, cookingMethod: "raw", yieldFactor: 1 },
+      ],
+    });
+  }
+  function renderCookingPanel() {
+    const batch = sampleCookingBatch();
+    const total = batch?.total || {};
+    const per100 = batch?.per100g || {};
+    return `<section class="tb-nutrition-subcard">
+      <div class="tb-nutrition-subcard-heading">
+        <div><h3>${esc(txt("Je cuisine", "I cook"))}</h3><p>${esc(txt("V1 recettes : ingredients crus, cuisson, rendement, poids final, portions et reste.", "V1 recipes: raw ingredients, cooking, yield, final weight, servings and leftovers."))}</p></div>
+        <span class="pill">${esc(txt("moteur pret", "engine ready"))}</span>
+      </div>
+      <div class="tb-sport-stats" style="margin-bottom:10px;">
+        <div class="tb-sport-stat"><span>${esc(txt("Plat total", "Whole batch"))}</span><strong>${Math.round(n(total.kcal, 0))} kcal</strong></div>
+        <div class="tb-sport-stat"><span>${esc(txt("Pour 100g", "Per 100g"))}</span><strong>${Math.round(n(per100.kcal, 0))} kcal</strong></div>
+        <div class="tb-sport-stat"><span>${esc(txt("Poids final", "Final weight"))}</span><strong>${Math.round(n(batch?.finalWeightG, 0))}g</strong></div>
+      </div>
+      <div class="muted" style="font-size:12px;">${esc(txt("Le poids final mesure modifie la densite /100g, pas les nutriments totaux. Les batchs seront figes par snapshot.", "Measured final weight changes per-100g density, not total nutrients. Batches will be frozen by snapshot."))}</div>
+      <button class="btn small primary" type="button" id="nutrition-cook-start" style="margin-top:10px;">+ ${esc(txt("Je cuisine", "I cook"))}</button>
+    </section>`;
+  }
   function loadNutritionGoal() {
     try {
       const raw = JSON.parse(localStorage.getItem(nutritionGoalKey()) || "{}");
@@ -1556,6 +1589,7 @@
         esc,
         t: txt,
       }),
+      cookingPanelHtml: renderCookingPanel(),
       esc,
       t: txt,
     }) || "";
@@ -1641,6 +1675,12 @@
     };
     const refresh = root.querySelector("#nutrition-refresh");
     if (refresh) refresh.onclick = async () => { await loadNutrition({ force: true }); renderNutrition("refresh"); };
+    const cookStart = root.querySelector("#nutrition-cook-start");
+    if (cookStart) cookStart.onclick = () => {
+      CACHE.activeSection = "meals";
+      CACHE.syncStatus = txt("Recettes V1 pretes cote moteur/base. Prochaine passe : editeur ingredients et sauvegarde batch.", "Recipes V1 ready in engine/database. Next pass: ingredient editor and batch save.");
+      renderNutrition("cook-start");
+    };
     const syncPending = root.querySelector("#nutrition-sync-pending");
     if (syncPending) syncPending.onclick = async () => {
       syncPending.disabled = true;

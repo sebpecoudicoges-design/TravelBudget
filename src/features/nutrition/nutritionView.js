@@ -453,6 +453,7 @@ export function renderNutritionShell({
   objectiveBalanceKcal = 0,
   balanceLabel = '',
   mealTimelineHtml = '',
+  cookingPanelHtml = '',
   esc = defaultEsc,
   t,
 } = {}) {
@@ -513,6 +514,7 @@ export function renderNutritionShell({
     <div class="tb-nutrition-section-panel" id="nutrition-panel-meals" role="tabpanel" aria-labelledby="nutrition-tab-meals" data-nutrition-panel="meals" ${active === 'meals' ? '' : 'hidden'}>
     <div class="tb-nutrition-layout">
       <div style="display:flex;flex-direction:column;gap:12px;">
+        ${cookingPanelHtml}
         ${renderQuickAddPanel({ ...quickAdd, esc, t })}
       </div>
       <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">

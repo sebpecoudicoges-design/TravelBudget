@@ -907,6 +907,10 @@
       notes: overrides?.notes || "",
       incrementKg: n(overrides?.incrementKg ?? overrides?.progression_increment_kg, 0) || null,
       trainingMaxPercentage: n(overrides?.trainingMaxPercentage ?? overrides?.training_max_percentage, 0) || null,
+      progressionType: overrides?.progressionType || overrides?.progression_type || "",
+      weekType: overrides?.weekType || overrides?.week_type || "",
+      targetRirMin: n(overrides?.targetRirMin ?? overrides?.target_rir_min, 0) || null,
+      targetRirMax: n(overrides?.targetRirMax ?? overrides?.target_rir_max, 0) || null,
     };
   }
   function programLoadForExercise(name) {
@@ -1322,7 +1326,7 @@
   }
   function programReps(name, equipment, sets, repMin, repMax, restSeconds, opts) {
     const activityKey = opts?.activityKey || (equipment === "bodyweight" ? "bodyweight_strength" : "strength");
-    const load = programLoadForExercise(name);
+    const load = opts?.templateOnly ? { weightKg: 0, loadLabel: "" } : programLoadForExercise(name);
     return makePlanItem(activityKey, Object.assign({
       exerciseName: name,
       equipment,
@@ -1352,54 +1356,67 @@
     }, opts || {}));
   }
   function defaultSessionFavorites() {
+    const force = { templateOnly: true, weekType: "FORCE", targetRirMin: 1, targetRirMax: 2 };
+    const hypertrophy = { templateOnly: true, weekType: "HYPERTROPHY", targetRirMin: 1, targetRirMax: 3 };
+    const main = { progressionType: "MAIN_COMPOUND" };
+    const secondary = { progressionType: "SECONDARY_COMPOUND" };
+    const isolation = { progressionType: "ISOLATION" };
+    const core = { progressionType: "STATIC_CORE" };
+    const F = (type, extra) => Object.assign({}, force, type, extra || {});
+    const H = (type, extra) => Object.assign({}, hypertrophy, type, extra || {});
     return [
-      { id: "mass_a1", week: "A", name: "Semaine A - A1 Poussee Volume", days: ["Lundi"], plan: [
-        programReps("Squat arriere", "barbell", 3, 6, 10, 180, { weightKg: 75 }),
-        programReps("Developpe couche", "barbell", 3, 6, 10, 180, { weightKg: 60 }),
-        programReps("Tractions pronation", "bodyweight", 3, 6, 10, 150, { loadLabel: "Poids du corps" }),
-        programReps("Developpe militaire", "barbell", 3, 6, 10, 180, { weightKg: 35 }),
-        programReps("Curl marteau", "dumbbell", 3, 10, 15, 60, { weightKg: 17.5 }),
-        programTime("Gainage", 3, 30, 90, 60),
+      { id: "mass_a1", week: "A", name: "FORCE A - Squat / Bench / Tractions", days: ["Lundi"], plan: [
+        programReps("Squat arriere", "barbell", 3, 4, 6, 240, F(main)),
+        programReps("Developpe couche barre", "barbell", 3, 4, 6, 180, F(main)),
+        programReps("Tractions pronation lestees", "bodyweight", 3, 4, 6, 180, F(main, { loadLabel: "Lest si calibre, sinon poids du corps" })),
+        programReps("Developpe militaire barre", "barbell", 3, 5, 8, 180, F(secondary)),
+        programReps("Curl barre", "barbell", 3, 6, 10, 120, F(isolation)),
+        programReps("Ab Wheel", "bodyweight", 3, 6, 12, 90, F(core, { activityKey: "core_abs" })),
       ] },
-      { id: "mass_a2", week: "A", name: "Semaine A - A2 Chaine posterieure Volume", days: ["Mercredi"], plan: [
-        programReps("Souleve de terre", "barbell", 3, 6, 10, 180, { weightKg: 115 }),
-        programReps("Developpe incline halteres", "dumbbell", 3, 6, 10, 150, { weightKg: 40, loadLabel: "2 x 20 kg" }),
-        programReps("Rowing barre", "barbell", 3, 6, 10, 150, { weightKg: 60 }),
-        programReps("Elevations laterales", "dumbbell", 3, 10, 15, 60, { weightKg: 7 }),
-        programReps("Extension triceps", "dumbbell", 3, 10, 15, 60, { weightKg: 20 }),
-        programReps("Releves de jambes", "bodyweight", 3, 10, 20, 60, { activityKey: "core_abs" }),
+      { id: "mass_a2", week: "A", name: "FORCE B - Deadlift / Incline / Row", days: ["Mercredi"], plan: [
+        programReps("Souleve de terre", "barbell", 3, 4, 6, 240, F(main)),
+        programReps("Developpe incline barre", "barbell", 3, 5, 8, 180, F(secondary)),
+        programReps("Rowing barre", "barbell", 3, 5, 8, 180, F(secondary)),
+        programReps("Bulgarian Split Squat leste", "dumbbell", 3, 6, 8, 120, F(secondary, { notes: "Reps par jambe." })),
+        programReps("Developpe couche prise serree", "barbell", 3, 6, 8, 120, F(secondary)),
+        programTime("Gainage leste", 3, 90, 120, 120, F(core)),
       ] },
-      { id: "mass_a3", week: "A", name: "Semaine A - A3 Variantes Volume", days: ["Vendredi"], plan: [
-        programReps("Front squat", "barbell", 3, 6, 10, 180, { weightKg: 45 }),
-        programReps("Developpe couche prise serree", "barbell", 3, 6, 10, 180, { weightKg: 50 }),
-        programReps("Tractions supination", "bodyweight", 3, 6, 10, 150, { loadLabel: "Poids du corps" }),
-        programReps("Oiseau halteres", "dumbbell", 3, 10, 15, 60, { weightKg: 6 }),
-        programReps("Curl marteau", "dumbbell", 3, 10, 15, 60, { weightKg: 17.5 }),
-        programTime("Gainage lateral", 2, 30, 60, 60),
+      { id: "mass_a3", week: "A", name: "FORCE C - Front Squat / Vertical", days: ["Vendredi"], plan: [
+        programReps("Front squat", "barbell", 3, 5, 8, 180, F(secondary)),
+        programReps("Developpe militaire barre", "barbell", 3, 5, 8, 180, F(secondary)),
+        programReps("Tractions supination lestees", "bodyweight", 3, 5, 8, 180, F(secondary, { loadLabel: "Lest si calibre, sinon poids du corps" })),
+        programReps("Developpe couche halteres", "dumbbell", 3, 6, 10, 120, F(secondary)),
+        programReps("Rowing haltere unilateral", "dumbbell", 3, 6, 10, 120, F(secondary, { notes: "Reps par cote." })),
+        programReps("Curl marteau", "dumbbell", 3, 8, 12, 90, F(isolation)),
+        programReps("Releves de jambes suspendu", "bodyweight", 3, 8, 15, 90, F(core, { activityKey: "core_abs" })),
       ] },
-      { id: "mass_b1", week: "B", name: "Semaine B - B1 Poussee Intensite", days: ["Lundi"], plan: [
-        programReps("Squat arriere", "barbell", 3, 4, 6, 240, { weightKg: 82.5 }),
-        programReps("Developpe couche", "barbell", 3, 4, 6, 240, { weightKg: 65 }),
-        programReps("Tractions pronation lestees", "bodyweight", 3, 4, 6, 180, { weightKg: 5, loadLabel: "+5 kg ou PDC" }),
-        programReps("Developpe militaire", "barbell", 3, 4, 6, 210, { weightKg: 37.5 }),
-        programReps("Curl marteau", "dumbbell", 3, 10, 15, 60, { weightKg: 17.5 }),
-        programTime("Gainage", 3, 30, 90, 60),
+      { id: "mass_b1", week: "B", name: "HYPERTROPHIE A - Quadriceps / Pecs / Dos", days: ["Lundi"], plan: [
+        programReps("Squat avec pause", "barbell", 3, 8, 10, 180, H(secondary)),
+        programReps("Developpe couche halteres", "dumbbell", 3, 8, 12, 120, H(secondary)),
+        programReps("Tractions pronation au poids du corps", "bodyweight", 3, 8, 12, 120, H(secondary, { loadLabel: "Poids du corps puis lest apres validation" })),
+        programReps("Arnold Press", "dumbbell", 3, 10, 12, 120, H(secondary)),
+        programReps("Elevations laterales", "dumbbell", 3, 12, 20, 90, H(isolation)),
+        programReps("Curl incline halteres", "dumbbell", 3, 10, 15, 90, H(isolation)),
+        programReps("Ab Wheel", "bodyweight", 3, 8, 15, 90, H(core, { activityKey: "core_abs" })),
       ] },
-      { id: "mass_b2", week: "B", name: "Semaine B - B2 Chaine posterieure Intensite", days: ["Mercredi"], plan: [
-        programReps("Souleve de terre", "barbell", 3, 4, 6, 240, { weightKg: 125 }),
-        programReps("Developpe incline halteres", "dumbbell", 3, 4, 6, 180, { weightKg: 45, loadLabel: "2 x 22.5 kg" }),
-        programReps("Rowing barre", "barbell", 3, 4, 6, 180, { weightKg: 67.5 }),
-        programReps("Elevations laterales", "dumbbell", 3, 10, 15, 60, { weightKg: 7 }),
-        programReps("Extension triceps", "dumbbell", 3, 10, 15, 60, { weightKg: 20 }),
-        programReps("Releves de jambes", "bodyweight", 3, 10, 20, 60, { activityKey: "core_abs" }),
+      { id: "mass_b2", week: "B", name: "HYPERTROPHIE B - Chaine posterieure / Pecs / Dos", days: ["Mercredi"], plan: [
+        programReps("Romanian Deadlift", "barbell", 3, 8, 10, 180, H(secondary)),
+        programReps("Developpe incline halteres", "dumbbell", 3, 8, 12, 120, H(secondary)),
+        programReps("Rowing haltere unilateral", "dumbbell", 3, 10, 12, 120, H(secondary, { notes: "Reps par cote." })),
+        programReps("Fentes arriere halteres", "dumbbell", 3, 8, 12, 120, H(secondary, { notes: "Reps par jambe." })),
+        programReps("Oiseau halteres", "dumbbell", 3, 12, 20, 90, H(isolation)),
+        programReps("Extension triceps haltere", "dumbbell", 3, 10, 15, 90, H(isolation)),
+        programTime("Gainage lateral leste", 3, 90, 120, 90, H(core, { notes: "Par cote." })),
       ] },
-      { id: "mass_b3", week: "B", name: "Semaine B - B3 Variantes Intensite", days: ["Vendredi"], plan: [
-        programReps("Front squat", "barbell", 3, 4, 6, 240, { weightKg: 50 }),
-        programReps("Developpe couche prise serree", "barbell", 3, 4, 6, 180, { weightKg: 55 }),
-        programReps("Tractions supination lestees", "bodyweight", 3, 4, 6, 180, { weightKg: 5, loadLabel: "+5 kg ou PDC" }),
-        programReps("Oiseau halteres", "dumbbell", 3, 10, 15, 60, { weightKg: 6 }),
-        programReps("Curl marteau", "dumbbell", 3, 10, 15, 60, { weightKg: 17.5 }),
-        programTime("Gainage lateral", 2, 30, 60, 60),
+      { id: "mass_b3", week: "B", name: "HYPERTROPHIE C - Jambes / Push / Pull", days: ["Vendredi"], plan: [
+        programReps("Bulgarian Split Squat", "dumbbell", 3, 8, 12, 120, H(secondary, { notes: "Reps par jambe." })),
+        programReps("Dips", "bodyweight", 3, 8, 12, 120, H(secondary, { loadLabel: "Poids du corps puis lest apres validation" })),
+        programReps("Tractions supination", "bodyweight", 3, 8, 12, 120, H(secondary, { loadLabel: "Poids du corps puis lest apres validation" })),
+        programReps("Hip Thrust barre", "barbell", 3, 8, 12, 120, H(secondary)),
+        programReps("Ecartes halteres", "dumbbell", 3, 12, 15, 90, H(isolation)),
+        programReps("Curl concentration", "dumbbell", 3, 10, 15, 90, H(isolation, { notes: "Reps par bras." })),
+        programReps("Elevations laterales", "dumbbell", 3, 15, 20, 60, H(isolation)),
+        programReps("Releves de jambes suspendu", "bodyweight", 3, 10, 15, 90, H(core, { activityKey: "core_abs" })),
       ] },
     ];
   }
@@ -1451,6 +1468,10 @@
       met_value: n(item?.metValue, 0) || null,
       sort_order: index + 1,
       notes: item?.notes || null,
+      week_type: item?.weekType || item?.week_type || null,
+      progression_type: item?.progressionType || item?.progression_type || null,
+      target_rir_min: n(item?.targetRirMin ?? item?.target_rir_min, 0) || null,
+      target_rir_max: n(item?.targetRirMax ?? item?.target_rir_max, 0) || null,
     };
   }
   async function saveProgramSessionEditorToSql(editor, opts) {
@@ -1732,6 +1753,10 @@
       notes: row?.notes || "",
       incrementKg: n(row?.progression_increment_kg, 0) || null,
       trainingMaxPercentage: n(row?.training_max_percentage, 0) || null,
+      weekType: row?.week_type || "",
+      progressionType: row?.progression_type || "",
+      targetRirMin: n(row?.target_rir_min, 0) || null,
+      targetRirMax: n(row?.target_rir_max, 0) || null,
     });
   }
   async function ensureSportProgramsLoaded(reason) {
@@ -1770,7 +1795,7 @@
       if (sessionIds.length) {
         exercises = await c
           .from(table("sport_program_exercises"))
-          .select("id,session_id,exercise_key,exercise_name,activity_key,equipment,mode,target_reps,rep_min,rep_max,target_seconds,time_min_seconds,time_max_seconds,planned_sets,rest_seconds,default_weight_kg,load_label,distance_m,met_value,sort_order,notes,progression_increment_kg,training_max_percentage")
+          .select("id,session_id,exercise_key,exercise_name,activity_key,equipment,mode,target_reps,rep_min,rep_max,target_seconds,time_min_seconds,time_max_seconds,planned_sets,rest_seconds,default_weight_kg,load_label,distance_m,met_value,sort_order,notes,progression_increment_kg,training_max_percentage,week_type,progression_type,target_rir_min,target_rir_max")
           .in("session_id", sessionIds)
           .order("sort_order", { ascending: true });
         if (exercises.error) throw exercises.error;
@@ -1859,6 +1884,7 @@
     const load = lastLoadForExercise(item, fallback);
     if (item?.loadLabel || item?.load_label) return item.loadLabel || item.load_label;
     if (supportsExternalLoad(item) && load) return `${Math.round(load * 10) / 10} kg`;
+    if (item?.progressionType || item?.progression_type) return txt("A calibrer", "Calibration");
     return labelEquipment(item?.equipment);
   }
   function exerciseProgressionRows(session) {

@@ -42,6 +42,121 @@ export function nutritionForGrams(food = {}, grams = 0) {
   };
 }
 
+export const COOKING_METHOD_CODES = Object.freeze([
+  'raw',
+  'boiled',
+  'steamed',
+  'roasted',
+  'baked',
+  'grilled',
+  'pan_fried',
+  'deep_fried',
+  'stewed',
+  'braised',
+  'microwaved',
+  'pressure_cooked',
+]);
+
+function retentionFactorFor(nutrient, retention = {}) {
+  const specific = retention?.[nutrient] ?? retention?.[`${nutrient}Retention`] ?? retention?.[`${nutrient}_retention`];
+  const generic = retention?.all ?? retention?.default ?? 1;
+  return Math.max(0, Math.min(1.5, num(specific ?? generic, 1)));
+}
+
+function scaleNutrition(values = {}, factor = 1) {
+  const f = Math.max(0, num(factor, 1));
+  return {
+    kcal: num(values.kcal, 0) * f,
+    protein: num(values.protein, 0) * f,
+    carbs: num(values.carbs, 0) * f,
+    fat: num(values.fat, 0) * f,
+    fiber: num(values.fiber, 0) * f,
+    waterMl: num(values.waterMl, 0) * f,
+  };
+}
+
+function addNutrition(left = {}, right = {}) {
+  return {
+    kcal: num(left.kcal, 0) + num(right.kcal, 0),
+    protein: num(left.protein, 0) + num(right.protein, 0),
+    carbs: num(left.carbs, 0) + num(right.carbs, 0),
+    fat: num(left.fat, 0) + num(right.fat, 0),
+    fiber: num(left.fiber, 0) + num(right.fiber, 0),
+    waterMl: num(left.waterMl, 0) + num(right.waterMl, 0),
+  };
+}
+
+export function normalizeCookingMethod(value = 'raw') {
+  const code = norm(value).replace(/\s+/g, '_');
+  return COOKING_METHOD_CODES.includes(code) ? code : 'raw';
+}
+
+export function calculateRecipeIngredient(input = {}) {
+  const food = normalizeFoodRow(input.food || input);
+  const initialWeightG = Math.max(0, num(input.initialWeightG ?? input.initial_weight_g ?? input.grams, 0));
+  const measuredCookedWeightG = Math.max(0, num(input.measuredCookedWeightG ?? input.measured_cooked_weight_g, 0));
+  const yieldFactor = Math.max(0, num(input.yieldFactor ?? input.yield_factor, 1));
+  const cookedWeightG = measuredCookedWeightG || initialWeightG * yieldFactor;
+  const before = nutritionForGrams(food || {}, initialWeightG);
+  const retention = input.retentionFactors || input.retention_factors || {};
+  const after = {
+    kcal: before.kcal * retentionFactorFor('kcal', retention),
+    protein: before.protein * retentionFactorFor('protein', retention),
+    carbs: before.carbs * retentionFactorFor('carbs', retention),
+    fat: before.fat * retentionFactorFor('fat', retention),
+    fiber: before.fiber * retentionFactorFor('fiber', retention),
+    waterMl: before.waterMl * retentionFactorFor('waterMl', retention),
+  };
+  return {
+    foodKey: food?.key || input.foodKey || input.food_key || '',
+    label: input.label || food?.name || '',
+    initialState: String(input.initialState || input.initial_state || 'raw'),
+    cookingMethod: normalizeCookingMethod(input.cookingMethod || input.cooking_method || 'raw'),
+    initialWeightG,
+    estimatedCookedWeightG: initialWeightG * yieldFactor,
+    measuredCookedWeightG,
+    cookedWeightG,
+    yieldFactor,
+    factorScope: input.factorScope || input.factor_scope || 'none',
+    confidence: input.confidence || 'estimated',
+    nutritionBefore: before,
+    nutrition: after,
+  };
+}
+
+export function calculateRecipeBatch({
+  name = '',
+  ingredients = [],
+  measuredFinalWeightG = 0,
+  servings = 1,
+  consumedWeightsG = [],
+} = {}) {
+  const rows = (Array.isArray(ingredients) ? ingredients : []).map(calculateRecipeIngredient);
+  const estimatedFinalWeightG = rows.reduce((sum, row) => sum + num(row.cookedWeightG, 0), 0);
+  const finalWeight = Math.max(0, num(measuredFinalWeightG, 0)) || estimatedFinalWeightG;
+  const total = rows.reduce((sum, row) => addNutrition(sum, row.nutrition), { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 });
+  const per100g = finalWeight > 0 ? scaleNutrition(total, 100 / finalWeight) : scaleNutrition(total, 0);
+  const cleanServings = Math.max(1, Math.round(num(servings, 1)));
+  const perServing = scaleNutrition(total, 1 / cleanServings);
+  const portionWeightG = finalWeight > 0 ? finalWeight / cleanServings : 0;
+  const consumedWeightG = (Array.isArray(consumedWeightsG) ? consumedWeightsG : []).reduce((sum, value) => sum + Math.max(0, num(value, 0)), 0);
+  return {
+    name: str(name, 'Preparation cuisinee'),
+    ingredients: rows,
+    estimatedFinalWeightG,
+    measuredFinalWeightG: Math.max(0, num(measuredFinalWeightG, 0)),
+    finalWeightG: finalWeight,
+    finalWeightSource: Math.max(0, num(measuredFinalWeightG, 0)) > 0 ? 'measured' : (estimatedFinalWeightG > 0 ? 'estimated' : 'none'),
+    servings: cleanServings,
+    portionWeightG,
+    remainingWeightG: Math.max(0, finalWeight - consumedWeightG),
+    total,
+    per100g,
+    perServing,
+    precisionLevel: Math.max(0, num(measuredFinalWeightG, 0)) > 0 ? 'measured' : 'estimated',
+  };
+}
+
 export function sumNutrition(items = []) {
   return (Array.isArray(items) ? items : []).reduce((total, item) => {
     const values = item?.nutrition || nutritionForGrams(item?.food || item, item?.grams);

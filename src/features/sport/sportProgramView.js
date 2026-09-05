@@ -76,10 +76,14 @@ function renderProgramCockpit({ days, program, api = {} }) {
           const targetText = item.mode === 'reps'
             ? `${sets} x ${range ? `${range.min}-${range.max}` : Math.round(n(item.targetReps, 0))} reps`
             : `${sets} x ${helpers.formatSeconds(item.targetSeconds || 0)}`;
+          const rir = n(item.targetRirMin ?? item.target_rir_min, 0) || n(item.targetRirMax ?? item.target_rir_max, 0)
+            ? ` · RIR ${n(item.targetRirMin ?? item.target_rir_min, 0)}-${n(item.targetRirMax ?? item.target_rir_max, 0)}`
+            : '';
+          const kind = item.progressionType || item.progression_type || item.weekType || item.week_type || '';
           return `<div>
           <span>${esc(helpers.sessionExerciseName?.(item) || item?.exerciseName || '')}</span>
           <strong>${esc(helpers.plannedExerciseLoadLabel?.(item) || '')}</strong>
-          <small>${esc(targetText)} · ${esc(t('repos', 'rest'))} ${esc(helpers.formatSeconds(helpers.restSecondsForItem?.(item) || 0))}</small>
+          <small>${esc(targetText)}${esc(rir)} · ${esc(t('repos', 'rest'))} ${esc(helpers.formatSeconds(helpers.restSecondsForItem?.(item) || 0))}${kind ? ` · ${esc(kind)}` : ''}</small>
         </div>`;
         }).join('')}
       </div>` : ''}
