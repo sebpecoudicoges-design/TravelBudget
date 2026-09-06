@@ -200,11 +200,22 @@
     return (CACHE.foods || []).find(food => String(food.key || "").toLocaleLowerCase() === wanted || String(food.name || "").toLocaleLowerCase() === wanted) || null;
   }
   function cookingQuantityMode(value) { return String(value || "grams") === "portion" ? "portion" : "grams"; }
-  function cookingIngredientGrams(row) {
+  function resolveCookingQuantity(row = {}) {
     const food = cookingFoodMatch(row.foodKey || row.foodName);
-    return cookingQuantityMode(row.quantityMode) === "portion"
-      ? Math.max(0, n(row.quantity, 1) * n(food?.servingGrams, 100))
-      : Math.max(0, n(row.grams, 0));
+    const mode = cookingQuantityMode(row.quantityMode);
+    const quantity = row.quantity !== undefined && row.quantity !== null && String(row.quantity).trim() !== ""
+      ? row.quantity
+      : (mode === "grams" ? row.grams : "");
+    if (typeof rules().resolveRecipeIngredientQuantity === "function") {
+      return rules().resolveRecipeIngredientQuantity({ mode, quantity, servingGrams: food?.servingGrams || 100 });
+    }
+    const fallbackQuantity = mode === "portion" ? 1 : 0;
+    const cleanQuantity = String(quantity ?? "").trim() === "" ? fallbackQuantity : Math.max(0, n(quantity, fallbackQuantity));
+    const servingGrams = Math.max(1, n(food?.servingGrams, 100));
+    return { mode, quantity: cleanQuantity, servingGrams, grams: mode === "portion" ? cleanQuantity * servingGrams : cleanQuantity };
+  }
+  function cookingIngredientGrams(row) {
+    return resolveCookingQuantity(row).grams;
   }
   function calculateCookingDraft(draft = ensureCookingDraft()) {
     if (typeof rules().calculateRecipeBatch !== "function") return null;
@@ -259,16 +270,48 @@
     return (draft.ingredients || []).map((row, index) => {
       const mode = cookingQuantityMode(row.quantityMode);
       const food = cookingFoodMatch(row.foodKey || row.foodName);
-      const derivedGrams = mode === "portion" ? Math.round(n(row.quantity, 1) * n(food?.servingGrams, 100)) : row.grams;
-      return `<div class="tb-nutrition-cook-ingredient" data-cook-row="${index}">
-      <label><span>${esc(txt("Aliment", "Food"))}</span><input type="text" data-cook-food value="${esc(row.foodName || row.foodKey || "")}" list="nutrition-cook-foods" placeholder="${esc(txt("Rechercher dans le catalogue", "Search the catalog"))}"></label>
-      <label><span>${esc(txt("Mode de quantite", "Quantity mode"))}</span><select data-cook-quantity-mode><option value="portion" ${mode === "portion" ? "selected" : ""}>${esc(txt("Portion", "Serving"))}</option><option value="grams" ${mode === "grams" ? "selected" : ""}>${esc(txt("Grammes", "Grams"))}</select></label>
-      <label><span>${esc(mode === "portion" ? txt("Nombre de portions", "Number of servings") : txt("Poids cru / utilise", "Raw / used weight"))}</span><input type="number" data-cook-quantity min="0.01" step="${mode === "portion" ? "0.25" : "1"}" value="${esc(mode === "portion" ? (row.quantity || 1) : (row.grams || ""))}" placeholder="${mode === "portion" ? "1" : "g"}"></label>
-      <label><span>${esc(txt("Grammes calcules", "Calculated grams"))}</span><input type="number" data-cook-grams min="0" step="1" value="${esc(derivedGrams || "")}" ${mode === "portion" ? "readonly" : ""} placeholder="g"></label>
+      const resolved = resolveCookingQuantity(row);
+      const quantityValue = mode === "portion" ? resolved.quantity : (row.quantity || row.grams || "");
+      const derivedGrams = food || mode === "grams" ? Math.round(resolved.grams * 10) / 10 : "";
+      const foodStatus = food
+        ? (mode === "portion" ? txt(`1 portion = ${Math.round(resolved.servingGrams)} g`, `1 serving = ${Math.round(resolved.servingGrams)} g`) : txt("Aliment reconnu", "Food recognized"))
+        : txt("Choisis une proposition de la bibliotheque.", "Choose a library suggestion.");
+      return `<div class="tb-nutrition-cook-ingredient ${food && resolved.grams > 0 ? "is-ready" : ""}" data-cook-row="${index}">
+      <label><span>${esc(txt("Aliment", "Food"))}</span><input type="text" data-cook-food value="${esc(row.foodName || row.foodKey || "")}" list="nutrition-cook-foods" placeholder="${esc(txt("Rechercher dans le catalogue", "Search the catalog"))}"><small data-cook-food-status>${esc(foodStatus)}</small></label>
+      <label><span>${esc(txt("Mode de quantite", "Quantity mode"))}</span><select data-cook-quantity-mode data-cook-current-mode="${mode}"><option value="portion" ${mode === "portion" ? "selected" : ""}>${esc(txt("Portion", "Serving"))}</option><option value="grams" ${mode === "grams" ? "selected" : ""}>${esc(txt("Grammes", "Grams"))}</select></label>
+      <label><span>${esc(mode === "portion" ? txt("Nombre de portions", "Number of servings") : txt("Poids cru / utilise", "Raw / used weight"))}</span><input type="number" data-cook-quantity min="0.01" step="${mode === "portion" ? "0.25" : "1"}" value="${esc(quantityValue)}" placeholder="${mode === "portion" ? "1" : "g"}"></label>
+      <label><span>${esc(txt("Grammes calcules", "Calculated grams"))}</span><input type="number" data-cook-grams min="0" step="0.1" value="${esc(derivedGrams)}" readonly placeholder="g"></label>
       <label><span>${esc(txt("Cuisson", "Cooking"))}</span><select data-cook-method>${cookingMethodOptions(row.method || "raw")}</select></label>
       <button class="btn small" type="button" data-cook-remove="${index}" aria-label="${esc(txt("Retirer cet ingredient", "Remove this ingredient"))}">×</button>
     </div>`;
     }).join("");
+  }
+  function cookingPotSnapshot(draft, batch) {
+    const totalRows = Math.max(1, (draft?.ingredients || []).length);
+    const recognizedRows = (batch?.ingredients || []).filter(row => n(row.initialWeightG, 0) > 0).length;
+    const initialWeightG = (batch?.ingredients || []).reduce((sum, row) => sum + n(row.initialWeightG, 0), 0);
+    const finalWeightG = n(batch?.finalWeightG, 0);
+    const measured = n(draft?.measuredFinalWeightG, 0) > 0;
+    const fillPct = recognizedRows ? Math.min(88, 22 + (recognizedRows / totalRows) * 42 + Math.min(24, initialWeightG / 50)) : 9;
+    const state = !recognizedRows ? "empty" : measured ? "ready" : "simmering";
+    const title = state === "empty"
+      ? txt("La marmite attend son premier ingredient", "The pot is waiting for its first ingredient")
+      : state === "ready"
+        ? txt("Recette prete a servir", "Recipe ready to serve")
+        : txt("La recette prend forme", "The recipe is coming together");
+    const detail = state === "empty"
+      ? txt("Selectionne un aliment puis sa quantite.", "Select a food and its quantity.")
+      : measured
+        ? txt(`${Math.round(finalWeightG)} g prets · ${Math.max(1, Math.round(n(draft?.servings, 1)))} portions`, `${Math.round(finalWeightG)} g ready · ${Math.max(1, Math.round(n(draft?.servings, 1)))} servings`)
+        : txt(`${recognizedRows}/${totalRows} ingredients reconnus · ${Math.round(initialWeightG)} g ajoutes`, `${recognizedRows}/${totalRows} ingredients recognized · ${Math.round(initialWeightG)} g added`);
+    return { state, fillPct: Math.round(fillPct), title, detail };
+  }
+  function renderCookingPot(draft, batch) {
+    const pot = cookingPotSnapshot(draft, batch);
+    return `<div id="nutrition-cook-pot" class="tb-nutrition-cook-pot" data-state="${pot.state}" style="--tb-pot-fill:${pot.fillPct}%" role="status" aria-live="polite">
+      <div class="tb-nutrition-cook-pot-scene" aria-hidden="true"><span>🍲</span></div>
+      <div class="tb-nutrition-cook-pot-copy"><strong>${esc(pot.title)}</strong><span>${esc(pot.detail)}</span></div>
+    </div>`;
   }
   function renderCookingEditor() {
     const draft = ensureCookingDraft();
@@ -293,12 +336,13 @@
             </div>
           </section>
           <section class="tb-nutrition-cook-step" aria-labelledby="nutrition-cook-step-ingredients">
-            <div class="tb-nutrition-cook-step-head"><span>2</span><div><strong id="nutrition-cook-step-ingredients">${esc(txt("Les ingredients", "Ingredients"))}</strong><small>${esc(txt("Choisis un aliment du catalogue, son poids utilise et sa cuisson.", "Choose a catalog food, its used weight and cooking method."))}</small></div></div>
+            <div class="tb-nutrition-cook-step-head"><span>2</span><div><strong id="nutrition-cook-step-ingredients">${esc(txt("Les ingredients", "Ingredients"))}</strong><small>${esc(txt("Choisis un aliment, indique des portions ou des grammes, puis sa cuisson.", "Choose a food, enter servings or grams, then its cooking method."))}</small></div></div>
             <div class="tb-nutrition-cook-ingredients">${renderCookingIngredients(draft)}</div>
             <button class="btn small" type="button" id="nutrition-cook-add-ingredient">+ ${esc(txt("Ajouter un ingredient", "Add an ingredient"))}</button>
           </section>
         </div>
         <aside class="tb-nutrition-cook-side" aria-label="${esc(txt("Resultat nutritionnel", "Nutrition result"))}">
+          ${renderCookingPot(draft, batch)}
           <section class="tb-nutrition-cook-step tb-nutrition-cook-portion" aria-labelledby="nutrition-cook-step-portion">
             <div class="tb-nutrition-cook-step-head"><span>3</span><div><strong id="nutrition-cook-step-portion">${esc(txt("Ma portion", "My portion"))}</strong><small>${esc(txt("Ajoute maintenant la quantite reellement mangee.", "Add the amount actually eaten now."))}</small></div></div>
             <div class="tb-nutrition-cook-consumption">
@@ -1770,15 +1814,21 @@
     const cookPortion = modalRoot.querySelector("#nutrition-cook-portion-g");
     const updateCookPreview = () => {
       const draft = readCookingDraft(modalRoot);
-      modalRoot.querySelectorAll("[data-cook-row]").forEach(row => {
-        const mode = cookingQuantityMode(row.querySelector("[data-cook-quantity-mode]")?.value);
-        if (mode !== "portion") return;
-        const food = cookingFoodMatch(row.querySelector("[data-cook-food]")?.value);
-        const quantity = n(row.querySelector("[data-cook-quantity]")?.value, 1);
+      modalRoot.querySelectorAll("[data-cook-row]").forEach((row, index) => {
+        const ingredient = draft.ingredients[index] || {};
+        const food = cookingFoodMatch(ingredient.foodKey || ingredient.foodName);
+        const resolved = resolveCookingQuantity(ingredient);
         const grams = row.querySelector("[data-cook-grams]");
-        if (grams) grams.value = String(Math.round(Math.max(0, quantity * n(food?.servingGrams, 100))));
+        if (grams) grams.value = food || resolved.mode === "grams" ? String(Math.round(resolved.grams * 10) / 10) : "";
+        row.classList.toggle("is-ready", Boolean(food && resolved.grams > 0));
+        const status = row.querySelector("[data-cook-food-status]");
+        if (status) status.textContent = food
+          ? (resolved.mode === "portion" ? txt(`1 portion = ${Math.round(resolved.servingGrams)} g`, `1 serving = ${Math.round(resolved.servingGrams)} g`) : txt("Aliment reconnu", "Food recognized"))
+          : txt("Choisis une proposition de la bibliotheque.", "Choose a library suggestion.");
       });
       const batch = calculateCookingDraft(draft);
+      const pot = modalRoot.querySelector("#nutrition-cook-pot");
+      if (pot) pot.outerHTML = renderCookingPot(draft, batch);
       const food = cookingFoodFromBatch(batch);
       const grams = Math.max(1, Math.round(n(cookPortion?.value, food.servingGrams || 100)));
       const nut = nutritionForGrams(food, grams);
@@ -1793,9 +1843,25 @@
     };
     modalRoot.querySelectorAll("[data-cook-quantity-mode]").forEach(select => {
       select.onchange = () => {
+        const ingredientRow = select.closest("[data-cook-row]");
+        const index = Math.max(0, n(ingredientRow?.getAttribute("data-cook-row"), 0));
+        const previousMode = cookingQuantityMode(select.getAttribute("data-cook-current-mode"));
+        const nextMode = cookingQuantityMode(select.value);
+        const foodName = String(ingredientRow?.querySelector("[data-cook-food]")?.value || "").trim();
+        const food = cookingFoodMatch(foodName);
+        const previousQuantity = ingredientRow?.querySelector("[data-cook-quantity]")?.value || "";
+        const previousResolved = rules().transitionRecipeIngredientQuantity({
+          fromMode: previousMode, toMode: nextMode, quantity: previousQuantity, servingGrams: food?.servingGrams || 100,
+        });
         const draft = readCookingDraft(modalRoot);
+        const target = draft.ingredients[index];
+        if (target) {
+          target.quantityMode = nextMode;
+          target.quantity = nextMode === "portion" ? 1 : (previousResolved.grams > 0 ? Math.round(previousResolved.grams * 10) / 10 : "");
+          target.grams = previousResolved.grams;
+        }
         CACHE.cookingDraft = draft;
-        refreshModal(`[data-cook-row]:nth-child(${Math.max(1, n(select.closest('[data-cook-row]')?.getAttribute('data-cook-row'), 0) + 1)}) [data-cook-quantity]`);
+        refreshModal(`[data-cook-row]:nth-child(${index + 1}) [data-cook-quantity]`);
       };
     });
     const cookAddIngredient = modalRoot.querySelector("#nutrition-cook-add-ingredient");
@@ -2113,15 +2179,13 @@
       const food = cookingFoodMatch(foodName);
       const quantityMode = cookingQuantityMode(row.querySelector("[data-cook-quantity-mode]")?.value);
       const quantity = row.querySelector("[data-cook-quantity]")?.value || "";
-      const grams = quantityMode === "portion"
-        ? Math.round(Math.max(0, n(quantity, 1) * n(food?.servingGrams, 100)))
-        : (row.querySelector("[data-cook-grams]")?.value || "");
+      const resolved = resolveCookingQuantity({ foodKey: food?.key || "", foodName: food?.name || foodName, quantityMode, quantity });
       return {
         foodKey: food?.key || "",
         foodName: food?.name || foodName,
-        grams,
+        grams: resolved.grams,
         quantityMode,
-        quantity,
+        quantity: resolved.quantity,
         method: row.querySelector("[data-cook-method]")?.value || "raw",
       };
     });

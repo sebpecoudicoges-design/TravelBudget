@@ -1158,6 +1158,37 @@ body.theme-dark .tb-nutrition-energy-settings select {
   border-radius: var(--tb-radius-sm);
   background: var(--tb-surface);
 }
+.tb-nutrition-cook-ingredient.is-ready { border-color: color-mix(in srgb, var(--tb-lagoon) 48%, var(--tb-line)); }
+.tb-nutrition-cook-ingredient label > small { min-height: 14px; color: var(--tb-muted); font-size: 10px; line-height: 1.35; }
+.tb-nutrition-cook-ingredient.is-ready label > small { color: var(--tb-success); }
+.tb-nutrition-cook-ingredient [data-cook-grams][readonly] {
+  background: color-mix(in srgb, var(--tb-lagoon) 7%, var(--tb-surface));
+  color: var(--tb-ink);
+  font-weight: 800;
+}
+
+.tb-nutrition-cook-pot {
+  --tb-pot-accent: var(--tb-warning);
+  display: grid; grid-template-columns: 76px minmax(0,1fr); align-items: center; gap: 12px;
+  box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--tb-coral) 28%, var(--tb-line));
+  border-radius: var(--tb-radius-md);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--tb-coral) 9%, var(--tb-surface)), var(--tb-surface));
+}
+.tb-nutrition-cook-pot[data-state="ready"] { --tb-pot-accent: var(--tb-lagoon); border-color: color-mix(in srgb, var(--tb-lagoon) 42%, var(--tb-line)); }
+.tb-nutrition-cook-pot[data-state="empty"] { --tb-pot-accent: var(--tb-line); }
+.tb-nutrition-cook-pot-scene {
+  display: grid; place-items: center; width: 72px; aspect-ratio: 1; border-radius: 50%;
+  background: conic-gradient(var(--tb-pot-accent) var(--tb-pot-fill), var(--tb-surface-soft) 0);
+  box-shadow: inset 0 0 0 5px var(--tb-surface);
+}
+.tb-nutrition-cook-pot-scene span { font-size: 38px; filter: drop-shadow(0 5px 6px color-mix(in srgb, var(--tb-ink) 16%, transparent)); }
+.tb-nutrition-cook-pot[data-state="simmering"] .tb-nutrition-cook-pot-scene span { animation: tb-cook-simmer 1.8s ease-in-out infinite; }
+.tb-nutrition-cook-pot-copy { display: grid; gap: 4px; min-width: 0; }
+.tb-nutrition-cook-pot-copy strong { color: var(--tb-ink); font-size: 14px; line-height: 1.25; }
+.tb-nutrition-cook-pot-copy span { color: var(--tb-muted); font-size: 11px; line-height: 1.45; }
+
+@keyframes tb-cook-simmer { 50% { transform: translateY(-3px) rotate(2deg); } }
 
 .tb-nutrition-cook-preview {
   display: grid;
@@ -1258,6 +1289,13 @@ body.theme-dark .tb-nutrition-cook-modal .tb-ui-modal__footer,
 body.theme-dark .tb-nutrition-cook-step { background: var(--panel2); color: var(--text, #f8fafc); }
 body.theme-dark .tb-nutrition-cook-modal .tb-ui-modal__header { border-color: rgba(241, 245, 249, .14); background: linear-gradient(135deg, rgba(255, 107, 74, .14), var(--panel2)); }
 body.theme-dark .tb-nutrition-cook-preview { border-color: rgba(35, 181, 175, .35); background: linear-gradient(145deg, rgba(35, 181, 175, .14), rgba(15, 23, 42, .56)); }
+body.theme-dark .tb-nutrition-cook-pot {
+  --tb-surface: var(--panel);
+  --tb-surface-soft: var(--panel2);
+  --tb-ink: var(--text, #f8fafc);
+  --tb-muted: var(--muted, #94a3b8);
+  --tb-line: var(--border, rgba(241, 245, 249, .14));
+}
 
 @media (max-width: 860px) {
   .tb-nutrition-section-tab { flex: 0 0 auto; }
@@ -1276,8 +1314,14 @@ body.theme-dark .tb-nutrition-cook-preview { border-color: rgba(35, 181, 175, .3
   .tb-nutrition-cook-ingredient { grid-template-columns: 1fr 1fr; }
   .tb-nutrition-cook-ingredient > label:first-child { grid-column: 1 / -1; }
   .tb-nutrition-cook-side { grid-template-columns: 1fr; }
+  .tb-nutrition-cook-pot { grid-template-columns: 64px minmax(0, 1fr); padding: 10px 12px; }
+  .tb-nutrition-cook-pot-scene { width: 60px; }
   .tb-nutrition-water-entry { align-items: stretch; flex-direction: column; }
   .tb-nutrition-water-entry .btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-nutrition-cook-pot[data-state="simmering"] .tb-nutrition-cook-pot-scene span { animation: none; }
 }
 
 @media (max-width: 390px) {

@@ -232,3 +232,5 @@ En 10.5.361, la fondation Cuisine devient un atelier complet et persistant, tand
 En 10.5.362, la création de recette rejoint une fenêtre premium dédiée, avec focus clavier, trois étapes, aperçu nutritionnel et actions fixes. Le domaine Nutrition mesure 225,7 / 235 KiB; initial 268,3 / 269 KiB, lazy 461,3 / 462 KiB et total JS 729,6 / 730 KiB restent inchangés. Le CSS atteint 64,8 KiB; son plafond passe au palier minimal de 65 KiB.
 
 En 10.5.363, le rafraîchissement de la fenêtre recette ne relit plus l ancien DOM après ajout ou suppression d ingrédient : le brouillon courant reste la source unique. Les budgets restent inchangés.
+
+En 10.5.365, les quantités de recette sont centralisées dans des règles pures : une portion vide vaut 1, les grammes saisis deviennent la valeur calculée et la transition entre modes conserve le sens de la quantité. La marmite interactive réutilise les couleurs du thème, une jauge conique et un mouvement réduit pour limiter le poids visuel. Le domaine Nutrition mesure 234,5 / 235 KiB; les plafonds distribués montent au palier entier minimal, soit 730,3 / 731 KiB en JS total et 67 / 67 KiB en CSS.

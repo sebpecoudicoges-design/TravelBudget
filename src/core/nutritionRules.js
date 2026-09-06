@@ -42,6 +42,29 @@ export function nutritionForGrams(food = {}, grams = 0) {
   };
 }
 
+export function resolveRecipeIngredientQuantity({ mode = 'grams', quantity = '', servingGrams = 100 } = {}) {
+  const cleanMode = String(mode || 'grams') === 'portion' ? 'portion' : 'grams';
+  const fallback = cleanMode === 'portion' ? 1 : 0;
+  const rawQuantity = quantity === null || quantity === undefined || String(quantity).trim() === ''
+    ? fallback
+    : num(quantity, fallback);
+  const cleanQuantity = Math.max(0, rawQuantity);
+  const cleanServingGrams = Math.max(1, num(servingGrams, 100));
+  return {
+    mode: cleanMode,
+    quantity: cleanQuantity,
+    servingGrams: cleanServingGrams,
+    grams: cleanMode === 'portion' ? cleanQuantity * cleanServingGrams : cleanQuantity,
+  };
+}
+
+export function transitionRecipeIngredientQuantity({ fromMode = 'grams', toMode = 'grams', quantity = '', servingGrams = 100 } = {}) {
+  const previous = resolveRecipeIngredientQuantity({ mode: fromMode, quantity, servingGrams });
+  return String(toMode || 'grams') === 'portion'
+    ? resolveRecipeIngredientQuantity({ mode: 'portion', quantity: 1, servingGrams: previous.servingGrams })
+    : resolveRecipeIngredientQuantity({ mode: 'grams', quantity: previous.grams || '', servingGrams: previous.servingGrams });
+}
+
 export const COOKING_METHOD_CODES = Object.freeze([
   'raw',
   'boiled',

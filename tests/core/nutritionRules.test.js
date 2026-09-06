@@ -14,7 +14,9 @@ import {
   normalizeFoodRow,
   nutritionForGrams,
   nutritionGoalTargets,
+  resolveRecipeIngredientQuantity,
   sumNutrition,
+  transitionRecipeIngredientQuantity,
 } from '../../src/core/nutritionRules.js';
 
 describe('nutrition rules core', () => {
@@ -43,6 +45,22 @@ describe('nutrition rules core', () => {
     const total = sumNutrition([{ food: rice, grams: 200 }, { food: chicken, grams: 120 }]);
     expect(Math.round(total.kcal)).toBe(458);
     expect(Math.round(total.protein)).toBe(43);
+  });
+
+  it('resolves recipe ingredients consistently from portions or grams', () => {
+    expect(resolveRecipeIngredientQuantity({ mode: 'portion', quantity: '', servingGrams: 120 })).toEqual({
+      mode: 'portion', quantity: 1, servingGrams: 120, grams: 120,
+    });
+    expect(resolveRecipeIngredientQuantity({ mode: 'portion', quantity: 1.5, servingGrams: 120 }).grams).toBe(180);
+    expect(resolveRecipeIngredientQuantity({ mode: 'grams', quantity: 275, servingGrams: 120 })).toEqual({
+      mode: 'grams', quantity: 275, servingGrams: 120, grams: 275,
+    });
+    expect(transitionRecipeIngredientQuantity({ fromMode: 'grams', toMode: 'portion', quantity: 275, servingGrams: 120 })).toEqual({
+      mode: 'portion', quantity: 1, servingGrams: 120, grams: 120,
+    });
+    expect(transitionRecipeIngredientQuantity({ fromMode: 'portion', toMode: 'grams', quantity: 1.5, servingGrams: 120 })).toEqual({
+      mode: 'grams', quantity: 180, servingGrams: 120, grams: 180,
+    });
   });
 
   it('separates cooking yield from total nutrients when calculating a recipe ingredient', () => {

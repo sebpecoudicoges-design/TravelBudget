@@ -13,6 +13,7 @@ describe('nutrition domain extraction contract', () => {
   const offlineState = fs.readFileSync('public/legacy/js/00_offline.js', 'utf8');
   const premiumTheme = fs.readFileSync('src/ui/premium-theme.css', 'utf8');
   const deepRefactorMigration = fs.readFileSync('supabase/migrations/20260815011706_nutrition_sections_and_hydration_time_10_5_344.sql', 'utf8');
+  const cookingQuantityRetest = fs.readFileSync('supabase/migrations/20260906100023_nutrition_recipe_quantity_pot_10_5_365.sql', 'utf8');
 
   it('exposes repository, store and views through the modular bridge', () => {
     expect(bridge).toContain("import { createNutritionRepository } from '../data/nutritionRepository.js'");
@@ -139,8 +140,19 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('cookingModalHandle?.close?.()');
     expect(legacy).toContain('draft.ingredients.push({ foodKey: "", foodName: "", grams: "", quantityMode: "grams", quantity: "", method: "raw" });');
     expect(legacy).toContain('data-cook-quantity-mode');
+    expect(legacy).toContain('data-cook-current-mode');
     expect(legacy).toContain('data-cook-quantity');
     expect(legacy).toContain('cookingIngredientGrams');
+    expect(legacy).toContain('renderCookingPot');
+    expect(legacy).toContain('id="nutrition-cook-pot"');
+    expect(legacy).toContain('target.quantity = nextMode === "portion" ? 1');
+    expect(legacy).toContain('transitionRecipeIngredientQuantity');
+    expect(premiumTheme).toContain('.tb-nutrition-cook-pot');
+    expect(premiumTheme).toContain('body.theme-dark .tb-nutrition-cook-pot');
+    expect(premiumTheme).toContain('@keyframes tb-cook-simmer');
+    expect(premiumTheme).toContain('@media (prefers-reduced-motion: reduce)');
+    expect(cookingQuantityRetest).toContain('Quantites recette et marmite interactive 10.5.365');
+    expect(cookingQuantityRetest).toContain("parent.title = 'Ajout ingredient sans perte de brouillon 10.5.363'");
     expect(view).toContain('foodLibraryCount');
     expect(legacy).not.toContain('renderNutrition("cook-add-ingredient")');
     expect(legacy).not.toContain('renderNutrition("cook-remove-ingredient")');
