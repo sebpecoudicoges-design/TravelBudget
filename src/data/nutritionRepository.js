@@ -314,5 +314,81 @@ export function createNutritionRepository(getClient) {
       }
       return { mealId, syncedItem: Boolean(item) };
     },
+
+    async loadCookingWorkspace({ tables, userId, limit = 8 }) {
+      const client = requireClient(getClient);
+      const batchesResult = await client.from(tables.batches)
+          .select('id,recipe_id,user_id,cooked_at,name,final_weight_g,final_weight_source,servings,precision_level,total_kcal,total_protein_g,total_carbs_g,total_fat_g,total_fiber_g,per_100g_snapshot,per_serving_snapshot,created_at')
+          .eq('user_id', userId)
+          .order('cooked_at', { ascending: false })
+          .limit(Math.max(1, limit));
+      return {
+        batches: cleanArray(unwrap(batchesResult), limit),
+      };
+    },
+
+    async saveCookingBatch({ tables, userId, recipe, batch }) {
+      const client = requireClient(getClient);
+      const recipeRow = unwrap(await client.from(tables.recipes).insert({
+        user_id: userId,
+        name: recipe.name,
+        description: recipe.description || null,
+        default_servings: Math.max(1, Math.round(safeNumber(batch.servings, 1))),
+      }).select('id').single());
+      const recipeId = recipeRow?.id;
+      const ingredients = (batch.ingredients || []).map((row, index) => ({
+        recipe_id: recipeId,
+        user_id: userId,
+        food_key: row.foodKey || null,
+        label: row.label || 'Ingredient',
+        quantity: safeNumber(row.initialWeightG, 0),
+        unit: 'g',
+        quantity_grams: safeNumber(row.initialWeightG, 0),
+        initial_state: row.initialState || 'raw',
+        cooking_method_code: row.cookingMethod || 'raw',
+        sort_order: index,
+      }));
+      if (ingredients.length) unwrap(await client.from(tables.ingredients).insert(ingredients));
+      const batchRow = unwrap(await client.from(tables.batches).insert({
+        recipe_id: recipeId,
+        user_id: userId,
+        name: batch.name,
+        estimated_final_weight_g: safeNumber(batch.estimatedFinalWeightG, 0),
+        measured_final_weight_g: safeNumber(batch.measuredFinalWeightG, 0) || null,
+        final_weight_g: safeNumber(batch.finalWeightG, 0),
+        final_weight_source: batch.finalWeightSource || 'estimated',
+        servings: Math.max(1, Math.round(safeNumber(batch.servings, 1))),
+        precision_level: batch.precisionLevel || 'estimated',
+        total_kcal: safeNumber(batch.total?.kcal, 0),
+        total_protein_g: safeNumber(batch.total?.protein, 0),
+        total_carbs_g: safeNumber(batch.total?.carbs, 0),
+        total_fat_g: safeNumber(batch.total?.fat, 0),
+        total_fiber_g: safeNumber(batch.total?.fiber, 0),
+        per_100g_snapshot: batch.per100g || {},
+        per_serving_snapshot: batch.perServing || {},
+      }).select('id,recipe_id,cooked_at,name,final_weight_g,final_weight_source,servings,precision_level,total_kcal,total_protein_g,total_carbs_g,total_fat_g,total_fiber_g,per_100g_snapshot,per_serving_snapshot').single());
+      const batchIngredients = (batch.ingredients || []).map((row, index) => ({
+        batch_id: batchRow.id,
+        user_id: userId,
+        food_key: row.foodKey || null,
+        label: row.label || 'Ingredient',
+        initial_weight_g: safeNumber(row.initialWeightG, 0),
+        initial_state: row.initialState || 'raw',
+        cooking_method_code: row.cookingMethod || 'raw',
+        nutrition_snapshot: row.nutrition || {},
+        yield_factor_used: safeNumber(row.yieldFactor, 1),
+        yield_source_used: row.factorScope || 'manual',
+        retention_factors_used: {},
+        estimated_cooked_weight_g: safeNumber(row.estimatedCookedWeightG, 0),
+        measured_cooked_weight_g: safeNumber(row.measuredCookedWeightG, 0) || null,
+        sort_order: index,
+      }));
+      if (batchIngredients.length) unwrap(await client.from(tables.batchIngredients).insert(batchIngredients));
+      return { recipeId, batch: batchRow };
+    },
   };
+}
+
+function cleanArray(value, limit = Infinity) {
+  return (Array.isArray(value) ? value : []).slice(0, limit);
 }

@@ -9,6 +9,8 @@ const numberValue = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const roundBodyMetric = (value) => Math.round(numberValue(value, 0) * 10) / 10;
+
 function helpers(api = {}) {
   return {
     esc: api.escapeHTML || fallbackEscape,
@@ -105,54 +107,61 @@ function renderMobilityAssessment(analysis = {}, h) {
   </div>`;
 }
 
-function renderBodyTrendChart(trend = [], h) {
-  const rows = Array.isArray(trend) ? trend.filter(Boolean) : [];
+function renderBodyTrendChart(trend = [], h, { metricKey = 'weightKg', range = 12 } = {}) {
+  const allRows = Array.isArray(trend) ? trend.filter(Boolean) : [];
+  const take = range === 'all' ? allRows.length : Math.max(2, Number(range) || 12);
+  const rows = allRows.slice(-take);
   if (!rows.length) return '';
   const series = [
     { key: 'weightKg', label: h.txt('Poids', 'Weight'), unit: 'kg', cls: 'weight' },
     { key: 'bodyFatPct', label: h.txt('Graisse %', 'Fat %'), unit: '%', cls: 'fat' },
     { key: 'fatMassKg', label: h.txt('Graisse kg', 'Fat kg'), unit: 'kg', cls: 'fat' },
-    { key: 'musclePct', label: h.txt('Muscle %', 'Muscle %'), unit: '%', cls: 'muscle' },
-    { key: 'muscleMassKg', label: h.txt('Muscle kg', 'Muscle kg'), unit: 'kg', cls: 'muscle' },
-  ].map((serie) => {
-    const values = rows.map((row) => h.n(row[serie.key], 0)).filter((value) => value > 0);
-    const min = values.length ? Math.min(...values) : 0;
-    const max = values.length ? Math.max(...values) : 0;
-    return { ...serie, min, max };
-  });
-  const barHeight = (value, serie) => {
-    const v = h.n(value, 0);
-    if (!v) return 0;
-    if (serie.max <= serie.min) return 54;
-    return Math.max(12, Math.round(16 + ((v - serie.min) / (serie.max - serie.min)) * 42));
-  };
-  const latest = rows.at(-1) || {};
-  const hasMissingMusclePct = rows.some((row) => !h.n(row.musclePct, 0));
-  const hasMissingMuscleKg = rows.some((row) => !h.n(row.muscleMassKg, 0));
+    { key: 'muscleMassKg', label: h.txt('Muscle total kg', 'Total muscle kg'), unit: 'kg', cls: 'muscle' },
+    { key: 'musclePct', label: h.txt('Muscle squelettique %', 'Skeletal muscle %'), unit: '%', cls: 'muscle' },
+    { key: 'skeletalMuscleKg', label: h.txt('Muscle squelettique kg', 'Skeletal muscle kg'), unit: 'kg', cls: 'muscle' },
+    { key: 'leanMassKg', label: h.txt('Masse maigre', 'Lean mass'), unit: 'kg', cls: 'muscle' },
+    { key: 'waterPct', label: h.txt('Eau corporelle', 'Body water'), unit: '%', cls: 'water' },
+    { key: 'subcutaneousFatPct', label: h.txt('Graisse sous-cutanee', 'Subcutaneous fat'), unit: '%', cls: 'fat' },
+    { key: 'visceralFat', label: h.txt('Graisse viscerale', 'Visceral fat'), unit: '', cls: 'fat' },
+    { key: 'proteinPct', label: h.txt('Proteines', 'Protein'), unit: '%', cls: 'protein' },
+    { key: 'bmrKcal', label: h.txt('Metabolisme basal', 'Basal metabolism'), unit: 'kcal', cls: 'energy' },
+  ];
+  const serie = series.find(row => row.key === metricKey) || series[0];
+  const points = rows.map(row => ({ row, value: h.n(row[serie.key], 0) })).filter(point => point.value > 0);
+  const values = points.map(point => point.value);
+  const min = values.length ? Math.min(...values) : 0;
+  const max = values.length ? Math.max(...values) : 0;
+  const span = Math.max(0.1, max - min);
+  const coords = points.map((point, index) => ({
+    ...point,
+    x: points.length === 1 ? 160 : 16 + index / (points.length - 1) * 288,
+    y: max === min ? 62 : 108 - (point.value - min) / span * 88,
+  }));
+  const line = coords.map(point => `${Math.round(point.x * 10) / 10},${Math.round(point.y * 10) / 10}`).join(' ');
+  const first = points[0]?.value || 0;
+  const latest = points.at(-1)?.value || 0;
+  const delta = first && latest ? Math.round((latest - first) * 10) / 10 : null;
+  const missing = rows.length - points.length;
   return `<div class="tb-sport-body-trend">
     <div class="tb-sport-body-trend-head">
-      <strong>${h.esc(h.txt('Evolution composition', 'Composition trend'))}</strong>
-      <small>${h.esc(h.txt('12 dernieres mesures', 'Last 12 measurements'))}</small>
+      <div><strong>${h.esc(h.txt('Analyse de tendance', 'Trend analysis'))}</strong><small>${h.esc(h.txt('Une metrique a la fois, sans melanger les echelles.', 'One metric at a time, without mixing scales.'))}</small></div>
+      <div class="tb-sport-body-trend-controls">
+        <select id="sport-body-trend-metric" aria-label="${h.esc(h.txt('Metrique analysee', 'Analyzed metric'))}">${series.map(row => `<option value="${h.esc(row.key)}" ${row.key === serie.key ? 'selected' : ''}>${h.esc(row.label)}</option>`).join('')}</select>
+        <div role="group" aria-label="${h.esc(h.txt('Periode analysee', 'Analyzed period'))}">${[['12', '12'], ['30', '30'], ['all', h.txt('Tout', 'All')]].map(([value, label]) => `<button type="button" class="btn small ${String(range) === value ? 'active' : ''}" data-sport-body-range="${value}">${h.esc(label)}</button>`).join('')}</div>
+      </div>
     </div>
-    ${series.map((serie) => {
-      const latestValue = h.n(latest[serie.key], 0);
-      return `<div class="tb-sport-body-trend-row">
-        <span>${h.esc(serie.label)}</span>
-        <div class="tb-sport-body-trend-bars ${h.esc(serie.cls)}">
-          ${rows.map((row) => {
-            const value = h.n(row[serie.key], 0);
-            const label = value ? `${row.date} - ${h.n(value, 0)}${serie.unit}` : `${row.date} - non renseigne`;
-            return `<i title="${h.esc(label)}" style="height:${barHeight(value, serie)}px;opacity:${value ? 1 : 0.22}"></i>`;
-          }).join('')}
-        </div>
-        <b>${latestValue ? `${h.n(latestValue, 0)}${serie.unit}` : '-'}</b>
-      </div>`;
-    }).join('')}
-    <div class="tb-sport-body-trend-dates">
-      <span>${h.esc(rows[0]?.date || '')}</span><span>${h.esc(rows.at(-1)?.date || '')}</span>
-    </div>
-    ${hasMissingMusclePct ? `<small class="tb-sport-body-trend-note">${h.esc(h.txt('Muscle % trace uniquement quand la balance le fournit directement ou dans la note.', 'Muscle % is charted only when the scale provides it directly or in the note.'))}</small>` : ''}
-    ${hasMissingMuscleKg ? `<small class="tb-sport-body-trend-note">${h.esc(h.txt('Muscle kg trace uniquement quand la mesure source le fournit, sans conversion artificielle depuis le pourcentage.', 'Muscle kg is charted only when provided by the source measurement, without an artificial conversion from percentage.'))}</small>` : ''}
+    ${points.length ? `<div class="tb-sport-body-trend-summary ${h.esc(serie.cls)}">
+        <div><span>${h.esc(serie.label)}</span><strong>${h.n(latest, 0)} ${h.esc(serie.unit)}</strong></div>
+        <div><span>${h.esc(h.txt('Evolution periode', 'Period change'))}</span><strong class="${delta > 0 ? 'up' : delta < 0 ? 'down' : ''}">${delta === null ? '-' : `${delta > 0 ? '+' : ''}${delta} ${serie.unit}`}</strong></div>
+        <div><span>${h.esc(h.txt('Amplitude', 'Range'))}</span><strong>${h.n(min, 0)}–${h.n(max, 0)} ${h.esc(serie.unit)}</strong></div>
+      </div>
+      <svg class="tb-sport-body-line ${h.esc(serie.cls)}" viewBox="0 0 320 124" role="img" aria-label="${h.esc(`${serie.label}: ${points.length} mesures, ${min} a ${max} ${serie.unit}`)}" preserveAspectRatio="none">
+        <line x1="16" y1="20" x2="304" y2="20"></line><line x1="16" y1="64" x2="304" y2="64"></line><line x1="16" y1="108" x2="304" y2="108"></line>
+        ${coords.length > 1 ? `<polygon points="16,112 ${line} 304,112"></polygon><polyline points="${line}"></polyline>` : ''}
+        ${coords.map(point => `<circle cx="${point.x}" cy="${point.y}" r="4"><title>${h.esc(`${point.row.date} · ${point.value} ${serie.unit}`)}</title></circle>`).join('')}
+      </svg>
+      <div class="tb-sport-body-trend-dates"><span>${h.esc(points[0]?.row.date || '')}</span><span>${points.length} ${h.esc(h.txt('mesure(s)', 'measurement(s)'))}</span><span>${h.esc(points.at(-1)?.row.date || '')}</span></div>` : `<div class="tb-sport-empty">${h.esc(h.txt('Cette metrique n est pas encore renseignee sur la periode.', 'This metric is not yet recorded for this period.'))}</div>`}
+    ${missing ? `<small class="tb-sport-body-trend-note">${missing} ${h.esc(h.txt('mesure(s) sans cette donnee ont ete ignorees, sans valeur inventee.', 'measurement(s) without this value were ignored, with no invented value.'))}</small>` : ''}
   </div>`;
 }
 
@@ -188,6 +197,8 @@ export function renderSportProfileDashboard({
   data = {},
   latest = null,
   bodyWeightKg = 0,
+  bodyTrendMetric = 'weightKg',
+  bodyTrendRange = 12,
   api = {},
 } = {}) {
   const h = helpers(api);
@@ -206,6 +217,7 @@ export function renderSportProfileDashboard({
   const weakest = data.weakest || axes[0] || { label: '-' };
   const athleticProfile = data.athleticProfile || null;
   const bodyAnalysis = data.bodyCompositionAnalysis || { metrics: [], insights: [], warnings: [] };
+  const bodyCompleteness = bodyAnalysis.completenessPct ?? (bodyAnalysis.metrics?.length ? 100 : 0);
   const loads = (data.bestLoads || []).length
     ? data.bestLoads.map((row) => `<span class="tb-sport-chip">${h.esc(row.name)} ${Math.round(h.n(row.estimate, 0))} kg e1RM</span>`).join('')
     : `<span class="tb-sport-chip">${h.esc(h.txt('Charges a renseigner dans les series', 'Enter loads in sets'))}</span>`;
@@ -251,15 +263,15 @@ export function renderSportProfileDashboard({
           <button class="btn primary" type="button" id="sport-open-body-measurement-2">+ ${h.esc(h.txt('Saisir', 'Add'))}</button>
         </div>
         <div class="tb-sport-body-kpis">
-          <div><span>${h.esc(h.txt('Poids', 'Weight'))}</span><strong>${latest?.weight_kg ? `${h.n(latest.weight_kg, 0)} kg` : `${h.n(bodyWeightKg || h.bodyWeight(), 0)} kg`}</strong></div>
-          <div><span>${h.esc(h.txt('Masse grasse', 'Body fat'))}</span><strong>${latest?.body_fat_pct ? `${h.n(latest.body_fat_pct, 0)}%` : '-'}</strong></div>
-          <div><span>${h.esc(h.txt('Muscle', 'Muscle'))}</span><strong>${latest?.muscle_mass_kg ? `${h.n(latest.muscle_mass_kg, 0)} kg` : '-'}</strong></div>
-          <div><span>${h.esc(h.txt('Eau', 'Water'))}</span><strong>${latest?.body_water_pct ? `${h.n(latest.body_water_pct, 0)}%` : '-'}</strong></div>
+          <div><span>${h.esc(h.txt('Poids', 'Weight'))}</span><strong>${latest?.weight_kg ? `${roundBodyMetric(latest.weight_kg)} kg` : `${roundBodyMetric(bodyWeightKg || h.bodyWeight())} kg`}</strong></div>
+          <div><span>${h.esc(h.txt('Masse grasse', 'Body fat'))}</span><strong>${latest?.body_fat_pct ? `${roundBodyMetric(latest.body_fat_pct)}%` : '-'}</strong></div>
+          <div><span>${h.esc(h.txt('Muscle', 'Muscle'))}</span><strong>${latest?.muscle_mass_kg ? `${roundBodyMetric(latest.muscle_mass_kg)} kg` : '-'}</strong></div>
+          <div><span>${h.esc(h.txt('Eau', 'Water'))}</span><strong>${latest?.body_water_pct ? `${roundBodyMetric(latest.body_water_pct)}%` : '-'}</strong></div>
         </div>
-        ${bodyAnalysis.metrics.length ? `<div class="tb-sport-athletic-metrics" style="margin-top:10px;">
-          ${bodyAnalysis.metrics.slice(0, 6).map((row) => `<div><span>${h.esc(row.label)}</span><strong>${h.esc(`${row.value}${row.unit ? ` ${row.unit}` : ''}`)}</strong><small>${row.delta === null ? h.esc(h.txt('Premiere reference', 'First reference')) : h.esc(`${row.delta > 0 ? '+' : ''}${row.delta}${row.unit ? ` ${row.unit}` : ''}`)}</small></div>`).join('')}
+        ${bodyAnalysis.metrics.length ? `<div class="tb-sport-body-analysis-head"><div><strong>${h.esc(h.txt('Tableau de bord corporel', 'Body dashboard'))}</strong><small>${h.esc(`${bodyAnalysis.availableMetricCount || bodyAnalysis.metrics.length}/${bodyAnalysis.totalMetricCount || bodyAnalysis.metrics.length} ${h.txt('indicateurs disponibles', 'metrics available')}`)}</small></div><b>${h.n(bodyCompleteness, 0)}%</b></div><div class="tb-sport-athletic-metrics tb-sport-body-metrics">
+          ${bodyAnalysis.metrics.map((row) => `<div><span>${h.esc(row.label)}</span><strong>${h.esc(`${row.value}${row.unit ? ` ${row.unit}` : ''}`)}</strong><small>${row.delta === null ? h.esc(h.txt('Premiere reference', 'First reference')) : h.esc(`${row.delta > 0 ? '+' : ''}${row.delta}${row.unit ? ` ${row.unit}` : ''}`)}</small></div>`).join('')}
         </div>` : ''}
-        ${renderBodyTrendChart(bodyAnalysis.trend || [], h)}
+        ${renderBodyTrendChart(bodyAnalysis.trend || [], h, { metricKey: bodyTrendMetric, range: bodyTrendRange })}
         ${renderBodyMeasurementHistory(bodyAnalysis.history || [], h)}
         <div class="tb-sport-athletic-grid" style="margin-top:10px;">
           <div class="tb-sport-athletic-panel">
@@ -417,6 +429,8 @@ export function renderBodyMeasurementModal({ editor = null, api = {} } = {}) {
           ${bodyInput('sport-body-fat', h.txt('Masse grasse %', 'Body fat %'), editor.body_fat_pct, '0.1', h)}
           ${bodyInput('sport-body-fat-mass', h.txt('Masse graisseuse kg (depuis %)', 'Fat mass kg (from %)'), editor.fat_mass_kg, '0.1', h)}
           ${bodyInput('sport-body-muscle', h.txt('Masse musculaire kg', 'Muscle mass kg'), editor.muscle_mass_kg, '0.1', h)}
+          ${bodyInput('sport-body-skeletal-muscle-pct', h.txt('Muscle squelettique %', 'Skeletal muscle %'), editor.skeletal_muscle_pct, '0.1', h)}
+          ${bodyInput('sport-body-skeletal-muscle-kg', h.txt('Muscle squelettique kg', 'Skeletal muscle kg'), editor.skeletal_muscle_kg, '0.1', h)}
           ${bodyInput('sport-body-lean', h.txt('Masse maigre kg (poids - graisse)', 'Lean mass kg (weight - fat)'), editor.lean_mass_kg, '0.1', h)}
           ${bodyInput('sport-body-water', h.txt('Eau corporelle %', 'Body water %'), editor.body_water_pct, '0.1', h)}
           ${bodyInput('sport-body-water-kg', h.txt('Eau corporelle kg (depuis %)', 'Body water kg (from %)'), editor.body_water_kg, '0.1', h)}

@@ -2,10 +2,10 @@
   "version": 1,
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
-    "initialJsMaxKiB": 266,
-    "lazyJsMaxKiB": 457,
-    "totalJsMaxKiB": 723,
-    "totalCssMaxKiB": 59,
+    "initialJsMaxKiB": 269,
+    "lazyJsMaxKiB": 462,
+    "totalJsMaxKiB": 730,
+    "totalCssMaxKiB": 61,
     "mainJsGzipMaxKiB": 110
   },
   "sourceGroups": [
@@ -153,7 +153,7 @@
     },
     {
       "name": "sport-domain",
-      "maxKiB": 460,
+      "maxKiB": 465,
       "paths": [
         "public/legacy/js/45_sport_ui.js",
         "src/core/sportProgressionRules.js",

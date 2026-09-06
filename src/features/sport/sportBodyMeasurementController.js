@@ -64,6 +64,8 @@ export function buildBodyMeasurementEditor({ row, latest, today, weightKg, heigh
     body_fat_pct: source.body_fat_pct ?? '',
     fat_mass_kg: source.fat_mass_kg ?? '',
     muscle_mass_kg: source.muscle_mass_kg ?? '',
+    skeletal_muscle_pct: source.skeletal_muscle_pct ?? '',
+    skeletal_muscle_kg: source.skeletal_muscle_kg ?? '',
     lean_mass_kg: source.lean_mass_kg ?? '',
     body_water_pct: source.body_water_pct ?? '',
     body_water_kg: source.body_water_kg ?? '',
@@ -107,6 +109,8 @@ export function readBodyMeasurementFromDom({ root, today, userId, qualityFn } = 
     body_fat_pct: cleanOptionalNumber(root.querySelector('#sport-body-fat')?.value, 2, 70),
     fat_mass_kg: cleanOptionalNumber(root.querySelector('#sport-body-fat-mass')?.value, 0, 250),
     muscle_mass_kg: cleanOptionalNumber(root.querySelector('#sport-body-muscle')?.value, 5, 200),
+    skeletal_muscle_pct: cleanOptionalNumber(root.querySelector('#sport-body-skeletal-muscle-pct')?.value, 5, 80),
+    skeletal_muscle_kg: cleanOptionalNumber(root.querySelector('#sport-body-skeletal-muscle-kg')?.value, 2, 220),
     lean_mass_kg: cleanOptionalNumber(root.querySelector('#sport-body-lean')?.value, 0, 300),
     body_water_pct: cleanOptionalNumber(root.querySelector('#sport-body-water')?.value, 20, 80),
     body_water_kg: cleanOptionalNumber(root.querySelector('#sport-body-water-kg')?.value, 0, 250),
@@ -180,7 +184,7 @@ export async function ensureBodyMeasurementsLoaded({
       .select(columns)
       .eq('user_id', userId)
       .order('measured_on', { ascending: false })
-      .limit(40);
+      .limit(80);
     if (response.error) throw response.error;
     saveBodyMeasurementsLocal(response.data || [], { storageKey, cache });
     return true;

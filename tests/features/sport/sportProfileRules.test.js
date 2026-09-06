@@ -217,6 +217,22 @@ describe('Sport profile rules', () => {
     expect(trend[1].muscleMassKg).toBe(0);
   });
 
+  it('keeps every impedance metric available and parses explicit skeletal muscle kilograms', () => {
+    const analysis = buildBodyCompositionAnalysis([{
+      measured_on: '2026-09-06', weight_kg: 65.3, bmi: 24.7, body_fat_pct: 23.8,
+      fat_mass_kg: 15.54, lean_mass_kg: 49.76, muscle_mass_kg: 47.28,
+      body_water_pct: 55, body_water_kg: 35.92, bone_mass_kg: 2.48,
+      visceral_fat_rating: 8, protein_pct: 17.4, protein_mass_kg: 11.36,
+      subcutaneous_fat_pct: 21.2, bmr_kcal: 1441, metabolic_age: 28,
+      notes: 'Renpho. Muscle squelettique: 32.06 kg (49.1%).',
+    }]);
+
+    expect(analysis.trend[0]).toMatchObject({ skeletalMuscleKg: 32.1, musclePct: 49.1, bmrKcal: 1441 });
+    expect(analysis.metrics.find(row => row.key === 'skeletal_muscle_kg')?.value).toBe(32.1);
+    expect(analysis.metrics.find(row => row.key === 'protein_mass_kg')?.value).toBe(11.4);
+    expect(analysis.completenessPct).toBe(100);
+  });
+
   it('builds recent body measurement history for editing', () => {
     const history = buildBodyMeasurementHistory([
       { id: 'old', measured_on: '2026-07-20', source: 'impedance_scale', weight_kg: 61 },

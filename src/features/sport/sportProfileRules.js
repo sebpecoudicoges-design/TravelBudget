@@ -295,17 +295,24 @@ function bodyMusclePct(row = {}) {
   const direct = numberValue(row?.muscle_pct || row?.skeletal_muscle_pct || row?.skeletal_muscle_percent, 0);
   if (direct > 0) return direct;
   const notes = String(row?.notes || '');
-  const match = notes.match(/muscle\s+squelettique\s*:?\s*([0-9]+(?:[,.][0-9]+)?)\s*%/i);
+  const match = notes.match(/muscle\s+squelettique[^%]*\(([0-9]+(?:[,.][0-9]+)?)\s*%/i)
+    || notes.match(/muscle\s+squelettique\s*:?\s*([0-9]+(?:[,.][0-9]+)?)\s*%/i);
   if (match) return numberValue(match[1].replace(',', '.'), 0);
   return 0;
+}
+
+function bodySkeletalMuscleKg(row = {}) {
+  const direct = numberValue(row?.skeletal_muscle_kg, 0);
+  if (direct > 0) return direct;
+  const match = String(row?.notes || '').match(/muscle\s+squelettique\s*:?\s*([0-9]+(?:[,.][0-9]+)?)\s*kg/i);
+  return match ? numberValue(match[1].replace(',', '.'), 0) : 0;
 }
 
 export function buildBodyCompositionTrend(measurements = []) {
   const rows = (measurements || [])
     .filter((row) => row && (row.measured_on || row.created_at))
     .slice()
-    .sort((a, b) => String(a.measured_on || a.created_at).localeCompare(String(b.measured_on || b.created_at)))
-    .slice(-12);
+    .sort((a, b) => String(a.measured_on || a.created_at).localeCompare(String(b.measured_on || b.created_at)));
   return rows.map((row) => ({
     date: String(row.measured_on || row.created_at || '').slice(0, 10),
     weightKg: roundOne(row.weight_kg),
@@ -313,6 +320,18 @@ export function buildBodyCompositionTrend(measurements = []) {
     fatMassKg: roundOne(bodyMetric(row, 'fat_mass_kg')),
     musclePct: roundOne(bodyMusclePct(row)),
     muscleMassKg: roundOne(row.muscle_mass_kg),
+    skeletalMuscleKg: roundOne(bodySkeletalMuscleKg(row)),
+    leanMassKg: roundOne(bodyMetric(row, 'lean_mass_kg')),
+    waterPct: roundOne(row.body_water_pct),
+    waterKg: roundOne(row.body_water_kg),
+    subcutaneousFatPct: roundOne(row.subcutaneous_fat_pct),
+    visceralFat: roundOne(row.visceral_fat_rating),
+    boneMassKg: roundOne(row.bone_mass_kg),
+    proteinPct: roundOne(row.protein_pct),
+    proteinMassKg: roundOne(row.protein_mass_kg),
+    bmi: roundOne(row.bmi),
+    bmrKcal: Math.round(numberValue(row.bmr_kcal, 0)),
+    metabolicAge: Math.round(numberValue(row.metabolic_age, 0)),
     musclePctSource: numberValue(row?.muscle_pct || row?.skeletal_muscle_pct || row?.skeletal_muscle_percent, 0) > 0 || /muscle\s+squelettique/i.test(String(row?.notes || ''))
       ? 'direct'
       : 'missing',
@@ -334,6 +353,8 @@ export function buildBodyMeasurementHistory(measurements = []) {
       weightKg: roundOne(row.weight_kg),
       bodyFatPct: roundOne(row.body_fat_pct),
       muscleMassKg: roundOne(row.muscle_mass_kg),
+      skeletalMusclePct: roundOne(bodyMusclePct(row)),
+      skeletalMuscleKg: roundOne(bodySkeletalMuscleKg(row)),
       qualityLabel: row.protocol_quality_label || '',
       qualityScore: numberValue(row.protocol_quality_score, 0) || null,
     }));
@@ -359,12 +380,23 @@ export function buildBodyCompositionAnalysis(measurements = []) {
     ['fat_mass_kg', 'Masse graisseuse', 'kg'],
     ['lean_mass_kg', 'Masse maigre', 'kg'],
     ['muscle_mass_kg', 'Muscle', 'kg'],
+    ['skeletal_muscle_pct', 'Muscle squelettique', '%'],
+    ['skeletal_muscle_kg', 'Muscle squelettique', 'kg'],
     ['body_water_pct', 'Eau', '%'],
+    ['body_water_kg', 'Eau corporelle', 'kg'],
+    ['subcutaneous_fat_pct', 'Graisse sous-cutanee', '%'],
     ['visceral_fat_rating', 'Graisse viscerale', ''],
+    ['bone_mass_kg', 'Masse osseuse', 'kg'],
+    ['protein_pct', 'Proteines', '%'],
+    ['protein_mass_kg', 'Proteines', 'kg'],
+    ['bmi', 'IMC', ''],
+    ['bmr_kcal', 'Metabolisme basal', 'kcal'],
+    ['metabolic_age', 'Age metabolique', 'ans'],
   ];
   const metrics = definitions.map(([key, label, unit]) => {
-    const current = bodyMetric(latest, key);
-    const before = previous ? bodyMetric(previous, key) : 0;
+    const readMetric = (row) => key === 'skeletal_muscle_pct' ? bodyMusclePct(row) : key === 'skeletal_muscle_kg' ? bodySkeletalMuscleKg(row) : bodyMetric(row, key);
+    const current = readMetric(latest);
+    const before = previous ? readMetric(previous) : 0;
     return current > 0 ? { key, label, unit, value: roundOne(current), delta: before > 0 ? roundOne(current - before) : null } : null;
   }).filter(Boolean);
   const getDelta = (key) => metrics.find((row) => row.key === key)?.delta;
@@ -374,6 +406,9 @@ export function buildBodyCompositionAnalysis(measurements = []) {
   const insights = [];
   const warnings = [];
   const consistencyWarnings = rows.flatMap((row) => bodyMeasurementConsistency(row).warnings);
+  const completenessKeys = ['weight_kg', 'bmi', 'body_fat_pct', 'fat_mass_kg', 'lean_mass_kg', 'muscle_mass_kg', 'skeletal_muscle_pct', 'skeletal_muscle_kg', 'body_water_pct', 'body_water_kg', 'bone_mass_kg', 'visceral_fat_rating', 'protein_pct', 'protein_mass_kg', 'subcutaneous_fat_pct', 'bmr_kcal', 'metabolic_age'];
+  const availableMetricCount = completenessKeys.filter((key) => bodyMetric(latest, key) > 0 || (key === 'skeletal_muscle_pct' && bodyMusclePct(latest) > 0) || (key === 'skeletal_muscle_kg' && bodySkeletalMuscleKg(latest) > 0)).length;
+  const completenessPct = Math.round(availableMetricCount / completenessKeys.length * 100);
 
   if (previous && weightDelta > 0 && leanDelta > 0 && (!fatDelta || leanDelta >= fatDelta)) {
     insights.push('Hausse du poids principalement accompagnee par la masse maigre sur les mesures comparables.');
@@ -393,6 +428,9 @@ export function buildBodyCompositionAnalysis(measurements = []) {
     previous,
     qualityScore: latestQuality || null,
     qualityLabel: latest.protocol_quality_label || '',
+    completenessPct,
+    availableMetricCount,
+    totalMetricCount: completenessKeys.length,
     metrics,
     trend: buildBodyCompositionTrend(rows),
     history: buildBodyMeasurementHistory(rows),

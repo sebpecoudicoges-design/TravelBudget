@@ -25,7 +25,7 @@
   const EXERCISE_FAVORITES_KEY = () => scopedKey("travelbudget_sport_exercise_favorites_v1");
   const EXERCISE_RECENT_KEY = () => scopedKey("travelbudget_sport_exercise_recent_v1");
   const RECOVERY_MET = 1.3;
-  const BODY_MEASUREMENT_COLUMNS = "id,user_id,measured_on,source,weight_kg,bmi,body_fat_pct,fat_mass_kg,muscle_mass_kg,lean_mass_kg,body_water_pct,body_water_kg,bone_mass_kg,visceral_fat_rating,bmr_kcal,metabolic_age,protein_pct,protein_mass_kg,subcutaneous_fat_pct,ideal_weight_kg,body_type,vma_kmh,vma_source,measurement_time,after_toilet,before_food,before_drink,before_activity,same_scale,hard_flat_floor,dry_feet,protocol_quality_score,protocol_quality_label,notes,created_at,updated_at";
+  const BODY_MEASUREMENT_COLUMNS = "id,user_id,measured_on,source,weight_kg,bmi,body_fat_pct,fat_mass_kg,muscle_mass_kg,skeletal_muscle_pct,skeletal_muscle_kg,lean_mass_kg,body_water_pct,body_water_kg,bone_mass_kg,visceral_fat_rating,bmr_kcal,metabolic_age,protein_pct,protein_mass_kg,subcutaneous_fat_pct,ideal_weight_kg,body_type,vma_kmh,vma_source,measurement_time,after_toilet,before_food,before_drink,before_activity,same_scale,hard_flat_floor,dry_feet,protocol_quality_score,protocol_quality_label,notes,created_at,updated_at";
 
   const sportCatalog = window.Core?.sportCatalog;
   if (!sportCatalog) throw new Error("Sport catalog indisponible");
@@ -113,6 +113,8 @@
     CACHE.timerMode = CACHE.timer ? "guided" : CACHE.freeTimer ? "free" : "guided";
     if (CACHE.timer || CACHE.freeTimer) startTicker();
     CACHE.bodyMeasurements = loadBodyMeasurementsLocal();
+    CACHE.bodyTrendMetric = CACHE.bodyTrendMetric || "weightKg";
+    CACHE.bodyTrendRange = CACHE.bodyTrendRange || 12;
     CACHE.bodyMeasurementsLoaded = false;
     CACHE.mobilityAssessments = loadMobilityAssessmentsLocal();
     CACHE.mobilityAssessmentsLoaded = false;
@@ -2569,6 +2571,8 @@
       data: sportProfileRadarData(),
       latest: latestBodyMeasurement(),
       bodyWeightKg: bodyWeight(),
+      bodyTrendMetric: CACHE.bodyTrendMetric || "weightKg",
+      bodyTrendRange: CACHE.bodyTrendRange || 12,
       api: sportViewApi(),
     }) || "";
   }
@@ -2882,6 +2886,18 @@
       btn.onclick = () => {
         openBodyMeasurementEditorByKey(btn.getAttribute("data-sport-body-edit"), btn.getAttribute("data-sport-body-source"));
         renderSport("body-measurement-edit");
+      };
+    });
+    const bodyTrendMetric = root.querySelector("#sport-body-trend-metric");
+    if (bodyTrendMetric) bodyTrendMetric.onchange = () => {
+      CACHE.bodyTrendMetric = bodyTrendMetric.value || "weightKg";
+      renderSport("body-trend-metric");
+    };
+    root.querySelectorAll("[data-sport-body-range]").forEach(btn => {
+      btn.onclick = () => {
+        const value = btn.getAttribute("data-sport-body-range") || "12";
+        CACHE.bodyTrendRange = value === "all" ? "all" : Math.max(2, n(value, 12));
+        renderSport("body-trend-range");
       };
     });
     const saveMobility = root.querySelector("#sport-save-mobility");

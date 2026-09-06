@@ -128,7 +128,16 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('id="nutrition-cook-editor"');
     expect(legacy).toContain('id="nutrition-cook-save"');
     expect(legacy).toContain('saveCookingPortion(root)');
+    expect(legacy).toContain('calculateCookingDraft');
+    expect(legacy).toContain('id="nutrition-cook-add-ingredient"');
+    expect(legacy).toContain('data-cook-batch');
+    expect(repository).toContain('async saveCookingBatch');
+    expect(repository).toContain('async loadCookingWorkspace');
+    expect(premiumTheme).toContain('.tb-nutrition-cook-ingredient');
     expect(legacy).toContain('publishNutrition("cooking-portion-local")');
+    expect(legacy).toContain('food: { ...food, key: null }');
+    expect(legacy).toContain('[tb_recipe_batch:${batchId}]');
+    expect(legacy).toContain('remoteSaveError = error');
     expect(legacy).not.toContain('Synchro alimentation en attente", "Pending nutrition sync');
     expect(legacy).not.toContain('rows.slice(0, 8).map((row, index)');
     expect(legacy).not.toContain('<section class="tb-nutrition-shell">');

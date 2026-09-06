@@ -66,6 +66,7 @@ describe('Sport profile view', () => {
       data,
       latest: { measured_on: '2026-07-07', weight_kg: 59, body_fat_pct: 15, muscle_mass_kg: 47, body_water_pct: 58 },
       bodyWeightKg: 59,
+      bodyTrendMetric: 'musclePct',
       api,
     });
 
@@ -80,19 +81,33 @@ describe('Sport profile view', () => {
     expect(html).toContain('Developpe militaire probablement en retard');
     expect(html).toContain('Derniere mesure : 2026-07-07');
     expect(html).toContain('15%');
-    expect(html).toContain('Evolution composition');
+    expect(html).toContain('Analyse de tendance');
     expect(html).toContain('Graisse %');
     expect(html).toContain('Graisse kg');
-    expect(html).toContain('Muscle %');
-    expect(html).toContain('Muscle kg');
-    expect(html).toContain('14.7kg');
-    expect(html).toContain('46.4kg');
-    expect(html).toContain('Muscle % trace uniquement');
-    expect(html).toContain('sans conversion artificielle');
+    expect(html).toContain('Muscle squelettique %');
+    expect(html).toContain('Muscle squelettique kg');
+    expect(html).toContain('id="sport-body-trend-metric"');
+    expect(html).toContain('data-sport-body-range="30"');
+    expect(html).toContain('sans cette donnee ont ete ignorees');
     expect(html).toContain('Pesées récentes');
     expect(html).toContain('data-sport-body-edit="2026-07-26"');
     expect(html).toContain('Modifier');
     expect(html).toContain('id="sport-open-body-measurement"');
+  });
+
+  it('rounds headline impedance values to a readable tenth', () => {
+    const html = renderSportProfileDashboard({
+      data,
+      latest: { measured_on: '2026-07-07', weight_kg: 63.7500001, body_fat_pct: 22.9000001, muscle_mass_kg: 46.6700001, body_water_pct: 55.7000001 },
+      bodyWeightKg: 63.75,
+      api,
+    });
+
+    expect(html).toContain('63.8 kg');
+    expect(html).toContain('22.9%');
+    expect(html).toContain('46.7 kg');
+    expect(html).toContain('55.7%');
+    expect(html).not.toContain('63.7500001');
   });
 
   it('renders a fallback chip when loads are missing', () => {
@@ -121,6 +136,8 @@ describe('Sport profile view', () => {
     expect(html).toContain('value="59"');
     expect(html).toContain('id="sport-body-bmi"');
     expect(html).toContain('id="sport-body-fat-mass"');
+    expect(html).toContain('id="sport-body-skeletal-muscle-pct"');
+    expect(html).toContain('id="sport-body-skeletal-muscle-kg"');
     expect(html).toContain('Body fat = masse grasse %');
     expect(html).toContain('restent modifiables');
     expect(html).toContain('Masse graisseuse kg (depuis %)');
