@@ -1050,14 +1050,90 @@ body.theme-dark .tb-nutrition-energy-settings select {
 .tb-nutrition-cook-batch span { margin-top: 4px; color: var(--tb-muted); font-size: 12px; }
 .tb-nutrition-cook-batch small { margin-top: 6px; color: var(--tb-coral-strong); font-weight: 850; }
 
+.tb-nutrition-cook-modal-backdrop {
+  padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  background: rgba(15, 23, 42, .62);
+  backdrop-filter: blur(12px);
+}
+
+.tb-nutrition-cook-modal {
+  width: min(1080px, 100%);
+  max-height: min(94dvh, 920px);
+  border-color: var(--tb-line);
+  border-radius: var(--tb-radius-lg);
+  background: var(--tb-surface);
+  color: var(--tb-ink);
+  box-shadow: var(--tb-shadow);
+}
+
+.tb-nutrition-cook-modal .tb-ui-modal__header {
+  padding: 18px 22px;
+  border-color: var(--tb-line);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tb-coral) 9%, var(--tb-surface)), var(--tb-surface));
+}
+
+.tb-nutrition-cook-modal .tb-ui-modal__title { color: var(--tb-ink); font-size: clamp(19px, 2vw, 24px); }
+.tb-nutrition-cook-modal .tb-ui-modal__subtitle { color: var(--tb-muted); }
+.tb-nutrition-cook-modal .tb-ui-modal__body { padding: 18px 22px 22px; }
+.tb-nutrition-cook-modal .tb-ui-modal__footer { padding: 12px 22px; border-color: var(--tb-line); background: var(--tb-surface); }
+.tb-nutrition-cook-modal .tb-ui-modal__footer .btn { min-height: 42px; }
+
 .tb-nutrition-cook-editor {
   display: grid;
-  gap: 12px;
-  margin-top: 12px;
-  padding: 12px;
+  gap: 14px;
+  min-width: 0;
+}
+
+.tb-nutrition-cook-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, .44fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.tb-nutrition-cook-main,
+.tb-nutrition-cook-side { display: grid; gap: 14px; min-width: 0; }
+.tb-nutrition-cook-side { position: sticky; top: 0; }
+
+.tb-nutrition-cook-step {
+  min-width: 0;
+  padding: 14px;
   border: 1px solid var(--tb-line);
   border-radius: var(--tb-radius-md);
-  background: var(--tb-surface-soft);
+  background: var(--tb-surface);
+}
+
+.tb-nutrition-cook-step-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.tb-nutrition-cook-step-head > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 999px;
+  background: var(--tb-coral);
+  color: #fff;
+  font-weight: 900;
+}
+
+.tb-nutrition-cook-step-head strong,
+.tb-nutrition-cook-step-head small { display: block; }
+.tb-nutrition-cook-step-head strong { color: var(--tb-ink); }
+.tb-nutrition-cook-step-head small { margin-top: 2px; color: var(--tb-muted); font-size: 11px; }
+
+.tb-nutrition-cook-error {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--tb-danger) 44%, var(--tb-line));
+  border-radius: var(--tb-radius-sm);
+  background: color-mix(in srgb, var(--tb-danger) 9%, var(--tb-surface));
+  color: var(--tb-danger);
+  font-weight: 800;
 }
 
 .tb-nutrition-cook-meta,
@@ -1067,8 +1143,10 @@ body.theme-dark .tb-nutrition-energy-settings select {
   gap: 8px;
 }
 
-.tb-nutrition-cook-editor label { display: grid; gap: 4px; min-width: 0; }
+.tb-nutrition-cook-editor label { display: grid; gap: 5px; min-width: 0; }
 .tb-nutrition-cook-editor label > span { color: var(--tb-muted); font-size: 11px; font-weight: 850; }
+.tb-nutrition-cook-editor input,
+.tb-nutrition-cook-editor select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 42px; }
 .tb-nutrition-cook-ingredients { display: grid; gap: 7px; }
 .tb-nutrition-cook-ingredient {
   display: grid;
@@ -1082,17 +1160,18 @@ body.theme-dark .tb-nutrition-energy-settings select {
 }
 
 .tb-nutrition-cook-preview {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 12px;
-  padding: 10px;
-  border-radius: var(--tb-radius-sm);
-  background: color-mix(in srgb, var(--tb-coral) 8%, var(--tb-surface));
+  display: grid;
+  gap: 7px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--tb-lagoon) 32%, var(--tb-line));
+  border-radius: var(--tb-radius-md);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--tb-lagoon) 12%, var(--tb-surface)), var(--tb-surface));
 }
-.tb-nutrition-cook-preview strong { font-size: 18px; }
+.tb-nutrition-cook-preview .tb-nutrition-cook-preview-label { color: var(--tb-ink); font-weight: 900; }
+.tb-nutrition-cook-preview strong { color: var(--tb-lagoon); font-size: clamp(24px, 4vw, 34px); line-height: 1; }
 .tb-nutrition-cook-preview span { color: var(--tb-muted); font-size: 12px; }
-.tb-nutrition-cook-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tb-nutrition-cook-preview > div { display: grid; gap: 4px; padding-top: 8px; border-top: 1px solid var(--tb-line); }
+.tb-nutrition-cook-help { margin: 0; padding-inline: 4px; color: var(--tb-muted); font-size: 11px; line-height: 1.5; }
 
 .tb-nutrition-water-form {
   display: grid;
@@ -1171,12 +1250,22 @@ body.theme-dark .tb-nutrition-subcard {
 
 body.theme-dark .tb-nutrition-cook-editor,
 body.theme-dark .tb-nutrition-cook-batch,
-body.theme-dark .tb-nutrition-cook-ingredient { border-color: rgba(241, 245, 249, .14); }
+body.theme-dark .tb-nutrition-cook-ingredient,
+body.theme-dark .tb-nutrition-cook-step { border-color: rgba(241, 245, 249, .14); }
+
+body.theme-dark .tb-nutrition-cook-modal,
+body.theme-dark .tb-nutrition-cook-modal .tb-ui-modal__footer,
+body.theme-dark .tb-nutrition-cook-step { background: var(--panel2); color: var(--text, #f8fafc); }
+body.theme-dark .tb-nutrition-cook-modal .tb-ui-modal__header { border-color: rgba(241, 245, 249, .14); background: linear-gradient(135deg, rgba(255, 107, 74, .14), var(--panel2)); }
+body.theme-dark .tb-nutrition-cook-preview { border-color: rgba(35, 181, 175, .35); background: linear-gradient(145deg, rgba(35, 181, 175, .14), rgba(15, 23, 42, .56)); }
 
 @media (max-width: 860px) {
   .tb-nutrition-section-tab { flex: 0 0 auto; }
   .tb-nutrition-recovery-layout { grid-template-columns: 1fr; }
   .tb-nutrition-recovery-layout .tb-nutrition-alcohol-card { grid-column: auto; }
+  .tb-nutrition-cook-workspace { grid-template-columns: 1fr; }
+  .tb-nutrition-cook-side { position: static; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .tb-nutrition-cook-help { grid-column: 1 / -1; }
 }
 
 @media (max-width: 460px) {
@@ -1186,16 +1275,24 @@ body.theme-dark .tb-nutrition-cook-ingredient { border-color: rgba(241, 245, 249
   .tb-nutrition-history-summary { grid-template-columns: 1fr 1fr; }
   .tb-nutrition-cook-ingredient { grid-template-columns: 1fr 1fr; }
   .tb-nutrition-cook-ingredient > label:first-child { grid-column: 1 / -1; }
+  .tb-nutrition-cook-side { grid-template-columns: 1fr; }
   .tb-nutrition-water-entry { align-items: stretch; flex-direction: column; }
   .tb-nutrition-water-entry .btn { width: 100%; }
 }
 
 @media (max-width: 390px) {
+  .tb-nutrition-cook-modal-backdrop { place-items: end center; padding: 0; }
+  .tb-nutrition-cook-modal { width: 100%; max-height: 100dvh; border-radius: var(--tb-radius-lg) var(--tb-radius-lg) 0 0; }
+  .tb-nutrition-cook-modal .tb-ui-modal__header { padding: 14px 16px; }
+  .tb-nutrition-cook-modal .tb-ui-modal__body { padding: 14px 12px 18px; }
+  .tb-nutrition-cook-modal .tb-ui-modal__footer { display: grid; grid-template-columns: 1fr; padding: 10px 12px max(10px, env(safe-area-inset-bottom)); }
+  .tb-nutrition-cook-modal .tb-ui-modal__footer .btn { width: 100%; }
+  .tb-nutrition-cook-modal #nutrition-cook-save { order: -1; }
+  .tb-nutrition-cook-side { grid-template-columns: 1fr; }
   .tb-nutrition-cook-meta,
   .tb-nutrition-cook-consumption,
   .tb-nutrition-cook-ingredient { grid-template-columns: 1fr; }
   .tb-nutrition-cook-ingredient > label:first-child { grid-column: auto; }
-  .tb-nutrition-cook-actions .btn { width: 100%; }
 }
 
 @media (max-width: 900px) {

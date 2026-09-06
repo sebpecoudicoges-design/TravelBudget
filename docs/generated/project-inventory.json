@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "f224c621afdc0cf776ecb222c61879da1ac2adc8",
-  "snapshotFingerprint": "726ef1a8925c314c471ea4f09f5c68aaa31c68822c0ea62e393d00c41adb4413",
-  "generatedAt": "2026-09-06T01:08:07.778Z",
+  "commit": "76b9a645501673d9d15a0af05ae5208b71630588",
+  "snapshotFingerprint": "6203bbe52f897930988ada3b339254cb20b4828c4a6cdafbf7db04f231806592",
+  "generatedAt": "2026-09-06T03:55:11.180Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.361"
+    "version": "10.5.362"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -578,7 +578,8 @@
     "supabase/migrations/20260829082147_project_page_visual_10_5_359.sql",
     "supabase/migrations/20260905021242_sport_force_hypertrophy_template_v2.sql",
     "supabase/migrations/20260905022509_nutrition_cooking_recipes_batches_v1.sql",
-    "supabase/migrations/20260906003052_body_measurement_professional_analysis_v3.sql"
+    "supabase/migrations/20260906003052_body_measurement_professional_analysis_v3.sql",
+    "supabase/migrations/20260906015352_nutrition_recipe_modal_10_5_362.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

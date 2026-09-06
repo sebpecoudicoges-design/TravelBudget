@@ -170,6 +170,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
     - [x] Extraire les panneaux de vue : saisie rapide, hydratation, sommeil et historique semaine.
     - [x] Extraire les vues objectif et alcool : cockpit objectif, moyenne 7 jours et barres alcool hebdomadaires.
     - [x] Rendre `Je cuisine` réellement fonctionnel en 10.5.361 : recette libre, ingrédients du catalogue, poids crus, modes de cuisson, poids final, portions, snapshots SQL et reprise des batchs récents.
+    - [x] Sortir la création de recette dans une vraie fenêtre en 10.5.362 : parcours en trois étapes, aperçu nutritionnel interactif, actions fixes, focus clavier contenu, fermeture complète et composition mobile sans rechargement du module.
   - [x] Extraire le panneau Synchro alimentation en attente vers `nutritionView.js`, avec actions sync/vider/supprimer conservees.
   - [x] Extraire le shell principal Nutrition vers `nutritionView.js` : en-tete, anneau kcal, macros, objectif, comparaison et slots de panneaux.
 - [x] Sante : supprimer le chantier autonome et garder les indicateurs dans Nutrition, Sport, Travail, notifications et KPI.

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `f224c621afdc0cf776ecb222c61879da1ac2adc8`
-> Empreinte du snapshot : `726ef1a8925c314c471ea4f09f5c68aaa31c68822c0ea62e393d00c41adb4413`
-> Généré le : `2026-09-06T01:08:07.778Z`
+> Commit analysé : `76b9a645501673d9d15a0af05ae5208b71630588`
+> Empreinte du snapshot : `6203bbe52f897930988ada3b339254cb20b4828c4a6cdafbf7db04f231806592`
+> Généré le : `2026-09-06T03:55:11.180Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.361` |
+| Version | `10.5.362` |
 | Écrans déclarés | 17 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 46 |
 | Fichiers de tests | 127 |
-| Migrations Supabase | 154 |
+| Migrations Supabase | 155 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -630,6 +630,7 @@ Modules :
 - `supabase/migrations/20260905021242_sport_force_hypertrophy_template_v2.sql`
 - `supabase/migrations/20260905022509_nutrition_cooking_recipes_batches_v1.sql`
 - `supabase/migrations/20260906003052_body_measurement_professional_analysis_v3.sql`
+- `supabase/migrations/20260906015352_nutrition_recipe_modal_10_5_362.sql`
 
 ## Android et budgets de modules
 

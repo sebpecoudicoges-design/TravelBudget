@@ -5,6 +5,7 @@
 (function () {
   const NUTRITION_STORE = window.Data?.nutritionStore || null;
   const CACHE = NUTRITION_STORE?.state || { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], sleep: {}, localRows: [], error: "", syncStatus: "", syncPhase: "", foodQuery: "", foodCategory: "all", selectedMealType: "", selectedDate: "", activeSection: "today", expandedHistory: "", editingItemId: "", cookingEditorOpen: false, cookingBatches: [], cookingDraft: null };
+  let cookingModalHandle = null;
   const FALLBACK_FOODS = [
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
@@ -255,7 +256,7 @@
       <button class="btn small" type="button" data-cook-remove="${index}" aria-label="${esc(txt("Retirer cet ingredient", "Remove this ingredient"))}">×</button>
     </div>`).join("");
   }
-  function renderCookingPanel() {
+  function renderCookingEditor() {
     const draft = ensureCookingDraft();
     const batch = calculateCookingDraft(draft);
     const recipeFood = cookingFoodFromBatch(batch);
@@ -264,34 +265,53 @@
     const defaultPortionG = Math.round(n(draft.portionG, 0) || n(recipeFood.servingGrams, 0) || 100);
     const activeCookMealType = draft.mealType || CACHE.selectedMealType || currentMealType();
     const preview = nutritionForGrams(recipeFood, defaultPortionG);
+    return `<div id="nutrition-cook-editor" class="tb-nutrition-cook-editor">
+      <datalist id="nutrition-cook-foods">${(CACHE.foods || []).map(food => `<option value="${esc(food.name)}"></option>`).join("")}</datalist>
+      <div id="nutrition-cook-error" class="tb-nutrition-cook-error" role="alert" tabindex="-1" hidden></div>
+      <div class="tb-nutrition-cook-workspace">
+        <div class="tb-nutrition-cook-main">
+          <section class="tb-nutrition-cook-step" aria-labelledby="nutrition-cook-step-recipe">
+            <div class="tb-nutrition-cook-step-head"><span>1</span><div><strong id="nutrition-cook-step-recipe">${esc(txt("La recette", "The recipe"))}</strong><small>${esc(txt("Identifie le plat et son rendement final.", "Identify the dish and its final yield."))}</small></div></div>
+            <div class="tb-nutrition-cook-meta">
+              <label><span>${esc(txt("Nom de la recette", "Recipe name"))}</span><input id="nutrition-cook-name" type="text" value="${esc(draft.name || "")}" placeholder="${esc(txt("Ex. curry poulet riz", "E.g. chicken rice curry"))}" autocomplete="off"></label>
+              <label><span>${esc(txt("Nombre de portions", "Number of servings"))}</span><input id="nutrition-cook-servings" type="number" min="1" max="40" step="1" value="${esc(String(draft.servings || 1))}"></label>
+              <label><span>${esc(txt("Poids final mesure (g)", "Measured final weight (g)"))}</span><input id="nutrition-cook-final-weight" type="number" min="1" step="1" value="${esc(draft.measuredFinalWeightG || "")}" placeholder="${Math.round(n(batch?.estimatedFinalWeightG, 0)) || "-"}"></label>
+            </div>
+          </section>
+          <section class="tb-nutrition-cook-step" aria-labelledby="nutrition-cook-step-ingredients">
+            <div class="tb-nutrition-cook-step-head"><span>2</span><div><strong id="nutrition-cook-step-ingredients">${esc(txt("Les ingredients", "Ingredients"))}</strong><small>${esc(txt("Choisis un aliment du catalogue, son poids utilise et sa cuisson.", "Choose a catalog food, its used weight and cooking method."))}</small></div></div>
+            <div class="tb-nutrition-cook-ingredients">${renderCookingIngredients(draft)}</div>
+            <button class="btn small" type="button" id="nutrition-cook-add-ingredient">+ ${esc(txt("Ajouter un ingredient", "Add an ingredient"))}</button>
+          </section>
+        </div>
+        <aside class="tb-nutrition-cook-side" aria-label="${esc(txt("Resultat nutritionnel", "Nutrition result"))}">
+          <section class="tb-nutrition-cook-step tb-nutrition-cook-portion" aria-labelledby="nutrition-cook-step-portion">
+            <div class="tb-nutrition-cook-step-head"><span>3</span><div><strong id="nutrition-cook-step-portion">${esc(txt("Ma portion", "My portion"))}</strong><small>${esc(txt("Ajoute maintenant la quantite reellement mangee.", "Add the amount actually eaten now."))}</small></div></div>
+            <div class="tb-nutrition-cook-consumption">
+              <label><span>${esc(txt("Poids mange (g)", "Eaten weight (g)"))}</span><input id="nutrition-cook-portion-g" type="number" min="1" step="1" value="${esc(String(defaultPortionG))}"></label>
+              <label><span>${esc(txt("Moment", "Moment"))}</span><select id="nutrition-cook-meal-type"><option value="breakfast" ${activeCookMealType === "breakfast" ? "selected" : ""}>${esc(mealTypeLabel("breakfast"))}</option><option value="morning_snack" ${activeCookMealType === "morning_snack" ? "selected" : ""}>${esc(mealTypeLabel("morning_snack"))}</option><option value="lunch" ${activeCookMealType === "lunch" ? "selected" : ""}>${esc(mealTypeLabel("lunch"))}</option><option value="afternoon_snack" ${activeCookMealType === "afternoon_snack" ? "selected" : ""}>${esc(mealTypeLabel("afternoon_snack"))}</option><option value="dinner" ${activeCookMealType === "dinner" ? "selected" : ""}>${esc(mealTypeLabel("dinner"))}</option><option value="snack" ${activeCookMealType === "snack" ? "selected" : ""}>${esc(mealTypeLabel("snack"))}</option></select></label>
+            </div>
+          </section>
+          <div id="nutrition-cook-preview" class="tb-nutrition-cook-preview">
+            <span class="tb-nutrition-cook-preview-label">${esc(txt("Apercu de la portion", "Portion preview"))}</span>
+            <strong>${Math.round(n(preview.kcal, 0))} kcal</strong>
+            <span>P ${fmtMacro(preview.protein)} · G ${fmtMacro(preview.carbs)} · L ${fmtMacro(preview.fat)}</span>
+            <div><span>${Math.round(n(per100.kcal, 0))} kcal/100g</span><span>${Math.round(n(batch?.finalWeightG, 0))}g ${batch?.finalWeightSource === "measured" ? txt("mesures", "measured") : txt("estimes", "estimated")}</span><span>${Math.round(n(total.kcal, 0))} kcal ${txt("au total", "total")}</span></div>
+          </div>
+          <p class="tb-nutrition-cook-help">${esc(txt("Le poids final ajuste la densite pour 100 g sans modifier les nutriments totaux de la recette.", "Final weight adjusts density per 100 g without changing the recipe's total nutrients."))}</p>
+        </aside>
+      </div>
+    </div>`;
+  }
+  function renderCookingPanel() {
     const recent = (CACHE.cookingBatches || []).slice(0, 4);
-    const editorHtml = CACHE.cookingEditorOpen ? `<div id="nutrition-cook-editor" class="tb-nutrition-cook-editor">
-        <datalist id="nutrition-cook-foods">${(CACHE.foods || []).map(food => `<option value="${esc(food.name)}"></option>`).join("")}</datalist>
-        <div class="tb-nutrition-cook-meta">
-          <label><span>${esc(txt("Nom de la recette", "Recipe name"))}</span><input id="nutrition-cook-name" type="text" value="${esc(draft.name || "")}" placeholder="${esc(txt("Ex. curry poulet riz", "E.g. chicken rice curry"))}"></label>
-          <label><span>${esc(txt("Nombre de portions", "Number of servings"))}</span><input id="nutrition-cook-servings" type="number" min="1" max="40" step="1" value="${esc(String(draft.servings || 1))}"></label>
-          <label><span>${esc(txt("Poids final mesure (g)", "Measured final weight (g)"))}</span><input id="nutrition-cook-final-weight" type="number" min="1" step="1" value="${esc(draft.measuredFinalWeightG || "")}" placeholder="${Math.round(n(batch?.estimatedFinalWeightG, 0)) || "-"}"></label>
-        </div>
-        <div class="tb-nutrition-cook-ingredients">${renderCookingIngredients(draft)}</div>
-        <button class="btn small" type="button" id="nutrition-cook-add-ingredient">+ ${esc(txt("Ajouter un ingredient", "Add an ingredient"))}</button>
-        <div class="tb-nutrition-cook-consumption">
-          <label><span>${esc(txt("Portion mangee maintenant (g)", "Portion eaten now (g)"))}</span><input id="nutrition-cook-portion-g" type="number" min="1" step="1" value="${esc(String(defaultPortionG))}"></label>
-          <label><span>${esc(txt("Moment", "Moment"))}</span><select id="nutrition-cook-meal-type"><option value="breakfast" ${activeCookMealType === "breakfast" ? "selected" : ""}>${esc(mealTypeLabel("breakfast"))}</option><option value="morning_snack" ${activeCookMealType === "morning_snack" ? "selected" : ""}>${esc(mealTypeLabel("morning_snack"))}</option><option value="lunch" ${activeCookMealType === "lunch" ? "selected" : ""}>${esc(mealTypeLabel("lunch"))}</option><option value="afternoon_snack" ${activeCookMealType === "afternoon_snack" ? "selected" : ""}>${esc(mealTypeLabel("afternoon_snack"))}</option><option value="dinner" ${activeCookMealType === "dinner" ? "selected" : ""}>${esc(mealTypeLabel("dinner"))}</option><option value="snack" ${activeCookMealType === "snack" ? "selected" : ""}>${esc(mealTypeLabel("snack"))}</option></select></label>
-        </div>
-        <div id="nutrition-cook-preview" class="tb-nutrition-cook-preview"><strong>${Math.round(n(preview.kcal, 0))} kcal</strong><span>P ${fmtMacro(preview.protein)} · G ${fmtMacro(preview.carbs)} · L ${fmtMacro(preview.fat)}</span><span>${Math.round(n(per100.kcal, 0))} kcal/100g · ${Math.round(n(batch?.finalWeightG, 0))}g ${batch?.finalWeightSource === "measured" ? txt("mesures", "measured") : txt("estimes", "estimated")}</span></div>
-        <div class="tb-nutrition-cook-actions">
-          <button class="btn small primary" type="button" id="nutrition-cook-save">${esc(txt("Cuire et ajouter la portion", "Cook and add portion"))}</button>
-          <button class="btn small" type="button" id="nutrition-cook-close">${esc(txt("Fermer", "Close"))}</button>
-        </div>
-      </div>` : "";
     return `<section class="tb-nutrition-subcard">
       <div class="tb-nutrition-subcard-heading">
         <div><h3>${esc(txt("Je cuisine", "I cook"))}</h3><p>${esc(txt("V1 recettes : ingredients crus, cuisson, rendement, poids final, portions et reste.", "V1 recipes: raw ingredients, cooking, yield, final weight, servings and leftovers."))}</p></div>
         <span class="pill">${esc(txt("recettes synchronisees", "synced recipes"))}</span>
       </div>
       ${recent.length ? `<div class="tb-nutrition-cook-recent">${recent.map(row => `<button class="tb-nutrition-cook-batch" type="button" data-cook-batch="${esc(row.id)}"><strong>${esc(row.name)}</strong><span>${Math.round(n(row.per_100g_snapshot?.kcal, 0))} kcal/100g · ${Math.round(n(row.final_weight_g, 0))}g</span><small>${esc(txt("Ajouter une portion", "Add a portion"))}</small></button>`).join("")}</div>` : `<p class="muted">${esc(txt("Aucune recette enregistree. Cree ton premier plat avec ses vrais ingredients.", "No saved recipe. Create your first dish with its real ingredients."))}</p>`}
-      <button class="btn small primary" type="button" id="nutrition-cook-start">+ ${esc(CACHE.cookingEditorOpen ? txt("Nouvelle recette", "New recipe") : txt("Je cuisine", "I cook"))}</button>
-      ${editorHtml}
+      <button class="btn small primary" type="button" id="nutrition-cook-start">+ ${esc(txt("Creer une recette", "Create a recipe"))}</button>
     </section>`;
   }
   function loadNutritionGoal() {
@@ -1722,6 +1742,84 @@
       grams.readOnly = false;
     }
   }
+  function closeCookingModal({ preserveDraft = true } = {}) {
+    const handle = cookingModalHandle;
+    if (preserveDraft && handle?.root) readCookingDraft(handle.root);
+    CACHE.cookingEditorOpen = false;
+    cookingModalHandle = null;
+    if (typeof handle?.close === "function") handle.close();
+    else handle?.destroy?.();
+  }
+  function bindCookingEditor(modalRoot) {
+    if (!modalRoot) return;
+    const cookPortion = modalRoot.querySelector("#nutrition-cook-portion-g");
+    const updateCookPreview = () => {
+      const draft = readCookingDraft(modalRoot);
+      const batch = calculateCookingDraft(draft);
+      const food = cookingFoodFromBatch(batch);
+      const grams = Math.max(1, Math.round(n(cookPortion?.value, food.servingGrams || 100)));
+      const nut = nutritionForGrams(food, grams);
+      const out = modalRoot.querySelector("#nutrition-cook-preview");
+      if (out) out.innerHTML = `<span class="tb-nutrition-cook-preview-label">${esc(txt("Apercu de la portion", "Portion preview"))}</span><strong>${Math.round(n(nut.kcal, 0))} kcal</strong><span>P ${fmtMacro(nut.protein)} · G ${fmtMacro(nut.carbs)} · L ${fmtMacro(nut.fat)}</span><div><span>${Math.round(n(food.kcalPer100g, 0))} kcal/100g</span><span>${Math.round(n(batch?.finalWeightG, 0))}g ${batch?.finalWeightSource === "measured" ? txt("mesures", "measured") : txt("estimes", "estimated")}</span><span>${Math.round(n(batch?.total?.kcal, 0))} kcal ${txt("au total", "total")}</span></div>`;
+    };
+    modalRoot.querySelectorAll("#nutrition-cook-editor input, #nutrition-cook-editor select").forEach(el => { el.oninput = updateCookPreview; el.onchange = updateCookPreview; });
+    const refreshModal = (focusSelector) => {
+      readCookingDraft(modalRoot);
+      cookingModalHandle?.destroy?.();
+      cookingModalHandle = null;
+      openCookingModal({ reset: false, focusSelector });
+    };
+    const cookAddIngredient = modalRoot.querySelector("#nutrition-cook-add-ingredient");
+    if (cookAddIngredient) cookAddIngredient.onclick = () => {
+      const draft = readCookingDraft(modalRoot);
+      draft.ingredients.push({ foodKey: "", foodName: "", grams: "", method: "raw" });
+      CACHE.cookingDraft = draft;
+      refreshModal("[data-cook-row]:last-child [data-cook-food]");
+    };
+    modalRoot.querySelectorAll("[data-cook-remove]").forEach(btn => {
+      btn.onclick = () => {
+        const draft = readCookingDraft(modalRoot);
+        draft.ingredients.splice(Math.max(0, n(btn.getAttribute("data-cook-remove"), 0)), 1);
+        if (!draft.ingredients.length) draft.ingredients.push({ foodKey: "", foodName: "", grams: "", method: "raw" });
+        CACHE.cookingDraft = draft;
+        refreshModal("[data-cook-food]");
+      };
+    });
+    const cookSave = modalRoot.querySelector("#nutrition-cook-save");
+    if (cookSave) cookSave.onclick = () => saveCookingPortion(modalRoot);
+    const cookClose = modalRoot.querySelector("#nutrition-cook-close");
+    if (cookClose) cookClose.onclick = () => cookingModalHandle?.close?.();
+  }
+  function openCookingModal({ reset = true, focusSelector = "#nutrition-cook-name" } = {}) {
+    if (!window.UI?.createModal) {
+      CACHE.error = txt("La fenetre de recette est indisponible.", "The recipe window is unavailable.");
+      renderNutrition("cooking-modal-unavailable");
+      return;
+    }
+    cookingModalHandle?.destroy?.();
+    cookingModalHandle = null;
+    if (reset) CACHE.cookingDraft = emptyCookingDraft();
+    CACHE.cookingEditorOpen = true;
+    const handle = window.UI.createModal({
+      id: "nutrition-cooking-modal",
+      size: "xl",
+      rootClass: "tb-nutrition-cook-modal-backdrop",
+      panelClass: "tb-nutrition-cook-modal",
+      title: txt("Creer une recette", "Create a recipe"),
+      subtitle: txt("Compose le plat, pese le resultat puis ajoute ta portion au journal.", "Build the dish, weigh the result, then add your portion to the journal."),
+      closeLabel: txt("Fermer la recette", "Close recipe"),
+      initialFocus: focusSelector,
+      contentHTML: renderCookingEditor(),
+      actionsHTML: `<button class="btn" type="button" id="nutrition-cook-close">${esc(txt("Annuler", "Cancel"))}</button><button class="btn primary" type="button" id="nutrition-cook-save">${esc(txt("Enregistrer et ajouter", "Save and add"))}</button>`,
+      onClose: () => {
+        if (CACHE.cookingEditorOpen && handle?.root) readCookingDraft(handle.root);
+        CACHE.cookingEditorOpen = false;
+        if (cookingModalHandle?.root === handle?.root) cookingModalHandle = null;
+      },
+    });
+    cookingModalHandle = handle;
+    bindCookingEditor(handle.root);
+  }
   function bindNutrition(root) {
     const editingItem = CACHE.editingItemId ? CACHE.items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
     const sectionButtons = Array.from(root.querySelectorAll("[data-nutrition-section]"));
@@ -1776,49 +1874,12 @@
     const cookStart = root.querySelector("#nutrition-cook-start");
     if (cookStart) cookStart.onclick = () => {
       CACHE.activeSection = "meals";
-      CACHE.cookingEditorOpen = true;
-      CACHE.cookingDraft = emptyCookingDraft();
       CACHE.syncStatus = txt("Cuisine ouverte : compose la recette, pese le plat puis ajoute ta portion.", "Cooking opened: build the recipe, weigh the dish, then add your portion.");
-      renderNutrition("cook-start");
+      openCookingModal({ reset: true });
     };
-    const cookPortion = root.querySelector("#nutrition-cook-portion-g");
-    const updateCookPreview = () => {
-      const draft = readCookingDraft(root);
-      const batch = calculateCookingDraft(draft);
-      const food = cookingFoodFromBatch(batch);
-      const grams = Math.max(1, Math.round(n(cookPortion?.value, food.servingGrams || 100)));
-      const nut = nutritionForGrams(food, grams);
-      const out = root.querySelector("#nutrition-cook-preview");
-      if (out) out.innerHTML = `<strong>${Math.round(n(nut.kcal, 0))} kcal</strong><span>P ${fmtMacro(nut.protein)} · G ${fmtMacro(nut.carbs)} · L ${fmtMacro(nut.fat)}</span><span>${Math.round(n(food.kcalPer100g, 0))} kcal/100g · ${Math.round(n(batch?.finalWeightG, 0))}g ${batch?.finalWeightSource === "measured" ? txt("mesures", "measured") : txt("estimes", "estimated")}</span>`;
-    };
-    root.querySelectorAll("#nutrition-cook-editor input, #nutrition-cook-editor select").forEach(el => { el.oninput = updateCookPreview; el.onchange = updateCookPreview; });
-    const cookAddIngredient = root.querySelector("#nutrition-cook-add-ingredient");
-    if (cookAddIngredient) cookAddIngredient.onclick = () => {
-      const draft = readCookingDraft(root);
-      draft.ingredients.push({ foodKey: "", foodName: "", grams: "", method: "raw" });
-      CACHE.cookingDraft = draft;
-      renderNutrition("cook-add-ingredient");
-    };
-    root.querySelectorAll("[data-cook-remove]").forEach(btn => {
-      btn.onclick = () => {
-        const draft = readCookingDraft(root);
-        draft.ingredients.splice(Math.max(0, n(btn.getAttribute("data-cook-remove"), 0)), 1);
-        if (!draft.ingredients.length) draft.ingredients.push({ foodKey: "", foodName: "", grams: "", method: "raw" });
-        CACHE.cookingDraft = draft;
-        renderNutrition("cook-remove-ingredient");
-      };
-    });
     root.querySelectorAll("[data-cook-batch]").forEach(btn => {
       btn.onclick = () => addStoredCookingPortion(btn.getAttribute("data-cook-batch"));
     });
-    const cookSave = root.querySelector("#nutrition-cook-save");
-    if (cookSave) cookSave.onclick = () => saveCookingPortion(root);
-    const cookClose = root.querySelector("#nutrition-cook-close");
-    if (cookClose) cookClose.onclick = () => {
-      readCookingDraft(root);
-      CACHE.cookingEditorOpen = false;
-      renderNutrition("cook-close");
-    };
     const syncPending = root.querySelector("#nutrition-sync-pending");
     if (syncPending) syncPending.onclick = async () => {
       syncPending.disabled = true;
@@ -2065,7 +2126,9 @@
     if (CACHE.savingCookingPortion) return;
     CACHE.savingCookingPortion = true;
     const saveBtn = root?.querySelector("#nutrition-cook-save");
-    if (saveBtn) saveBtn.disabled = true;
+    const errorBox = root?.querySelector("#nutrition-cook-error");
+    if (errorBox) { errorBox.hidden = true; errorBox.textContent = ""; }
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.setAttribute("aria-busy", "true"); }
     try {
       const draft = readCookingDraft(root);
       const batch = calculateCookingDraft(draft);
@@ -2100,12 +2163,17 @@
           : txt("Portion ajoutee localement. La recette sera a recreer une fois en ligne.", "Portion added locally. The recipe must be recreated once online.");
       CACHE.cookingEditorOpen = false;
       CACHE.cookingDraft = emptyCookingDraft();
+      closeCookingModal({ preserveDraft: false });
     } catch (e) {
       CACHE.error = e?.message || String(e);
-      renderNutrition("cooking-portion-error");
+      if (errorBox) {
+        errorBox.textContent = CACHE.error;
+        errorBox.hidden = false;
+        errorBox.focus?.();
+      }
     } finally {
       CACHE.savingCookingPortion = false;
-      try { if (saveBtn) saveBtn.disabled = false; } catch (_) {}
+      try { if (saveBtn) { saveBtn.disabled = false; saveBtn.removeAttribute("aria-busy"); } } catch (_) {}
     }
   }
   async function saveNutritionMeal(root) {
@@ -2368,9 +2436,15 @@
     return { meals: CACHE.meals.slice(), items: CACHE.items.slice() };
   };
   window.addEventListener("tb:auth_scope_changed", () => {
+    closeCookingModal({ preserveDraft: false });
     if (typeof nutritionStore()?.resetAccountScope === "function") nutritionStore().resetAccountScope();
     else { CACHE.loaded = false; CACHE.meals = []; CACHE.items = []; }
   });
+  try {
+    window.tbBus?.on?.("view:changed", ({ view: nextView }) => {
+      if (nextView !== "nutrition" && cookingModalHandle) closeCookingModal();
+    });
+  } catch (_) {}
   try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadNutrition(); } catch (_) {} }); } catch (_) {}
   try { window.addEventListener("tb:offline_state_changed", (ev) => { if (ev?.detail?.offline === false && loadLocalMeals().length) requestNutritionSync("online"); }); } catch (_) {}
   window.tbNutritionSyncLocal = async function tbNutritionSyncLocal(reason) {
