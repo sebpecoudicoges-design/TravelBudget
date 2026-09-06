@@ -177,6 +177,7 @@ export function renderQuickAddPanel({
   syncBadge = '',
   foodQuery = '',
   foodOptionsHtml = '',
+  foodLibraryCount = 0,
   quickFoods = {},
   mealFavorites = [],
   activeMealType = 'meal',
@@ -191,7 +192,7 @@ export function renderQuickAddPanel({
   return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
       <h3 style="margin:0;">${esc(editingItem ? langText('Modifier', 'Edit', t) : langText('Ajout rapide', 'Quick add', t))}</h3>
-      <span class="pill">${esc(syncBadge)}</span>
+      <span class="pill">${esc(syncBadge)} · ${Math.max(0, Number(foodLibraryCount) || 0)} ${esc(langText('aliments', 'foods', t))}</span>
     </div>
     <div class="field"><label>${esc(langText('Chercher', 'Search', t))}</label><input id="nutrition-search" value="${esc(foodQuery)}" placeholder="${esc(langText('Riz, poulet, banane...', 'Rice, chicken, banana...', t))}"></div>
     <div class="field"><label>${esc(langText('Aliment', 'Food', t))}</label><select id="nutrition-food">${foodOptionsHtml}</select></div>

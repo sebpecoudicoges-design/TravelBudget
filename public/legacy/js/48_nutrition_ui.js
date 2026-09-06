@@ -188,7 +188,7 @@
   function emptyCookingDraft() {
     return {
       name: "", servings: 4, measuredFinalWeightG: "", portionG: "", mealType: CACHE.selectedMealType || currentMealType(),
-      ingredients: [{ foodKey: "", foodName: "", grams: "", method: "raw" }],
+      ingredients: [{ foodKey: "", foodName: "", grams: "", quantityMode: "grams", quantity: "", method: "raw" }],
     };
   }
   function ensureCookingDraft() {
@@ -198,6 +198,13 @@
   function cookingFoodMatch(value) {
     const wanted = String(value || "").trim().toLocaleLowerCase();
     return (CACHE.foods || []).find(food => String(food.key || "").toLocaleLowerCase() === wanted || String(food.name || "").toLocaleLowerCase() === wanted) || null;
+  }
+  function cookingQuantityMode(value) { return String(value || "grams") === "portion" ? "portion" : "grams"; }
+  function cookingIngredientGrams(row) {
+    const food = cookingFoodMatch(row.foodKey || row.foodName);
+    return cookingQuantityMode(row.quantityMode) === "portion"
+      ? Math.max(0, n(row.quantity, 1) * n(food?.servingGrams, 100))
+      : Math.max(0, n(row.grams, 0));
   }
   function calculateCookingDraft(draft = ensureCookingDraft()) {
     if (typeof rules().calculateRecipeBatch !== "function") return null;
@@ -210,7 +217,7 @@
         return {
           food,
           label: food?.name || row.foodName || row.foodKey,
-          initialWeightG: n(row.grams, 0),
+          initialWeightG: cookingIngredientGrams(row),
           cookingMethod: row.method || "raw",
           yieldFactor: cookingYield(row.method || "raw"),
           factorScope: "generic_method",
@@ -249,12 +256,19 @@
     return Object.entries(COOKING_METHOD_LABELS).map(([code, labels]) => `<option value="${esc(code)}" ${code === selected ? "selected" : ""}>${esc(txt(labels[0], labels[1]))}</option>`).join("");
   }
   function renderCookingIngredients(draft) {
-    return (draft.ingredients || []).map((row, index) => `<div class="tb-nutrition-cook-ingredient" data-cook-row="${index}">
+    return (draft.ingredients || []).map((row, index) => {
+      const mode = cookingQuantityMode(row.quantityMode);
+      const food = cookingFoodMatch(row.foodKey || row.foodName);
+      const derivedGrams = mode === "portion" ? Math.round(n(row.quantity, 1) * n(food?.servingGrams, 100)) : row.grams;
+      return `<div class="tb-nutrition-cook-ingredient" data-cook-row="${index}">
       <label><span>${esc(txt("Aliment", "Food"))}</span><input type="text" data-cook-food value="${esc(row.foodName || row.foodKey || "")}" list="nutrition-cook-foods" placeholder="${esc(txt("Rechercher dans le catalogue", "Search the catalog"))}"></label>
-      <label><span>${esc(txt("Poids cru / utilise", "Raw / used weight"))}</span><input type="number" data-cook-grams min="1" step="1" value="${esc(row.grams || "")}" placeholder="g"></label>
+      <label><span>${esc(txt("Mode de quantite", "Quantity mode"))}</span><select data-cook-quantity-mode><option value="portion" ${mode === "portion" ? "selected" : ""}>${esc(txt("Portion", "Serving"))}</option><option value="grams" ${mode === "grams" ? "selected" : ""}>${esc(txt("Grammes", "Grams"))}</select></label>
+      <label><span>${esc(mode === "portion" ? txt("Nombre de portions", "Number of servings") : txt("Poids cru / utilise", "Raw / used weight"))}</span><input type="number" data-cook-quantity min="0.01" step="${mode === "portion" ? "0.25" : "1"}" value="${esc(mode === "portion" ? (row.quantity || 1) : (row.grams || ""))}" placeholder="${mode === "portion" ? "1" : "g"}"></label>
+      <label><span>${esc(txt("Grammes calcules", "Calculated grams"))}</span><input type="number" data-cook-grams min="0" step="1" value="${esc(derivedGrams || "")}" ${mode === "portion" ? "readonly" : ""} placeholder="g"></label>
       <label><span>${esc(txt("Cuisson", "Cooking"))}</span><select data-cook-method>${cookingMethodOptions(row.method || "raw")}</select></label>
       <button class="btn small" type="button" data-cook-remove="${index}" aria-label="${esc(txt("Retirer cet ingredient", "Remove this ingredient"))}">×</button>
-    </div>`).join("");
+    </div>`;
+    }).join("");
   }
   function renderCookingEditor() {
     const draft = ensureCookingDraft();
@@ -1674,6 +1688,7 @@
         syncBadge,
         foodQuery: CACHE.foodQuery,
         foodOptionsHtml: foodOptions(),
+        foodLibraryCount: CACHE.foods.length,
         quickFoods,
         mealFavorites,
         activeMealType,
@@ -1755,6 +1770,14 @@
     const cookPortion = modalRoot.querySelector("#nutrition-cook-portion-g");
     const updateCookPreview = () => {
       const draft = readCookingDraft(modalRoot);
+      modalRoot.querySelectorAll("[data-cook-row]").forEach(row => {
+        const mode = cookingQuantityMode(row.querySelector("[data-cook-quantity-mode]")?.value);
+        if (mode !== "portion") return;
+        const food = cookingFoodMatch(row.querySelector("[data-cook-food]")?.value);
+        const quantity = n(row.querySelector("[data-cook-quantity]")?.value, 1);
+        const grams = row.querySelector("[data-cook-grams]");
+        if (grams) grams.value = String(Math.round(Math.max(0, quantity * n(food?.servingGrams, 100))));
+      });
       const batch = calculateCookingDraft(draft);
       const food = cookingFoodFromBatch(batch);
       const grams = Math.max(1, Math.round(n(cookPortion?.value, food.servingGrams || 100)));
@@ -1768,10 +1791,17 @@
       cookingModalHandle = null;
       openCookingModal({ reset: false, focusSelector });
     };
+    modalRoot.querySelectorAll("[data-cook-quantity-mode]").forEach(select => {
+      select.onchange = () => {
+        const draft = readCookingDraft(modalRoot);
+        CACHE.cookingDraft = draft;
+        refreshModal(`[data-cook-row]:nth-child(${Math.max(1, n(select.closest('[data-cook-row]')?.getAttribute('data-cook-row'), 0) + 1)}) [data-cook-quantity]`);
+      };
+    });
     const cookAddIngredient = modalRoot.querySelector("#nutrition-cook-add-ingredient");
     if (cookAddIngredient) cookAddIngredient.onclick = () => {
       const draft = readCookingDraft(modalRoot);
-      draft.ingredients.push({ foodKey: "", foodName: "", grams: "", method: "raw" });
+      draft.ingredients.push({ foodKey: "", foodName: "", grams: "", quantityMode: "grams", quantity: "", method: "raw" });
       CACHE.cookingDraft = draft;
       refreshModal("[data-cook-row]:last-child [data-cook-food]");
     };
@@ -1779,7 +1809,7 @@
       btn.onclick = () => {
         const draft = readCookingDraft(modalRoot);
         draft.ingredients.splice(Math.max(0, n(btn.getAttribute("data-cook-remove"), 0)), 1);
-        if (!draft.ingredients.length) draft.ingredients.push({ foodKey: "", foodName: "", grams: "", method: "raw" });
+        if (!draft.ingredients.length) draft.ingredients.push({ foodKey: "", foodName: "", grams: "", quantityMode: "grams", quantity: "", method: "raw" });
         CACHE.cookingDraft = draft;
         refreshModal("[data-cook-food]");
       };
@@ -2081,10 +2111,17 @@
     const ingredients = Array.from(root.querySelectorAll("[data-cook-row]")).map(row => {
       const foodName = String(row.querySelector("[data-cook-food]")?.value || "").trim();
       const food = cookingFoodMatch(foodName);
+      const quantityMode = cookingQuantityMode(row.querySelector("[data-cook-quantity-mode]")?.value);
+      const quantity = row.querySelector("[data-cook-quantity]")?.value || "";
+      const grams = quantityMode === "portion"
+        ? Math.round(Math.max(0, n(quantity, 1) * n(food?.servingGrams, 100)))
+        : (row.querySelector("[data-cook-grams]")?.value || "");
       return {
         foodKey: food?.key || "",
         foodName: food?.name || foodName,
-        grams: row.querySelector("[data-cook-grams]")?.value || "",
+        grams,
+        quantityMode,
+        quantity,
         method: row.querySelector("[data-cook-method]")?.value || "raw",
       };
     });
