@@ -137,6 +137,7 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('contentHTML: renderCookingEditor()');
     expect(legacy).toContain('initialFocus: focusSelector');
     expect(legacy).toContain('cookingModalHandle?.close?.()');
+    expect(legacy).toContain('draft.ingredients.push({ foodKey: "", foodName: "", grams: "", method: "raw" });');
     expect(legacy).not.toContain('renderNutrition("cook-add-ingredient")');
     expect(legacy).not.toContain('renderNutrition("cook-remove-ingredient")');
     expect(repository).toContain('async saveCookingBatch');

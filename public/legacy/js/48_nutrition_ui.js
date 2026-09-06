@@ -1764,7 +1764,6 @@
     };
     modalRoot.querySelectorAll("#nutrition-cook-editor input, #nutrition-cook-editor select").forEach(el => { el.oninput = updateCookPreview; el.onchange = updateCookPreview; });
     const refreshModal = (focusSelector) => {
-      readCookingDraft(modalRoot);
       cookingModalHandle?.destroy?.();
       cookingModalHandle = null;
       openCookingModal({ reset: false, focusSelector });
