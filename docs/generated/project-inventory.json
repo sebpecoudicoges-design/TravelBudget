@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "c9c0874263eb78f46a32621e467d022be256814b",
-  "snapshotFingerprint": "491039a6a225566531a256e213b7617f4493a3965e47fcd3d51bb854faa4189b",
-  "generatedAt": "2026-09-06T10:12:44.151Z",
+  "commit": "8a2021d92aa4f0e6308c18d22e53855a2abb55d4",
+  "snapshotFingerprint": "9862aed73da4d9d470d870d446184e5bb17c9c97df76e7a399cd2a17b58f3b39",
+  "generatedAt": "2026-09-07T08:00:09.930Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.365"
+    "version": "10.5.366"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -581,7 +581,8 @@
     "supabase/migrations/20260906003052_body_measurement_professional_analysis_v3.sql",
     "supabase/migrations/20260906015352_nutrition_recipe_modal_10_5_362.sql",
     "supabase/migrations/20260906040354_nutrition_recipe_modal_add_ingredient_fix_10_5_363.sql",
-    "supabase/migrations/20260906100023_nutrition_recipe_quantity_pot_10_5_365.sql"
+    "supabase/migrations/20260906100023_nutrition_recipe_quantity_pot_10_5_365.sql",
+    "supabase/migrations/20260906102850_body_composition_interactive_v4_10_5_366.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

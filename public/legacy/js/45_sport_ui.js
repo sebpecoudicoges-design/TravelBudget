@@ -115,6 +115,8 @@
     CACHE.bodyMeasurements = loadBodyMeasurementsLocal();
     CACHE.bodyTrendMetric = CACHE.bodyTrendMetric || "weightKg";
     CACHE.bodyTrendRange = CACHE.bodyTrendRange || 12;
+    CACHE.bodyCompositionPanel = CACHE.bodyCompositionPanel || "overview";
+    CACHE.bodyMapMetric = CACHE.bodyMapMetric || "body_fat_pct";
     CACHE.bodyMeasurementsLoaded = false;
     CACHE.mobilityAssessments = loadMobilityAssessmentsLocal();
     CACHE.mobilityAssessmentsLoaded = false;
@@ -2567,12 +2569,22 @@
     if (!isSportProfileRuntimeReady()) {
       return `<div class="tb-sport-profile-grid"><div class="tb-sport-card"><strong>${esc(txt("Profil sportif", "Sport profile"))}</strong><div class="muted">${esc(txt("Chargement du profil, de la progression et des mesures...", "Loading profile, progression and measurements..."))}</div></div></div>`;
     }
+    const data = sportProfileRadarData();
+    const bodyComparison = window.Core?.sportProfileRules?.buildBodyMeasurementComparison?.(CACHE.bodyMeasurements || [], {
+      fromKey: CACHE.bodyCompareFrom || "",
+      toKey: CACHE.bodyCompareTo || "",
+    }) || data.bodyCompositionAnalysis?.comparison || null;
+    if (bodyComparison?.fromKey) CACHE.bodyCompareFrom = bodyComparison.fromKey;
+    if (bodyComparison?.toKey) CACHE.bodyCompareTo = bodyComparison.toKey;
     return window.UI?.sportProfileView?.renderSportProfileDashboard?.({
-      data: sportProfileRadarData(),
+      data,
       latest: latestBodyMeasurement(),
       bodyWeightKg: bodyWeight(),
       bodyTrendMetric: CACHE.bodyTrendMetric || "weightKg",
       bodyTrendRange: CACHE.bodyTrendRange || 12,
+      bodyPanel: CACHE.bodyCompositionPanel || "overview",
+      bodyComparison,
+      bodyMapMetric: CACHE.bodyMapMetric || "body_fat_pct",
       api: sportViewApi(),
     }) || "";
   }
@@ -2900,6 +2912,27 @@
         renderSport("body-trend-range");
       };
     });
+    root.querySelectorAll("[data-sport-body-panel]").forEach(btn => {
+      btn.onclick = () => {
+        CACHE.bodyCompositionPanel = btn.getAttribute("data-sport-body-panel") || "overview";
+        renderSport("body-composition-panel");
+      };
+    });
+    root.querySelectorAll("[data-sport-body-map-metric]").forEach(btn => {
+      btn.onclick = () => {
+        CACHE.bodyMapMetric = btn.getAttribute("data-sport-body-map-metric") || "body_fat_pct";
+        renderSport("body-map-metric");
+      };
+    });
+    const bodyCompareFrom = root.querySelector("#sport-body-compare-from");
+    const bodyCompareTo = root.querySelector("#sport-body-compare-to");
+    const updateBodyComparison = () => {
+      CACHE.bodyCompareFrom = bodyCompareFrom?.value || "";
+      CACHE.bodyCompareTo = bodyCompareTo?.value || "";
+      renderSport("body-comparison");
+    };
+    if (bodyCompareFrom) bodyCompareFrom.onchange = updateBodyComparison;
+    if (bodyCompareTo) bodyCompareTo.onchange = updateBodyComparison;
     const saveMobility = root.querySelector("#sport-save-mobility");
     if (saveMobility) saveMobility.onclick = () => saveMobilityAssessmentFromDom(root);
     const add = root.querySelector("#sport-add-item");

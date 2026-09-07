@@ -4,11 +4,13 @@ import {
   buildExerciseProgressionAnalysis,
   buildBodyCompositionAnalysis,
   buildBodyMeasurementHistory,
+  buildBodyMeasurementComparison,
   buildBodyCompositionTrend,
   buildCardioCapacity,
   buildMobilityAnalysis,
   buildSportProfileRadarData,
   bodyMeasurementConsistency,
+  bodyMeasurementComparability,
   chooseBestCapacity,
   exerciseProfileBucket,
   profileExerciseCapacity,
@@ -231,6 +233,29 @@ describe('Sport profile rules', () => {
     expect(analysis.metrics.find(row => row.key === 'skeletal_muscle_kg')?.value).toBe(32.1);
     expect(analysis.metrics.find(row => row.key === 'protein_mass_kg')?.value).toBe(11.4);
     expect(analysis.completenessPct).toBe(100);
+  });
+
+  it('derives safe historical kg values and compares two selected protocols', () => {
+    const rows = [{
+      measured_on: '2026-08-08', source: 'impedance_scale', weight_kg: 63.5,
+      body_fat_pct: 22.8, body_water_pct: 55.7, protein_pct: 17.6,
+      measurement_time: 'morning', same_scale: true, before_food: true, before_drink: true, before_activity: true,
+    }, {
+      measured_on: '2026-08-16', source: 'impedance_scale', weight_kg: 63.75,
+      body_fat_pct: 22.9, body_water_pct: 55.7, protein_pct: 17.6,
+      measurement_time: 'evening', same_scale: true, before_food: false, before_drink: true, before_activity: true,
+    }];
+    const analysis = buildBodyCompositionAnalysis(rows);
+    expect(analysis.trend[0].waterKg).toBe(35.4);
+    expect(analysis.trend[0].proteinMassKg).toBe(11.2);
+    const comparison = buildBodyMeasurementComparison(rows, {
+      fromKey: '2026-08-08|impedance_scale', toKey: '2026-08-16|impedance_scale',
+    });
+    expect(comparison.metrics.find(row => row.key === 'body_water_kg')).toMatchObject({ before: 35.4, value: 35.5, delta: 0.1, source: 'calculated', beforeSource: 'calculated' });
+    expect(comparison.comparability.level).toBe('weak');
+    expect(comparison.comparability.issues).toContain('Moment de la journee different');
+    expect(bodyMeasurementComparability(rows[0], { ...rows[0] }).level).toBe('strong');
+    expect(bodyMeasurementComparability({ measurement_time: 'morning' }, { measurement_time: 'morning' })).toMatchObject({ level: 'caution', issues: ['Protocole detaille incomplet'] });
   });
 
   it('builds recent body measurement history for editing', () => {

@@ -95,6 +95,33 @@ describe('Sport profile view', () => {
     expect(html).toContain('id="sport-open-body-measurement"');
   });
 
+  it('renders interactive body, trend and comparison spaces', () => {
+    const html = renderSportProfileDashboard({
+      data,
+      latest: { measured_on: '2026-07-26', weight_kg: 63.9, body_fat_pct: 23, muscle_mass_kg: 46.7, body_water_pct: 55.7 },
+      bodyPanel: 'compare',
+      bodyMapMetric: 'body_water_pct',
+      bodyComparison: {
+        fromKey: '2026-07-24|impedance_scale', toKey: '2026-07-26|impedance_scale',
+        from: { measured_on: '2026-07-24' }, to: { measured_on: '2026-07-26' },
+        options: [
+          { key: '2026-07-24|impedance_scale', date: '2026-07-24', source: 'impedance_scale' },
+          { key: '2026-07-26|impedance_scale', date: '2026-07-26', source: 'impedance_scale' },
+        ],
+        comparability: { level: 'strong', issues: [] },
+        metrics: [{ key: 'weight_kg', label: 'Poids', unit: 'kg', before: 62.4, value: 63.9, delta: 1.5, deltaPct: 2.4 }],
+      },
+      api,
+    });
+    expect(html).toContain('data-sport-body-panel="overview"');
+    expect(html).toContain('data-sport-body-panel="compare"');
+    expect(html).toContain('class="tb-sport-body-map water"');
+    expect(html).toContain('data-sport-body-map-metric="body_water_pct"');
+    expect(html).toContain('id="sport-body-compare-from"');
+    expect(html).toContain('Comparaison solide');
+    expect(html).toContain('62.4 kg → 63.9 kg');
+  });
+
   it('rounds headline impedance values to a readable tenth', () => {
     const html = renderSportProfileDashboard({
       data,

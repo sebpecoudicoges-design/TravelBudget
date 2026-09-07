@@ -184,6 +184,67 @@ function renderBodyMeasurementHistory(history = [], h) {
   </div>`;
 }
 
+function renderInteractiveBodyMap(analysis = {}, selectedMetric = 'body_fat_pct', h) {
+  const choices = [
+    { key: 'body_fat_pct', label: h.txt('Graisse', 'Fat'), max: 50, cls: 'fat' },
+    { key: 'muscle_mass_kg', label: h.txt('Muscle', 'Muscle'), max: 80, cls: 'muscle' },
+    { key: 'body_water_pct', label: h.txt('Eau', 'Water'), max: 75, cls: 'water' },
+    { key: 'lean_mass_kg', label: h.txt('Masse maigre', 'Lean mass'), max: 100, cls: 'lean' },
+  ];
+  const active = choices.find(row => row.key === selectedMetric) || choices[0];
+  const metric = (analysis.metrics || []).find(row => row.key === active.key) || { value: 0, delta: null, unit: active.key.endsWith('_pct') ? '%' : 'kg' };
+  const fill = Math.max(4, Math.min(100, h.n(metric.value, 0) / active.max * 100));
+  const delta = metric.delta === null || metric.delta === undefined ? h.txt('Première référence', 'First reference') : `${metric.delta > 0 ? '+' : ''}${metric.delta} ${metric.unit}`;
+  const sourceLabel = metric.source === 'calculated' ? h.txt('Valeur calculée', 'Calculated value') : h.txt('Valeur mesurée', 'Measured value');
+  const bodyParts = `<circle cx="80" cy="34" r="22"/><path d="M55 66 Q80 53 105 66 L116 145 Q108 158 99 158 L105 258 Q96 270 84 258 L80 169 L76 258 Q64 270 55 258 L61 158 Q52 158 44 145 Z"/><path d="M50 73 Q38 78 34 96 L18 164 Q19 174 29 176 L52 118 Z"/><path d="M110 73 Q122 78 126 96 L142 164 Q141 174 131 176 L108 118 Z"/>`;
+  return `<div class="tb-sport-body-map ${h.esc(active.cls)}" style="--tb-body-fill:${fill}%">
+    <div class="tb-sport-body-map-copy">
+      <span>${h.esc(h.txt('Lecture corporelle', 'Body reading'))}</span><strong>${h.esc(active.label)}</strong>
+      <b>${h.esc(`${h.n(metric.value, 0)} ${metric.unit}`)}</b><small>${h.esc(`${sourceLabel} · ${delta}`)}</small>
+      <p>${h.esc(h.txt('Le niveau coloré représente la valeur sur son échelle d affichage, pas une zone anatomique ni un diagnostic.', 'The colored level represents the value on its display scale, not an anatomical area or diagnosis.'))}</p>
+    </div>
+    <div class="tb-sport-body-map-figure">
+      <svg viewBox="0 0 160 280" role="img" aria-label="${h.esc(`${active.label}: ${h.n(metric.value, 0)} ${metric.unit}`)}">
+        <defs><clipPath id="tb-sport-body-clip">${bodyParts}</clipPath></defs>
+        <g class="tb-sport-body-outline">${bodyParts}</g>
+        <rect class="tb-sport-body-fill" x="0" y="${280 - fill * 2.8}" width="160" height="${fill * 2.8}" clip-path="url(#tb-sport-body-clip)"/>
+        <line class="tb-sport-body-level" x1="14" x2="146" y1="${280 - fill * 2.8}" y2="${280 - fill * 2.8}"/>
+      </svg>
+      <em>${Math.round(fill)}%</em>
+    </div>
+    <div class="tb-sport-body-map-controls" role="group" aria-label="${h.esc(h.txt('Métrique affichée sur le corps', 'Metric displayed on body'))}">
+      ${choices.map(row => `<button type="button" class="btn ${row.key === active.key ? 'active' : ''}" data-sport-body-map-metric="${row.key}" aria-pressed="${row.key === active.key}">${h.esc(row.label)}</button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderBodyComparison(comparison = {}, h) {
+  const options = Array.isArray(comparison.options) ? comparison.options : [];
+  const optionHtml = (selected) => options.map(row => `<option value="${h.esc(row.key)}" ${row.key === selected ? 'selected' : ''}>${h.esc(`${row.date} · ${row.source}`)}</option>`).join('');
+  const reliability = comparison.comparability;
+  const reliabilityLabel = reliability?.level === 'strong'
+    ? h.txt('Comparaison solide', 'Strong comparison')
+    : reliability?.level === 'caution'
+      ? h.txt('Comparaison avec vigilance', 'Comparison with caution')
+      : h.txt('Comparaison fragile', 'Weak comparison');
+  return `<div class="tb-sport-body-compare">
+    <div class="tb-sport-body-compare-controls">
+      <label><span>${h.esc(h.txt('Mesure de depart', 'Starting measurement'))}</span><select id="sport-body-compare-from">${optionHtml(comparison.fromKey)}</select></label>
+      <span aria-hidden="true">→</span>
+      <label><span>${h.esc(h.txt('Mesure finale', 'Final measurement'))}</span><select id="sport-body-compare-to">${optionHtml(comparison.toKey)}</select></label>
+    </div>
+    ${comparison.from && comparison.to ? `<div class="tb-sport-body-compare-status ${h.esc(reliability?.level || 'weak')}">
+      <strong>${h.esc(reliabilityLabel)}</strong>
+      <span>${h.esc(reliability?.issues?.length ? reliability.issues.join(' · ') : h.txt('Conditions de mesure cohérentes.', 'Measurement conditions are consistent.'))}</span>
+    </div>
+    <div class="tb-sport-body-compare-grid">${(comparison.metrics || []).map(row => `<article>
+      <span>${h.esc(row.label)}</span><strong>${h.esc(`${row.value}${row.unit ? ` ${row.unit}` : ''}`)}</strong>
+      <small>${h.esc(`${row.before}${row.unit ? ` ${row.unit}` : ''} → ${row.value}${row.unit ? ` ${row.unit}` : ''}${row.source === 'calculated' || row.beforeSource === 'calculated' ? ` · ${h.txt('calculé', 'calculated')}` : ''}`)}</small>
+      <b class="${row.delta > 0 ? 'is-up' : row.delta < 0 ? 'is-down' : 'is-flat'}">${h.esc(`${row.delta > 0 ? '+' : ''}${row.delta}${row.unit ? ` ${row.unit}` : ''}${row.deltaPct === null ? '' : ` · ${row.deltaPct > 0 ? '+' : ''}${row.deltaPct}%`}`)}</b>
+    </article>`).join('')}</div>` : `<div class="tb-sport-empty">${h.esc(h.txt('Deux pesées sont nécessaires pour les comparer.', 'Two measurements are required for comparison.'))}</div>`}
+  </div>`;
+}
+
 export function radarPoints(axes = [], radius = 104, cx = 140, cy = 140) {
   const count = Math.max(1, axes.length);
   return (axes || []).map((axis, idx) => {
@@ -199,6 +260,9 @@ export function renderSportProfileDashboard({
   bodyWeightKg = 0,
   bodyTrendMetric = 'weightKg',
   bodyTrendRange = 12,
+  bodyPanel = 'overview',
+  bodyComparison = null,
+  bodyMapMetric = 'body_fat_pct',
   api = {},
 } = {}) {
   const h = helpers(api);
@@ -217,6 +281,8 @@ export function renderSportProfileDashboard({
   const weakest = data.weakest || axes[0] || { label: '-' };
   const athleticProfile = data.athleticProfile || null;
   const bodyAnalysis = data.bodyCompositionAnalysis || { metrics: [], insights: [], warnings: [] };
+  const activeBodyPanel = ['overview', 'trend', 'compare'].includes(bodyPanel) ? bodyPanel : 'overview';
+  const comparison = bodyComparison || bodyAnalysis.comparison || {};
   const bodyCompleteness = bodyAnalysis.completenessPct ?? (bodyAnalysis.metrics?.length ? 100 : 0);
   const loads = (data.bestLoads || []).length
     ? data.bestLoads.map((row) => `<span class="tb-sport-chip">${h.esc(row.name)} ${Math.round(h.n(row.estimate, 0))} kg e1RM</span>`).join('')
@@ -262,27 +328,28 @@ export function renderSportProfileDashboard({
           </div>
           <button class="btn primary" type="button" id="sport-open-body-measurement-2">+ ${h.esc(h.txt('Saisir', 'Add'))}</button>
         </div>
-        <div class="tb-sport-body-kpis">
-          <div><span>${h.esc(h.txt('Poids', 'Weight'))}</span><strong>${latest?.weight_kg ? `${roundBodyMetric(latest.weight_kg)} kg` : `${roundBodyMetric(bodyWeightKg || h.bodyWeight())} kg`}</strong></div>
-          <div><span>${h.esc(h.txt('Masse grasse', 'Body fat'))}</span><strong>${latest?.body_fat_pct ? `${roundBodyMetric(latest.body_fat_pct)}%` : '-'}</strong></div>
-          <div><span>${h.esc(h.txt('Muscle', 'Muscle'))}</span><strong>${latest?.muscle_mass_kg ? `${roundBodyMetric(latest.muscle_mass_kg)} kg` : '-'}</strong></div>
-          <div><span>${h.esc(h.txt('Eau', 'Water'))}</span><strong>${latest?.body_water_pct ? `${roundBodyMetric(latest.body_water_pct)}%` : '-'}</strong></div>
-        </div>
-        ${bodyAnalysis.metrics.length ? `<div class="tb-sport-body-analysis-head"><div><strong>${h.esc(h.txt('Tableau de bord corporel', 'Body dashboard'))}</strong><small>${h.esc(`${bodyAnalysis.availableMetricCount || bodyAnalysis.metrics.length}/${bodyAnalysis.totalMetricCount || bodyAnalysis.metrics.length} ${h.txt('indicateurs disponibles', 'metrics available')}`)}</small></div><b>${h.n(bodyCompleteness, 0)}%</b></div><div class="tb-sport-athletic-metrics tb-sport-body-metrics">
-          ${bodyAnalysis.metrics.map((row) => `<div><span>${h.esc(row.label)}</span><strong>${h.esc(`${row.value}${row.unit ? ` ${row.unit}` : ''}`)}</strong><small>${row.delta === null ? h.esc(h.txt('Premiere reference', 'First reference')) : h.esc(`${row.delta > 0 ? '+' : ''}${row.delta}${row.unit ? ` ${row.unit}` : ''}`)}</small></div>`).join('')}
-        </div>` : ''}
-        ${renderBodyTrendChart(bodyAnalysis.trend || [], h, { metricKey: bodyTrendMetric, range: bodyTrendRange })}
-        ${renderBodyMeasurementHistory(bodyAnalysis.history || [], h)}
-        <div class="tb-sport-athletic-grid" style="margin-top:10px;">
-          <div class="tb-sport-athletic-panel">
-            <b>${h.esc(h.txt('Analyse composition', 'Composition analysis'))}</b>
-            ${(bodyAnalysis.insights || []).map((row) => `<span class="ok">OK ${h.esc(row)}</span>`).join('') || `<span>${h.esc(h.txt('Ajoute une seconde mesure comparable pour analyser la tendance.', 'Add a second comparable measurement to analyze the trend.'))}</span>`}
+        <nav class="tb-sport-body-tabs" aria-label="${h.esc(h.txt('Espaces de composition corporelle', 'Body composition views'))}">
+          ${[['overview', h.txt('Vue d ensemble', 'Overview')], ['trend', h.txt('Evolution', 'Trends')], ['compare', h.txt('Comparer', 'Compare')]].map(([key, label]) => `<button class="btn ${activeBodyPanel === key ? 'active' : ''}" type="button" data-sport-body-panel="${key}" aria-pressed="${activeBodyPanel === key}">${h.esc(label)}</button>`).join('')}
+        </nav>
+        <section class="tb-sport-body-panel" data-body-panel-content="overview" ${activeBodyPanel === 'overview' ? '' : 'hidden'}>
+          ${renderInteractiveBodyMap(bodyAnalysis, bodyMapMetric, h)}
+          <div class="tb-sport-body-kpis">
+            <div><span>${h.esc(h.txt('Poids', 'Weight'))}</span><strong>${latest?.weight_kg ? `${roundBodyMetric(latest.weight_kg)} kg` : `${roundBodyMetric(bodyWeightKg || h.bodyWeight())} kg`}</strong></div>
+            <div><span>${h.esc(h.txt('Masse grasse', 'Body fat'))}</span><strong>${latest?.body_fat_pct ? `${roundBodyMetric(latest.body_fat_pct)}%` : '-'}</strong></div>
+            <div><span>${h.esc(h.txt('Muscle', 'Muscle'))}</span><strong>${latest?.muscle_mass_kg ? `${roundBodyMetric(latest.muscle_mass_kg)} kg` : '-'}</strong></div>
+            <div><span>${h.esc(h.txt('Eau', 'Water'))}</span><strong>${latest?.body_water_pct ? `${roundBodyMetric(latest.body_water_pct)}%` : '-'}</strong></div>
           </div>
-          <div class="tb-sport-athletic-panel">
-            <b>${h.esc(h.txt('Fiabilite / vigilance', 'Reliability / watch points'))}</b>
-            ${(bodyAnalysis.warnings || []).map((row) => `<span class="warn">! ${h.esc(row)}</span>`).join('') || `<span>${h.esc(h.txt('Protocole coherent.', 'Consistent protocol.'))}</span>`}
+          ${bodyAnalysis.metrics.length ? `<div class="tb-sport-body-analysis-head"><div><strong>${h.esc(h.txt('Tableau de bord corporel', 'Body dashboard'))}</strong><small>${h.esc(`${bodyAnalysis.availableMetricCount || bodyAnalysis.metrics.length}/${bodyAnalysis.totalMetricCount || bodyAnalysis.metrics.length} ${h.txt('indicateurs disponibles', 'metrics available')}`)}</small></div><b>${h.n(bodyCompleteness, 0)}%</b></div><div class="tb-sport-athletic-metrics tb-sport-body-metrics">
+            ${bodyAnalysis.metrics.map((row) => `<div><span>${h.esc(row.label)}</span><strong>${h.esc(`${row.value}${row.unit ? ` ${row.unit}` : ''}`)}</strong><small>${h.esc(row.source === 'calculated' ? h.txt('Calculé', 'Calculated') : h.txt('Mesuré', 'Measured'))} · ${row.delta === null ? h.esc(h.txt('Premiere reference', 'First reference')) : h.esc(`${row.delta > 0 ? '+' : ''}${row.delta}${row.unit ? ` ${row.unit}` : ''}`)}</small></div>`).join('')}
+          </div>` : ''}
+          <div class="tb-sport-athletic-grid" style="margin-top:10px;">
+            <div class="tb-sport-athletic-panel"><b>${h.esc(h.txt('Analyse composition', 'Composition analysis'))}</b>${(bodyAnalysis.insights || []).map((row) => `<span class="ok">OK ${h.esc(row)}</span>`).join('') || `<span>${h.esc(h.txt('Ajoute une seconde mesure comparable pour analyser la tendance.', 'Add a second comparable measurement to analyze the trend.'))}</span>`}</div>
+            <div class="tb-sport-athletic-panel"><b>${h.esc(h.txt('Fiabilite / vigilance', 'Reliability / watch points'))}</b>${(bodyAnalysis.warnings || []).map((row) => `<span class="warn">! ${h.esc(row)}</span>`).join('') || `<span>${h.esc(h.txt('Protocole coherent.', 'Consistent protocol.'))}</span>`}</div>
           </div>
-        </div>
+          ${renderBodyMeasurementHistory(bodyAnalysis.history || [], h)}
+        </section>
+        <section class="tb-sport-body-panel" data-body-panel-content="trend" ${activeBodyPanel === 'trend' ? '' : 'hidden'}>${renderBodyTrendChart(bodyAnalysis.trend || [], h, { metricKey: bodyTrendMetric, range: bodyTrendRange })}</section>
+        <section class="tb-sport-body-panel" data-body-panel-content="compare" ${activeBodyPanel === 'compare' ? '' : 'hidden'}>${renderBodyComparison(comparison, h)}</section>
         <div class="muted" style="margin-top:10px;">${h.esc(h.txt('Les tendances de balance impedancemetrique restent indicatives et sont comparees seulement avec un protocole suffisamment proche.', 'Impedance-scale trends remain indicative and are compared only when the protocol is sufficiently similar.'))}</div>
       </div>
       ${renderMobilityAssessment(data.mobilityAnalysis || {}, h)}

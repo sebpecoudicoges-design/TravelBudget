@@ -1324,6 +1324,84 @@ body.theme-dark .tb-nutrition-cook-pot {
   .tb-nutrition-cook-pot[data-state="simmering"] .tb-nutrition-cook-pot-scene span { animation: none; }
 }
 
+.tb-sport-body-tabs {
+  display: flex; gap: 6px; margin-top: 12px; padding: 5px; overflow-x: auto;
+  border: 1px solid var(--tb-line); border-radius: var(--tb-radius-md); background: var(--tb-surface-soft);
+  scrollbar-width: none; touch-action: pan-y;
+}
+.tb-sport-body-tabs::-webkit-scrollbar { display: none; }
+.tb-sport-body-tabs .btn { flex: 1 0 auto; min-height: 38px; box-shadow: none; }
+.tb-sport-body-tabs .btn.active { border-color: var(--tb-coral); background: var(--tb-coral-soft); color: var(--tb-coral-strong); }
+.tb-sport-body-panel { min-width: 0; padding-top: 10px; }
+.tb-sport-body-panel[hidden] { display: none !important; }
+.tb-sport-body-map {
+  --tb-body-color: var(--tb-coral);
+  display: grid; grid-template-columns: minmax(150px, 1fr) 150px minmax(150px, 1fr); gap: 14px; align-items: center;
+  min-width: 0; margin-bottom: 10px; padding: 14px; overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tb-body-color) 30%, var(--tb-line)); border-radius: var(--tb-radius-md);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--tb-body-color) 13%, transparent), transparent 44%), var(--tb-surface);
+}
+.tb-sport-body-map.muscle { --tb-body-color: var(--tb-success); }
+.tb-sport-body-map.water { --tb-body-color: var(--tb-info); }
+.tb-sport-body-map.lean { --tb-body-color: var(--tb-warning); }
+.tb-sport-body-map-copy { display: grid; align-content: center; gap: 4px; min-width: 0; }
+.tb-sport-body-map-copy > span { color: var(--tb-muted); font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.tb-sport-body-map-copy strong { color: var(--tb-ink); font-size: 18px; }
+.tb-sport-body-map-copy b { color: var(--tb-body-color); font-size: clamp(26px, 4vw, 38px); line-height: 1; }
+.tb-sport-body-map-copy small { color: var(--tb-ink); font-weight: 850; }
+.tb-sport-body-map-copy p { margin: 5px 0 0; color: var(--tb-muted); font-size: 10px; line-height: 1.4; }
+.tb-sport-body-map-figure { position: relative; display: grid; place-items: center; min-height: 220px; }
+.tb-sport-body-map-figure svg { width: 118px; height: 218px; overflow: visible; }
+.tb-sport-body-outline { fill: color-mix(in srgb, var(--tb-body-color) 10%, var(--tb-surface-soft)); stroke: color-mix(in srgb, var(--tb-body-color) 40%, var(--tb-line)); stroke-width: 2; }
+.tb-sport-body-fill { fill: color-mix(in srgb, var(--tb-body-color) 72%, var(--tb-surface)); transition: y .35s ease, height .35s ease; }
+.tb-sport-body-level { stroke: var(--tb-body-color); stroke-width: 2; stroke-dasharray: 4 4; transition: y1 .35s ease, y2 .35s ease; }
+.tb-sport-body-map-figure em { position: absolute; right: 4px; top: 8px; padding: 4px 7px; border-radius: 999px; background: var(--tb-surface); color: var(--tb-body-color); font-size: 11px; font-style: normal; font-weight: 950; }
+.tb-sport-body-map-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tb-sport-body-map-controls .btn { min-height: 40px; padding: 7px; font-size: 11px; }
+.tb-sport-body-map-controls .btn.active { border-color: var(--tb-body-color); background: color-mix(in srgb, var(--tb-body-color) 13%, var(--tb-surface)); color: var(--tb-ink); }
+.tb-sport-body-compare { display: grid; gap: 10px; }
+.tb-sport-body-compare-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; }
+.tb-sport-body-compare-controls label { display: grid; gap: 4px; min-width: 0; }
+.tb-sport-body-compare-controls label span { color: var(--tb-muted); font-size: 10px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.tb-sport-body-compare-controls select { width: 100%; min-width: 0; }
+.tb-sport-body-compare-controls > span { padding-bottom: 10px; color: var(--tb-coral); font-weight: 950; }
+.tb-sport-body-compare-status { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--tb-line); border-radius: var(--tb-radius-sm); background: var(--tb-surface-soft); }
+.tb-sport-body-compare-status strong { color: var(--tb-ink); }
+.tb-sport-body-compare-status span { color: var(--tb-muted); font-size: 11px; }
+.tb-sport-body-compare-status.strong { border-color: color-mix(in srgb, var(--tb-success) 45%, var(--tb-line)); }
+.tb-sport-body-compare-status.caution { border-color: color-mix(in srgb, var(--tb-warning) 55%, var(--tb-line)); }
+.tb-sport-body-compare-status.weak { border-color: color-mix(in srgb, var(--tb-danger) 45%, var(--tb-line)); }
+.tb-sport-body-compare-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.tb-sport-body-compare-grid article { display: grid; gap: 2px; min-width: 0; padding: 9px; border: 1px solid var(--tb-line); border-radius: var(--tb-radius-sm); background: var(--tb-surface); }
+.tb-sport-body-compare-grid span, .tb-sport-body-compare-grid small { color: var(--tb-muted); font-size: 10px; }
+.tb-sport-body-compare-grid strong { color: var(--tb-ink); font-size: 15px; }
+.tb-sport-body-compare-grid b { color: var(--tb-info); font-size: 11px; }
+.tb-sport-body-compare-grid b.is-up::before { content: '↑ '; }
+.tb-sport-body-compare-grid b.is-down::before { content: '↓ '; }
+.tb-sport-body-compare-grid b.is-flat::before { content: '→ '; }
+body.theme-dark .tb-sport-body-tabs,
+body.theme-dark .tb-sport-body-map,
+body.theme-dark .tb-sport-body-compare-status,
+body.theme-dark .tb-sport-body-compare-grid article {
+  --tb-surface: var(--panel); --tb-surface-soft: var(--panel2); --tb-ink: var(--text); --tb-muted: var(--muted); --tb-line: var(--border);
+}
+body.theme-dark .tb-sport-body-compare-status { background: var(--panel2); }
+.tb-sport-body-card .tb-sport-body-metrics { max-height: none !important; overflow: visible !important; }
+
+@media (max-width: 620px) {
+  .tb-sport-body-map { grid-template-columns: minmax(0, 1fr) 112px; gap: 8px; padding: 11px; }
+  .tb-sport-body-map-figure { min-height: 188px; }
+  .tb-sport-body-map-figure svg { width: 96px; height: 180px; }
+  .tb-sport-body-map-controls { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tb-sport-body-compare-controls { grid-template-columns: 1fr; }
+  .tb-sport-body-compare-controls > span { display: none; }
+  .tb-sport-body-compare-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-sport-body-fill, .tb-sport-body-level { transition: none; }
+}
+
 @media (max-width: 390px) {
   .tb-nutrition-cook-modal-backdrop { place-items: end center; padding: 0; }
   .tb-nutrition-cook-modal { width: 100%; max-height: 100dvh; border-radius: var(--tb-radius-lg) var(--tb-radius-lg) 0 0; }

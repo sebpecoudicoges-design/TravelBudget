@@ -234,3 +234,5 @@ En 10.5.362, la création de recette rejoint une fenêtre premium dédiée, avec
 En 10.5.363, le rafraîchissement de la fenêtre recette ne relit plus l ancien DOM après ajout ou suppression d ingrédient : le brouillon courant reste la source unique. Les budgets restent inchangés.
 
 En 10.5.365, les quantités de recette sont centralisées dans des règles pures : une portion vide vaut 1, les grammes saisis deviennent la valeur calculée et la transition entre modes conserve le sens de la quantité. La marmite interactive réutilise les couleurs du thème, une jauge conique et un mouvement réduit pour limiter le poids visuel. Le domaine Nutrition mesure 234,5 / 235 KiB; les plafonds distribués montent au palier entier minimal, soit 730,3 / 731 KiB en JS total et 67 / 67 KiB en CSS.
+
+En 10.5.366, le profil corporel sépare vue d ensemble, évolution et comparaison, avec silhouette interactive, provenance mesurée/calculée et contrôle réel du protocole. Les plafonds passent au palier entier minimal attendu pour ce chantier : Sport 478 KiB, lazy 470 KiB, total JS 739 KiB et CSS 73 KiB; initial et gzip principal restent inchangés.

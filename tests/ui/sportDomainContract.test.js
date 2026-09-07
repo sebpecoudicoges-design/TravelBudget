@@ -25,6 +25,7 @@ describe('Sport domain contract', () => {
   const profileView = fs.readFileSync('src/features/sport/sportProfileView.js', 'utf8');
   const runtime = fs.readFileSync('src/features/sport/sportRuntime.js', 'utf8');
   const sportCss = fs.readFileSync('public/legacy/css/sport.css', 'utf8');
+  const premiumTheme = fs.readFileSync('src/ui/premium-theme.css', 'utf8');
 
   it('exposes Sport rules, data and store through the bridge while lazy-loading Sport views', () => {
     for (const token of [
@@ -195,6 +196,13 @@ describe('Sport domain contract', () => {
     expect(legacy).toContain('sportProfileView?.renderSportProfileDashboard');
     expect(legacy).toContain('sportMobilityController?.saveMobilityAssessment');
     expect(legacy).toContain('sportBodyMeasurementController?.saveBodyMeasurement');
+    expect(profileRules).toContain('export function buildBodyMeasurementComparison');
+    expect(profileRules).toContain('export function bodyMeasurementComparability');
+    expect(profileView).toContain('data-sport-body-map-metric');
+    expect(profileView).toContain('id="sport-body-compare-from"');
+    expect(legacy).toContain('data-sport-body-panel');
+    expect(premiumTheme).toContain('.tb-sport-body-map');
+    expect(premiumTheme).toContain('body.theme-dark .tb-sport-body-map');
   });
 
   it('delegates Sport builder form option rendering to sportFormView', () => {
