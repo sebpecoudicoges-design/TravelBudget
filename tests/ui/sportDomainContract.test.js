@@ -237,7 +237,8 @@ describe('Sport domain contract', () => {
     expect(legacy).toContain('builderHTML: renderBuilder()');
     expect(legacy).not.toContain('includeProgram');
     expect(sportCss).toContain('.tb-sport-section-tabs');
-    expect(sportCss).toContain('touch-action:pan-y');
+    expect(sportCss).toContain('@media(max-width:620px){.tb-sport-section-tabs{grid-template-columns:repeat(2,minmax(0,1fr))');
+    expect(sportCss).toContain('.tb-sport-section-tab strong,.tb-sport-section-tab span{white-space:normal');
     expect(sportCss).toContain('body.theme-dark .tb-sport-section-tabs');
     expect(sportCss).toContain('.tb-sport-section-panel[hidden]');
   });

@@ -125,6 +125,8 @@ En `10.5.357`, la règle des avoirs remonte dans le moteur du budget journalier 
 
 En `10.5.358`, la lecture devient explicite : Analyse nomme le budget net et précise les entrées déduites, tandis que le budget journalier affiche un marqueur plus vert ou moins rouge. L'audit d'une ligne de 75,94 EUR révèle une ancienne ombre Trip orpheline à côté de sa quote-part liée; elle est neutralisée sans suppression lorsqu'un remplacement lié strictement identique existe. Les transactions gérées par Trip ne proposent plus les actions de paiement ou de modification, et `Confirmée` reste réservé aux règles récurrentes. La répartition Trip par montants affiche en direct le reste à attribuer, la complétion ou le dépassement; la première saisie manuelle libère les autres valeurs automatiques pour permettre une attribution progressive. Quatre retests descendants rouvrent Dashboard, Analyse, Transactions et Trip.
 
+En `10.5.367`, Sport conserve la dernière charge réellement validée pendant la séance pour préremplir la série suivante du même exercice. Ce choix de séance est exact, même en cas de baisse volontaire, sans affaiblir le plancher historique utilisé pour préparer les séances futures. La navigation mobile remplace le carrousel horizontal peu visible par une grille 2 x 2 où les quatre espaces restent immédiatement accessibles. Deux retests descendants prolongent **Retest reprise de charge Sport 10.5.346** et **Retest espaces Sport 10.5.345**.
+
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 
 ## Historique et cloture

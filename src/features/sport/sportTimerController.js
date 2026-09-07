@@ -233,7 +233,16 @@ export function applyStepDefaults(timer = {}, step = {}, options = {}) {
     effectiveLoadKg: options.effectiveLoadKg,
     lastLoadForExercise: options.lastLoadForExercise,
   });
-  next.stepLoadKg = defaults.stepLoadKg;
+  const itemIndex = Math.max(0, Math.round(num(step?.itemIndex, 0)));
+  const previousSet = step?.kind === 'work'
+    ? next.doneSets.slice().reverse().find((set) => (
+      Math.max(0, Math.round(num(set?.itemIndex, 0))) === itemIndex
+      && Number.isFinite(Number(set?.weightKg ?? set?.weight_kg))
+    ))
+    : null;
+  next.stepLoadKg = previousSet
+    ? Math.max(0, num(previousSet.weightKg ?? previousSet.weight_kg, defaults.stepLoadKg))
+    : defaults.stepLoadKg;
   next.stepReps = defaults.stepReps;
   return next;
 }

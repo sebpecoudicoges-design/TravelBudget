@@ -3770,14 +3770,6 @@
     if (el) timer.stepReps = Math.max(0, Math.round(n(el.value, 0)));
     return Math.max(0, Math.round(n(timer?.stepReps, step?.item?.targetReps || 0)));
   }
-  function setTimerStepDefaults(timer, step) {
-    if (!timer) return timer;
-    const applyDefaults = window.UI?.sportTimerController?.applyStepDefaults;
-    if (typeof applyDefaults !== "function") return timer;
-    const next = applyDefaults(timer, step, sportTimerControllerOptions());
-    Object.assign(timer, next);
-    return timer;
-  }
   function recordWorkStep(timer, step, durationOverride, loadOverride, repsOverride) {
     if (!timer || !step || step.kind !== "work") return null;
     const record = window.UI?.sportTimerController?.recordWorkStep;
@@ -3844,9 +3836,6 @@
       return;
     }
     sportFeedback(step.kind === "work" ? txt("Serie terminee", "Set complete") : txt("Repos termine", "Rest complete"), `${stepLabel(next)} - ${next.duration ? fmtSec(next.duration) : txt("a valider", "to validate")}`, { toast: step.kind === "rest", persistNotification: true });
-    setTimerStepDefaults(timer, next);
-    timer.stepStartedAt = Date.now();
-    timer.stepEndAt = next.duration ? Date.now() + (next.duration * 1000) : null;
     renderSport("step");
     restoreTimerFullscreen("step");
   }

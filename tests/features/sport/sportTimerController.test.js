@@ -162,6 +162,26 @@ describe('sport timer controller', () => {
     expect(result.timer.stepLoadKg).toBe(30);
   });
 
+  it('carries the exact edited load to the next set of the same exercise', () => {
+    const bench = { exerciseName: 'Bench', mode: 'reps', targetReps: 10, sets: 2, restSeconds: 90, weightKg: 55 };
+    const timer = createTimerState({ sequence: buildWorkoutSequence([bench]), now, bodyWeightKg: 59 });
+    const completed = completeTimerStep(timer, {
+      now: now + 30_000,
+      reps: 8,
+      loadKg: 47.5,
+      effectiveLoadKg: (item) => item.weightKg,
+      lastLoadForExercise: () => 60,
+    });
+    const next = skipRestStep(completed.timer, {
+      now: now + 40_000,
+      effectiveLoadKg: (item) => item.weightKg,
+      lastLoadForExercise: () => 60,
+    });
+
+    expect(next.nextStep).toMatchObject({ kind: 'work', itemIndex: 0, setIndex: 2 });
+    expect(next.timer.stepLoadKg).toBe(47.5);
+  });
+
   it('adjusts timed steps and pauses without losing the remaining time', () => {
     const plank = { exerciseName: 'Gainage', mode: 'time', targetSeconds: 60, sets: 1, restSeconds: 0 };
     const timer = createTimerState({ sequence: buildWorkoutSequence([plank]), now, bodyWeightKg: 59 });

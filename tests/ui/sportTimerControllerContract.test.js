@@ -22,5 +22,6 @@ describe('Sport timer controller bridge', () => {
     expect(sportUi).toContain('window.UI?.sportTimerController?.togglePause');
     expect(sportUi).not.toContain('window.Core?.sportRules?.insertExerciseSet');
     expect(sportUi).not.toContain('window.Core?.sportRules?.appendCircuitRound');
+    expect(sportUi).not.toContain('function setTimerStepDefaults');
   });
 });

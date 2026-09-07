@@ -177,4 +177,18 @@ describe('tester campaign contract', () => {
     expect(migration).toContain('Reste à attribuer : 32 AUD');
     expect(migration).toContain("parent.title = 'Depense partagee'");
   });
+
+  it('opens linked Sport retests for timer loads and the complete mobile navigation in 10.5.367', () => {
+    const migration = read('supabase/migrations/20260907094506_sport_timer_load_and_mobile_tabs_10_5_367.sql');
+
+    expect(migration).toContain("module.module_key = 'sport'");
+    expect(migration).toContain("parent.title = 'Retest reprise de charge Sport 10.5.346'");
+    expect(migration).toContain("parent.title = 'Retest espaces Sport 10.5.345'");
+    expect(migration).toContain('Charge conservee entre series Sport 10.5.367');
+    expect(migration).toContain('Quatre espaces Sport visibles sur mobile 10.5.367');
+    expect(migration).toContain("lower(email) = lower('seb.pecoud@gmail.com')");
+    expect(migration).toContain("set app_version = '10.5.367'");
+    expect(migration).not.toContain('sport_sets');
+    expect(migration).not.toContain('sport_program_exercises');
+  });
 });
