@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `60851c16d054e5949cd0a66950091998cadb10c6`
-> Empreinte du snapshot : `9862aed73da4d9d470d870d446184e5bb17c9c97df76e7a399cd2a17b58f3b39`
-> Généré le : `2026-09-07T08:45:16.786Z`
+> Commit analysé : `f8bbc9ace8b3fc5653304aa0a33d91cde9d221a8`
+> Empreinte du snapshot : `23d46863f6c1762a1f7b718525b668896ea364e3b9794a1202537b6e2e4b6a74`
+> Généré le : `2026-09-07T09:56:31.807Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.366` |
+| Version | `10.5.367` |
 | Écrans déclarés | 17 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 46 |
 | Fichiers de tests | 127 |
-| Migrations Supabase | 158 |
+| Migrations Supabase | 159 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -634,6 +634,7 @@ Modules :
 - `supabase/migrations/20260906040354_nutrition_recipe_modal_add_ingredient_fix_10_5_363.sql`
 - `supabase/migrations/20260906100023_nutrition_recipe_quantity_pot_10_5_365.sql`
 - `supabase/migrations/20260906102850_body_composition_interactive_v4_10_5_366.sql`
+- `supabase/migrations/20260907094506_sport_timer_load_and_mobile_tabs_10_5_367.sql`
 
 ## Android et budgets de modules
 
