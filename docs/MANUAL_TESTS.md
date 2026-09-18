@@ -8,8 +8,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 - Retest Analyse `10.5.369` : contrôler les listes séparées « Sorties à payer » et « Frais estimés », chacune avec son total filtré. Les estimations restent dans le budget prévisionnel mais ne génèrent plus d'alerte d'échéance en retard. Vérifier les cas sans estimation et avec seulement des estimations, en clair/sombre et PC/mobile.
 
-- Version web à valider : `10.5.354`.
-- APK : `travelbudget-10.5.341-20260810-192605-debug.apk` publie dans Supabase Storage ; SHA-256 `3CC0F8597939B3F47AD9F325AD21C0C5E9C5DC3319B4B408E26F023FCAEDE37D`.
+- Version web et Android à valider : `10.5.369`.
+- APK : `travelbudget-10.5.369-20260918-112133-debug.apk` publié dans Supabase Storage ; SHA-256 `2D5CEB964B3685CC7C204AC7F66AE8A3BCDF0E57B1508C50DF66DFBA4EEDA86E`. Version embarquée et signature debug vérifiées ; fichier téléchargé identique au local. Validation sur téléphone à effectuer.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
