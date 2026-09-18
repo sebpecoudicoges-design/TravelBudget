@@ -13,6 +13,23 @@ describe('Analysis filter view contract', () => {
     return sandbox.window.TBAnalysisFilterView;
   }
 
+  it('renders separately totaled payable expenses and estimates, including estimates-only states', () => {
+    const sandbox = { window: {} };
+    vm.runInNewContext(filterView, sandbox);
+    const render = sandbox.window.TBAnalysisView.renderAnalysisUnpaidBlock;
+    const model = { base: 'AUD', expensePlanned: 302.75, unpaidTxDetails: [{ tx: { label: 'Google One' }, visibleAmount: 260.5 }], estimatedTxDetails: [{ tx: { label: '<Frais estimés>' }, visibleAmount: 42.25 }] };
+    const html = render({ model, formatCurrency: n => `${n} AUD` });
+    const [payable, estimated] = html.split('analysis-stat--estimated');
+    expect(payable).toContain('260.5 AUD');
+    expect(payable).not.toContain('42.25 AUD');
+    expect(estimated).toContain('42.25 AUD');
+    expect(estimated).toContain('&lt;Frais estimés&gt;');
+    expect(html).not.toContain('302.75 AUD');
+    expect(render({ model: { ...model, unpaidTxDetails: [] } })).not.toContain('analysis-stat--unpaid');
+    expect(render({ model: { ...model, estimatedTxDetails: [] }, isEn: true })).not.toContain('analysis-stat--estimated');
+    expect(legacy).toContain('splitPlannedDetails(unpaidTxDetails)');
+  });
+
   it('loads the filter view before the Analysis legacy page', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
     const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));

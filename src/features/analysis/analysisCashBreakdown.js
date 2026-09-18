@@ -25,13 +25,21 @@ export function isInternalTransferCapital(tx = {}) {
   return !fee;
 }
 
+export function isEstimatedTransferFee(tx = {}) {
+  return Boolean(tx.internalTransferId || tx.internal_transfer_id) && !isInternalTransferCapital(tx)
+    && (tx.payNow ?? tx.pay_now) === false && /frais estim|estimated fee/i.test(String(tx.label || ''));
+}
+
+export function splitPlannedDetails(rows = []) {
+  const sorted = rows.slice().sort((a, b) => String(a.budgetStart || a.cashDate || '').localeCompare(String(b.budgetStart || b.cashDate || '')));
+  return { unpaidTxDetails: sorted.filter(row => !isEstimatedTransferFee(row.tx)), estimatedTxDetails: sorted.filter(row => isEstimatedTransferFee(row.tx)) };
+}
+
 export function selectBudgetAnalysisRows(rows = []) {
   const feeKey = (tx) => [tx.internalTransferId || tx.internal_transfer_id, String(tx.currency || '').toUpperCase()].join('|');
   const paidFees = new Set(rows.filter(tx => (tx.internalTransferId || tx.internal_transfer_id)
     && !isInternalTransferCapital(tx) && (tx.payNow ?? tx.pay_now) === true).map(feeKey));
-  return rows.filter(tx => !((tx.internalTransferId || tx.internal_transfer_id)
-    && !isInternalTransferCapital(tx) && (tx.payNow ?? tx.pay_now) === false
-    && /frais estim|estimated fee/i.test(String(tx.label || '')) && paidFees.has(feeKey(tx))));
+  return rows.filter(tx => !(isEstimatedTransferFee(tx) && paidFees.has(feeKey(tx))));
 }
 
 export function isExpenseOffsetIncome(tx = {}, expenseCategories = []) {

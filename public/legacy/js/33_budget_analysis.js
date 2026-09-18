@@ -1234,9 +1234,7 @@ deltaProjectedWithBudget,
   nightCoveredTransportSpent, nightCoveredShareOfSpent, nightCoveredRows,
 categoryTxMap, subcategoryTxMap
   , ...cashBreakdown,
-  unpaidTxDetails: unpaidTxDetails
-    .slice()
-    .sort((a,b) => String(a?.budgetStart || a?.cashDate || '').localeCompare(String(b?.budgetStart || b?.cashDate || '')))
+  ...window.TBAnalysisCashBreakdown.splitPlannedDetails(unpaidTxDetails)
 };
         }
   function _buildReferenceComparisonSeries(actualMap, referenceCategoryMap, comparableDays){

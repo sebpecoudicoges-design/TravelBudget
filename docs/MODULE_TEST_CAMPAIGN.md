@@ -4,6 +4,8 @@ Version de depart : `10.5.316`. Version cible actuelle : `10.5.357`.
 
 ## Objectif
 
+Retest Analyse complété en `10.5.369` : distinction des frais estimés et des dettes à payer, conservation des estimations dans le budget prévisionnel et exclusion des alertes d'échéance. Les résultats précédents restent conservés ; aucune transaction financière modifiée.
+
 Figer temporairement les modules pour les comptes standards, puis les verifier et les refondre un par un avant la reprise du chantier Play Store.
 
 ## Roles

@@ -195,9 +195,11 @@
     categoryLabel,
     subcategoryLabel,
     tripLabel,
+    estimated = false,
   } = {}){
-    const unpaidRows = Array.isArray(model.unpaidTxDetails) ? model.unpaidTxDetails : [];
-    if (!unpaidRows.length) return "";
+    const unpaidRows = (estimated ? model.estimatedTxDetails : model.unpaidTxDetails) || [];
+    const estimates = estimated ? '' : renderUnpaidBlock({ model, formatCurrency, isEn, categoryLabel, subcategoryLabel, tripLabel, estimated: true });
+    if (!unpaidRows.length) return estimates;
     const tr = (fr, en) => isEn ? en : fr;
     const money = (value) => formatMoney(formatCurrency, value, model.base);
     const category = typeof categoryLabel === "function" ? categoryLabel : (tx) => tx?.category || "";
@@ -213,10 +215,10 @@
       const originalCurrency = String(tx.currency || model.base || "").toUpperCase();
       const sub = subcategory(tx);
       return `
-        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid rgba(245,158,11,.18);">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:10px 0;border-top:1px solid var(--tb-line);">
           <div style="min-width:0;">
-            <div style="font-size:13px;font-weight:900;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(tx.label || tx.category || "Transaction")}</div>
-            <div style="margin-top:4px;font-size:12px;color:rgba(120,53,15,.72);display:flex;gap:6px;flex-wrap:wrap;">
+            <div style="font-weight:900;overflow-wrap:anywhere;">${escapeHTML(tx.label || tx.category || "Transaction")}</div>
+            <div style="font-size:12px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;">
               <span>Budget : ${escapeHTML(budgetRange)}</span>
               <span>&middot;</span>
               <span>${escapeHTML(category(tx) || "Autre")}${sub ? ` / ${escapeHTML(sub)}` : ""}</span>
@@ -225,32 +227,32 @@
             </div>
           </div>
           <div style="text-align:right;white-space:nowrap;">
-            <div style="font-size:14px;font-weight:950;color:#b45309;">${escapeHTML(money(row?.visibleAmount))}</div>
-            <div style="font-size:12px;color:rgba(120,53,15,.62);">${escapeHTML(`${originalAmount} ${originalCurrency}`)}</div>
+            <div style="font-weight:950;">${escapeHTML(money(row?.visibleAmount))}</div>
+            <div style="font-size:12px;color:var(--muted);">${escapeHTML(`${originalAmount} ${originalCurrency}`)}</div>
           </div>
         </div>`;
     }).join("");
 
     const overflow = unpaidRows.length > 8
-      ? `<div style="font-size:12px;color:rgba(120,53,15,.72);padding-top:4px;">${escapeHTML(tr(`+ ${unpaidRows.length - 8} autre(s) ligne(s) dans la periode.`, `+ ${unpaidRows.length - 8} other row(s) in the period.`))}</div>`
+      ? `<div>${escapeHTML(tr(`+ ${unpaidRows.length - 8} autre(s) ligne(s) dans la periode.`, `+ ${unpaidRows.length - 8} other row(s) in the period.`))}</div>`
       : "";
 
     return `
-      <div class="analysis-stat analysis-stat--unpaid"
-        style="grid-column:1 / -1; padding:18px 20px; border-radius:24px; border:1px solid rgba(245,158,11,.24); background:linear-gradient(135deg, rgba(255,251,235,.96), rgba(255,255,255,.88)); box-shadow:0 16px 38px rgba(245,158,11,.12);">
+      <div class="analysis-stat ${estimated ? 'analysis-stat--estimated' : 'analysis-stat--unpaid'}"
+        style="grid-column:1 / -1;padding:18px;color:var(--text);background:var(--tb-surface);border:1px solid var(--tb-line);border-radius:var(--tb-radius-lg);">
         <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;">
           <div>
-            <div style="font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(120,53,15,.62);">${escapeHTML(tr("Sorties a payer identifiees", "Identified unpaid expenses"))}</div>
-            <h3 style="margin:5px 0 4px;font-size:23px;line-height:1.15;color:#78350f;">${escapeHTML(money(model.expensePlanned))}</h3>
-            <div style="font-size:13px;color:rgba(120,53,15,.72);">${escapeHTML(tr('Ces lignes expliquent l ecart entre "payees" et "payees + a payer" dans le filtre courant.', "These rows explain the gap between paid and paid + unpaid in the current filter."))}</div>
+            <div>${escapeHTML(estimated ? tr('Frais estimés', 'Estimated fees') : tr("Sorties a payer identifiees", "Identified unpaid expenses"))}</div>
+            <h3>${escapeHTML(money(unpaidRows.reduce((sum, row) => sum + safeNum(row.visibleAmount), 0)))}</h3>
+            <div>${escapeHTML(estimated ? tr('Inclus dans le budget prévisionnel, pas une dette à régler.', 'Included in the forecast budget, not a payable debt.') : tr('Échéances à régler. Les frais estimés sont présentés séparément.', 'Payable expenses. Estimated fees are listed separately.'))}</div>
           </div>
-          <div style="font-size:12px;font-weight:850;color:#92400e;">${escapeHTML(unpaidRows.length)} ${escapeHTML(tr("ligne(s)", "row(s)"))}</div>
+          <div>${escapeHTML(unpaidRows.length)} ${escapeHTML(tr("ligne(s)", "row(s)"))}</div>
         </div>
         <div style="margin-top:12px;display:grid;gap:8px;">
           ${rows}
           ${overflow}
         </div>
-      </div>`;
+      </div>${estimates}`;
   }
 
   window.TBAnalysisView = {

@@ -1,7 +1,21 @@
 import { describe, expect, it } from 'vitest';
+import { isEstimatedTransferFee, splitPlannedDetails } from '../../../src/features/analysis/analysisCashBreakdown.js';
 import { applyBudgetOffsets, applyPaidBudgetOffsets, buildCashBreakdown, filterCashTransactions, isExpenseOffsetIncome, isTripBudgetIncomeShare, isTripCashExpense, isTripCashIncome } from '../../../src/features/analysis/analysisCashBreakdown.js';
 
 describe('analysis cash breakdown', () => {
+  it('separates estimates from payable debts without changing budget rows', () => {
+    const estimate = { type: 'expense', label: 'Mouvement interne — frais estimés', internal_transfer_id: 'transfer', affects_budget: true, is_internal: false, pay_now: false };
+    const rows = [{ tx: estimate, visibleAmount: 42.25, budgetStart: '2026-05-15' }, { tx: { label: 'Google One' }, visibleAmount: 260.5, budgetStart: '2026-09-18' }];
+    const snapshot = JSON.stringify(rows);
+    const split = splitPlannedDetails(rows);
+    expect(split.unpaidTxDetails).toEqual([rows[1]]);
+    expect(split.estimatedTxDetails).toEqual([rows[0]]);
+    expect(JSON.stringify(rows)).toBe(snapshot);
+    expect(isEstimatedTransferFee({ ...estimate, pay_now: true })).toBe(false);
+    expect(isEstimatedTransferFee({ ...estimate, internal_transfer_id: null })).toBe(false);
+    expect(isEstimatedTransferFee({ ...estimate, label: 'Frais bancaires réels' })).toBe(false);
+    expect(splitPlannedDetails([])).toEqual({ unpaidTxDetails: [], estimatedTxDetails: [] });
+  });
   it('recognizes an income in an expense category as a budget offset', () => {
     expect(isExpenseOffsetIncome({ type: 'income', category: 'Essence' }, ['Repas', 'Essence'])).toBe(true);
     expect(isExpenseOffsetIncome({ type: 'income', category: 'Salaire' }, ['Repas', 'Essence'])).toBe(false);
