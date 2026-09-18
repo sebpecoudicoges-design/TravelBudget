@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "5ad6d724f00a86d9c1d1780303bd1b9219c9c544",
-  "snapshotFingerprint": "23d46863f6c1762a1f7b718525b668896ea364e3b9794a1202537b6e2e4b6a74",
-  "generatedAt": "2026-09-10T07:16:52.282Z",
+  "commit": "352d92316d1d13bc587bc91363614342eb5a9270",
+  "snapshotFingerprint": "55a52ff9646bbaaf98753cc61828d4fe075e47de111873611b07799ae12077e6",
+  "generatedAt": "2026-09-18T00:38:17.966Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.367"
+    "version": "10.5.368"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -281,6 +281,7 @@
     "tests/data/supabaseRepository.test.js",
     "tests/data/testCampaignRepository.test.js",
     "tests/data/tripRepository.test.js",
+    "tests/e2e/analysis-audit.spec.js",
     "tests/e2e/critical-flows.spec.js",
     "tests/features/analysis/analysisCashBreakdown.test.js",
     "tests/features/analysis/analysisChartOptions.test.js",
@@ -422,6 +423,7 @@
     "tests/ui/workDomainContract.test.js"
   ],
   "playwrightTests": [
+    "tests/e2e/analysis-audit.spec.js",
     "tests/e2e/critical-flows.spec.js"
   ],
   "supabaseMigrations": [
@@ -583,7 +585,8 @@
     "supabase/migrations/20260906040354_nutrition_recipe_modal_add_ingredient_fix_10_5_363.sql",
     "supabase/migrations/20260906100023_nutrition_recipe_quantity_pot_10_5_365.sql",
     "supabase/migrations/20260906102850_body_composition_interactive_v4_10_5_366.sql",
-    "supabase/migrations/20260907094506_sport_timer_load_and_mobile_tabs_10_5_367.sql"
+    "supabase/migrations/20260907094506_sport_timer_load_and_mobile_tabs_10_5_367.sql",
+    "supabase/migrations/20260918003053_analysis_trip_signed_balances.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

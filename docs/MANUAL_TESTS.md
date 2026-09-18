@@ -52,6 +52,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Parcours de régression condensés
 
+- Analyse / Dashboard `10.5.368` : sur 15/05 au 02/10, distinguer l ecart a date de la projection finale; inclure/exclure Autre et verifier les avoirs. Les frais de virement budgetaires apparaissent en mode paye + a payer, le capital reste exclu; des frais reels lies remplacent l estimation de la meme devise. Verifier les cartes a 1440/390 px en clair/sombre. Comparer les soldes dans Trip et dans la projection Dashboard : au jeu audite le 18/09, PVT Australie vaut 8,32 AUD + 96,78 EUR et Amsterdam 164,97 EUR. Ne pas attendre les memes montants EUR si les taux ou les donnees changent.
+
 | Priorité | Versions couvertes | Module | Parcours et étapes utilisateur | Résultat attendu | Console attendue | Statut |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 10.5.224 à 10.5.225 | Réglages + navigation + i18n | Ouvrir **Réglages > Règles récurrentes**, créer puis annuler une règle. Ouvrir ensuite Trip, Sport, Alimentation, Travail et Patrimoine. Tester aussi `showView("health")` depuis la console. Puis dans Réglages > Compte, passer la langue en anglais et revenir en français. | La modale partagée s'ouvre et se ferme proprement. Tous les domaines s'ouvrent sans blocage, `health` redirige vers Alimentation et le dictionnaire anglais se charge à la demande sans bloquer le boot. | `TB BUILD 10.5.225` ; aucun `Uncaught`, aucun `_tbEnsureModal` manquant, aucun `[i18n] lazy dictionary load failed`. | ok |

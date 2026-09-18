@@ -131,6 +131,8 @@ Les tables sont exposees uniquement aux utilisateurs authentifies autorises et p
 
 ## Historique et cloture
 
+En `10.5.368`, deux retests descendants Analyse et Dashboard verifient les calculs rapproches des donnees admin du 18/09 : signe des entrees Trip, distinction ecart a date / projection finale, extrapolation du rythme net avec plancher des depenses connues, inclusion des frais de virement sans double estimation liee. Les anciens retours sont conserves et les nouvelles evaluations restent a effectuer. La migration ne modifie aucune transaction financiere.
+
 - **Ajouter un nouveau retour** cree un episode relie au precedent sans ecraser les notes ni les dates.
 - Un scenario derive affiche le test parent dont il decoule.
 - **Clore pour tous** est reserve aux administrateurs : le scenario devient clos au niveau campagne et disparait des tests actifs de chaque testeur.

@@ -3,8 +3,8 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 269,
-    "lazyJsMaxKiB": 470,
-    "totalJsMaxKiB": 739,
+    "lazyJsMaxKiB": 471,
+    "totalJsMaxKiB": 740,
     "totalCssMaxKiB": 73,
     "mainJsGzipMaxKiB": 110
   },

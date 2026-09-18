@@ -20,13 +20,7 @@
   function _upper(s){ return _norm(s).toUpperCase(); }
   function _analysisIsEnglish(){ return typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en'; }
   function _normKey(s){
-    const core = window.TBCore?.budgetAnalysisRules;
-    if (core?.normalizeAnalysisKey) return core.normalizeAnalysisKey(s);
-    return String(s || '')
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+    return window.TBCore.budgetAnalysisRules.normalizeAnalysisKey(s);
   }
   function _isUUID(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || '')); }
   function _iso(d){ try { return toLocalISODate(d); } catch (_) { return new Date(d).toISOString().slice(0,10); } }
@@ -411,10 +405,9 @@
   return true;
   }
   function _isInternalMovement(tx){ return String(tx?.category || '').trim().toLowerCase() === 'mouvement interne'; }
-  function _isInternalTransferLinked(tx){ return !!(tx?.internal_transfer_id || tx?.internalTransferId); }
   function _isAnalysisInternalMovement(tx) {
     if (_isTripBudgetShare(tx) || window.TBAnalysisCashBreakdown?.isTripBudgetIncomeShare?.(tx)) return false;
-    if (_isInternalTransferLinked(tx)) return true;
+    if (window.TBAnalysisCashBreakdown.isInternalTransferCapital(tx)) return true;
     if (tx?.is_internal === true || tx?.isInternal === true) return true;
     return typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : _isInternalMovement(tx);
   }
@@ -517,7 +510,8 @@ function _analysisBucketOrder(){
   return Array.from(new Set([...TB_SOURCED_BUCKET_ORDER, ...dynamic]));
 }
   function _analysisTransactions(){
-    const base = Array.isArray(state?.transactions) ? state.transactions : [];
+    const rows = Array.isArray(state?.transactions) ? state.transactions : [];
+    const base = window.TBAnalysisCashBreakdown.selectBudgetAnalysisRows(rows);
     try {
       const range = _analysisRange();
       const virtualRows = window.tbAssetBudgetTransactionsForRange?.(range.start, range.end) || [];
@@ -712,17 +706,6 @@ function _analysisBucketOrder(){
     rowType: _txType, rowTravelId: (tx) => tx?.travel_id || tx?.travelId, budgetStart: _txBudgetStart, budgetEnd: _txBudgetEnd,
   }) || [];
 }
-function _incomeSplit(txs){
-  const real = [];
-  const planned = [];
-
-  txs.forEach(tx => {
-    if (_txPaid(tx)) real.push(tx);
-    else planned.push(tx);
-  });
-
-  return { real, planned };
-}
 function _sumTxArray(txs, base){
   return txs.reduce((sum, tx) => {
     const cashDate = _txCashDate(tx);
@@ -826,7 +809,7 @@ function _sumTxArray(txs, base){
     const cashIncomeReal = cashFlows.income || [];
     const cashExpenseReal = cashFlows.expenses || [];
     const incomeCashCandidates = incomeTxs.filter((tx) => !window.TBAnalysisCashBreakdown?.isTripBudgetIncomeShare?.(tx));
-    const { planned: incomePlanned } = _incomeSplit(incomeCashCandidates);
+    const incomePlanned = incomeCashCandidates.filter(tx => !_txPaid(tx));
     const expenseCats = [...new Set(txs.map(_txCategory).filter(Boolean))];
     const expenseOffsets = incomeTxs.filter((tx) => window.TBAnalysisCashBreakdown?.isExpenseOffsetIncome?.(tx, expenseCats));
 
@@ -1084,10 +1067,9 @@ if (sub) {
     const comparablePerDay = comparableDays > 0 ? (comparableIncludedSpent / comparableDays) : 0;
     const unmappedPerDay = comparableDays > 0 ? (unmappedComparableSpent / comparableDays) : 0;
     const excludedPerDay = comparableDays > 0 ? (comparableExcludedSpent / comparableDays) : 0;
-    let projection = spent;
-    if (end < todayIso) projection = spent;
-    else if (start > todayIso) projection = totalBudget;
-    else projection = Math.max(spentToToday, targetToToday) + Math.max(0, totalBudget - targetToToday);
+    const projection = window.TBAnalysisCashBreakdown.projectBudgetConsumption({
+      spent, spentToToday, targetToToday, totalBudget, start, end, today: todayIso,
+    });
     const remaining = totalBudget - projection;
     const referenceGap = spentToToday - totalReferenceElapsed;
     const pct = totalBudget > 0 ? (spentToToday / totalBudget) * 100 : 0;
@@ -1348,12 +1330,12 @@ categoryTxMap, subcategoryTxMap
       return ((current - target) / target) * 100;
     };
     const ratioText = (current, total) => `${_fmtMoney(current, model.base)} / ${_fmtMoney(total, model.base)}`;
-    const deltaBudgetPct = signedPct(model.spentToToday, model.targetToToday);
-    const deltaReferencePct = signedPct(model.spentToToday, model.totalReferenceElapsed);
+    const deltaBudgetPct = signedPct(model.projection, model.totalBudget);
+    const deltaReferencePct = signedPct(model.projection, model.totalReferencePeriod);
     const deltaBudgetTone = deltaBudgetPct > 0 ? _theme('bad') : (deltaBudgetPct < 0 ? _theme('good') : _theme('muted'));
     const deltaReferenceTone = deltaReferencePct > 0 ? _theme('bad') : (deltaReferencePct < 0 ? _theme('good') : _theme('muted'));
-    const deltaBudgetAmount = _safeNum(model.spentToToday) - _safeNum(model.targetToToday);
-    const deltaReferenceAmount = _safeNum(model.spentToToday) - _safeNum(model.totalReferenceElapsed);
+    const deltaBudgetAmount = _safeNum(model.projection) - _safeNum(model.totalBudget);
+    const deltaReferenceAmount = _safeNum(model.projection) - _safeNum(model.totalReferencePeriod);
     const isEn = _analysisIsEnglish();
     const trA = (fr, en) => isEn ? en : fr;
     const dayWord = trA('jours', 'days');
@@ -1430,6 +1412,7 @@ categoryTxMap, subcategoryTxMap
 host.innerHTML = progressView?.renderAnalysisProgressPanels?.({
   progressCards,
   delta: {
+    atDateAmount: _safeNum(model.spentToToday) - _safeNum(model.targetToToday),
     deltaBudgetTone,
     deltaBudgetPct,
     deltaBudgetAmount,

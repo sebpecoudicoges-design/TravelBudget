@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `5ad6d724f00a86d9c1d1780303bd1b9219c9c544`
-> Empreinte du snapshot : `23d46863f6c1762a1f7b718525b668896ea364e3b9794a1202537b6e2e4b6a74`
-> Généré le : `2026-09-10T07:16:52.282Z`
+> Commit analysé : `352d92316d1d13bc587bc91363614342eb5a9270`
+> Empreinte du snapshot : `55a52ff9646bbaaf98753cc61828d4fe075e47de111873611b07799ae12077e6`
+> Généré le : `2026-09-18T00:38:17.966Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.367` |
+| Version | `10.5.368` |
 | Écrans déclarés | 17 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 46 |
-| Fichiers de tests | 127 |
-| Migrations Supabase | 159 |
+| Fichiers de tests | 128 |
+| Migrations Supabase | 160 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -325,6 +325,7 @@ Modules :
 
 ### Parcours Playwright
 
+- `tests/e2e/analysis-audit.spec.js`
 - `tests/e2e/critical-flows.spec.js`
 
 ### Tous les fichiers de tests
@@ -367,6 +368,7 @@ Modules :
 - `tests/data/supabaseRepository.test.js`
 - `tests/data/testCampaignRepository.test.js`
 - `tests/data/tripRepository.test.js`
+- `tests/e2e/analysis-audit.spec.js`
 - `tests/e2e/critical-flows.spec.js`
 - `tests/features/analysis/analysisCashBreakdown.test.js`
 - `tests/features/analysis/analysisChartOptions.test.js`
@@ -635,6 +637,7 @@ Modules :
 - `supabase/migrations/20260906100023_nutrition_recipe_quantity_pot_10_5_365.sql`
 - `supabase/migrations/20260906102850_body_composition_interactive_v4_10_5_366.sql`
 - `supabase/migrations/20260907094506_sport_timer_load_and_mobile_tabs_10_5_367.sql`
+- `supabase/migrations/20260918003053_analysis_trip_signed_balances.sql`
 
 ## Android et budgets de modules
 

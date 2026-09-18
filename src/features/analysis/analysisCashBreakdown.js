@@ -9,6 +9,31 @@ function entries(map, limit) {
   return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
 }
 
+// Scale the observed net pace by budget exposure (also supports variable daily budgets).
+// Known allocations are a floor: future commitments must never disappear from the forecast.
+export function projectBudgetConsumption({ spent = 0, spentToToday = 0, targetToToday = 0, totalBudget = 0, start = '', end = '', today = '' } = {}) {
+  if (end < today) return num(spent);
+  if (start > today || num(targetToToday) <= 0) return num(totalBudget);
+  return Math.max(0, num(spent), num(spentToToday) / num(targetToToday) * num(totalBudget));
+}
+
+export function isInternalTransferCapital(tx = {}) {
+  if (!(tx.internalTransferId || tx.internal_transfer_id)) return false;
+  // Generated fees are expenses explicitly marked budget-affecting and non-internal.
+  const fee = tx.type === 'expense' && (tx.affectsBudget ?? tx.affects_budget) === true
+    && !(tx.isInternal ?? tx.is_internal);
+  return !fee;
+}
+
+export function selectBudgetAnalysisRows(rows = []) {
+  const feeKey = (tx) => [tx.internalTransferId || tx.internal_transfer_id, String(tx.currency || '').toUpperCase()].join('|');
+  const paidFees = new Set(rows.filter(tx => (tx.internalTransferId || tx.internal_transfer_id)
+    && !isInternalTransferCapital(tx) && (tx.payNow ?? tx.pay_now) === true).map(feeKey));
+  return rows.filter(tx => !((tx.internalTransferId || tx.internal_transfer_id)
+    && !isInternalTransferCapital(tx) && (tx.payNow ?? tx.pay_now) === false
+    && /frais estim|estimated fee/i.test(String(tx.label || '')) && paidFees.has(feeKey(tx))));
+}
+
 export function isExpenseOffsetIncome(tx = {}, expenseCategories = []) {
   return isBudgetOffsetIncome(tx, expenseCategories);
 }

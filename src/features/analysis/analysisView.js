@@ -369,6 +369,7 @@ export function renderAnalysisProgressGlassCard(card = {}, idx = 0) {
 }
 
 export function renderAnalysisProgressDeltaCard({
+  atDateAmount = 0,
   idx = 0,
   deltaBudgetTone = '#94a3b8',
   deltaBudgetPct = 0,
@@ -387,6 +388,7 @@ export function renderAnalysisProgressDeltaCard({
         <div style="position:relative; z-index:1;">
           <div class="analysis-stat-label" style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(15,23,42,.72);">${escapeHtml(tr('Écart de tendance', 'Trend gap'))}</div>
           <div class="analysis-stat-meta" style="margin-top:4px; font-size:12px; color:rgba(15,23,42,.58);">${escapeHtml(tr('Projection finale comparée au budget app et à la référence pays.', 'Final projection compared with app budget and country reference.'))}</div>
+          <div class="analysis-stat-meta">${escapeHtml(tr('Écart à date : ', 'To-date gap: ') + (atDateAmount > 0 ? '+' : '') + formatMoney(formatCurrency, atDateAmount, currency))}</div>
         </div>
         <div style="position:relative; z-index:1; display:flex; flex-direction:column; gap:12px;">
           <div style="padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border:1px solid rgba(255,255,255,.78); box-shadow:inset 0 1px 0 rgba(255,255,255,.78);">
@@ -395,7 +397,7 @@ export function renderAnalysisProgressDeltaCard({
             <div style="margin-top:4px; font-size:12px; font-weight:750; color:rgba(15,23,42,.62);">${escapeHtml(deltaAmountText({
               amount: deltaBudgetAmount,
               positiveLabel: tr('Dépassement', 'Over budget'),
-              negativeLabel: tr('Économisé', 'Saved'),
+              negativeLabel: tr('Économie projetée', 'Projected saving'),
               neutralLabel: tr('Écart', 'Gap'),
               formatCurrency,
               currency,

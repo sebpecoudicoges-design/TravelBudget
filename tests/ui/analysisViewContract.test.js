@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 
 describe('Analysis view extraction contract', () => {
+  it('keeps signed Trip balances and authenticated invoker security in the migration', () => {
+    const file = fs.readdirSync('supabase/migrations').find(name => name.endsWith('_analysis_trip_signed_balances.sql'));
+    const sql = fs.readFileSync(`supabase/migrations/${file}`, 'utf8');
+    expect(sql).toContain('security_invoker = true');
+    expect(sql).toContain('tm.auth_user_id = auth.uid()');
+    expect(sql.match(/coalesce\(te.income_due_back, true\)/g)).toHaveLength(2);
+    expect(sql).toContain('se.cancelled_at IS NULL');
+    expect(sql).not.toMatch(/delete from public.transactions/i);
+  });
   const main = fs.readFileSync('src/main.js', 'utf8');
   const runtime = fs.readFileSync('src/features/analysis/analysisRuntime.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/33_budget_analysis.js', 'utf8');
@@ -56,6 +65,12 @@ describe('Analysis view extraction contract', () => {
   });
 
   it('keeps the Analysis progress cards delegated out of the legacy file', () => {
+    expect(legacy).toContain('signedPct(model.projection, model.totalBudget)');
+    expect(legacy).toContain('signedPct(model.projection, model.totalReferencePeriod)');
+    expect(legacy).toContain('TBAnalysisCashBreakdown.projectBudgetConsumption');
+    expect(legacy).not.toContain('Math.max(spentToToday, targetToToday)');
+    expect(legacy).toContain('TBAnalysisCashBreakdown.selectBudgetAnalysisRows');
+    expect(legacy).not.toContain('function _isInternalTransferLinked');
     expect(legacy).toContain('progressView?.renderAnalysisProgressPanels');
     expect(runtime).toContain('...analysisView');
     expect(legacy).not.toContain('const renderGlassCard');
@@ -78,7 +93,8 @@ describe('Analysis view extraction contract', () => {
 
   it('builds pure cashflow only from received income and paid expenses', () => {
     expect(legacy).toContain('const cashFlows = window.TBAnalysisCashBreakdown?.selectCashFlows?.({');
-    expect(legacy).toContain('const { planned: incomePlanned } = _incomeSplit(incomeCashCandidates);');
+    expect(legacy).toContain('const incomePlanned = incomeCashCandidates.filter(tx => !_txPaid(tx));');
+    expect(legacy).not.toContain('function _incomeSplit');
     expect(legacy).toContain('if (_txAnalysisPaid(tx)) paidSpent += alloc.amount;');
     expect(legacy).toContain('window.TBAnalysisCashBreakdown?.buildCashBreakdown');
     expect(cashBreakdown).toContain('income.forEach((row) => add(row');
