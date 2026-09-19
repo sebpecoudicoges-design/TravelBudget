@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 .ms-playwright/
+test-results/
 
 # Build
 dist/

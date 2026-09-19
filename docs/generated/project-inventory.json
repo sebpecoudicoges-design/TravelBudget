@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "256827207e9dc189208216758f1e491edbad1e97",
-  "snapshotFingerprint": "7ebcbc09d565d30e79c77d54f423d45883a8b6f1d96cc859383611d129d78d5c",
-  "generatedAt": "2026-09-18T01:29:03.212Z",
+  "commit": "7185c464a052fc40da73aa6ced02240c5ec1ba08",
+  "snapshotFingerprint": "ea45056e937675764643a33d917f185360654594d245aaaad210c2416a1ea73c",
+  "generatedAt": "2026-09-19T00:32:16.163Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.369"
+    "version": "10.5.370"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -197,6 +197,8 @@
   "featureModules": [
     "src/features/analysis/analysisCashBreakdown.js",
     "src/features/analysis/analysisChartOptions.js",
+    "src/features/analysis/analysisPeriodComparison.js",
+    "src/features/analysis/analysisPeriodRules.js",
     "src/features/analysis/analysisRuntime.js",
     "src/features/analysis/analysisView.js",
     "src/features/assets/assetView.js",
@@ -285,6 +287,7 @@
     "tests/e2e/critical-flows.spec.js",
     "tests/features/analysis/analysisCashBreakdown.test.js",
     "tests/features/analysis/analysisChartOptions.test.js",
+    "tests/features/analysis/analysisPeriodRules.test.js",
     "tests/features/analysis/analysisView.test.js",
     "tests/features/assets/assetView.test.js",
     "tests/features/dashboard/dashboardView.test.js",

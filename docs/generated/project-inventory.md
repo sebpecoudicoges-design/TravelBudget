@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `256827207e9dc189208216758f1e491edbad1e97`
-> Empreinte du snapshot : `7ebcbc09d565d30e79c77d54f423d45883a8b6f1d96cc859383611d129d78d5c`
-> Généré le : `2026-09-18T01:29:03.212Z`
+> Commit analysé : `7185c464a052fc40da73aa6ced02240c5ec1ba08`
+> Empreinte du snapshot : `ea45056e937675764643a33d917f185360654594d245aaaad210c2416a1ea73c`
+> Généré le : `2026-09-19T00:32:16.163Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.369` |
+| Version | `10.5.370` |
 | Écrans déclarés | 17 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
-| Modules features | 46 |
-| Fichiers de tests | 128 |
+| Modules features | 48 |
+| Fichiers de tests | 129 |
 | Migrations Supabase | 160 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
@@ -225,6 +225,8 @@ Modules :
 
 - `src/features/analysis/analysisCashBreakdown.js`
 - `src/features/analysis/analysisChartOptions.js`
+- `src/features/analysis/analysisPeriodComparison.js`
+- `src/features/analysis/analysisPeriodRules.js`
 - `src/features/analysis/analysisRuntime.js`
 - `src/features/analysis/analysisView.js`
 - `src/features/assets/assetView.js`
@@ -372,6 +374,7 @@ Modules :
 - `tests/e2e/critical-flows.spec.js`
 - `tests/features/analysis/analysisCashBreakdown.test.js`
 - `tests/features/analysis/analysisChartOptions.test.js`
+- `tests/features/analysis/analysisPeriodRules.test.js`
 - `tests/features/analysis/analysisView.test.js`
 - `tests/features/assets/assetView.test.js`
 - `tests/features/dashboard/dashboardView.test.js`
