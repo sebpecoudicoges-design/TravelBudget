@@ -6,11 +6,13 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
+- Retest Analyse `10.5.371` : sur le voyage Asie de l'Est et une plage incluant le 15/09/2026, choisir **Hors budget** puis **Les deux**. La dépense `Réparation et Entretien voiture`, catégorie **Autre / Divers**, montant 729,20 AUD, doit apparaître dans les totaux et détails hors budget. Elle ne doit jamais gonfler le budget consommé ni la projection du budget.
+
 - Retest Analyse `10.5.370` : tester **Ce mois**, **Mois précédent**, **Cette semaine**, **Semaine précédente** et **Date à date**, puis activer **Période précédente**. La plage doit rester bornée au voyage ; la comparaison doit porter sur le même nombre de jours écoulés et afficher les rythmes par jour, l'écart et le pourcentage. Vérifier la mémorisation après retour dans Analyse, en clair/sombre et PC/mobile.
 
 - Retest Analyse `10.5.369` : contrôler les listes séparées « Sorties à payer » et « Frais estimés », chacune avec son total filtré. Les estimations restent dans le budget prévisionnel mais ne génèrent plus d'alerte d'échéance en retard. Vérifier les cas sans estimation et avec seulement des estimations, en clair/sombre et PC/mobile.
 
-- Version web à valider : `10.5.370`. Version Android disponible : `10.5.369` (aucun nouvel APK pour ce chantier).
+- Version web à valider : `10.5.371`. Version Android disponible : `10.5.369` (aucun nouvel APK pour ce chantier).
 - APK : `travelbudget-10.5.369-20260918-112133-debug.apk` publié dans Supabase Storage ; SHA-256 `2D5CEB964B3685CC7C204AC7F66AE8A3BCDF0E57B1508C50DF66DFBA4EEDA86E`. Version embarquée et signature debug vérifiées ; fichier téléchargé identique au local. Validation sur téléphone à effectuer.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.

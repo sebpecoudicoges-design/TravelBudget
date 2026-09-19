@@ -40,9 +40,11 @@ export function normalizeAnalysisKey(value) {
 
 export function affectsBudgetAnalysisDataset(tx = {}) {
   if (!tx || typeof tx !== 'object') return false;
+  if (String(tx.type || '').toLowerCase() !== 'expense') return false;
+  const outOfBudget = tx.outOfBudget ?? tx.out_of_budget;
+  if (outOfBudget === true) return true;
   const flag = tx.affectsBudget ?? tx.affects_budget;
   if (flag === false) return false;
-  if (String(tx.type || '').toLowerCase() !== 'expense') return false;
   return true;
 }
 

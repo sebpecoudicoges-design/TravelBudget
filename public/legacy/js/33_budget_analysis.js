@@ -448,9 +448,11 @@
     const core = window.TBCore?.budgetAnalysisRules;
     if (core?.affectsBudgetAnalysisDataset) return !!core.affectsBudgetAnalysisDataset(tx);
     if (!tx || typeof tx !== 'object') return false;
+    if (_txType(tx) !== 'expense') return false;
+    if (_txOut(tx)) return true;
     const flag = tx.affectsBudget ?? tx.affects_budget;
     if (flag === false) return false;
-    return _txType(tx) === 'expense';
+    return true;
   }
   function _categoryColor(name){
     try {

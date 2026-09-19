@@ -1,10 +1,10 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.370`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.371`.
 
 ## Objectif
 
-Retest Analyse ouvert en `10.5.370` : raccourcis calendaires mois/semaine, dates libres conservées et comparaison optionnelle avec la période précédente de même durée. Le filtre et la comparaison sont mémorisés ; les résultats précédents restent conservés et aucune transaction financière n'est modifiée.
+Retest Analyse ouvert en `10.5.371` : les dépenses marquées hors budget restent analysables dans Hors budget et Les deux même si `affects_budget` est faux, sans rejoindre le budget ni sa projection. Le cas réel du 15/09/2026 est la référence de validation ; aucune transaction financière n'est modifiée.
 
 Figer temporairement les modules pour les comptes standards, puis les verifier et les refondre un par un avant la reprise du chantier Play Store.
 

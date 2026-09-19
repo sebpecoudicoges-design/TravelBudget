@@ -85,6 +85,7 @@ describe('budget analysis rules core', () => {
   it('keeps cashflow-only rows out of budget analysis totals', () => {
     expect(affectsBudgetAnalysisDataset({ type: 'expense', affects_budget: true })).toBe(true);
     expect(affectsBudgetAnalysisDataset({ type: 'expense', affectsBudget: false })).toBe(false);
+    expect(affectsBudgetAnalysisDataset({ type: 'expense', affects_budget: false, out_of_budget: true })).toBe(true);
     expect(affectsBudgetAnalysisDataset({ type: 'income', affects_budget: true })).toBe(false);
   });
 
