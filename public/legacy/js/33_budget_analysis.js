@@ -1717,7 +1717,7 @@ function _openTxDrilldown(kind, key, model){
       const inputs = _rangeInputs();
       const travel = _getSelectedTravel();
       window.TBAnalysisPeriodComparison.renderPreviousPeriodComparison({
-        host: comparisonHost, current: model,
+        host: comparisonHost, current: model, periodPreset: period?.value || 'range',
         travelBounds: { start: _norm(travel?.start_date || travel?.start), end: _norm(travel?.end_date || travel?.end) },
         computeForRange(range) {
           const saved = { period: period?.value, start: inputs.start?.value, end: inputs.end?.value };

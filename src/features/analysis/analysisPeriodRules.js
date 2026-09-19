@@ -26,8 +26,25 @@ export function clampRange(range = {}, bounds = {}) {
   return start && end && start <= end ? { start, end } : { start: '', end: '' };
 }
 
-export function previousComparableRange({ start, elapsedDays = 0 } = {}) {
+export function previousComparableRange({ start, elapsedDays = 0 } = {}, preset = 'range') {
   const days = Math.max(1, Number(elapsedDays) || 1);
+  if (preset === 'month' || preset === 'previous-month') {
+    const monthStart = atNoon(start);
+    monthStart.setMonth(monthStart.getMonth() - 1, 1);
+    const startIso = iso(monthStart);
+    const monthEnd = new Date(monthStart);
+    monthEnd.setMonth(monthEnd.getMonth() + 1, 0);
+    const end = new Date(monthStart);
+    end.setDate(end.getDate() + days - 1);
+    return { start: startIso, end: iso(end > monthEnd ? monthEnd : end) };
+  }
+  if (preset === 'week' || preset === 'previous-week') {
+    const previousStart = atNoon(start);
+    previousStart.setDate(previousStart.getDate() - 7);
+    const end = new Date(previousStart);
+    end.setDate(end.getDate() + Math.min(days, 7) - 1);
+    return { start: iso(previousStart), end: iso(end) };
+  }
   const end = atNoon(start);
   end.setDate(end.getDate() - 1);
   const previousEnd = iso(end);

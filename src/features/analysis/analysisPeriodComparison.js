@@ -23,11 +23,11 @@ export function renderPeriodComparison({ current = {}, previous = {}, range = {}
     </div></section>`;
 }
 
-export function renderPreviousPeriodComparison({ host, current, travelBounds, computeForRange, formatCurrency, isEn = false } = {}) {
+export function renderPreviousPeriodComparison({ host, current, periodPreset = 'range', travelBounds, computeForRange, formatCurrency, isEn = false } = {}) {
   if (!host) return null;
   host.innerHTML = '';
   try {
-    const range = clampRange(previousComparableRange(current), travelBounds);
+    const range = clampRange(previousComparableRange(current, periodPreset), travelBounds);
     if (!range.start) throw new Error('no previous range');
     const previous = computeForRange(range);
     const metrics = comparisonMetrics(current, previous);
