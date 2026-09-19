@@ -18,8 +18,17 @@ import {
   renderAnalysisSubcategoryBreakdown,
   renderAnalysisTrajectoryMeta,
 } from '../../../src/features/analysis/analysisView.js';
+import { renderPeriodComparison } from '../../../src/features/analysis/analysisPeriodComparison.js';
 
 describe('Analysis view helpers', () => {
+  it('renders an escaped, responsive period comparison', () => {
+    const html = renderPeriodComparison({ current: { base: 'AUD', start: '<now>', end: '2026-09-19' }, previous: { spentToToday: 250 }, range: { start: '2026-09-08', end: '2026-09-13' }, metrics: { currentDaily: 40, previousDaily: 50, delta: -10, deltaPct: -20, favorable: true }, formatCurrency: (n, c) => `${n} ${c}` });
+    expect(html).toContain('tb-analysis-comparison');
+    expect(html).toContain('&lt;now&gt;');
+    expect(html).toContain('-20.0 %');
+    expect(html).toContain('40 AUD');
+    expect(html).toContain('250 AUD');
+  });
   const t = (key, vars = {}) => {
     const dict = {
       'analysis.filter.travel': 'Voyage',

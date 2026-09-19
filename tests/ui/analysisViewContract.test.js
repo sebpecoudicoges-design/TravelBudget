@@ -16,6 +16,7 @@ describe('Analysis view extraction contract', () => {
   const legacy = fs.readFileSync('public/legacy/js/33_budget_analysis.js', 'utf8');
   const filterView = fs.readFileSync('public/legacy/js/33_analysis_filter_view.js', 'utf8');
   const cashBreakdown = fs.readFileSync('src/features/analysis/analysisCashBreakdown.js', 'utf8');
+  const periodRules = fs.readFileSync('src/features/analysis/analysisPeriodRules.js', 'utf8');
 
   it('exposes the Analysis view module to the legacy runtime on demand', () => {
     expect(main).toContain("import('./features/analysis/analysisRuntime.js')");
@@ -23,6 +24,10 @@ describe('Analysis view extraction contract', () => {
     expect(runtime).toContain("import * as analysisView from './analysisView.js'");
     expect(runtime).toContain('target.TBAnalysisView');
     expect(runtime).toContain('...analysisView');
+    expect(runtime).toContain('target.TBAnalysisPeriodRules = analysisPeriodRules');
+    expect(runtime).toContain('target.TBAnalysisPeriodComparison = analysisPeriodComparison');
+    expect(periodRules).toContain('previousComparableRange');
+    expect(legacy).toContain("'analysis-comparison'");
   });
 
   it('exposes the Analysis chart option module to the legacy runtime on demand', () => {
@@ -170,6 +175,6 @@ describe('Analysis view extraction contract', () => {
     const inlineLanguageChecks = legacy.match(/typeof window\.tbGetLang === 'function' && window\.tbGetLang\(\) === 'en'/g) || [];
     expect(legacy).toContain('function _analysisIsEnglish()');
     expect(inlineLanguageChecks).toHaveLength(1);
-    expect(legacy.match(/_analysisIsEnglish\(\)/g) || []).toHaveLength(3);
+    expect(legacy.match(/_analysisIsEnglish\(\)/g) || []).toHaveLength(4);
   });
 });

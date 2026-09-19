@@ -75,6 +75,10 @@ describe('Analysis filter view contract', () => {
     expect(periodHtml).toContain('value="p&lt;1&gt;"');
     expect(periodHtml).toContain('Période 1 • 2026-07-01 → 2026-07-05 • AUD');
     expect(periodHtml).toContain('<option value="range">Date à date</option>');
+    expect(periodHtml).toContain('<option value="month">Ce mois</option>');
+    expect(periodHtml).toContain('<option value="previous-month">Mois précédent</option>');
+    expect(periodHtml).toContain('<option value="week">Cette semaine</option>');
+    expect(periodHtml).toContain('<option value="previous-week">Semaine précédente</option>');
     expect(chipHtml).toContain('data-cat="&lt;Transport&gt;"');
     expect(chipHtml).toContain('is-excluded');
     expect(api.buildCategoryExcludeSummary({ total: 4, count: 2 })).toBe('2 catégories exclues • 2 incluses');

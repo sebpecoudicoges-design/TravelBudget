@@ -1,10 +1,10 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.357`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.370`.
 
 ## Objectif
 
-Retest Analyse complété en `10.5.369` : distinction des frais estimés et des dettes à payer, conservation des estimations dans le budget prévisionnel et exclusion des alertes d'échéance. Les résultats précédents restent conservés ; aucune transaction financière modifiée.
+Retest Analyse ouvert en `10.5.370` : raccourcis calendaires mois/semaine, dates libres conservées et comparaison optionnelle avec la période précédente de même durée. Le filtre et la comparaison sont mémorisés ; les résultats précédents restent conservés et aucune transaction financière n'est modifiée.
 
 Figer temporairement les modules pour les comptes standards, puis les verifier et les refondre un par un avant la reprise du chantier Play Store.
 

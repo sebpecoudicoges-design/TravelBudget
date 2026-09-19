@@ -37,7 +37,7 @@
       const label = `Période ${idx + 1} • ${start} → ${end}${base ? ' • ' + base : ''}`;
       return `<option value="${esc(id)}">${esc(label)}</option>`;
     }).join('');
-    return `<option value="active">${esc(activeLabel)}</option><option value="all">Tout le voyage</option>${rows}<option value="range">Date à date</option>`;
+    return `<option value="active">${esc(activeLabel)}</option><option value="all">Tout le voyage</option><option value="month">Ce mois</option><option value="previous-month">Mois précédent</option><option value="week">Cette semaine</option><option value="previous-week">Semaine précédente</option>${rows}<option value="range">Date à date</option>`;
   }
   function buildCategoryExcludeSummary({ total = 0, count = 0 } = {}) {
     const safeTotal = Math.max(0, Math.round(num(total)));

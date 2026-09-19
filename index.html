@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="BudgetPacker">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.369";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.370";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -4075,6 +4075,13 @@
               </div>
             </div>
             <div class="analysis-filter-group">
+              <label for="analysis-comparison">Comparaison</label>
+              <select id="analysis-comparison">
+                <option value="none">Sans comparaison</option>
+                <option value="previous">Période précédente</option>
+              </select>
+            </div>
+            <div class="analysis-filter-group">
               <label for="analysis-scope" data-t="analysis.filter.scope">Périmètre</label>
               <select id="analysis-scope">
                 <option value="budget" data-t="analysis.scope.budget">Dans le budget</option>
@@ -4134,6 +4141,8 @@
               <button id="analysis-refresh" class="btn primary" type="button" data-t="analysis.refresh">Actualiser</button>
             </div>
           </div>
+
+          <div id="analysis-period-comparison"></div>
 
           <div id="analysis-summary" class="analysis-summary-grid"></div>
 

@@ -193,7 +193,7 @@
   function _getSelectedTravel(){ return _travelList().find(t => String(t.id) === String(_getSelectedTravelId())) || _travelList()[0] || null; }
   function _getSelectedPeriodObj(){
     const pid = _getSelectedPeriodId();
-    if (pid === 'all' || pid === 'range') return null;
+    if (['all','range','month','previous-month','week','previous-week'].includes(pid)) return null;
     if (pid === 'active') return _getActivePeriodForTravel(_getSelectedTravelId());
     return _periodList(_getSelectedTravelId()).find(p => String(p.id) === String(pid)) || null;
   }
@@ -201,6 +201,12 @@
     const travel = _getSelectedTravel();
     const pid = _getSelectedPeriodId();
     const period = _getSelectedPeriodObj();
+    if (['month','previous-month','week','previous-week'].includes(pid)) {
+      return window.TBAnalysisPeriodRules.clampRange(
+        window.TBAnalysisPeriodRules.calendarPresetRange(pid),
+        { start: _norm(travel?.start_date || travel?.start || state?.period?.start), end: _norm(travel?.end_date || travel?.end || state?.period?.end) },
+      );
+    }
     if (pid === 'range') {
       const ri = _rangeInputs();
       const tStart = _norm(travel?.start_date || travel?.start || state?.period?.start);
@@ -233,6 +239,7 @@
         periodId: _getSelectedPeriodId(),
         rangeStart: _el('analysis-range-start')?.value || '',
         rangeEnd: _el('analysis-range-end')?.value || '',
+        comparison: _el('analysis-comparison')?.value || 'none',
         scope: _el('analysis-scope')?.value || 'budget',
         mode: _el('analysis-mode')?.value || 'planned',
         currencyMode: _el('analysis-currency')?.value || 'account',
@@ -1703,6 +1710,32 @@ function _openTxDrilldown(kind, key, model){
       try { fn(model); } catch (err) { console.warn(`[analysis] ${label} failed`, err); }
     };
 
+    const comparisonHost = _el('analysis-period-comparison');
+    if (comparisonHost) comparisonHost.innerHTML = '';
+    if (comparisonHost && _el('analysis-comparison')?.value === 'previous') {
+      const period = _el('analysis-period');
+      const inputs = _rangeInputs();
+      const travel = _getSelectedTravel();
+      window.TBAnalysisPeriodComparison.renderPreviousPeriodComparison({
+        host: comparisonHost, current: model,
+        travelBounds: { start: _norm(travel?.start_date || travel?.start), end: _norm(travel?.end_date || travel?.end) },
+        computeForRange(range) {
+          const saved = { period: period?.value, start: inputs.start?.value, end: inputs.end?.value };
+          try {
+            if (period) period.value = 'range';
+            if (inputs.start) inputs.start.value = range.start;
+            if (inputs.end) inputs.end.value = range.end;
+            return _computeModel();
+          } finally {
+            if (period) period.value = saved.period;
+            if (inputs.start) inputs.start.value = saved.start;
+            if (inputs.end) inputs.end.value = saved.end;
+          }
+        },
+        formatCurrency: _fmtMoney, isEn: _analysisIsEnglish(),
+      });
+    }
+
     safe('overview-strip', _renderOverviewStrip);
     safe('summary', _buildSummary);
     safe('night-covered', _renderNightCovered);
@@ -1870,7 +1903,7 @@ function _openTxDrilldown(kind, key, model){
   }
 
   function _ensureEvents(){
-    ['analysis-travel','analysis-period','analysis-scope','analysis-mode','analysis-range-start','analysis-range-end','analysis-currency','analysis-category-filter','analysis-subcategory-filter'].forEach(id => {
+    ['analysis-travel','analysis-period','analysis-comparison','analysis-scope','analysis-mode','analysis-range-start','analysis-range-end','analysis-currency','analysis-category-filter','analysis-subcategory-filter'].forEach(id => {
       const el = _el(id);
       if (!el || el._tbBound) return;
       el._tbBound = true;
@@ -2010,6 +2043,7 @@ function _openTxDrilldown(kind, key, model){
     if (_el('analysis-scope')) _el('analysis-scope').value = ['budget','out','all'].includes(filters.scope) ? filters.scope : 'budget';
     if (_el('analysis-mode')) _el('analysis-mode').value = ['expenses','planned'].includes(filters.mode) ? filters.mode : 'planned';
     if (_el('analysis-currency')) _el('analysis-currency').value = ['period','account'].includes(filters.currencyMode) ? filters.currencyMode : 'account';
+    if (_el('analysis-comparison')) _el('analysis-comparison').value = filters.comparison === 'previous' ? 'previous' : 'none';
     _renderAnalysisFilterSelects();
     if (_el('analysis-category-filter')) _el('analysis-category-filter').value = [..._el('analysis-category-filter').options].some(o => o.value === filters.categoryFilter) ? filters.categoryFilter : 'all';
     _renderAnalysisFilterSelects();

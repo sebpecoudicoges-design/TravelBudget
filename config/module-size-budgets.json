@@ -3,8 +3,8 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 269,
-    "lazyJsMaxKiB": 471,
-    "totalJsMaxKiB": 740,
+    "lazyJsMaxKiB": 475,
+    "totalJsMaxKiB": 744,
     "totalCssMaxKiB": 73,
     "mainJsGzipMaxKiB": 110
   },
@@ -73,13 +73,21 @@
       "name": "analysis-domain",
       "maxKiB": 160,
       "paths": [
-        "public/legacy/js/33_analysis_filter_view.js",
         "public/legacy/js/33_analysis_drilldown_view.js",
         "public/legacy/js/33_budget_analysis.js",
         "src/core/budgetAnalysisRules.js",
         "src/features/analysis/analysisChartOptions.js",
         "src/features/analysis/analysisRuntime.js",
         "src/features/analysis/analysisView.js"
+      ]
+    },
+    {
+      "name": "analysis-period-filters",
+      "maxKiB": 27,
+      "paths": [
+        "public/legacy/js/33_analysis_filter_view.js",
+        "src/features/analysis/analysisPeriodRules.js",
+        "src/features/analysis/analysisPeriodComparison.js"
       ]
     },
     {
