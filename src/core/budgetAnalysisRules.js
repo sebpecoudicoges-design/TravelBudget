@@ -42,7 +42,8 @@ export function affectsBudgetAnalysisDataset(tx = {}) {
   if (!tx || typeof tx !== 'object') return false;
   if (String(tx.type || '').toLowerCase() !== 'expense') return false;
   const outOfBudget = tx.outOfBudget ?? tx.out_of_budget;
-  if (outOfBudget === true) return true;
+  const tripExpenseId = tx.tripExpenseId ?? tx.trip_expense_id;
+  if (outOfBudget === true) return !tripExpenseId;
   const flag = tx.affectsBudget ?? tx.affects_budget;
   if (flag === false) return false;
   return true;

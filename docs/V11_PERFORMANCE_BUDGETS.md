@@ -244,3 +244,5 @@ En 10.5.368, les nouvelles regles de projection et de frais rejoignent le sous-m
 En 10.5.370, les raccourcis mois/semaine et la comparaison de rythmes rejoignent le sous-domaine `analysis-period-filters`, qui regroupe la vue de filtres et deux modules purs pour 26,5 / 27 KiB. Le coeur Analyse redescend ainsi a 141,1 / 160 KiB au lieu d elargir son plafond historique. Les nouveaux calculs testes portent le lazy a 474,9 / 475 KiB et le total JS a 743,8 / 744 KiB; l initial reste a 268,9 / 269 KiB et aucun CSS n est ajoute.
 
 En 10.5.371, le socle Analyse conserve les depenses explicitement hors budget dans son jeu de donnees meme lorsque `affects_budget` vaut faux. La correction ajoute seulement une garde metier testee : Analyse mesure 141,3 / 160 KiB, l initial 269 / 269 KiB, le lazy 474,9 / 475 KiB et le total 743,8 / 744 KiB. Aucun plafond ni CSS n est ajoute.
+
+En 10.5.372, la garde Analyse distingue les debits wallet Trip lies par `trip_expense_id` des lignes de quote-part personnelles. Analyse mesure 141,4 / 160 KiB, l initial 269 / 269 KiB, le lazy 474,9 / 475 KiB et le total 743,9 / 744 KiB. Aucun plafond ni CSS n est ajoute.

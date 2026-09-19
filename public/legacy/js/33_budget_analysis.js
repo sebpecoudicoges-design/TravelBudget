@@ -449,7 +449,7 @@
     if (core?.affectsBudgetAnalysisDataset) return !!core.affectsBudgetAnalysisDataset(tx);
     if (!tx || typeof tx !== 'object') return false;
     if (_txType(tx) !== 'expense') return false;
-    if (_txOut(tx)) return true;
+    if (_txOut(tx)) return !(tx.tripExpenseId || tx.trip_expense_id);
     const flag = tx.affectsBudget ?? tx.affects_budget;
     if (flag === false) return false;
     return true;

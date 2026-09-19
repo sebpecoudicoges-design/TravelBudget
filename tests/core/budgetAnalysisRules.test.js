@@ -82,10 +82,17 @@ describe('budget analysis rules core', () => {
     })).toEqual(['Logement', 'Repas', 'Connectivité']);
   });
 
-  it('keeps cashflow-only rows out of budget analysis totals', () => {
+  it('keeps ordinary out-of-budget expenses but excludes gross Trip cash rows', () => {
     expect(affectsBudgetAnalysisDataset({ type: 'expense', affects_budget: true })).toBe(true);
     expect(affectsBudgetAnalysisDataset({ type: 'expense', affectsBudget: false })).toBe(false);
     expect(affectsBudgetAnalysisDataset({ type: 'expense', affects_budget: false, out_of_budget: true })).toBe(true);
+    expect(affectsBudgetAnalysisDataset({ type: 'expense', affects_budget: false, out_of_budget: true, trip_expense_id: 'trip-expense' })).toBe(false);
+    expect(affectsBudgetAnalysisDataset({ type: 'expense', affects_budget: true, out_of_budget: false, label: '[Trip] Part personnelle' })).toBe(true);
+    const tripPair = [
+      { id: 'wallet-debit', type: 'expense', amount: 99.7, affects_budget: false, out_of_budget: true, trip_expense_id: 'beer' },
+      { id: 'personal-share', type: 'expense', amount: 49.85, affects_budget: true, out_of_budget: false, label: '[Trip] Bière' },
+    ];
+    expect(tripPair.filter(affectsBudgetAnalysisDataset).map((row) => row.id)).toEqual(['personal-share']);
     expect(affectsBudgetAnalysisDataset({ type: 'income', affects_budget: true })).toBe(false);
   });
 

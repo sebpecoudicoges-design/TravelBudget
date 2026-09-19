@@ -1,10 +1,10 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.371`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.372`.
 
 ## Objectif
 
-Retest Analyse ouvert en `10.5.371` : les dépenses marquées hors budget restent analysables dans Hors budget et Les deux même si `affects_budget` est faux, sans rejoindre le budget ni sa projection. Le cas réel du 15/09/2026 est la référence de validation ; aucune transaction financière n'est modifiée.
+Retest Analyse ouvert en `10.5.372` : les débits wallet Trip liés par `trip_expense_id` restent des mouvements de trésorerie, mais ne remplacent plus la quote-part personnelle dans les totaux analytiques. Le couple réel Bière 99,70 AUD / part 49,85 AUD sert de référence ; aucune transaction financière n'est modifiée.
 
 Figer temporairement les modules pour les comptes standards, puis les verifier et les refondre un par un avant la reprise du chantier Play Store.
 
