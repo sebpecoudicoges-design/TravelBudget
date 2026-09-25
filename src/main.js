@@ -347,6 +347,11 @@ async function ensureDomainModules(domain) {
 
 async function boot() {
   ensureKpiView();
+  window.tbOpenAccounting = async function tbOpenAccounting() {
+    const runtime = await import('./features/accounting/accountingController.js');
+    runtime.installAccountingRuntime(window);
+    if (window.activeView === 'accounting') await window.renderAccounting();
+  };
   window.tbLoadLegacyDomain = function tbLoadLegacyDomain(domain) {
     const key = String(domain || '').trim();
     const scripts = LEGACY_DOMAIN_SCRIPTS[key];

@@ -12,6 +12,7 @@ function setActiveTab(view) {
     ["subscriptions", "tab-subscriptions", "view-subscriptions"],
     ["settings", "tab-settings", "view-settings"],
     ["analysis", "tab-analysis", "view-analysis"],
+    ["accounting", "tab-accounting", "view-accounting"],
     ["assets", "tab-assets", "view-assets"],
     ["documents", "tab-documents", "view-documents"],
     ["inbox", "tab-inbox", "view-inbox"],
@@ -42,6 +43,12 @@ function showView(view) {
   try { if (typeof window !== "undefined") window.activeView = view; } catch (_) {}
   try { if (window.tbBus && typeof window.tbBus.emit === "function") window.tbBus.emit("view:changed", { view }); } catch (_) {}
   setActiveTab(view);
+  if (view === "accounting") {
+    window.tbOpenAccounting?.().catch(() => {
+      const root = document.getElementById('accounting-root');
+      if (root) root.textContent = 'Comptabilité indisponible. Rouvre cet onglet pour réessayer.';
+    });
+  }
   if (view === "transactions") {
     renderTransactions();
     try { if (typeof window.tbEnsureDeferredData === "function") window.tbEnsureDeferredData("transactions"); } catch (_) {}
@@ -237,7 +244,7 @@ function syncTabsForRole() {
     ? window.TBModuleAccess.roleUiState(role)
     : { isAdmin: role === "admin", isTester: role === "test", canPreviewModules: role === "admin" || role === "test", canUseTestCampaign: role === "admin" || role === "test", isRestricted: role !== "admin" && role !== "test" };
   const moduleTabs = [
-    'dashboard','transactions','subscriptions','analysis','assets','sport','nutrition','work','documents','inbox','notifications','trip'
+    'dashboard','transactions','subscriptions','analysis','accounting','assets','sport','nutrition','work','documents','inbox','notifications','trip'
   ];
   const canAccessView = (name) => window.TBModuleAccess?.canAccessAppView
     ? window.TBModuleAccess.canAccessAppView(name, role)

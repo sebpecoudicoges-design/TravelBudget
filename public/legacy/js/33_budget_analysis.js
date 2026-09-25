@@ -523,7 +523,7 @@ function _analysisBucketOrder(){
     const base = window.TBAnalysisCashBreakdown.selectBudgetAnalysisRows(rows);
     try {
       const range = _analysisRange();
-      const virtualRows = window.tbAssetBudgetTransactionsForRange?.(range.start, range.end) || [];
+      const virtualRows = window.tbAssetBudgetTransactionsForRange?.(range.start, range.end, _getSelectedTravelId()) || [];
       return virtualRows.length ? base.concat(virtualRows) : base;
     } catch (_) { return base; }
   }
@@ -1979,7 +1979,7 @@ function _openTxDrilldown(kind, key, model){
   async function _ensureAnalysisDeferredData(){
     try {
       if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) return;
-      if (typeof window.tbLoadAssets === "function") await window.tbLoadAssets();
+      if (typeof window.tbLoadAssetBudgetData === "function") await window.tbLoadAssetBudgetData();
       const tid=String(_el('analysis-travel')?.value||state?.activeTravelId||state?.period?.travel_id||state?.period?.travelId||'').trim();
       if(tid&&String(window.__tbDeferredDataLoadedForTravel||"")===tid&&state?.transactions?.some((tx)=>String(tx?.travel_id||tx?.travelId||"")===tid))return;
       if (ensureAnalysisDeferredPromise) {

@@ -7,6 +7,9 @@ Cette page est la porte d'entrée de la documentation. Elle oriente vers les sou
 | Comprendre les couches et les règles de migration | [Architecture V11](V11_ARCHITECTURE.md) |
 | Comprendre les repositories et la synchronisation | [Couche de données V11](V11_DATA_LAYER.md) |
 | Voir l'avancement du refactoring | [Checklist V11](V11_REFACTOR_CHECKLIST.md) |
+| Préparer GPT-6 et les prochaines étapes comptables | [Plan GPT-6, amortissements et comptabilité](GPT6_AND_ACCOUNTING_PLAN.md) |
+| Configurer le pilote IA | [Exploitation de l'assistant GPT-6](ASSISTANT_AI_OPERATIONS.md) |
+| Comprendre la comptabilité personnelle et ses limites | [Module comptable](ACCOUNTING_MODULE_BRIEF.md) |
 | Connaître les budgets de taille | [Budgets de performance](V11_PERFORMANCE_BUDGETS.md) |
 | Utiliser les composants UI partagés | [Composants UI V11](V11_UI_COMPONENTS.md) |
 | Respecter l’identité et les règles graphiques | [Système visuel officiel](VISUAL_SYSTEM.md) |

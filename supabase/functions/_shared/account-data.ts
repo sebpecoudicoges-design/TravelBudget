@@ -17,6 +17,7 @@ type OwnedTable = {
 export const OWNED_TABLES: OwnedTable[] = [
   { table: "analytic_category_mappings", column: "user_id" },
   { table: "app_error_logs", column: "user_id" },
+  { table: "assistant_request_quota", column: "user_id" },
   { table: "asset_documents", column: "user_id" },
   { table: "asset_owners", column: "user_id" },
   { table: "asset_transaction_links", column: "user_id" },

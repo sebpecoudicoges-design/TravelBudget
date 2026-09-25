@@ -65,7 +65,7 @@ export function filterCashTransactions({ rows = [], scope = 'budget', paid, inte
   return rows.filter((tx) => {
     const cat = category(tx);
     const sub = subcategory(tx);
-    if (!paid(tx) || internal(tx)) return false;
+    if (tx.virtualBudgetOnly || !paid(tx) || internal(tx)) return false;
     if ((scope === 'budget' && out(tx) && !tripCash(tx)) || (scope === 'out' && !out(tx))) return false;
     if (categoryFilter && categoryFilter !== 'all' && categoryFilter !== '__income' && cat !== categoryFilter) return false;
     if ((subcategoryFilter === '__none__' && sub) || (subcategoryFilter && subcategoryFilter !== 'all' && subcategoryFilter !== '__none__' && sub !== subcategoryFilter)) return false;

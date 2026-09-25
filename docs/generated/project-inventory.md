@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `122f70612a5d43d609f9c2044942ac229b9011a0`
-> Empreinte du snapshot : `a61c1c7ccb28c1c309e1f2913ba716150773b08ba03f0139d895d7a02c542335`
-> Généré le : `2026-09-19T01:01:00.791Z`
+> Commit analysé : `7cd9c304a52ca1241cdbb05426c8b4c786ffbf13`
+> Empreinte du snapshot : `04b2101cd9ec9527c14686e6381c9d2189b9c7b1c7b2827a145eeef14c5e7232`
+> Généré le : `2026-09-25T02:14:26.175Z`
 
 # Inventaire du projet TravelBudget
 
@@ -12,14 +12,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Élément | Valeur |
 |---|---:|
 | Version | `10.5.372` |
-| Écrans déclarés | 17 |
+| Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
-| Modules features | 48 |
-| Fichiers de tests | 129 |
-| Migrations Supabase | 160 |
-| Fonctions Edge | 12 |
+| Modules features | 54 |
+| Fichiers de tests | 137 |
+| Migrations Supabase | 161 |
+| Fonctions Edge | 13 |
 | Projet Android présent | Oui |
 
 ## Scripts npm
@@ -50,6 +50,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 ## Écrans déclarés dans index.html
 
+- `accounting`
 - `analysis`
 - `assets`
 - `dashboard`
@@ -70,6 +71,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 ## Onglets de navigation déclarés
 
+- `accounting`
 - `analysis`
 - `assets`
 - `dashboard`
@@ -206,8 +208,10 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 Domaines :
 
+- `accounting`
 - `analysis`
 - `assets`
+- `assistant`
 - `dashboard`
 - `documents`
 - `inbox`
@@ -223,13 +227,19 @@ Domaines :
 
 Modules :
 
+- `src/features/accounting/accountingController.js`
+- `src/features/accounting/accountingData.js`
+- `src/features/accounting/accountingRules.js`
+- `src/features/accounting/accountingView.js`
 - `src/features/analysis/analysisCashBreakdown.js`
 - `src/features/analysis/analysisChartOptions.js`
 - `src/features/analysis/analysisPeriodComparison.js`
 - `src/features/analysis/analysisPeriodRules.js`
 - `src/features/analysis/analysisRuntime.js`
 - `src/features/analysis/analysisView.js`
+- `src/features/assets/assetBudgetData.js`
 - `src/features/assets/assetView.js`
+- `src/features/assistant/assistantAiClient.js`
 - `src/features/dashboard/dashboardDailyBudgetState.js`
 - `src/features/dashboard/dashboardView.js`
 - `src/features/dashboard/dashboardWalletRules.js`
@@ -276,6 +286,7 @@ Modules :
 
 ### Contrats de domaine et d'interface
 
+- `tests/ui/accountingViewContract.test.js`
 - `tests/ui/analysisDrilldownViewContract.test.js`
 - `tests/ui/analysisFilterViewContract.test.js`
 - `tests/ui/analysisViewContract.test.js`
@@ -327,7 +338,10 @@ Modules :
 
 ### Parcours Playwright
 
+- `tests/e2e/accounting.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
+- `tests/e2e/asset-budget-loading.spec.js`
+- `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/critical-flows.spec.js`
 
 ### Tous les fichiers de tests
@@ -370,13 +384,20 @@ Modules :
 - `tests/data/supabaseRepository.test.js`
 - `tests/data/testCampaignRepository.test.js`
 - `tests/data/tripRepository.test.js`
+- `tests/e2e/accounting.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
+- `tests/e2e/asset-budget-loading.spec.js`
+- `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/features/accounting/accountingData.test.js`
+- `tests/features/accounting/accountingRules.test.js`
 - `tests/features/analysis/analysisCashBreakdown.test.js`
 - `tests/features/analysis/analysisChartOptions.test.js`
 - `tests/features/analysis/analysisPeriodRules.test.js`
 - `tests/features/analysis/analysisView.test.js`
+- `tests/features/assets/assetBudgetData.test.js`
 - `tests/features/assets/assetView.test.js`
+- `tests/features/assistant/assistantAi.test.js`
 - `tests/features/dashboard/dashboardView.test.js`
 - `tests/features/dashboard/dashboardWalletRules.test.js`
 - `tests/features/documents/documentView.test.js`
@@ -410,6 +431,7 @@ Modules :
 - `tests/features/trip/tripStore.test.js`
 - `tests/features/trip/tripView.test.js`
 - `tests/features/work/workView.test.js`
+- `tests/ui/accountingViewContract.test.js`
 - `tests/ui/analysisDrilldownViewContract.test.js`
 - `tests/ui/analysisFilterViewContract.test.js`
 - `tests/ui/analysisViewContract.test.js`
@@ -471,6 +493,7 @@ Modules :
 - `admin-invite`
 - `admin-set-user-role`
 - `admin-wipe-user`
+- `assistant-help`
 - `dispatch-mobile-notifications`
 - `export-account-data`
 - `fx-latest`
@@ -641,6 +664,7 @@ Modules :
 - `supabase/migrations/20260906102850_body_composition_interactive_v4_10_5_366.sql`
 - `supabase/migrations/20260907094506_sport_timer_load_and_mobile_tabs_10_5_367.sql`
 - `supabase/migrations/20260918003053_analysis_trip_signed_balances.sql`
+- `supabase/migrations/20260925012905_assistant_ai_quota.sql`
 
 ## Android et budgets de modules
 
@@ -652,9 +676,12 @@ Modules :
 
 ## Documents d'architecture et de navigation
 
+- `docs/ACCOUNTING_MODULE_BRIEF.md`
 - `docs/ACCOUNT_DATA_LIFECYCLE.md`
 - `docs/ADMIN_TEST_RETURNS.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
+- `docs/ASSISTANT_AI_OPERATIONS.md`
+- `docs/GPT6_AND_ACCOUNTING_PLAN.md`
 - `docs/MANUAL_TESTS.md`
 - `docs/MODULE_TEST_CAMPAIGN.md`
 - `docs/PLAY_STORE_READINESS.md`
@@ -670,6 +697,7 @@ Modules :
 - `docs/V11_UI_COMPONENTS.md`
 - `docs/V11_VISUAL_REDESIGN_CHECKLIST.md`
 - `docs/VISUAL_SYSTEM.md`
+- `docs/assistant-ai-evaluation.md`
 - `docs/deployment_settings_checklist.md`
 
 ## Matrice d'impact déclarée

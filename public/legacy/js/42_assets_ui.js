@@ -107,17 +107,6 @@
     }catch(e){ console.warn('[TB][assets] fallback preview used', e); CACHE = { assets:FALLBACK_ASSETS, owners:FALLBACK_OWNERS, events:FALLBACK_EVENTS, documentLinks:[], transactionLinks:[], demo:true, reason:e && (e.message || e.code) }; return CACHE; }
   }
 
-  function assetBudgetRows(start, end){
-    try {
-      return window.Core?.assetRules?.buildAssetBudgetTransactions?.({
-        assets: CACHE.assets || window.state?.assets || [],
-        owners: CACHE.owners || window.state?.assetOwners || [],
-        rangeStart: start,
-        rangeEnd: end,
-      }) || [];
-    } catch (_) { return []; }
-  }
-
   function findAsset(id){ return (CACHE.assets||[]).find(a=>String(a.id)===String(id)); }
   function ownerRows(assetOrId, owners){ const id = typeof assetOrId === 'object' ? assetOrId.id : assetOrId; return (owners||CACHE.owners||[]).filter(o=>String(o.asset_id)===String(id)); }
   function assetDocumentRows(assetOrId){ const id = typeof assetOrId === 'object' ? assetOrId.id : assetOrId; return (CACHE.documentLinks||[]).filter(x=>String(x.asset_id)===String(id)); }
@@ -1154,7 +1143,6 @@ async function addDocumentToAsset(assetId){
 const content = data.empty ? emptyState() : `${summary}<div class="tb-assets-grid">${data.assets.map(a=>card(a,data.owners)).join('')}</div>`; const buildLabel = window.TB_BUILD_LABEL || 'V9'; root.innerHTML = `<div class="tb-assets-shell"><div class="tb-assets-head"><div><h2>${esc(tr('assets.title'))}</h2><p>${esc(tr('assets.subtitle'))} ${data.demo ? esc(tr('assets.demo_hint')) : ''}</p></div><div class="tb-assets-actions"><button class="tb-asset-add-btn" type="button" data-tb-asset-open>${esc(tr('assets.action.add'))}</button><div class="tb-assets-badge">${esc(buildLabel)} · Assets</div></div></div>${content}</div>`; if(!data.empty) setTimeout(()=>renderCharts(data.assets),0); }
   window.renderAssets = renderAssets;
   window.tbLoadAssets = loadAssets;
-  window.tbAssetBudgetTransactionsForRange = assetBudgetRows;
   window.addEventListener('tb:auth_scope_changed', () => {
     CACHE = { assets:[], owners:[], events:[], documentLinks:[], transactionLinks:[], demo:false, empty:true };
     loadAssets().then(() => { try { window.tbRequestRenderAll?.('assets:auth'); } catch (_) {} }).catch(() => {});

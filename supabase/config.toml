@@ -385,6 +385,10 @@ verify_jwt = true
 [functions.export-account-data]
 verify_jwt = false
 
+[functions.assistant-help]
+# The handler validates the user token with Auth before checking the pilot list.
+verify_jwt = false
+
 [functions.request-account-deletion]
 verify_jwt = false
 

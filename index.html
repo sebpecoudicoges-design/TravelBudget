@@ -3307,6 +3307,7 @@
       .wrap > #view-transactions,
       .wrap > #view-settings,
       .wrap > #view-analysis,
+      .wrap > #view-accounting,
       .wrap > #view-assets,
       .wrap > #view-documents,
       .wrap > #view-help,
@@ -3948,6 +3949,7 @@
         <div id="tab-subscriptions" class="tab" data-icon="📅" onclick="showView('subscriptions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-subscriptions"></use></svg><span class="tab-label">Abonnements</span></div>
         <div id="tab-analysis" class="tab" data-icon="📊" onclick="showView('analysis')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-analysis"></use></svg><span class="tab-label" data-t="nav.analysis">Analyse</span></div>
         <div id="tab-assets" class="tab" data-icon="💎" onclick="showView('assets')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-assets"></use></svg><span class="tab-label" data-t="nav.assets">Patrimoine</span></div>
+        <button id="tab-accounting" type="button" class="tab" data-icon="📒" onclick="showView('accounting')"><span class="tab-icon" aria-hidden="true">📒</span><span class="tab-label">Comptabilité</span></button>
         <div class="tab-group-label">Quotidien</div>
         <div id="tab-sport" class="tab" data-icon="🏋️" onclick="showView('sport')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-sport"></use></svg><span class="tab-label">Sport</span></div>
         <div id="tab-nutrition" class="tab" data-icon="🍎" onclick="showView('nutrition')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-nutrition"></use></svg><span class="tab-label">Alimentation</span></div>
@@ -4009,6 +4011,9 @@
 
       <div id="view-assets" class="hidden">
         <div id="assets-root" class="card"></div>
+      </div>
+      <div id="view-accounting" class="hidden">
+        <div id="accounting-root"></div>
       </div>
 
 

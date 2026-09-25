@@ -206,6 +206,7 @@
     btn.innerHTML = "AI";
     btn.title = t("assistant.title");
 
+    let pendingRequest = null;
     const panel = document.createElement("div");
     panel.id = "tb-assist-panel";
     panel.className = "tb-assist-panel hidden";
@@ -237,8 +238,14 @@
         <div class="tb-assist-hint">${esc(t("assistant.hint"))}</div>
         <div id="tb-assist-thread" class="tb-assist-thread"></div>
       </div>
+      <div class="tb-assist-ai-controls">
+        <label><input id="tb-assist-ai" type="checkbox" /> ${esc(atxt('Aide IA en ligne', 'Online AI help'))}</label>
+        <small>${esc(atxt('Envoie ta question à OpenAI. Les comptes et documents ne sont pas joints. Analyse rapide reste locale.', 'Sends your question to OpenAI. Accounts and documents are not attached. Quick analysis stays local.'))}</small>
+        <span id="tb-assist-status" role="status" aria-live="polite"></span>
+        <button id="tb-assist-cancel" class="btn" type="button" hidden>${esc(atxt('Annuler', 'Cancel'))}</button>
+      </div>
       <div class="tb-assist-foot">
-        <input id="tb-assist-input" class="tb-assist-input" type="text" placeholder="${esc(t("assistant.placeholder"))}" />
+        <input id="tb-assist-input" class="tb-assist-input" type="text" maxlength="1500" aria-label="${esc(t('assistant.placeholder'))}" placeholder="${esc(t("assistant.placeholder"))}" />
         <button id="tb-assist-send" class="tb-assist-send" type="button">${esc(t("assistant.send"))}</button>
       </div>`;
 
@@ -258,7 +265,7 @@
       renderInsightCards();
     }
     function openPanel() { panel.classList.remove("hidden"); setOpenPersisted(true); renderContext(); document.getElementById("tb-assist-input")?.focus(); }
-    function closePanel() { panel.classList.add("hidden"); setOpenPersisted(false); }
+    function closePanel() { pendingRequest?.abort(); panel.classList.add("hidden"); setOpenPersisted(false); }
     btn.addEventListener("click", () => panel.classList.contains("hidden") ? openPanel() : closePanel());
     panel.querySelector("#tb-assist-close")?.addEventListener("click", closePanel);
     panel.querySelector("#tb-assist-open-faq")?.addEventListener("click", () => { go("help"); closePanel(); });
@@ -299,18 +306,61 @@
       return "";
     }
 
-    function handleSend() {
+    function localAnswer(q) {
+      const intent = routeIntent(q);
+      if (intent) return intent;
+      const hits = (window.tbSearchFaq ? tbSearchFaq(q, 1) : []);
+      return (hits?.[0]?.a?.[lang()]) || t("assistant.no_match");
+    }
+    panel.querySelector('#tb-assist-cancel').addEventListener('click', () => pendingRequest?.abort());
+    panel.querySelector('#tb-assist-ai').addEventListener('change', () => pendingRequest?.abort());
+    window.addEventListener('tb:auth_scope_changed', () => {
+      pendingRequest?.abort();
+      threadData.length = 0;
+      saveThread([]);
+      panel.querySelector('#tb-assist-thread').replaceChildren();
+      panel.querySelector('#tb-assist-ai').checked = false;
+    });
+    async function handleSend() {
+      if (pendingRequest) return;
       const input = document.getElementById("tb-assist-input");
       const q = (input && input.value || "").trim();
       if (!q) return;
       if (input) input.value = "";
       appendMsg("user", q);
-      const intent = routeIntent(q);
-      if (intent) { appendMsg("bot", intent); return; }
-      const hits = (window.tbSearchFaq ? tbSearchFaq(q, 1) : []);
-      if (!hits || !hits.length) { appendMsg("bot", t("assistant.no_match")); return; }
-      const best = hits[0];
-      appendMsg("bot", (best.a && best.a[lang()]) || t("assistant.no_match"));
+      const status = panel.querySelector('#tb-assist-status');
+      status.textContent = '';
+      if (!panel.querySelector('#tb-assist-ai').checked || navigator.onLine === false || !window.tbRequestAssistantHelp) {
+        if (panel.querySelector('#tb-assist-ai').checked) status.textContent = atxt('Mode local : connexion indisponible.', 'Local mode: connection unavailable.');
+        appendMsg('bot', localAnswer(q)); return;
+      }
+      const request = new AbortController();
+      pendingRequest = request;
+      const send = panel.querySelector('#tb-assist-send');
+      const cancel = panel.querySelector('#tb-assist-cancel');
+      send.disabled = true; cancel.hidden = false;
+      status.textContent = atxt('Recherche avec l’IA…', 'Asking AI…');
+      try {
+        const result = await window.tbRequestAssistantHelp({ client: window.sb, question: q, language: lang(), view: currentView(), signal: request.signal });
+        if (request.signal.aborted) return;
+        appendMsg('bot', result.answer, false);
+        if (result.view) {
+          const link = document.createElement('button');
+          link.type = 'button'; link.className = 'btn';
+          link.dataset.assistView = result.view;
+          link.textContent = `${atxt('Ouvrir', 'Open')} ${viewLabel(result.view)}`;
+          panel.querySelector('#tb-assist-thread').appendChild(link);
+        }
+        status.textContent = atxt('Réponse IA · vérifie les informations dans l’application.', 'AI response · check information in the app.');
+      } catch (_) {
+        if (!request.signal.aborted) {
+          status.textContent = atxt('IA indisponible : réponse locale.', 'AI unavailable: local answer.');
+          appendMsg('bot', localAnswer(q));
+        }
+      } finally {
+        if (request.signal.aborted) status.textContent = atxt('Demande annulée.', 'Request cancelled.');
+        pendingRequest = null; send.disabled = false; cancel.hidden = true;
+      }
     }
 
     panel.querySelector("#tb-assist-send")?.addEventListener("click", handleSend);

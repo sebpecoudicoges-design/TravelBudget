@@ -49,7 +49,29 @@ window.Core.inboxRules = inboxRules;
 window.Core.documentRules = documentRules;
 window.Core.walletBalanceRules = walletBalanceRules;
 window.Core.assetRules = assetRules;
+window.tbAssetBudgetTransactionsForRange = (start, end, travelId = window.state?.activeTravelId || window.state?.period?.travel_id || '') => assetRules.buildAssetBudgetTransactions({
+  assets: (window.state?.assets || []).filter(asset => !travelId || !asset.travel_id || String(asset.travel_id) === String(travelId)),
+  owners: window.state?.assetOwners || [], rangeStart: start, rangeEnd: end,
+});
+let assetBudgetScope = 0;
+window.addEventListener('tb:auth_scope_changed', () => {
+  assetBudgetScope += 1;
+  if (window.state) { window.state.assets = []; window.state.assetOwners = []; }
+});
+window.tbLoadAssetBudgetData = async () => {
+  const scope = assetBudgetScope;
+  const state = window.state;
+  const { loadAssetBudgetData } = await import('../features/assets/assetBudgetData.js');
+  return loadAssetBudgetData({ client: window.sb, state,
+    offline: navigator.onLine === false || window.tbIsOfflineMode?.(),
+    isCurrent: () => scope === assetBudgetScope && state === window.state,
+  });
+};
 window.Core.assistantRules = assistantRules;
+window.tbRequestAssistantHelp = async (options) => {
+  const { requestAssistantHelp } = await import('../features/assistant/assistantAiClient.js');
+  return requestAssistantHelp(options);
+};
 window.Core.notificationRules = notificationRules;
 window.Core.workRules = workRules;
 window.Core.bodyEnergyRules = bodyEnergyRules;

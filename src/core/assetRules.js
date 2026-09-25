@@ -138,7 +138,7 @@ export function buildAssetBudgetTransactions({ assets = [], owners = [], rangeSt
     const depreciationMonths = Math.max(1, Math.round(num(asset.depreciation_months, 1)));
     const linearEnd = String(asset.budget_method || 'linear') === 'manual'
       ? null
-      : new Date(budgetStart.getFullYear(), budgetStart.getMonth() + depreciationMonths - 1, 31);
+      : new Date(budgetStart.getFullYear(), budgetStart.getMonth() + depreciationMonths, 0);
     const activeEnd = explicitEnd && linearEnd
       ? (explicitEnd < linearEnd ? explicitEnd : linearEnd)
       : (explicitEnd || linearEnd);

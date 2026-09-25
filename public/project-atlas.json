@@ -1,21 +1,23 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
   "version": "10.5.372",
-  "commit": "122f70612a5d43d609f9c2044942ac229b9011a0",
-  "generatedAt": "2026-09-19T01:01:00.791Z",
+  "commit": "7cd9c304a52ca1241cdbb05426c8b4c786ffbf13",
+  "generatedAt": "2026-09-25T02:14:26.175Z",
   "counts": {
-    "screens": 17,
+    "screens": 18,
     "criticalFeatures": 11,
-    "tests": 129,
-    "migrations": 160,
-    "featureModules": 48,
+    "tests": 137,
+    "migrations": 161,
+    "featureModules": 54,
     "coreModules": 27,
     "dataModules": 8,
-    "edgeFunctions": 12
+    "edgeFunctions": 13
   },
   "domains": [
+    "accounting",
     "analysis",
     "assets",
+    "assistant",
     "dashboard",
     "documents",
     "inbox",
