@@ -37,7 +37,7 @@ Les opérations utilisent le taux à leur date ; les comptes et soldes déclaré
 
 Le taux publié le plus récent à la date demandée est retenu, sans anticipation et avec une limite de sept jours (week-ends/jours fériés). Si le fournisseur ne permet pas la conversion, les taux manuels datés du module FX peuvent servir de repli ; un taux actuel n'est jamais présenté comme un taux historique. Pour un croisement manuel, les deux jambes EUR doivent être datées du même jour. La fiche source expose montant original, taux, date et origine. Un taux absent conserve la ligne visible avec un montant converti inconnu, et invalide les totaux qui en dépendent ; zéro n'exige pas de taux.
 
-Les séries sont lues par paire/année avec trois requêtes simultanées au maximum, délai de 12 secondes par requête, cache de session de dix minutes et annulation lors d'un changement de compte ou de filtre. La mémoire cache contient seulement des taux publics. Les soldes complémentaires doivent être renseignés dans chaque devise concernée avant calcul du patrimoine net consolidé.
+Les séries sont lues par paire/année avec trois requêtes simultanées au maximum, délai de 12 secondes par requête, cache de session de dix minutes et annulation lors d'un changement de compte ou de filtre. La mémoire cache contient seulement des taux publics. Les compléments absents sont retenus à zéro provisoire avec une invitation à les confirmer ; un montant existant non convertible reste inconnu.
 
 ### Déduction des comptes
 
@@ -45,11 +45,21 @@ Les règles déterministes distinguent repas/courses, logement, transport, sant�
 
 Les cas ambigus (ventes, cautions, remboursements, matériel, retraits…) restent en « autres » avec un signalement à vérifier, sans exclusion automatique fondée sur leur seul nom. Les traitements des transactions liées à des biens ou à Trip gardent priorité. Les anciennes corrections par catégorie restent compatibles ; une correction par sous-catégorie est plus précise. Choisir « Auto » réactive explicitement la suggestion pour cette paire. L'interface indique l'origine et la raison de l'affectation ; aucun appel IA n'est nécessaire.
 
-Un montant inconnu reste « Non disponible ». Les autres dettes et créances doivent être déclarées explicitement, y compris zéro, pour calculer le patrimoine net recensé. Elles doivent couvrir seulement le périmètre/devise choisi et exclure les postes déjà présents. La déclaration est datée du bilan, à reconfirmer pour une nouvelle date de lecture.
+Un solde de compte ou taux FX réellement inconnu reste « Non disponible ». À la demande de l’utilisateur, les dettes/créances complémentaires absentes valent zéro provisoire, avec mention « à confirmer ». Les valeurs déjà saisies restent utilisées aux dates suivantes, en signalant leur date ancienne. Saisir explicitement zéro confirme l’absence. Les compléments couvrent seulement le périmètre/devise choisi, sans recompter les postes existants. Un périmètre vide présente zéro actif et zéro passif.
 
 Les réglages sont locaux à l'appareil et isolés par utilisateur/voyage (`tb-accounting-v1`), avec montants par devise. Ils ne sont pas synchronisés ni inclus dans l'export général. Un échec d'enregistrement conserve le réglage précédent et affiche une erreur. Une future synchronisation devra définir le schéma, les politiques d'accès, la sauvegarde et la reprise de ces réglages.
 
 Les lectures paginées conservent la RLS et les filtres utilisateur/voyage. Le chargement est atomique : une table indisponible ne produit pas un état partiellement silencieux. Le changement de compte efface les données affichées et invalide les lectures en vol. Hors ligne, seule une dernière lecture de la même session/périmètre est réutilisable, signalée et datée ; sans lecture préalable, un état de reprise est affiché.
+
+### Classement initial, totaux signés et performance
+
+Au premier chargement complet et non vide, `classificationVersion=1` enregistre une seule passe de classement dans le paramétrage local. Les corrections existantes (catégorie, sous-catégorie ou choix explicite Auto) sont préservées. Les affectations déduites portent une origine distincte ; les cas ambigus restent à vérifier. Les paires nouvelles après cette passe continuent à afficher leur suggestion sans nouvelle réécriture automatique. Les règles couvrent également habillement (613), impôts (614), entretien (615) et énergie du logement (616), avec synonymes français/anglais.
+
+Les comptes, catégories, sous-catégories puis dates sont triés par ordre croissant. Les sous-totaux dépliables additionnent les centimes signés : une dépense de +1 et son annulation de −1 donnent zéro. Le type revenu/charge reste distinct ; aucun montant n’est transformé en valeur absolue pour le total.
+
+Le bilan calcule actif = comptes positifs + biens nets + créances ; passif = patrimoine net + découverts + autres dettes. Le patrimoine net est obtenu par différence, y compris s’il est négatif. Les deux totaux sont égaux et l’écart est affiché ; aucune écriture fictive ne bouche un solde inconnu. L’ancien calcul du bilan dupliqué dans la vue a été supprimé au profit du calcul testé dans les règles.
+
+Les indicateurs présentent valeur, formule et jauge accessible : épargne courante, marge personnelle après amortissements, poids des dettes sur actif et autonomie de trésorerie. L’autonomie utilise la trésorerie nette positive et les charges mensuelles moyennes hors amortissements, sur les jours de la période écoulés (mois moyen = 365,25 / 12 jours). Pas de ratio si le dénominateur n’est pas positif. Les valeurs négatives restent visibles ; les jauges de ratios démarrent à zéro, les barres de flux représentent l’amplitude. Comparaison du résultat en valeur avec la période de l’année précédente, sans pourcentage trompeur sur une base nulle.
 
 ## Vérification
 

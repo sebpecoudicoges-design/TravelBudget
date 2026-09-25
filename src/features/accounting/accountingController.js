@@ -2,6 +2,7 @@ import { buildAccountingReport, validDate } from './accountingRules.js';
 import { loadAccountingData, readSettings, saveSettings } from './accountingData.js';
 import { renderAccounting } from './accountingView.js';
 import { loadAccountingFx } from './accountingFx.js';
+import { completeInitialMapping } from './accountingMapping.js';
 import './accounting.css';
 
 const localToday = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
@@ -60,6 +61,11 @@ export function installAccountingRuntime(win = window) {
       }
       if (!current()) return;
       settings = readSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId);
+      const completed = !data.partial && data.transactions.length ? completeInitialMapping(data.transactions, settings) : settings;
+      if (completed !== settings) {
+        try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, completed); settings = completed; }
+        catch { status = 'Classement initial non enregistré : stockage local indisponible.'; }
+      }
       const today = localToday();
       ui ||= { tab: 'summary', source: null, start: `${today.slice(0, 4)}-01-01`, end: today, currency: String(win.state.user?.baseCurrency || 'EUR').toUpperCase(), mode: 'consolidated' };
       await prepareFx();
@@ -103,7 +109,9 @@ export function installAccountingRuntime(win = window) {
         balances[cur] = { debt, receivable, asOf: data.asOf || localToday() };
       }
       const mapping = { ...settings.mapping, ...Object.fromEntries([...event.target.querySelectorAll('[data-ac-mapping]')].map(el => [el.dataset.acMapping, el.value])) };
-      const next = { ...settings, mapping, balances };
+      const inferredMapping = { ...settings.inferredMapping };
+      for (const key of Object.keys(mapping)) if (mapping[key] !== settings.mapping?.[key]) delete inferredMapping[key];
+      const next = { ...settings, mapping, balances, inferredMapping };
       try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; status = 'Paramétrage enregistré sur cet appareil. Les états ont été recalculés.'; draw(); }
       catch { setStatus('Enregistrement local impossible. Les réglages précédents sont conservés.'); }
     }

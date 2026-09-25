@@ -43,9 +43,9 @@ describe('personal accounting statements', () => {
     settings.mapping[categoryKey(t)] = '471';
     expect(buildAccountingReport({ transactions: [t] }, { ...options, settings }).expenses).toBe(0);
   });
-  it('does not invent zero debts, receivables or wallet balances', () => {
-    expect(buildAccountingReport({ ...base(), walletBalances: [] }, { ...options, settings: {} })).toMatchObject({ debt: null, receivable: null, cash: null, netWorth: null });
-    expect(buildAccountingReport(base(), { ...options, today: '2026-02-01' }).netWorth).toBeNull();
+  it('uses disclosed provisional zero complements, preserves dated values and never invents wallet balances', () => {
+    expect(buildAccountingReport({ ...base(), walletBalances: [] }, { ...options, settings: {} })).toMatchObject({ debt: 0, receivable: 0, cash: null, netWorth: null });
+    expect(buildAccountingReport(base(), { ...options, today: '2026-02-01' })).toMatchObject({ netWorth: 1900, totalAssets: 1900, totalFunding: 1900 });
   });
   it('preserves residual value, ownership and rounding over a full schedule', () => {
     const schedule = depreciationSchedule({ ...asset, purchase_value: 100, residual_value: 1, depreciation_months: 7 }, 0.5);
@@ -90,4 +90,29 @@ describe('personal accounting statements', () => {
     expect(report.entries.find(e => e.sourceId === 'foreign')).toMatchObject({ originalAmount: 100, originalCurrency: 'AUD', amount: null });
     expect(report.warnings.join(' ')).toContain('sans taux FX');
   });
+});
+
+it('nets signed reversals in cents and sorts accounts, categories and dates ascending', () => {
+  const report = buildAccountingReport({ transactions: [tx('b', { amount: -1 }), tx('a', { amount: 1 }), tx('c', { amount: 0.1 }), tx('d', { amount: 0.2 }), tx('e', { amount: -0.3 }), tx('salary', { type: 'income', amount: 1 }), tx('reversal', { type: 'income', amount: -1 }), tx('zero', { amount: 0 })] }, options);
+  expect(report).toMatchObject({ income: 0, expenses: 0, result: 0 });
+  expect(report.entries).toHaveLength(8);
+  expect(report.excluded).toHaveLength(0);
+  expect(report.entries.map(e => e.account)).toEqual(['601', '601', '601', '601', '601', '601', '708', '708']);
+});
+it('balances positive wallets, overdrafts, debts and negative net worth without plugging an asset', () => {
+  const report = buildAccountingReport({ wallets: [{ id: 'p', currency: 'EUR' }, { id: 'n', currency: 'EUR' }], walletBalances: [{ wallet_id: 'p', effective_balance: 100 }, { wallet_id: 'n', effective_balance: -200 }] }, { ...options, settings: { balances: { EUR: { debt: 50, receivable: 10, asOf: '2025-12-01' } } } });
+  expect(report).toMatchObject({ cash: -100, netWorth: -140, totalAssets: 110, liabilities: 250, totalFunding: 110 });
+  expect(report.unconfirmed.length).toBeGreaterThan(0);
+});
+it('calculates performance using elapsed days and keeps undefined ratios null', () => {
+  const data = { transactions: [tx('salary', { type: 'income', amount: 2000 }), tx('food', { amount: 1000 })], wallets: [{ id: 'w', currency: 'EUR' }], walletBalances: [{ wallet_id: 'w', effective_balance: 3000 }] };
+  const report = buildAccountingReport(data, { ...options, end: '2026-12-31' });
+  expect(report).toMatchObject({ savingRate: 50, autonomyMonths: 3.06, debtRatio: 0, totalAssets: 3000, totalFunding: 3000 });
+  expect(buildAccountingReport({}, { ...options, settings: {} })).toMatchObject({ netWorth: 0, totalAssets: 0, totalFunding: 0, savingRate: null, debtRatio: null, autonomyMonths: null });
+});
+
+it('does not mistake missing transaction amounts for signed zero', () => {
+  const report = buildAccountingReport({ transactions: [tx('missing', { amount: null }), tx('blank', { amount: '' }), tx('zero', { amount: 0 })] }, options);
+  expect(report.entries.map(e => e.sourceId)).toEqual(['zero']);
+  expect(report.excluded.map(e => e.reason)).toEqual(['Montant invalide', 'Montant invalide']);
 });

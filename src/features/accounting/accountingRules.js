@@ -55,7 +55,7 @@ export function buildAccountingReport(data, { start, end, currency, travelId, to
     const tripShare = (field(tx, 'tripShareLinkId', 'trip_share_link_id') || (field(tx, 'isInternal', 'is_internal') && /^\[trip\] /i.test(tx.label || '')))
       && field(tx, 'affectsBudget', 'affects_budget') !== false && field(tx, 'outOfBudget', 'out_of_budget') !== true;
     let reason = '';
-    if (!Number.isFinite(amount) || amount <= 0) reason = 'Montant invalide';
+    if (tx.amount == null || String(tx.amount).trim() === '' || !Number.isFinite(amount)) reason = 'Montant invalide';
     else if (date > today || (field(tx, 'payNow', 'pay_now') === false && !tripShare) || field(tx, 'recurringInstanceStatus', 'recurring_instance_status') === 'skipped') reason = 'Opération future ou non réglée';
     else if (tx.virtualBudgetOnly) reason = 'Simulation budgétaire';
     else if (field(tx, 'internalTransferId', 'internal_transfer_id')) reason = 'Virement interne : neutre sur le résultat';
@@ -105,20 +105,36 @@ export function buildAccountingReport(data, { start, end, currency, travelId, to
   const income = sum(entries.filter(e => e.kind === 'income'));
   const expenses = sum(entries.filter(e => e.kind === 'expense'));
   const depreciation = sum(entries.filter(e => e.account === '681'));
-  const cash = walletRows.length && walletRows.every(w => w.amount !== null) ? sum(walletRows) : null;
+  const cash = walletRows.every(w => w.amount !== null) ? sum(walletRows) : null;
   const declarationCurrencies = mode === 'native' ? [currency] : [...new Set([currency, ...transactions.map(currencyOf), ...assets.map(currencyOf), ...wallets.map(currencyOf), ...Object.keys(settings.balances || {})])].filter(Boolean).sort();
+  const unconfirmed = [];
   const declaredValue = (cur, key) => {
     const declared = settings.balances?.[cur] || {};
-    return declared.asOf === today && declared[key] !== '' && declared[key] != null && Number.isFinite(Number(declared[key])) && Number(declared[key]) >= 0 ? convert(Number(declared[key]), cur, today).amount : null;
+    const raw = declared[key];
+    if (raw === '' || raw == null) { unconfirmed.push(`${cur} ${key === 'debt' ? 'dettes' : 'créances'}`); return 0; }
+    if (!Number.isFinite(Number(raw)) || Number(raw) < 0) { warnings.add('Solde complémentaire invalide : corrige le paramétrage.'); return null; }
+    if (declared.asOf !== today) unconfirmed.push(`${cur} montant déclaré le ${declared.asOf || 'date inconnue'}`);
+    return convert(Number(raw), cur, today).amount;
   };
   const debt = sum(declarationCurrencies.map(cur => ({ amount: declaredValue(cur, 'debt') })));
   const receivable = sum(declarationCurrencies.map(cur => ({ amount: declaredValue(cur, 'receivable') })));
   const netAssets = sum(assetRows);
   const netWorth = [cash, debt, receivable, netAssets].every(Number.isFinite) ? round(cash + netAssets + receivable - debt) : null;
+  const availableCash = sum(walletRows.filter(w => w.amount === null || w.amount >= 0));
+  const overdraft = sum(walletRows.filter(w => w.amount === null || w.amount < 0).map(w => ({ amount: w.amount === null ? null : -w.amount })));
+  const totalAssets = sum([{ amount: availableCash }, { amount: netAssets }, { amount: receivable }]);
+  const liabilities = sum([{ amount: overdraft }, { amount: debt }]);
+  const totalFunding = sum([{ amount: netWorth }, { amount: liabilities }]);
+  const periodDays = Math.floor((Date.parse(end < today ? end : today) - Date.parse(start)) / 86400000) + 1;
+  const cashExpenses = expenses !== null && depreciation !== null ? round(expenses - depreciation) : null;
+  const monthlyExpenses = cashExpenses !== null && periodDays > 0 ? cashExpenses * 365.25 / (12 * periodDays) : null;
+  const autonomyMonths = monthlyExpenses > 0 && cash !== null ? round(Math.max(0, cash) / monthlyExpenses) : null;
+  const debtRatio = totalAssets > 0 && liabilities !== null ? round(liabilities / totalAssets * 100) : null;
+  if (unconfirmed.length) warnings.add('Bilan provisoire : compléments absents retenus à zéro ; montants déjà saisis conservés. À confirmer dans le paramétrage.');
   const result = income !== null && expenses !== null ? round(income - expenses) : null;
   if (missingFx.size) warnings.add(`${missingFx.size} conversion(s) sans taux FX daté : les totaux concernés sont non disponibles. Ouvre les mouvements pour identifier les sources.`);
   if (data.fx?.errors?.length) warnings.add('Certaines séries FX n’ont pas pu être actualisées ; seuls les taux datés disponibles sont utilisés.');
   const reviewCount = entries.filter(e => e.origin === 'review').length;
   if (reviewCount) warnings.add(`${reviewCount} mouvement(s) à classer ou à confirmer dans le paramétrage.`);
-  return { entries: entries.sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id)), excluded, assetRows, walletRows, warnings: [...warnings], income, expenses, depreciation, result, cash, debt, receivable, netAssets, netWorth, declarationCurrencies, mode, savingRate: income > 0 && expenses !== null && depreciation !== null ? round((income - (expenses - depreciation)) / income * 100) : null, currency, start, end, today };
+  return { entries: entries.sort((a, b) => a.account.localeCompare(b.account, 'fr', { numeric: true }) || a.category.localeCompare(b.category, 'fr', { numeric: true }) || (a.subcategory || '').localeCompare(b.subcategory || '', 'fr', { numeric: true }) || a.date.localeCompare(b.date) || a.id.localeCompare(b.id)), excluded, assetRows, walletRows, warnings: [...warnings], income, expenses, depreciation, result, cash, debt, receivable, netAssets, netWorth, declarationCurrencies, unconfirmed, availableCash, overdraft, totalAssets, liabilities, totalFunding, autonomyMonths, debtRatio, cashExpenses, mode, savingRate: income > 0 && expenses !== null && depreciation !== null ? round((income - (expenses - depreciation)) / income * 100) : null, currency, start, end, today };
 }

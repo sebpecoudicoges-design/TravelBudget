@@ -43,3 +43,8 @@
 .tb-accounting p,.tb-accounting label,.tb-accounting summary { overflow-wrap:anywhere; }
 @media(max-width:1000px) { .tb-accounting-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:650px) { .tb-accounting-columns,.tb-accounting-mapping { grid-template-columns:1fr; } .tb-accounting-panel,.tb-accounting-head { padding:18px; } .tb-accounting-kpi { padding:14px; } .tb-accounting-line { flex-wrap:wrap; } .tb-accounting-line strong { margin-left:auto; } .tb-accounting-tabs .btn { flex:1 1 135px; } }
+
+.tb-accounting meter { display:block; width:100%; height:18px; margin:12px 0; accent-color:var(--tb-lagoon); }
+.tb-accounting meter::-webkit-meter-bar { background:var(--panel); border:1px solid var(--border); border-radius:var(--tb-radius-sm); }
+.tb-accounting meter::-webkit-meter-optimum-value { background:var(--tb-lagoon); }
+.tb-accounting-flow .tb-accounting-line { border:0; padding-bottom:0; }

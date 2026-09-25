@@ -3,15 +3,15 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 271,
-    "lazyJsMaxKiB": 512,
-    "totalJsMaxKiB": 783,
-    "totalCssMaxKiB": 78,
+    "lazyJsMaxKiB": 517,
+    "totalJsMaxKiB": 788,
+    "totalCssMaxKiB": 79,
     "mainJsGzipMaxKiB": 110
   },
   "sourceGroups": [
     {
       "name": "accounting-domain",
-      "maxKiB": 53,
+      "maxKiB": 62,
       "paths": [
         "src/features/accounting/accountingRules.js",
         "src/features/accounting/accountingFx.js",

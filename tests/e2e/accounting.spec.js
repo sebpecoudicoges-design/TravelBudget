@@ -9,7 +9,7 @@ const nav = html.slice(html.indexOf('<div class="tabs app-tabs">'), html.indexOf
 async function setup(page, width = 1440, theme = 'light') {
   await page.setViewportSize({ width, height: 1000 });
   await page.clock.setFixedTime(new Date('2026-01-31T12:00:00'));
-  await page.route('**/accounting-test', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head><meta charset="utf-8"><style>${styles}</style></head><body><div class="wrap"><header><h1>TravelBudget</h1></header><div id="kpi"></div>${nav}<div id="view-dashboard"></div><div id="view-validation" class="hidden"></div><div id="view-accounting" class="hidden"><div id="accounting-root"></div></div></div></body></html>` }));
+  await page.route('**/accounting-test', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style></head><body><div class="wrap"><header><h1>TravelBudget</h1></header><div id="kpi"></div>${nav}<div id="view-dashboard"></div><div id="view-validation" class="hidden"></div><div id="view-accounting" class="hidden"><div id="accounting-root"></div></div></div></body></html>` }));
   await page.goto('/accounting-test');
   await page.addStyleTag({ url: '/src/ui/premium-theme.css' });
   await page.evaluate(async theme => {
@@ -57,13 +57,15 @@ for (const width of [1440, 900, 600, 390]) for (const theme of ['light', 'dark']
     await page.screenshot({ path: `test-results/accounting-summary-${width}-${theme}.png`, fullPage: true });
     await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
     await page.getByText('681 · Amortissements', { exact: true }).click();
+    await page.locator('.tb-accounting-account[open] .tb-accounting-account > summary').click();
     await page.locator('[data-ac-source="depreciation:a:2026-01-31"]').click();
     await expect(page.locator('#tb-accounting-detail')).toContainText('100,00 EUR');
     await expect(page.locator('#tb-accounting-detail')).toContainText('Sans mouvement de trésorerie');
     await page.locator('[data-ac-back]').click();
     await expect(page.locator('.tb-accounting-tabs [data-ac-tab="result"]')).toHaveAttribute('aria-pressed', 'true');
     await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
-    await expect(page.locator('.tb-accounting-content')).toContainText('Non disponible');
+    await expect(page.locator('.tb-accounting-content')).toContainText('Écart actif − passif');
+    await expect(page.locator('.tb-accounting-content')).toContainText('0,00 EUR');
     await page.getByRole('button', { name: 'Renseigner les soldes' }).click();
     await page.getByLabel('Autres dettes', { exact: true }).fill('300');
     await page.getByLabel('Créances complémentaires', { exact: true }).fill('50');
@@ -157,6 +159,7 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await expect(page.locator('.tb-accounting-kpi').nth(1)).toContainText('2\u202f740,30 EUR');
     await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
     await page.getByText('612 · Assurances', { exact: true }).click();
+    await page.locator('.tb-accounting-account[open] .tb-accounting-account > summary').click();
     await page.locator('[data-ac-source="tx:insurance"]').click();
     await expect(page.locator('#tb-accounting-detail')).toContainText('50,00 EUR');
     await expect(page.locator('#tb-accounting-detail')).toContainText('100,00 AUD');
@@ -194,4 +197,26 @@ test('missing FX never displays an incomplete sum as a complete result', async (
   await page.locator('[data-ac-source="tx:missing"]').click();
   await expect(page.locator('#tb-accounting-detail')).toContainText('100,00 XXX');
   await expect(page.locator('#tb-accounting-detail')).toContainText('Taux FX indisponible');
+});
+
+test('one-time enrichment preserves user classification and shows signed subtotals and performance', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(() => {
+    const key = 'tb-accounting-v1:user-a:trip-a';
+    localStorage.setItem(key, JSON.stringify({ mapping: { '["expense","Repas"]': '602' } }));
+    window.fixture.transactions.push({ ...window.fixture.transactions[1], id: 'refund', amount: -500 });
+  });
+  await page.locator('[data-ac-refresh]').click();
+  await expect(page.getByRole('region', { name: 'Indicateurs de performance' })).toBeVisible();
+  await expect(page.locator('.tb-accounting-kpi').nth(2)).not.toContainText('Non disponible');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')));
+  expect(saved.classificationVersion).toBe(1);
+  expect(saved.mapping['["expense","Repas"]']).toBe('602');
+  expect(saved.mapping['["income","Salaire",""]']).toBe('701');
+  await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
+  await page.getByText('602 · Logement', { exact: true }).click();
+  await expect(page.locator('.tb-accounting-account[open] > strong')).toHaveCount(0);
+  await expect(page.locator('.tb-accounting-account[open] > summary')).toContainText('49,85 EUR');
+  await page.locator('[data-ac-refresh]').click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')))).toEqual(saved);
 });

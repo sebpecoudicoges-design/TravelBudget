@@ -15,11 +15,24 @@ it('uses a lazy runtime, accessible navigation and preserves validation role acc
   expect(canAccessAppView('accounting', 'admin')).toBe(true);
   expect(canAccessAppView('accounting', 'test')).toBe(true);
 });
-it('escapes source content and shows unknown liabilities without a fabricated balanced total', () => {
+it('escapes source content and discloses provisional complements and renders equal balance totals', () => {
   const data = { transactions: [{ id: 'x', type: 'expense', currency: 'EUR', amount: 10, date_start: '2026-01-01', label: '<script>unsafe</script>' }] };
   const report = buildAccountingReport(data, { start: '2026-01-01', end: '2026-01-31', today: '2026-01-31', currency: 'EUR' });
   const model = { data, report, previous: report, settings: {}, currencies: ['EUR'], scopeName: '<img>', ui: { tab: 'entries' } };
   expect(renderAccounting(model)).toContain('&lt;script&gt;');
   expect(renderAccounting(model)).not.toContain('<script>');
-  expect(renderAccounting({ ...model, ui: { tab: 'balance' } })).toContain('Total patrimoine net et dettes</span><strong>Non disponible');
+  expect(renderAccounting({ ...model, ui: { tab: 'balance' } })).toContain('Total passif recensé</span><strong>0,00 EUR');
+});
+
+it('shows a zero signed category subtotal, ascending accounts and accessible performance visuals', () => {
+  const data = { transactions: [1, -1].map((amount, i) => ({ id: String(i), type: 'expense', category: 'Repas', subcategory: 'Restaurant', currency: 'EUR', amount, date_start: '2026-01-01' })) };
+  const report = buildAccountingReport(data, { start: '2026-01-01', end: '2026-01-31', today: '2026-01-31', currency: 'EUR' });
+  const model = { data, report, previous: report, settings: {}, currencies: ['EUR'], scopeName: 'Test', ui: { tab: 'result' } };
+  const result = renderAccounting(model);
+  expect(result).toContain('Repas → Restaurant · 2 mouvement(s)</span><strong>0,00 EUR');
+  expect(result).toContain('-1,00 EUR');
+  const summary = renderAccounting({ ...model, ui: { tab: 'summary' } });
+  expect(summary).toContain('aria-label="Indicateurs de performance"');
+  expect(summary).toContain('Autonomie de trésorerie');
+  expect(summary).not.toContain('NaN');
 });
