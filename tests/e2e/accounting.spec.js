@@ -136,3 +136,62 @@ test('ignores in-flight data after account change and preserves explicitly dated
   });
   await expect(page.locator('#accounting-root')).toBeEmpty();
 });
+
+for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
+  test(`daily FX consolidation and subcategory inference ${width} ${theme}`, async ({ page }) => {
+    await setup(page, width, theme);
+    await page.route('https://api.frankfurter.dev/v2/rates?**', async route => {
+      const url = new URL(route.request().url());
+      expect([...url.searchParams.keys()].sort()).toEqual(['base', 'from', 'quotes', 'to']);
+      await route.fulfill({ json: [
+        { base: 'AUD', quote: 'EUR', date: '2026-01-05', rate: 0.5 },
+        { base: 'AUD', quote: 'EUR', date: '2026-01-30', rate: 0.6 },
+      ] });
+    });
+    await page.evaluate(() => {
+      window.fixture.transactions.push({ ...window.fixture.transactions[1], id: 'insurance', currency: 'AUD', amount: 100, category: 'Santé', subcategory: 'Assurance santé', label: 'Assurance voyage', wallet_id: 'aud' });
+      window.fixture.wallets.push({ ...window.fixture.wallets[0], id: 'aud', name: 'Compte AUD', currency: 'AUD', balance: 1000 });
+    });
+    await page.locator('[data-ac-refresh]').click();
+    await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f300,15 EUR');
+    await expect(page.locator('.tb-accounting-kpi').nth(1)).toContainText('2\u202f740,30 EUR');
+    await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
+    await page.getByText('612 · Assurances', { exact: true }).click();
+    await page.locator('[data-ac-source="tx:insurance"]').click();
+    await expect(page.locator('#tb-accounting-detail')).toContainText('50,00 EUR');
+    await expect(page.locator('#tb-accounting-detail')).toContainText('100,00 AUD');
+    await expect(page.locator('#tb-accounting-detail')).toContainText('taux du 2026-01-05');
+    await expect(page.locator('#tb-accounting-detail')).toContainText('sous-catégorie');
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.screenshot({ path: `test-results/accounting-fx-${width}-${theme}.png`, fullPage: true });
+    await page.locator('.tb-accounting-tabs [data-ac-tab="settings"]').click();
+    const mapping = page.locator('.tb-accounting-mapping').filter({ hasText: 'Assurance santé' }).locator('select');
+    await expect(mapping).toHaveValue('auto');
+    await expect(mapping.locator('option:checked')).toContainText('612');
+    await mapping.selectOption('604');
+    await page.getByRole('button', { name: 'Enregistrer et recalculer' }).click();
+    await expect(mapping).toHaveValue('604');
+    await page.locator('[data-ac-refresh]').click();
+    await expect(mapping).toHaveValue('604');
+    await mapping.selectOption('auto');
+    await page.getByRole('button', { name: 'Enregistrer et recalculer' }).click();
+    await expect(mapping).toHaveValue('auto');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.locator('[name="mode"]').selectOption('native');
+    await page.getByRole('button', { name: 'Appliquer', exact: true }).click();
+    await page.locator('.tb-accounting-tabs [data-ac-tab="summary"]').click();
+    await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f350,15 EUR');
+  });
+}
+
+test('missing FX never displays an incomplete sum as a complete result', async ({ page }) => {
+  await setup(page);
+  await page.route('https://api.frankfurter.dev/v2/rates?**', route => route.fulfill({ status: 422, json: { message: 'Missing currency' } }));
+  await page.evaluate(() => window.fixture.transactions.push({ ...window.fixture.transactions[1], id: 'missing', currency: 'XXX', amount: 100 }));
+  await page.locator('[data-ac-refresh]').click();
+  await expect(page.locator('.tb-accounting-kpi').first()).toContainText('Non disponible');
+  await page.locator('.tb-accounting-tabs [data-ac-tab="entries"]').click();
+  await page.locator('[data-ac-source="tx:missing"]').click();
+  await expect(page.locator('#tb-accounting-detail')).toContainText('100,00 XXX');
+  await expect(page.locator('#tb-accounting-detail')).toContainText('Taux FX indisponible');
+});

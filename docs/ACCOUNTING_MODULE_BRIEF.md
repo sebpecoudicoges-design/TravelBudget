@@ -4,7 +4,7 @@
 
 Le 25 septembre 2026, le périmètre personnel a été retenu. Une première version locale est implémentée dans `src/features/accounting/`, accessible depuis Finances → Comptabilité. Elle suit l'accès de prévisualisation existant (administrateurs et testeurs). Aucun déploiement, aucune migration et aucune écriture serveur ne font partie de ce lot.
 
-Les états sont des vues de gestion calculées depuis les sources existantes, avec traçabilité. Ils ne constituent pas un journal validé ou une clôture. Le périmètre comprend le voyage actif et ses transactions/comptes, ainsi que les biens associés et sans voyage, avec sélection d'une devise unique sans conversion. Il ne consolide pas tous les voyages du compte.
+Les états sont des vues de gestion calculées depuis les sources existantes, avec traçabilité. Ils ne constituent pas un journal validé ou une clôture. Le périmètre comprend le voyage actif et ses transactions/comptes, ainsi que les biens associés et sans voyage. Toutes les devises sont consolidées par défaut dans la devise de présentation choisie ; le mode « Devise seule » reste disponible. Le module ne consolide pas tous les voyages du compte.
 
 ## Parcours livré
 
@@ -12,7 +12,7 @@ Les états sont des vues de gestion calculées depuis les sources existantes, av
 - **Compte de résultat** : période sélectionnée, comparaison aux mêmes dates de l'année précédente, comptes dépliables, mouvements puis fiche source.
 - **Bilan** : situation à la date de lecture, comptes positifs, biens bruts/amortis/nets, créances déclarées, découverts, autres dettes et patrimoine net par différence.
 - **Mouvements** : éléments retenus et écartés avec motif, fiche de traçabilité et accès à l'éditeur de transaction lorsqu'elle est chargée dans l'application.
-- **Paramétrage** : affectation des catégories à des regroupements personnels et soldes complémentaires par devise ; liens vers le paramétrage des biens et comptes.
+- **Paramétrage** : déduction des comptes à partir des catégories/sous-catégories utilisées, corrections manuelles et soldes complémentaires en devises d'origine ; liens vers le paramétrage des biens et comptes/FX.
 
 Dates, devise et onglet sont conservés lors du parcours détail/retour. Le bilan reste une situation actuelle, indépendamment de la période du résultat. Un bilan historique nécessite une reprise des ouvertures et mouvements patrimoniaux.
 
@@ -29,6 +29,22 @@ Dates, devise et onglet sont conservés lors du parcours détail/retour. Le bila
 
 ## Complétude et stockage
 
+### Consolidation FX
+
+Le module réutilise le fournisseur Frankfurter v2 et les helpers de séries historiques du domaine FX. [API officielle](https://frankfurter.dev/) : les requêtes publiques contiennent seulement paires de devises et dates, jamais les montants ou libellés. Une vérification réelle sur AUD/EUR au 24 septembre 2026 a confirmé le chargement du taux journalier.
+
+Les opérations utilisent le taux à leur date ; les comptes et soldes déclarés celui de la date du bilan. Les biens amortissables et leurs dotations conservent le taux d'acquisition. La conversion des cumuls puis leur différence conserve les arrondis des amortissements. Les différences de change ne sont pas générées comme écritures d'un journal.
+
+Le taux publié le plus récent à la date demandée est retenu, sans anticipation et avec une limite de sept jours (week-ends/jours fériés). Si le fournisseur ne permet pas la conversion, les taux manuels datés du module FX peuvent servir de repli ; un taux actuel n'est jamais présenté comme un taux historique. Pour un croisement manuel, les deux jambes EUR doivent être datées du même jour. La fiche source expose montant original, taux, date et origine. Un taux absent conserve la ligne visible avec un montant converti inconnu, et invalide les totaux qui en dépendent ; zéro n'exige pas de taux.
+
+Les séries sont lues par paire/année avec trois requêtes simultanées au maximum, délai de 12 secondes par requête, cache de session de dix minutes et annulation lors d'un changement de compte ou de filtre. La mémoire cache contient seulement des taux publics. Les soldes complémentaires doivent être renseignés dans chaque devise concernée avant calcul du patrimoine net consolidé.
+
+### Déduction des comptes
+
+Les règles déterministes distinguent repas/courses, logement, transport, santé, loisirs, télécoms/abonnements, banque, visas, projets/formation, cadeaux/dons et assurances, ainsi que revenus d'activité et du patrimoine. Une sous-catégorie précise est prioritaire sur une catégorie générale : « Santé → Assurance santé » devient 612, alors que « Santé → Pharmacie » devient 604. Les codes restent ceux du plan de gestion personnelle, sans prétendre à un référentiel réglementaire.
+
+Les cas ambigus (ventes, cautions, remboursements, matériel, retraits…) restent en « autres » avec un signalement à vérifier, sans exclusion automatique fondée sur leur seul nom. Les traitements des transactions liées à des biens ou à Trip gardent priorité. Les anciennes corrections par catégorie restent compatibles ; une correction par sous-catégorie est plus précise. Choisir « Auto » réactive explicitement la suggestion pour cette paire. L'interface indique l'origine et la raison de l'affectation ; aucun appel IA n'est nécessaire.
+
 Un montant inconnu reste « Non disponible ». Les autres dettes et créances doivent être déclarées explicitement, y compris zéro, pour calculer le patrimoine net recensé. Elles doivent couvrir seulement le périmètre/devise choisi et exclure les postes déjà présents. La déclaration est datée du bilan, à reconfirmer pour une nouvelle date de lecture.
 
 Les réglages sont locaux à l'appareil et isolés par utilisateur/voyage (`tb-accounting-v1`), avec montants par devise. Ils ne sont pas synchronisés ni inclus dans l'export général. Un échec d'enregistrement conserve le réglage précédent et affiche une erreur. Une future synchronisation devra définir le schéma, les politiques d'accès, la sauvegarde et la reprise de ces réglages.
@@ -41,7 +57,7 @@ Fixture EUR : solde d'ouverture 2 000, achat lié 1 200, dotation mensuelle 100 
 
 Tests : `tests/features/accounting/`, `tests/ui/accountingViewContract.test.js`, `tests/e2e/accounting.spec.js`. Les parcours couvrent les thèmes clair/sombre à 1440, 900, 600 et 390 px, détail/retour, affectation, soldes, erreurs et isolation des comptes. La feuille de style est chargée à la demande et utilise les tokens de `premium-theme.css` via leurs alias compatibles sombre.
 
-Recherche de code mort : aucun ancien module comptable ou gestionnaire concurrent dans ce périmètre. Les helpers de trésorerie existants sont réutilisés ; aucune fonctionnalité existante supprimée.
+Recherche de code mort : l'ancienne affectation par défaut 606/708 a été remplacée par le module de déduction ; les clés par catégorie sont conservées uniquement pour la compatibilité des réglages existants. Les helpers de trésorerie et FX existants sont réutilisés ; aucune fonctionnalité utile supprimée.
 
 ## Étapes suivantes
 

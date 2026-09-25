@@ -37,6 +37,7 @@
 .tb-accounting fieldset { border:1px solid var(--border); border-radius:var(--tb-radius-sm); padding:18px; margin:18px 0; min-width:0; }
 .tb-accounting legend { padding:0 6px; font-weight:800; }
 .tb-accounting-mapping { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:center; margin:12px 0; }
+.tb-accounting-mapping small { display:block; color:var(--muted); margin-top:6px; line-height:1.45; }
 .tb-accounting :focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
 .tb-accounting button:hover { border-color:var(--accent); }
 .tb-accounting p,.tb-accounting label,.tb-accounting summary { overflow-wrap:anywhere; }

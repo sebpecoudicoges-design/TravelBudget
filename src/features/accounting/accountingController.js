@@ -1,6 +1,7 @@
 import { buildAccountingReport, validDate } from './accountingRules.js';
 import { loadAccountingData, readSettings, saveSettings } from './accountingData.js';
 import { renderAccounting } from './accountingView.js';
+import { loadAccountingFx } from './accountingFx.js';
 import './accounting.css';
 
 const localToday = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
@@ -9,9 +10,24 @@ const priorYear = value => { const [y, m, d] = value.split('-').map(Number); con
 export function installAccountingRuntime(win = window) {
   if (win.renderAccounting) return;
   let generation = 0, scope = '', data = null, settings = {}, ui = null, status = '', pending = false;
+  let fxRequest = null;
   const root = () => win.document.getElementById('accounting-root');
   const identity = () => `${win.sbUser?.id || ''}|${win.state?.activeTravelId || ''}`;
-  function reset() { generation += 1; scope = ''; data = null; settings = {}; ui = null; pending = false; status = ''; if (root()) root().replaceChildren(); }
+  function reset() { generation += 1; fxRequest?.abort(); scope = ''; data = null; settings = {}; ui = null; pending = false; status = ''; if (root()) root().replaceChildren(); }
+  async function prepareFx() {
+    fxRequest?.abort();
+    const request = new AbortController(); fxRequest = request;
+    const snapshot = data, currentScope = scope;
+    const today = data.asOf || localToday();
+    const inScope = r => !(r.travel_id || r.travelId) || String(r.travel_id || r.travelId) === String(win.state.activeTravelId);
+    const assets = data.assets.filter(inScope);
+    const rows = [...data.transactions, ...data.wallets, ...assets];
+    const dates = [today, ...assets.map(a => a.purchase_date), ...data.transactions.map(t => t.date_start || t.dateStart).filter(d => (d >= ui.start && d <= ui.end) || (d >= priorYear(ui.start) && d <= priorYear(ui.end)))];
+    root().innerHTML = '<p role="status">Consolidation avec les taux FX journaliers…</p>';
+    const fx = await loadAccountingFx({ currencies: ui.mode === 'native' ? [] : [...rows.map(r => r.currency), ...Object.keys(settings.balances || {})], target: ui.currency, dates, today, offline: win.tbIsOfflineMode?.() === true, manualRates: snapshot.manualRates || {}, signal: request.signal });
+    if (request.signal.aborted || identity() !== currentScope || data !== snapshot) return;
+    data.fx = fx; draw();
+  }
   function draw() {
     if (!root() || !data || !ui || identity() !== scope) return;
     const today = data.asOf || localToday();
@@ -40,13 +56,13 @@ export function installAccountingRuntime(win = window) {
       } else {
         const result = await loadAccountingData({ client: win.sb, userId: win.sbUser.id, travelId: win.state.activeTravelId });
         if (!current()) return;
-        data = { ...result, asOf: localToday() }; status = 'Données actualisées. Paramétrage enregistré sur cet appareil uniquement.';
+        data = { ...result, manualRates: win.tbFxGetManualRates?.() || win.state.fx?.manualRates || {}, asOf: localToday() }; status = 'Données actualisées. Paramétrage enregistré sur cet appareil uniquement.';
       }
       if (!current()) return;
       settings = readSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId);
       const today = localToday();
-      ui ||= { tab: 'summary', source: null, start: `${today.slice(0, 4)}-01-01`, end: today, currency: String(win.state.user?.baseCurrency || 'EUR').toUpperCase() };
-      draw();
+      ui ||= { tab: 'summary', source: null, start: `${today.slice(0, 4)}-01-01`, end: today, currency: String(win.state.user?.baseCurrency || 'EUR').toUpperCase(), mode: 'consolidated' };
+      await prepareFx();
     } catch {
       if (!current()) return;
       if (data && ui) { data = { ...data, partial: true }; status = 'Actualisation indisponible : dernière lecture conservée, chiffres à vérifier.'; draw(); }
@@ -77,12 +93,17 @@ export function installAccountingRuntime(win = window) {
     if (event.target.id === 'tb-accounting-period') {
       const start = String(form.get('start')), end = String(form.get('end'));
       if (!validDate(start) || !validDate(end) || start > end) { setStatus('Choisis une date de début antérieure ou égale à la date de fin.'); return; }
-      ui = { ...ui, start, end, currency: String(form.get('currency')), source: null }; draw();
+      ui = { ...ui, start, end, currency: String(form.get('currency')), mode: String(form.get('mode') || 'consolidated'), source: null }; prepareFx();
     } else {
-      const debt = form.get('debt'), receivable = form.get('receivable');
-      if ([debt, receivable].some(v => v !== '' && (!Number.isFinite(Number(v)) || Number(v) < 0))) { setStatus('Les soldes doivent être des nombres positifs ou zéro.'); return; }
-      const mapping = Object.fromEntries([...event.target.querySelectorAll('[data-ac-mapping]')].map(el => [el.dataset.acMapping, el.value]));
-      const next = { ...settings, mapping, balances: { ...settings.balances, [ui.currency]: { debt, receivable, asOf: data.asOf || localToday() } } };
+      const balances = { ...settings.balances };
+      for (const fieldset of event.target.querySelectorAll('[data-ac-balance]')) {
+        const cur = fieldset.dataset.acBalance;
+        const debt = fieldset.querySelector('[data-ac-debt]').value, receivable = fieldset.querySelector('[data-ac-receivable]').value;
+        if ([debt, receivable].some(v => v !== '' && (!Number.isFinite(Number(v)) || Number(v) < 0))) { setStatus('Les soldes doivent être des nombres positifs ou zéro.'); return; }
+        balances[cur] = { debt, receivable, asOf: data.asOf || localToday() };
+      }
+      const mapping = { ...settings.mapping, ...Object.fromEntries([...event.target.querySelectorAll('[data-ac-mapping]')].map(el => [el.dataset.acMapping, el.value])) };
+      const next = { ...settings, mapping, balances };
       try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; status = 'Paramétrage enregistré sur cet appareil. Les états ont été recalculés.'; draw(); }
       catch { setStatus('Enregistrement local impossible. Les réglages précédents sont conservés.'); }
     }

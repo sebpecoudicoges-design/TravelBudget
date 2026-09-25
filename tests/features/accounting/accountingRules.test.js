@@ -29,7 +29,7 @@ describe('personal accounting statements', () => {
   });
   it('filters travel and currency and deduplicates source IDs', () => {
     const rows = [tx('yes'), tx('yes'), tx('other', { travel_id: 'other' }), tx('foreign', { currency: 'AUD' })];
-    expect(buildAccountingReport({ transactions: rows }, options).expenses).toBe(100);
+    expect(buildAccountingReport({ transactions: rows }, { ...options, mode: 'native' }).expenses).toBe(100);
   });
   it('does not treat out-of-budget as an accounting exclusion', () => {
     expect(buildAccountingReport({ transactions: [tx('one', { out_of_budget: true, affects_budget: false })] }, options).expenses).toBe(100);
@@ -39,7 +39,7 @@ describe('personal accounting statements', () => {
     const settings = { mapping: { [categoryKey(t)]: '602' } };
     expect(buildAccountingReport({ transactions: [t] }, { ...options, settings }).entries[0].account).toBe('602');
     settings.mapping[categoryKey(t)] = '701';
-    expect(buildAccountingReport({ transactions: [t] }, { ...options, settings }).entries[0].account).toBe('606');
+    expect(buildAccountingReport({ transactions: [t] }, { ...options, settings }).entries[0].account).toBe('601');
     settings.mapping[categoryKey(t)] = '471';
     expect(buildAccountingReport({ transactions: [t] }, { ...options, settings }).expenses).toBe(0);
   });
@@ -75,5 +75,19 @@ describe('personal accounting statements', () => {
     const report = buildAccountingReport(data, options);
     expect(report.income).toBe(0);
     expect(report.warnings.join(' ')).toContain('rapprocher');
+  });
+  it('consolidates daily flows, closing cash and historical asset cost at distinct rates', () => {
+    const data = { ...base(), assets: [{ ...asset, currency: 'AUD' }], transactions: [tx('eur'), tx('aud1', { currency: 'AUD' }), tx('aud2', { currency: 'AUD', date_start: '2026-01-06' })], wallets: [{ id: 'w', currency: 'AUD' }], walletBalances: [{ wallet_id: 'w', effective_balance: 100 }], fx: { series: { 'AUD:EUR': [{ date: '2026-01-01', rate: 0.5 }, { date: '2026-01-05', rate: 0.5 }, { date: '2026-01-06', rate: 0.6 }, { date: '2026-01-30', rate: 0.7 }] } } };
+    const settings = { balances: { EUR: { debt: 0, receivable: 0, asOf: options.today }, AUD: { debt: 10, receivable: 20, asOf: options.today } } };
+    const report = buildAccountingReport(data, { ...options, settings });
+    expect(report).toMatchObject({ expenses: 260, depreciation: 50, cash: 70, netAssets: 550, debt: 7, receivable: 14, netWorth: 627 });
+    expect(report.entries.find(e => e.sourceId === 'aud2')).toMatchObject({ originalAmount: 100, originalCurrency: 'AUD', amount: 60, fxDate: '2026-01-06' });
+    expect(report.assetRows[0]).toMatchObject({ gross: 600, accumulated: 50, fxDate: '2026-01-01' });
+  });
+  it('keeps missing-rate movements visible and invalidates affected totals', () => {
+    const report = buildAccountingReport({ ...base(), transactions: [tx('foreign', { currency: 'AUD' })] }, options);
+    expect(report).toMatchObject({ expenses: null, result: null, savingRate: null });
+    expect(report.entries.find(e => e.sourceId === 'foreign')).toMatchObject({ originalAmount: 100, originalCurrency: 'AUD', amount: null });
+    expect(report.warnings.join(' ')).toContain('sans taux FX');
   });
 });
