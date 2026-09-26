@@ -18,10 +18,10 @@ it('uses a lazy runtime, accessible navigation and preserves validation role acc
 it('escapes source content and discloses provisional complements and renders equal balance totals', () => {
   const data = { transactions: [{ id: 'x', type: 'expense', currency: 'EUR', amount: 10, date_start: '2026-01-01', label: '<script>unsafe</script>' }] };
   const report = buildAccountingReport(data, { start: '2026-01-01', end: '2026-01-31', today: '2026-01-31', currency: 'EUR' });
-  const model = { data, report, previous: report, settings: {}, currencies: ['EUR'], scopeName: '<img>', ui: { tab: 'entries' } };
+  const model = { data, report, previous: report, settings: {}, currencies: ['EUR'], scopeName: '<img>', ui: { tab: 'result' } };
   expect(renderAccounting(model)).toContain('&lt;script&gt;');
   expect(renderAccounting(model)).not.toContain('<script>');
-  expect(renderAccounting({ ...model, ui: { tab: 'balance' } })).toContain('Total passif recensé</span><strong>0,00 EUR');
+  expect(renderAccounting({ ...model, ui: { tab: 'balance' } })).toContain('Total passif recensé</span><strong>Non disponible');
 });
 
 it('shows a zero signed category subtotal, ascending accounts and accessible performance visuals', () => {
@@ -35,4 +35,15 @@ it('shows a zero signed category subtotal, ascending accounts and accessible per
   expect(summary).toContain('aria-label="Indicateurs de performance"');
   expect(summary).toContain('Autonomie de trésorerie');
   expect(summary).not.toContain('NaN');
+});
+
+it('removes the movements tab and exposes a detailed chart and independently confirmed balance', () => {
+ const report=buildAccountingReport({}, {start:'2026-01-01',end:'2026-01-31',today:'2026-01-31',currency:'EUR'});
+ const model={data:{transactions:[]},report,previous:report,settings:{},currencies:['EUR'],scopeName:'Test',ui:{tab:'chart'}};
+ const html=renderAccounting(model);
+ expect(html).not.toContain('data-ac-tab="entries"');
+ expect(html).toContain('118 comptes');
+ expect(html).toContain('281830');
+ expect(renderAccounting({...model,ui:{tab:'settings'}})).toContain('data-ac-equity');
+ expect(renderAccounting({...model,ui:{tab:'balance'}})).toContain('data-ac-balance-status="incomplete"');
 });

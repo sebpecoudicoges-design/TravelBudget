@@ -47,7 +47,13 @@ async function setup(page, width = 1440, theme = 'light') {
   await page.addScriptTag({ url: '/legacy/js/10_navigation.js' });
   if (await page.locator('#tb-mobile-nav-toggle').isVisible()) await page.locator('#tb-mobile-nav-toggle').click();
   await page.locator('#tab-accounting').click();
-  await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1 350,15'.replace(' ', '\u202f'));
+  await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1 400,00'.replace(' ', '\u202f'));
+}
+
+async function openAccountDetails(page) {
+  for (const detail of await page.locator('.tb-accounting-content details').all()) {
+    if (await detail.getAttribute('open') === null) await detail.locator(':scope > summary').click();
+  }
 }
 
 for (const width of [1440, 900, 600, 390]) for (const theme of ['light', 'dark']) {
@@ -56,7 +62,7 @@ for (const width of [1440, 900, 600, 390]) for (const theme of ['light', 'dark']
     expect((await page.locator('#accounting-root').boundingBox()).width).toBeGreaterThan(width * 0.6);
     await page.screenshot({ path: `test-results/accounting-summary-${width}-${theme}.png`, fullPage: true });
     await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
-    await page.getByText('681 · Amortissements', { exact: true }).click();
+    await page.getByText('681120 · Dotations aux amortissements', { exact: true }).click();
     await page.locator('.tb-accounting-account[open] .tb-accounting-account > summary').click();
     await page.locator('[data-ac-source="depreciation:a:2026-01-31"]').click();
     await expect(page.locator('#tb-accounting-detail')).toContainText('100,00 EUR');
@@ -65,22 +71,25 @@ for (const width of [1440, 900, 600, 390]) for (const theme of ['light', 'dark']
     await expect(page.locator('.tb-accounting-tabs [data-ac-tab="result"]')).toHaveAttribute('aria-pressed', 'true');
     await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
     await expect(page.locator('.tb-accounting-content')).toContainText('Écart actif − passif');
-    await expect(page.locator('.tb-accounting-content')).toContainText('0,00 EUR');
+    await expect(page.locator('.tb-accounting-content')).toContainText('Non disponible');
     await page.getByRole('button', { name: 'Renseigner les soldes' }).click();
     await page.getByLabel('Autres dettes', { exact: true }).fill('300');
     await page.getByLabel('Créances complémentaires', { exact: true }).fill('50');
-    await page.locator('[data-ac-mapping]').filter({ has: page.locator('option[value="602"]') }).first().selectOption('602');
+    await page.getByLabel('Capitaux propres confirmés', { exact: true }).fill('3050.30');
+    await page.getByLabel('Référence de confirmation', { exact: true }).fill('Inventaire et relevés vérifiés');
+    await page.locator('[data-ac-mapping]').filter({ has: page.locator('option[value="613220"]') }).first().selectOption('613220');
     await page.getByRole('button', { name: 'Enregistrer et recalculer' }).click();
     await expect(page.locator('.tb-accounting-status')).toContainText('enregistré');
     await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
     await expect(page.locator('.tb-accounting-content')).toContainText('3\u202f050,30 EUR');
-    await page.getByText('Biens à leur valeur nette', { exact: true }).click();
-    await expect(page.locator('.tb-accounting-content')).toContainText('Brut 1\u202f200,00 EUR');
+    await page.getByText('218310 · Ordinateurs', { exact: true }).click();
+    await expect(page.locator('.tb-accounting-content')).toContainText('brut 1\u202f200,00 EUR');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     if (theme === 'dark') expect(await page.locator('.tb-accounting-panel').first().evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe('rgb(255, 255, 255)');
     await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({ path: `test-results/accounting-${width}-${theme}.png`, fullPage: true });
-    await page.locator('.tb-accounting-tabs [data-ac-tab="entries"]').click();
+    await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
+    await openAccountDetails(page);
     await page.locator('[data-ac-source="tx:food"]').click();
     await expect(page.locator('#tb-accounting-detail')).toContainText('<Repas>');
     await page.getByRole('button', { name: 'Ouvrir la transaction', exact: true }).click();
@@ -90,6 +99,11 @@ for (const width of [1440, 900, 600, 390]) for (const theme of ['light', 'dark']
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({ path: `test-results/accounting-settings-${width}-${theme}.png`, fullPage: true });
+    await page.locator('.tb-accounting-tabs [data-ac-tab="chart"]').click();
+    await expect(page.locator('.tb-accounting-content')).toContainText('118 comptes');
+    await page.locator('.tb-accounting-content details').first().locator(':scope > summary').click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: `test-results/accounting-chart-${width}-${theme}.png`, fullPage: true });
   });
 }
 
@@ -155,10 +169,10 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
       window.fixture.wallets.push({ ...window.fixture.wallets[0], id: 'aud', name: 'Compte AUD', currency: 'AUD', balance: 1000 });
     });
     await page.locator('[data-ac-refresh]').click();
-    await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f300,15 EUR');
+    await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f350,00 EUR');
     await expect(page.locator('.tb-accounting-kpi').nth(1)).toContainText('2\u202f740,30 EUR');
     await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
-    await page.getByText('612 · Assurances', { exact: true }).click();
+    await page.getByText('616130 · Assurance santé', { exact: true }).click();
     await page.locator('.tb-accounting-account[open] .tb-accounting-account > summary').click();
     await page.locator('[data-ac-source="tx:insurance"]').click();
     await expect(page.locator('#tb-accounting-detail')).toContainText('50,00 EUR');
@@ -168,14 +182,14 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({ path: `test-results/accounting-fx-${width}-${theme}.png`, fullPage: true });
     await page.locator('.tb-accounting-tabs [data-ac-tab="settings"]').click();
-    const mapping = page.locator('.tb-accounting-mapping').filter({ hasText: 'Assurance santé' }).locator('select');
+    const mapping = page.locator('select[data-ac-mapping*="Assurance santé"]');
     await expect(mapping).toHaveValue('auto');
-    await expect(mapping.locator('option:checked')).toContainText('612');
-    await mapping.selectOption('604');
+    await expect(mapping.locator('option:checked')).toContainText('616130');
+    await mapping.selectOption('622610');
     await page.getByRole('button', { name: 'Enregistrer et recalculer' }).click();
-    await expect(mapping).toHaveValue('604');
+    await expect(mapping).toHaveValue('622610');
     await page.locator('[data-ac-refresh]').click();
-    await expect(mapping).toHaveValue('604');
+    await expect(mapping).toHaveValue('622610');
     await mapping.selectOption('auto');
     await page.getByRole('button', { name: 'Enregistrer et recalculer' }).click();
     await expect(mapping).toHaveValue('auto');
@@ -183,7 +197,7 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await page.locator('[name="mode"]').selectOption('native');
     await page.getByRole('button', { name: 'Appliquer', exact: true }).click();
     await page.locator('.tb-accounting-tabs [data-ac-tab="summary"]').click();
-    await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f350,15 EUR');
+    await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f400,00 EUR');
   });
 }
 
@@ -193,7 +207,8 @@ test('missing FX never displays an incomplete sum as a complete result', async (
   await page.evaluate(() => window.fixture.transactions.push({ ...window.fixture.transactions[1], id: 'missing', currency: 'XXX', amount: 100 }));
   await page.locator('[data-ac-refresh]').click();
   await expect(page.locator('.tb-accounting-kpi').first()).toContainText('Non disponible');
-  await page.locator('.tb-accounting-tabs [data-ac-tab="entries"]').click();
+  await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
+    await openAccountDetails(page);
   await page.locator('[data-ac-source="tx:missing"]').click();
   await expect(page.locator('#tb-accounting-detail')).toContainText('100,00 XXX');
   await expect(page.locator('#tb-accounting-detail')).toContainText('Taux FX indisponible');
@@ -208,15 +223,49 @@ test('one-time enrichment preserves user classification and shows signed subtota
   });
   await page.locator('[data-ac-refresh]').click();
   await expect(page.getByRole('region', { name: 'Indicateurs de performance' })).toBeVisible();
-  await expect(page.locator('.tb-accounting-kpi').nth(2)).not.toContainText('Non disponible');
+  await expect(page.locator('.tb-accounting-kpi').nth(2)).toContainText('Non disponible');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')));
-  expect(saved.classificationVersion).toBe(1);
+  expect(saved.classificationVersion).toBe(2);
   expect(saved.mapping['["expense","Repas"]']).toBe('602');
-  expect(saved.mapping['["income","Salaire",""]']).toBe('701');
+  expect(saved.mapping['["income","Salaire",""]']).toBe('758110');
   await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
-  await page.getByText('602 · Logement', { exact: true }).click();
+  await page.getByText('625710 · Restaurants et repas', { exact: true }).click();
   await expect(page.locator('.tb-accounting-account[open] > strong')).toHaveCount(0);
-  await expect(page.locator('.tb-accounting-account[open] > summary')).toContainText('49,85 EUR');
+  await expect(page.locator('.tb-accounting-account[open] > summary')).toContainText('0,00 EUR');
   await page.locator('[data-ac-refresh]').click();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')))).toEqual(saved);
+});
+
+test('budget dates, real balance reconciliation and removal of internal amounts', async ({ page }) => {
+  await setup(page, 390, 'dark');
+  await expect(page.locator('[data-ac-tab="entries"]')).toHaveCount(0);
+  await page.evaluate(() => {
+    window.fixture.transactions.push({ ...window.fixture.transactions[1], id:'budget-rent', category:'Logement', subcategory:'Loyer', label:'Loyer janvier', amount:310, date_start:'2025-12-15', budget_date_start:'2026-01-01', budget_date_end:'2026-01-31' });
+  });
+  await page.locator('[data-ac-refresh]').click();
+  await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f090,00 EUR');
+  await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
+  await openAccountDetails(page);
+  await expect(page.locator('[data-ac-source="tx:share"]')).toHaveCount(0);
+  await page.locator('[data-ac-source="tx:budget-rent"]').click();
+  await expect(page.locator('#tb-accounting-detail')).toContainText('2026-01-01 → 2026-01-31');
+  await expect(page.locator('#tb-accounting-detail')).toContainText('2025-12-15');
+  await page.locator('.tb-accounting-tabs [data-ac-tab="settings"]').click();
+  await page.getByLabel('Autres dettes',{exact:true}).fill('0');
+  await page.getByLabel('Créances complémentaires',{exact:true}).fill('0');
+  await page.getByLabel('Capitaux propres confirmés',{exact:true}).fill('2990.30');
+  await page.getByLabel('Référence de confirmation',{exact:true}).fill('Inventaire confirmé');
+  await page.getByRole('button',{name:'Enregistrer et recalculer'}).click();
+  await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
+  await expect(page.locator('[data-ac-balance-status]')).toHaveAttribute('data-ac-balance-status','balanced');
+  await expect(page.locator('[data-ac-balance-status]')).toContainText('0,00 EUR');
+  await page.locator('.tb-accounting-tabs [data-ac-tab="settings"]').click();
+  await page.getByLabel('Capitaux propres confirmés',{exact:true}).fill('2900');
+  await page.getByRole('button',{name:'Enregistrer et recalculer'}).click();
+  await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
+  await expect(page.locator('[data-ac-balance-status]')).toHaveAttribute('data-ac-balance-status','unbalanced');
+  await expect(page.locator('[data-ac-balance-status]')).toContainText('90,30 EUR');
+  await page.locator('.tb-accounting-tabs [data-ac-tab="chart"]').click();
+  await expect(page.locator('.tb-accounting-content')).toContainText('118 comptes');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

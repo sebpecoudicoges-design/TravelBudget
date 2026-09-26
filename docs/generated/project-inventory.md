@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `6d0e37174b2112b0d372677d01a4a51e3b3b67f2`
-> Empreinte du snapshot : `9947eb78bd2ea96bf7426f18958a4c8be166e7a62b8784cb3130c06246bbf75c`
-> Généré le : `2026-09-25T03:09:59.270Z`
+> Commit analysé : `30fbac01cb5a40750968eadf6ee6bce04cc2c184`
+> Empreinte du snapshot : `493bf87e4ee5e2e450dbfb71b7c07c4940ef57f9107b0a2c225c08b2254d25e3`
+> Généré le : `2026-09-26T00:22:10.128Z`
 
 # Inventaire du projet TravelBudget
 
@@ -16,8 +16,8 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
-| Modules features | 56 |
-| Fichiers de tests | 139 |
+| Modules features | 59 |
+| Fichiers de tests | 141 |
 | Migrations Supabase | 161 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -227,10 +227,13 @@ Domaines :
 
 Modules :
 
+- `src/features/accounting/accountingChart.js`
 - `src/features/accounting/accountingController.js`
 - `src/features/accounting/accountingData.js`
 - `src/features/accounting/accountingFx.js`
+- `src/features/accounting/accountingIndicators.js`
 - `src/features/accounting/accountingMapping.js`
+- `src/features/accounting/accountingRecognition.js`
 - `src/features/accounting/accountingRules.js`
 - `src/features/accounting/accountingView.js`
 - `src/features/analysis/analysisCashBreakdown.js`
@@ -393,7 +396,9 @@ Modules :
 - `tests/e2e/critical-flows.spec.js`
 - `tests/features/accounting/accountingData.test.js`
 - `tests/features/accounting/accountingFx.test.js`
+- `tests/features/accounting/accountingIndicators.test.js`
 - `tests/features/accounting/accountingMapping.test.js`
+- `tests/features/accounting/accountingRecognition.test.js`
 - `tests/features/accounting/accountingRules.test.js`
 - `tests/features/analysis/analysisCashBreakdown.test.js`
 - `tests/features/analysis/analysisChartOptions.test.js`

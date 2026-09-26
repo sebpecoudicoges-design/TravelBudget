@@ -14,18 +14,18 @@ describe('personal accounting statements', () => {
     expect(report.assetRows[0]).toMatchObject({ gross: 1200, accumulated: 100, amount: 1100 });
     expect(report.excluded[0].reason).toContain('Achat immobilisé');
   });
-  it('keeps only unpaid personal Trip share, not gross cash or neutralized shadow', () => {
+  it('excludes all internal Trip shares and gross out-of-budget payments from accounting', () => {
     const data = { transactions: [tx('cash', { amount: 99.70, trip_expense_id: 'trip-e', out_of_budget: true }), tx('share', { amount: 49.85, label: '[Trip] Repas', is_internal: true, pay_now: false, affects_budget: true }), tx('old', { label: '[Trip] Repas', is_internal: true, pay_now: false, affects_budget: false, out_of_budget: true })] };
     const report = buildAccountingReport(data, options);
-    expect(report.expenses).toBe(49.85);
-    expect(report.entries.map(e => e.sourceId)).toEqual(['share']);
+    expect(report.expenses).toBe(0);
+    expect(report.entries).toEqual([]);
   });
   it('retains a fully personal Trip payment if it affects the budget', () => {
     expect(buildAccountingReport({ transactions: [tx('own', { trip_expense_id: 'e', affects_budget: true, out_of_budget: false })] }, options).expenses).toBe(100);
   });
-  it('ignores transfers, adjustments, future or unpaid ordinary expenses and simulation rows', () => {
+  it('ignores internal and simulated rows but accrues unpaid budgeted charges', () => {
     const data = { transactions: [tx('transfer', { internal_transfer_id: 'i' }), tx('adjust', { category: 'Ajustement wallet' }), tx('unpaid', { pay_now: false }), tx('future', { date_start: '2026-02-01' }), tx('virtual', { virtualBudgetOnly: true })] };
-    expect(buildAccountingReport(data, { ...options, end: '2026-12-31' }).result).toBe(0);
+    expect(buildAccountingReport(data, { ...options, end: '2026-12-31' }).result).toBe(-100);
   });
   it('filters travel and currency and deduplicates source IDs', () => {
     const rows = [tx('yes'), tx('yes'), tx('other', { travel_id: 'other' }), tx('foreign', { currency: 'AUD' })];
@@ -36,16 +36,16 @@ describe('personal accounting statements', () => {
   });
   it('supports classification and manual capital exclusions without reversing income/expense', () => {
     const t = tx('x');
-    const settings = { mapping: { [categoryKey(t)]: '602' } };
-    expect(buildAccountingReport({ transactions: [t] }, { ...options, settings }).entries[0].account).toBe('602');
+    const settings = { mapping: { [categoryKey(t)]: '613220' } };
+    expect(buildAccountingReport({ transactions: [t] }, { ...options, settings }).entries[0].account).toBe('613220');
     settings.mapping[categoryKey(t)] = '701';
-    expect(buildAccountingReport({ transactions: [t] }, { ...options, settings }).entries[0].account).toBe('601');
+    expect(buildAccountingReport({ transactions: [t] }, { ...options, settings }).entries[0].account).toBe('625710');
     settings.mapping[categoryKey(t)] = '471';
     expect(buildAccountingReport({ transactions: [t] }, { ...options, settings }).expenses).toBe(0);
   });
-  it('uses disclosed provisional zero complements, preserves dated values and never invents wallet balances', () => {
-    expect(buildAccountingReport({ ...base(), walletBalances: [] }, { ...options, settings: {} })).toMatchObject({ debt: 0, receivable: 0, cash: null, netWorth: null });
-    expect(buildAccountingReport(base(), { ...options, today: '2026-02-01' })).toMatchObject({ netWorth: 1900, totalAssets: 1900, totalFunding: 1900 });
+  it('requires confirmed complements and independently sourced equity, never plugs a total', () => {
+    expect(buildAccountingReport({ ...base(), walletBalances: [] }, { ...options, settings: {} })).toMatchObject({ debt: null, receivable: null, cash: null, netWorth: null });
+    expect(buildAccountingReport(base(), { ...options, today: '2026-02-01' })).toMatchObject({ netWorth: 1900, totalAssets: 1900, totalFunding: null });
   });
   it('preserves residual value, ownership and rounding over a full schedule', () => {
     const schedule = depreciationSchedule({ ...asset, purchase_value: 100, residual_value: 1, depreciation_months: 7 }, 0.5);
@@ -97,22 +97,53 @@ it('nets signed reversals in cents and sorts accounts, categories and dates asce
   expect(report).toMatchObject({ income: 0, expenses: 0, result: 0 });
   expect(report.entries).toHaveLength(8);
   expect(report.excluded).toHaveLength(0);
-  expect(report.entries.map(e => e.account)).toEqual(['601', '601', '601', '601', '601', '601', '708', '708']);
+  expect(report.entries.map(e => e.account)).toEqual(['625710', '625710', '625710', '625710', '625710', '625710', '758900', '758900']);
 });
 it('balances positive wallets, overdrafts, debts and negative net worth without plugging an asset', () => {
   const report = buildAccountingReport({ wallets: [{ id: 'p', currency: 'EUR' }, { id: 'n', currency: 'EUR' }], walletBalances: [{ wallet_id: 'p', effective_balance: 100 }, { wallet_id: 'n', effective_balance: -200 }] }, { ...options, settings: { balances: { EUR: { debt: 50, receivable: 10, asOf: '2025-12-01' } } } });
-  expect(report).toMatchObject({ cash: -100, netWorth: -140, totalAssets: 110, liabilities: 250, totalFunding: 110 });
+  expect(report).toMatchObject({ cash: -100, netWorth: -140, totalAssets: 110, liabilities: 250, totalFunding: null });
   expect(report.unconfirmed.length).toBeGreaterThan(0);
 });
 it('calculates performance using elapsed days and keeps undefined ratios null', () => {
   const data = { transactions: [tx('salary', { type: 'income', amount: 2000 }), tx('food', { amount: 1000 })], wallets: [{ id: 'w', currency: 'EUR' }], walletBalances: [{ wallet_id: 'w', effective_balance: 3000 }] };
   const report = buildAccountingReport(data, { ...options, end: '2026-12-31' });
-  expect(report).toMatchObject({ savingRate: 50, autonomyMonths: 3.06, debtRatio: 0, totalAssets: 3000, totalFunding: 3000 });
-  expect(buildAccountingReport({}, { ...options, settings: {} })).toMatchObject({ netWorth: 0, totalAssets: 0, totalFunding: 0, savingRate: null, debtRatio: null, autonomyMonths: null });
+  expect(report).toMatchObject({ savingRate: 50, autonomyMonths: 3.06, debtRatio: 0, totalAssets: 3000, totalFunding: null });
+  expect(buildAccountingReport({}, { ...options, settings: {} })).toMatchObject({ netWorth: null, totalAssets: null, totalFunding: null, savingRate: null, debtRatio: null, autonomyMonths: null });
 });
 
 it('does not mistake missing transaction amounts for signed zero', () => {
   const report = buildAccountingReport({ transactions: [tx('missing', { amount: null }), tx('blank', { amount: '' }), tx('zero', { amount: 0 })] }, options);
   expect(report.entries.map(e => e.sourceId)).toEqual(['zero']);
   expect(report.excluded.map(e => e.reason)).toEqual(['Montant invalide', 'Montant invalide']);
+});
+
+it('attaches results to budget dates even when cash dates lie outside the selected period', () => {
+  const report=buildAccountingReport({transactions:[tx('rent',{amount:310,cashDate:'2025-12-15',budget_date_start:'2026-01-01',budget_date_end:'2026-01-31'})]}, {...options,start:'2026-01-11',end:'2026-01-20'});
+  expect(report.expenses).toBe(100);
+  expect(report.entries[0]).toMatchObject({amount:100,sourceAmount:310,cashDate:'2025-12-15',budgetStart:'2026-01-01',budgetEnd:'2026-01-31'});
+});
+it('creates prepaid charges and accrued liabilities from budget recognition without counting them twice', () => {
+  const data={transactions:[tx('prepaid',{amount:590,date_start:'2026-01-01',budget_date_start:'2026-01-01',budget_date_end:'2026-02-28'}),tx('unpaid',{amount:100,pay_now:false})],wallets:[{id:'w',currency:'EUR'}],walletBalances:[{wallet_id:'w',effective_balance:410}]};
+  const settings={balances:{EUR:{debt:0,receivable:0,equity:590,evidence:'Situation vérifiée',asOf:options.today}}};
+  const report=buildAccountingReport(data,{...options,settings});
+  expect(report).toMatchObject({expenses:410,accrualAssets:280,accrualLiabilities:100,totalAssets:690,totalFunding:690,balanceGap:0,balanceStatus:'balanced'});
+  expect(report.accrualRows.map(r=>r.account).sort()).toEqual(['401000','486000']);
+  const wrong=buildAccountingReport(data,{...options,settings:{balances:{EUR:{...settings.balances.EUR,equity:500}}}});
+  expect(wrong).toMatchObject({balanceGap:90,balanceStatus:'unbalanced'});
+});
+it('accrues unpaid income and defers prepaid income on budget dates', () => {
+  const data={transactions:[tx('unpaidIncome',{type:'income',category:'Salaire',amount:200,pay_now:false}),tx('advance',{type:'income',category:'Salaire',amount:590,budget_date_start:'2026-01-01',budget_date_end:'2026-02-28'})]};
+  const report=buildAccountingReport(data,options);
+  expect(report).toMatchObject({income:510,accrualAssets:200,accrualLiabilities:280});
+  expect(report.accrualRows.map(r=>r.account).sort()).toEqual(['411000','487000']);
+});
+it('records a categorized refund as negative expense and preserves cash direction', () => {
+  const data={transactions:[tx('pharmacy',{amount:10,category:'Santé',subcategory:'Pharmacie'}),tx('refund',{type:'income',amount:10,category:'Remboursement',subcategory:'Pharmacie'})]};
+  const report=buildAccountingReport(data,options);
+  expect(report).toMatchObject({income:0,expenses:0,result:0});
+  expect(report.entries.every(e=>e.account==='606330')).toBe(true);
+});
+it('uses budget start of an asset for its depreciation period', () => {
+  const report=buildAccountingReport({...base(),assets:[{...asset,budget_start_date:'2026-02-01'}]},options);
+  expect(report).toMatchObject({depreciation:0,netAssets:1200});
 });

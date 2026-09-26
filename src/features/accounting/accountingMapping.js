@@ -1,73 +1,51 @@
-// Personal management accounts, deliberately separate from a statutory chart.
-export const ACCOUNTS = Object.freeze({
-  '601': 'Vie quotidienne', '602': 'Logement', '603': 'Déplacements',
-  '604': 'Santé', '605': 'Loisirs', '606': 'Autres charges',
-  '607': 'Télécoms et abonnements', '608': 'Frais bancaires', '609': 'Démarches et visas',
-  '610': 'Formation et projets', '611': 'Cadeaux et dons', '612': 'Assurances',
-  '613': 'Habillement et équipement personnel', '614': 'Impôts et taxes',
-  '615': 'Entretien et réparations', '616': 'Énergie et charges du logement',
-  '681': 'Amortissements', '701': 'Revenus d’activité', '702': 'Revenus du patrimoine',
-  '708': 'Autres revenus', '471': 'Patrimoine / à rapprocher',
-});
+import { CHART, accountInfo, selectableAccounts } from './accountingChart.js';
+export { ACCOUNTS } from './accountingChart.js';
 export const categoryKey = tx => JSON.stringify([tx.type, tx.category || 'Sans catégorie']);
 export const mappingKey = tx => JSON.stringify([tx.type, tx.category || 'Sans catégorie', tx.subcategory || '']);
-const normal = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-const allowed = (code, type) => typeof code === 'string' && (code === '471' || (ACCOUNTS[code] && code !== '681' && code.startsWith(type === 'income' ? '7' : '6')));
-const expenseRules = [
-  ['614', /\b(impots?|taxes?|fiscalite|income tax)\b/, 'Impôt ou taxe'],
-  ['616', /\b(electricite|electricity|gaz|gas bill|charges locatives|facture eau)\b/, 'Charge du logement'],
-  ['615', /\b(reparations?|entretien|maintenance|garage|mecanique|pneus?)\b/, 'Entretien ou réparation'],
-  ['613', /\b(vetements?|chaussures?|habillement|clothing|shoes|equipement personnel)\b/, 'Habillement ou équipement personnel'],
-  ['612', /\b(assurances?|insurance)\b/, 'Assurance identifiée'],
-  ['608', /\b(frais bancaires?|frais carte|commissions? change|tenue de compte|bank fee)\b/, 'Frais de compte ou de change'],
-  ['607', /\b(abonnements?|telephone|mobile|telecom|internet|sim|recharge data|subscription)\b/, 'Télécom ou abonnement'],
-  ['604', /\b(sante|pharmacie|medicaments?|dentiste|consultations?|soins|health|medical)\b/, 'Dépense de santé'],
-  ['609', /\b(visa|consulaire|demarches|frontiere)\b/, 'Formalité ou visa'],
-  ['602', /\b(logement|hebergement|loyers?|auberges?|hotels?|guesthouse|airbnb|camping|rent|accommodation)\b/, 'Hébergement ou loyer'],
-  ['603', /\b(transports?|carburant|avion|billet avion|location voiture|bus|train|metro|taxi|vtc|scooter|essence|ferry|velo|parking|peage|vol|flight|fuel)\b/, 'Déplacement ou transport'],
-  ['610', /\b(etudes|scolarite|formations?|projet personnel|logiciel|course education|training)\b/, 'Formation ou projet personnel'],
-  ['611', /\b(cadeaux?|dons?|gift|donation)\b/, 'Cadeau ou don'],
-  ['605', /\b(bar|bars|activites?|excursions?|sport|sortie|sorties|loisir|loisirs|culturel|sportive|fete|cinema|musee|souvenir|souvenirs|evenement)\b/, 'Loisir ou sortie'],
-  ['601', /\b(alimentation|nourriture|boulangerie|restaurants?|repas|course|courses|supermarche|marche|petit dejeuner|dejeuner|diner|snack|cafe|eau|laundry|hygiene|food|groceries)\b/, 'Vie quotidienne'],
-];
+export const normal = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const legacy = { '601':'625710', '602':'613230', '603':'625190', '604':'622610', '605':'651130', '606':'658900', '607':'626190', '608':'627110', '609':'635130', '610':'618190', '611':'651150', '612':'616190', '613':'606340', '614':'635190', '615':'615590', '616':'606110', '701':'758110', '702':'762100', '708':'758900', '471':'471000' };
+const matches = (text, kind) => CHART.filter(a => a.kind === kind && a.keywords).flatMap(a => a.keywords.split(',').filter(k => (` ${text} `).includes(` ${k} `)).map(k => ({ a, score: k.length }))).sort((a, b) => b.score - a.score || a.a.code.localeCompare(b.a.code))[0]?.a;
 export function inferAccount(tx) {
-  const category = normal(tx.category), subcategory = normal(tx.subcategory);
-  if (/\b(caution|emprunt|pret|remboursement|vente|materiel|retrait atm|mouvement interne|virement|transfert|change devise)\b/.test(`${category} ${subcategory}`)) {
-    return { account: tx.type === 'income' ? '708' : '606', origin: 'review', reason: 'Nature ambiguë : remboursement, capital ou charge à confirmer' };
+  const texts = [normal(tx.subcategory), normal(tx.category)], combined = texts.join(' ');
+  const refund = tx.type === 'income' && /\b(remboursement|remboursements|refund|avoir)\b/.test(combined);
+  // Capital operations cannot be recognized as income/expense merely from their wording.
+  const ambiguous = /\b(caution|emprunt|pret|capital|vente|retrait|virement|transfert)\b/.test(combined);
+  for (const [i, text] of texts.entries()) {
+    const hit = matches(text, refund ? 'expense' : tx.type);
+    if (hit && (!ambiguous || ['661100', '661600', '627130'].includes(hit.code))) return { account: hit.code, origin: 'automatic', reason: `${refund ? 'Remboursement en diminution de charge' : hit.label} · ${i === 0 ? 'sous-catégorie' : 'catégorie'}` };
   }
-  for (const [level, text] of [['sous-catégorie', subcategory], ['catégorie', category]]) {
-    if (!text) continue;
-    if (tx.type === 'income') {
-      if (/\b(salaires?|primes?|bonus|paye|remuneration|honoraires|freelance|salary|wage|travail)\b/.test(text)) return { account: '701', origin: 'automatic', reason: `Revenu d’activité reconnu dans la ${level}` };
-      if (/\b(dividende|dividendes|interet|interets|revenu locatif|loyer percu|rente)\b/.test(text)) return { account: '702', origin: 'automatic', reason: `Revenu du patrimoine reconnu dans la ${level}` };
-    } else {
-      const rule = expenseRules.find(([, pattern]) => pattern.test(text));
-      if (rule) return { account: rule[0], origin: 'automatic', reason: `${rule[2]} · ${level}` };
-    }
-  }
-  return { account: tx.type === 'income' ? '708' : '606', origin: 'review', reason: 'Aucune règle suffisamment précise : à vérifier' };
+  return { account: tx.type === 'income' ? '758900' : '658900', origin: 'review', reason: ambiguous || refund ? 'Capital, cession ou remboursement : rapprochement nécessaire' : 'Libellé insuffisant : affectation à confirmer' };
 }
 export function resolveAccount(tx, settings = {}) {
-  const exact = settings.mapping?.[mappingKey(tx)];
-  // An explicit auto selection overrides an older category-wide setting.
-  if (exact === 'auto') return inferAccount(tx);
-  if (allowed(exact, tx.type) && settings.inferredMapping?.[mappingKey(tx)] === exact) return { account: exact, origin: 'initial', reason: 'Déduction initiale enregistrée une seule fois ; modifiable' };
-  if (allowed(exact, tx.type)) return { account: exact, origin: 'manual', reason: 'Affectation manuelle de cette catégorie / sous-catégorie' };
-  const parent = settings.mapping?.[categoryKey(tx)];
-  if (allowed(parent, tx.type)) return { account: parent, origin: 'manual', reason: 'Affectation manuelle de la catégorie conservée' };
-  return inferAccount(tx);
+  const key = mappingKey(tx), exact = settings.mapping?.[key], parent = settings.mapping?.[categoryKey(tx)];
+  const code = exact === 'auto' ? null : exact || parent;
+  if (selectableAccounts().some(a => a.code === code)) return { account: code, origin: settings.inferredMapping?.[key] === code ? (inferAccount(tx).origin === 'review' ? 'review' : 'initial') : 'manual', reason: settings.inferredMapping?.[key] === code ? 'Reclassement détaillé enregistré ; modifiable' : 'Affectation manuelle détaillée' };
+  if (code === '471') return { account: '471000', origin: 'manual', reason: 'Ancienne affectation patrimoniale conservée' };
+  const inferred = inferAccount(tx);
+  if (code && legacy[code] && inferred.origin === 'review') return { account: legacy[code], origin: 'review', reason: 'Ancien regroupement repris : sous-compte à confirmer' };
+  return inferred;
 }
 export const mappedAccount = (tx, settings = {}) => resolveAccount(tx, settings).account;
-
-// Freeze a first pass once per local user/travel scope; never overwrite a user's mapping.
 export function completeInitialMapping(transactions, settings = {}) {
-  if (settings.classificationVersion === 1) return settings;
+  if (settings.classificationVersion === 2) return settings;
   const mapping = { ...settings.mapping }, inferredMapping = { ...settings.inferredMapping };
   for (const tx of transactions.filter(t => ['income', 'expense'].includes(t.type))) {
-    const key = mappingKey(tx), resolved = resolveAccount(tx, settings);
-    if (resolved.origin !== 'automatic' || Object.hasOwn(mapping, key)) continue;
+    const key = mappingKey(tx), existing = mapping[key];
+    if (existing === 'auto' || (accountInfo(existing) && !settings.inferredMapping?.[key]) || (!existing && accountInfo(mapping[categoryKey(tx)]))) continue;
+    const resolved = resolveAccount(tx, settings);
     mapping[key] = resolved.account;
+    // Uncertain accounts retain their review state through a dedicated list.
     inferredMapping[key] = resolved.account;
   }
-  return { ...settings, mapping, inferredMapping, classificationVersion: 1 };
+  return { ...settings, mapping, inferredMapping, classificationVersion: 2, mappingBeforeDetailedChart: settings.mappingBeforeDetailedChart || { ...settings.mapping } };
+}
+export function assetAccount(asset) {
+  const name = normal(asset.name);
+  if (asset.asset_type === 'car') return '218200';
+  if (asset.asset_type === 'real_estate') return '213000';
+  if (/ordinateur|computer|laptop/.test(name)) return '218310';
+  if (/telephone|phone|tablette/.test(name)) return '218320';
+  if (/photo|camera|video/.test(name)) return '218330';
+  if (/mobilier|meuble/.test(name)) return '218400';
+  return '218800';
 }

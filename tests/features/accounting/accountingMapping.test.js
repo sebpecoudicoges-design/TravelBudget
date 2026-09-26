@@ -1,41 +1,49 @@
 import { it, expect } from 'vitest';
-import { completeInitialMapping, inferAccount, resolveAccount, mappingKey, categoryKey } from '../../../src/features/accounting/accountingMapping.js';
-
+import { CHART } from '../../../src/features/accounting/accountingChart.js';
+import { inferAccount, resolveAccount, completeInitialMapping, mappingKey, categoryKey } from '../../../src/features/accounting/accountingMapping.js';
+it('provides over one hundred unique six-digit accounts across balance and result classes', () => {
+  expect(CHART.length).toBeGreaterThan(100);
+  expect(new Set(CHART.map(a => a.code)).size).toBe(CHART.length);
+  expect(CHART.every(a => /^\d{6}$/.test(a.code))).toBe(true);
+  expect(new Set(CHART.map(a => a.kind))).toEqual(new Set(['equity','liability','asset','contraAsset','suspense','expense','income']));
+});
 it.each([
-  ['expense', 'Repas', 'Déjeuner', '601'], ['expense', 'Logement', 'Hôtel', '602'],
-  ['expense', 'Transport Internationale', 'Vol', '603'], ['expense', 'Santé', 'Pharmacie', '604'],
-  ['expense', 'Sorties', 'Cinéma', '605'], ['expense', 'Abonnement/Mobile', 'SIM', '607'],
-  ['expense', 'Frais bancaire', 'Frais carte', '608'], ['expense', 'Visa', 'Extension visa', '609'],
-  ['expense', 'Projet Personnel', 'Formation', '610'], ['expense', 'Cadeau', 'Famille', '611'],
-  ['expense', 'Santé', 'Assurance santé', '612'], ['income', 'Revenu', 'Salaire', '701'],
-  ['income', 'Revenu', 'Dividendes', '702'], ['expense', 'Autre', 'Bus local', '603'],
-])('infers %s %s / %s as %s', (type, category, subcategory, account) => {
-  expect(inferAccount({ type, category, subcategory })).toMatchObject({ account, origin: 'automatic' });
+  ['expense','Repas','Déjeuner','625710'], ['expense','Logement','Hôtel','613220'],
+  ['expense','Transport Internationale','Vol','625110'], ['expense','Santé','Pharmacie','606330'],
+  ['expense','Sorties','Cinéma','651110'], ['expense','Abonnement/Mobile','SIM','626110'],
+  ['expense','Frais bancaire','Frais carte','627110'], ['expense','Visa','Extension visa','635130'],
+  ['expense','Projet Personnel','Formation','618110'], ['expense','Cadeau','Famille','651150'],
+  ['expense','Santé','Assurance santé','616130'], ['income','Revenu','Salaire','758110'],
+  ['income','Revenu','Dividendes','761100'], ['expense','Autre','Bus local','625130'],
+  ['expense','Maison','Électricité','606110'], ['expense','Achats','Vêtements','606340'],
+  ['expense','Finances','Intérêts emprunt','661100'], ['income','Remboursement','Pharmacie','606330'],
+  ['expense','Banque','Frais retrait','627130'], ['income','Revenus','Loyer perçu','752100']
+])('classifies %s %s / %s as %s', (type, category, subcategory, account) => {
+  expect(inferAccount({ type, category, subcategory })).toMatchObject({ account, origin:'automatic' });
 });
-it('flags ambiguous amounts without automatically removing them from the result', () => {
-  for (const category of ['Caution', 'Remboursement', 'Vente', 'Inconnu']) expect(inferAccount({ type: 'expense', category })).toMatchObject({ account: '606', origin: 'review' });
+it('does not silently treat capital or unidentified refunds as trading flows', () => {
+  for (const category of ['Caution','Remboursement','Vente','Emprunt','Inconnu']) expect(inferAccount({ type:'expense', category }).origin).toBe('review');
 });
-it('preserves parent overrides, supports precise subcategory overrides and explicit auto restoration', () => {
-  const tx = { type: 'expense', category: 'Santé', subcategory: 'Assurance santé' };
-  const settings = { mapping: { [categoryKey(tx)]: '604' } };
-  expect(resolveAccount(tx, settings)).toMatchObject({ account: '604', origin: 'manual' });
-  settings.mapping[mappingKey(tx)] = '606';
-  expect(resolveAccount(tx, settings).account).toBe('606');
-  settings.mapping[mappingKey(tx)] = 'auto';
-  expect(resolveAccount(tx, settings)).toMatchObject({ account: '612', origin: 'automatic' });
-  expect(resolveAccount({ ...tx, subcategory: 'Pharmacie' }, settings).account).toBe('604');
+it('migrates coarse accounts once, archives prior choices, preserves detailed manual decisions and auto', () => {
+  const a={type:'expense',category:'Santé',subcategory:'Assurance santé'}, b={type:'expense',category:'Repas'}, c={type:'income',category:'Salaire'};
+  const settings={classificationVersion:1,mapping:{[mappingKey(a)]:'604',[mappingKey(b)]:'613220',[mappingKey(c)]:'auto'},balances:{EUR:{debt:1}}};
+  const next=completeInitialMapping([a,b,c],settings);
+  expect(next.mapping[mappingKey(a)]).toBe('616130');
+  expect(next.mapping[mappingKey(b)]).toBe('613220');
+  expect(next.mapping[mappingKey(c)]).toBe('auto');
+  expect(next.mappingBeforeDetailedChart).toEqual(settings.mapping);
+  expect(next.balances).toEqual(settings.balances);
+  expect(completeInitialMapping([a,b,c],next)).toBe(next);
+  expect(resolveAccount(a,next).origin).toBe('initial');
+  expect(resolveAccount(b,next).origin).toBe('manual');
+  expect(resolveAccount(a,{mapping:{[categoryKey(a)]:'622610'}}).account).toBe('622610');
+  const inherited=completeInitialMapping([a],{mapping:{[categoryKey(a)]:'622610'}});
+  expect(inherited.mapping[mappingKey(a)]).toBeUndefined();
+  expect(resolveAccount(a,inherited).origin).toBe('manual');
+  expect(resolveAccount(a,{mapping:{[mappingKey(a)]:'auto',[categoryKey(a)]:'622610'}}).account).toBe('616130');
 });
-
-it.each([['Alimentation', 'Restaurant', '601'], ['Maison', 'Électricité', '616'], ['Divers', 'Impôts', '614'], ['Transport', 'Réparation', '615'], ['Achats', 'Vêtements', '613'], ['Divers', 'Carburant', '603']])('recognizes %s / %s', (category, subcategory, account) => {
-  expect(inferAccount({ type: 'expense', category, subcategory }).account).toBe(account);
-});
-it('completes classification only once and preserves exact, inherited and explicit auto choices', () => {
-  const a = { type: 'expense', category: 'Santé', subcategory: 'Pharmacie' }, b = { type: 'expense', category: 'Maison', subcategory: 'Électricité' }, c = { type: 'expense', category: 'Repas' }, d = { type: 'expense', category: 'Inconnu' };
-  const settings = { mapping: { [categoryKey(a)]: '606', [mappingKey(c)]: 'auto' }, balances: { EUR: { debt: 12 } } };
-  const result = completeInitialMapping([a, b, c, d], settings);
-  expect(result.mapping).toEqual({ ...settings.mapping, [mappingKey(b)]: '616' });
-  expect(resolveAccount(b, result)).toMatchObject({ account: '616', origin: 'initial' });
-  expect(result.balances).toEqual(settings.balances);
-  expect(completeInitialMapping([{ type: 'income', category: 'Salaire' }], result)).toBe(result);
-  expect(settings.mapping[mappingKey(b)]).toBeUndefined();
+it('retains review flags after migration and old capital exclusions', () => {
+  const tx={type:'expense',category:'Inconnu'};
+  expect(resolveAccount(tx,completeInitialMapping([tx])).origin).toBe('review');
+  expect(resolveAccount(tx,{mapping:{[categoryKey(tx)]:'471'}}).account).toBe('471000');
 });

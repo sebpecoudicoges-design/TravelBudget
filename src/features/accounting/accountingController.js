@@ -2,6 +2,7 @@ import { buildAccountingReport, validDate } from './accountingRules.js';
 import { loadAccountingData, readSettings, saveSettings } from './accountingData.js';
 import { renderAccounting } from './accountingView.js';
 import { loadAccountingFx } from './accountingFx.js';
+import { needsAccountingTransaction, accountingFxDate } from './accountingRecognition.js';
 import { completeInitialMapping } from './accountingMapping.js';
 import './accounting.css';
 
@@ -22,8 +23,9 @@ export function installAccountingRuntime(win = window) {
     const today = data.asOf || localToday();
     const inScope = r => !(r.travel_id || r.travelId) || String(r.travel_id || r.travelId) === String(win.state.activeTravelId);
     const assets = data.assets.filter(inScope);
-    const rows = [...data.transactions, ...data.wallets, ...assets];
-    const dates = [today, ...assets.map(a => a.purchase_date), ...data.transactions.map(t => t.date_start || t.dateStart).filter(d => (d >= ui.start && d <= ui.end) || (d >= priorYear(ui.start) && d <= priorYear(ui.end)))];
+    const transactions = data.transactions.filter(t => needsAccountingTransaction(t, ui.start, ui.end, today) || needsAccountingTransaction(t, priorYear(ui.start), priorYear(ui.end), today));
+    const rows = [...transactions, ...data.wallets, ...assets];
+    const dates = [today, ...assets.map(a => a.purchase_date), ...transactions.map(t => accountingFxDate(t, today))];
     root().innerHTML = '<p role="status">Consolidation avec les taux FX journaliers…</p>';
     const fx = await loadAccountingFx({ currencies: ui.mode === 'native' ? [] : [...rows.map(r => r.currency), ...Object.keys(settings.balances || {})], target: ui.currency, dates, today, offline: win.tbIsOfflineMode?.() === true, manualRates: snapshot.manualRates || {}, signal: request.signal });
     if (request.signal.aborted || identity() !== currentScope || data !== snapshot) return;
@@ -104,9 +106,10 @@ export function installAccountingRuntime(win = window) {
       const balances = { ...settings.balances };
       for (const fieldset of event.target.querySelectorAll('[data-ac-balance]')) {
         const cur = fieldset.dataset.acBalance;
-        const debt = fieldset.querySelector('[data-ac-debt]').value, receivable = fieldset.querySelector('[data-ac-receivable]').value;
+        const debt = fieldset.querySelector('[data-ac-debt]').value, receivable = fieldset.querySelector('[data-ac-receivable]').value, equity = fieldset.querySelector('[data-ac-equity]').value, evidence = fieldset.querySelector('[data-ac-evidence]').value.trim();
+        if (equity !== '' && !Number.isFinite(Number(equity))) { setStatus('Capitaux propres invalides.'); return; }
         if ([debt, receivable].some(v => v !== '' && (!Number.isFinite(Number(v)) || Number(v) < 0))) { setStatus('Les soldes doivent être des nombres positifs ou zéro.'); return; }
-        balances[cur] = { debt, receivable, asOf: data.asOf || localToday() };
+        balances[cur] = { debt, receivable, equity, evidence, asOf: data.asOf || localToday() };
       }
       const mapping = { ...settings.mapping, ...Object.fromEntries([...event.target.querySelectorAll('[data-ac-mapping]')].map(el => [el.dataset.acMapping, el.value])) };
       const inferredMapping = { ...settings.inferredMapping };
