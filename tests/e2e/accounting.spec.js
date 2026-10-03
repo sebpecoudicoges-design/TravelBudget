@@ -278,7 +278,7 @@ for (const width of [1440,390]) for (const theme of ['light','dark']) test(`date
   await create.getByLabel('Capital dû à la date de départ').fill('2000');
   await create.getByLabel('Date de départ du suivi').fill('2026-01-05');
   await create.getByLabel('Bien lié').selectOption('a');
-  await create.getByLabel('Opération d’origine').selectOption('salary');
+  await create.locator('[name="originTransactionId"]').selectOption('salary');
   await create.getByRole('button',{name:'Ajouter la dette'}).click();
   const debt=page.locator('[data-ac-debt-id]');
   await expect(debt).toContainText('2\u202f000,00 EUR');
@@ -340,4 +340,30 @@ test('debt storage failure preserves previous state and account change hides its
  await expect(page.locator('[data-ac-debt-id]')).toHaveCount(1);
  await page.evaluate(()=>{window.sbUser={id:'user-b'};window.dispatchEvent(new Event('tb:auth_scope_changed'));});
  await expect(page.locator('#accounting-root')).toBeEmpty();
+});
+
+for(const width of [1440,390]) for(const theme of ['light','dark']) test(`operation search and clear balance confirmations ${width} ${theme}`,async({page})=>{
+ await setup(page,width,theme);
+ await page.evaluate(async()=>{localStorage.setItem('tb-accounting-v1:user-a:trip-a',JSON.stringify({balances:{EUR:{debt:10,receivable:20,equity:30,asOf:'2026-01-30',evidence:'Relevé'}}}));await window.renderAccounting();});
+ await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
+ await page.locator('.tb-accounting-balance-checks summary').click();
+ await expect(page.locator('.tb-accounting-balance-checks')).toContainText('Autres dettes : 10,00 EUR');
+ await expect(page.locator('.tb-accounting-balance-checks')).toContainText('Créances complémentaires : 20,00 EUR');
+ await expect(page.locator('.tb-accounting-balance-checks')).toContainText('Ces montants restent utilisés');
+ const search=page.getByRole('searchbox',{name:'Rechercher : Opération d’origine (facultative)',exact:true});
+ const select=page.locator('[name="originTransactionId"]');
+ await search.fill('2 000 salaire 05/01/2026');
+ await expect(select.locator('option')).toHaveCount(2);
+ await select.selectOption('salary');
+ await search.fill('aucun résultat possible');
+ await expect(select).toHaveValue('salary');
+ await expect(page.locator('[data-ac-search-count]')).toContainText('0 résultat(s) · sélection actuelle conservée');
+ await select.selectOption('');
+ await search.fill('repas 500');
+ await expect(select.locator('option')).toHaveCount(2);
+ await search.fill('');
+ await expect(select.locator('option')).toHaveCount(6);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.evaluate(()=>scrollTo(0,0));
+ await page.screenshot({path:`test-results/accounting-search-${width}-${theme}.png`,fullPage:true});
 });

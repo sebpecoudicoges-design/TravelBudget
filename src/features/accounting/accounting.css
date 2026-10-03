@@ -52,3 +52,8 @@
 .tb-accounting-debt { border-top:1px solid var(--border); margin-top:22px; padding-top:14px; min-width:0; overflow-wrap:anywhere; }
 .tb-accounting-debt form { margin:18px 0; }
 .tb-accounting-debt li { margin:12px 0; }
+
+.tb-accounting-operation-picker { display:grid; gap:8px; flex:2 1 280px; min-width:0; }
+.tb-accounting-operation-picker small { color:var(--muted); }
+.tb-accounting-balance-checks { margin:18px 0; }
+.tb-accounting-balance-checks summary { cursor:pointer; min-height:40px; }

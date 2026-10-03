@@ -1,4 +1,4 @@
-import { debtLedger, repaymentEligible, debtOriginEligible } from './accountingDebts.js';
+import { debtLedger, repaymentEligible, debtOriginEligible, matchesOperationSearch } from './accountingDebts.js';
 import { buildAccountingReport, validDate } from './accountingRules.js';
 import { loadAccountingData, readSettings, saveSettings } from './accountingData.js';
 import { renderAccounting } from './accountingView.js';
@@ -84,6 +84,17 @@ export function installAccountingRuntime(win = window) {
     catch { setStatus('Enregistrement local impossible. Les données précédentes sont conservées.'); return false; }
   }
   function setStatus(message) { status = message; const el = root()?.querySelector('[role="status"]'); if (el) el.textContent = message; }
+  win.document.addEventListener('input', event => {
+    if (!event.target.matches?.('#accounting-root [data-ac-operation-search]')) return;
+    const picker = event.target.closest('.tb-accounting-operation-picker'), select = picker.querySelector('select');
+    // Keep the original option nodes, including the selected value, while filtering.
+    picker.searchOptions ||= [...select.options].slice(1);
+    const selected = select.value, matches = picker.searchOptions.filter(o => matchesOperationSearch(o.dataset.acSearch, event.target.value));
+    const retained = picker.searchOptions.find(o => o.value === selected);
+    select.replaceChildren(select.options[0], ...matches, ...(retained && !matches.includes(retained) ? [retained] : []));
+    select.value = selected;
+    picker.querySelector('[data-ac-search-count]').textContent = `${matches.length} résultat(s)${retained && !matches.includes(retained) ? ' · sélection actuelle conservée hors recherche' : ''}.`;
+  });
   win.document.addEventListener('click', event => {
     const button = event.target.closest?.('#accounting-root button');
     if (!button) return;

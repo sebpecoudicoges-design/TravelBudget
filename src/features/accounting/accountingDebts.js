@@ -53,3 +53,13 @@ export function debtLedger(settings, transactions, today, links = []) {
   });
   return { rows, principalByTransaction, fundingTransactions, warnings };
 }
+
+export function operationSearchText(tx) {
+  const dates = [tx.cashDate || tx.dateStart || tx.date_start, tx.budgetDateStart || tx.budget_date_start, tx.budgetDateEnd || tx.budget_date_end].filter(Boolean).map(d => String(d).slice(0,10));
+  return [tx.label, tx.category, tx.subcategory, tx.currency, tx.amount, Number(tx.amount).toFixed(2), ...dates, ...dates.map(d => d.split('-').reverse().join('/'))].filter(v => v != null).join(' ');
+}
+export function matchesOperationSearch(text, query) {
+  const normalize = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/(\d)[ \u00a0\u202f]+(?=\d{3}(?:\D|$))/g, '$1').replace(/,/g, '.');
+  const haystack = normalize(text);
+  return normalize(query).trim().split(/\s+/).every(term => haystack.includes(term));
+}

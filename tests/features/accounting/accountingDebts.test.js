@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { debtLedger, repaymentEligible } from '../../../src/features/accounting/accountingDebts.js';
+import { debtLedger, repaymentEligible, operationSearchText, matchesOperationSearch } from '../../../src/features/accounting/accountingDebts.js';
 import { buildAccountingReport } from '../../../src/features/accounting/accountingRules.js';
 const today = '2026-01-31';
 const tx = (id, amount, patch = {}) => ({id, amount, type:'expense', currency:'EUR', date_start:'2026-01-15', pay_now:true, category:'Intérêts emprunt', ...patch});
@@ -53,4 +53,10 @@ it('uses closing FX for debt and excludes unknown amounts from known portions', 
 it('optional asset and expense references do not create new assets or duplicate charges', () => {
  const r=report([tx('e',4000,{date_start:'2026-01-01'})],[loan({assetId:'car',originTransactionId:'e'})]);
  expect(r).toMatchObject({expenses:4000,trackedDebt:4000,netAssets:0});
+});
+
+it('searches combined labels, categories, amounts and payment or budget dates',()=>{
+ const text=operationSearchText(tx('s',4000.50,{label:'Prêt été',category:'Financement',subcategory:'Famille',date_start:'2026-10-03',budget_date_start:'2026-10-01'}));
+ for(const query of ['pret famille','4 000,50','4000.50 03/10/2026','financement 2026-10','01/10/2026','']) expect(matchesOperationSearch(text,query)).toBe(true);
+ expect(matchesOperationSearch(text,'4001')).toBe(false);
 });
