@@ -1,3 +1,4 @@
+import { debtLedger, repaymentEligible, debtOriginEligible } from './accountingDebts.js';
 import { buildAccountingReport, validDate } from './accountingRules.js';
 import { loadAccountingData, readSettings, saveSettings } from './accountingData.js';
 import { renderAccounting } from './accountingView.js';
@@ -27,14 +28,14 @@ export function installAccountingRuntime(win = window) {
     const rows = [...transactions, ...data.wallets, ...assets];
     const dates = [today, ...assets.map(a => a.purchase_date), ...transactions.map(t => accountingFxDate(t, today))];
     root().innerHTML = '<p role="status">Consolidation avec les taux FX journaliers…</p>';
-    const fx = await loadAccountingFx({ currencies: ui.mode === 'native' ? [] : [...rows.map(r => r.currency), ...Object.keys(settings.balances || {})], target: ui.currency, dates, today, offline: win.tbIsOfflineMode?.() === true, manualRates: snapshot.manualRates || {}, signal: request.signal });
+    const fx = await loadAccountingFx({ currencies: ui.mode === 'native' ? [] : [...rows.map(r => r.currency), ...Object.keys(settings.balances || {}), ...(settings.debts || []).map(d => d.currency)], target: ui.currency, dates, today, offline: win.tbIsOfflineMode?.() === true, manualRates: snapshot.manualRates || {}, signal: request.signal });
     if (request.signal.aborted || identity() !== currentScope || data !== snapshot) return;
     data.fx = fx; draw();
   }
   function draw() {
     if (!root() || !data || !ui || identity() !== scope) return;
     const today = data.asOf || localToday();
-    const currencies = [...new Set([ui.currency, ...(data.transactions || []), ...(data.wallets || []), ...(data.assets || [])].map(r => typeof r === 'string' ? r : r.currency).filter(Boolean).map(c => String(c).toUpperCase()))].sort();
+    const currencies = [...new Set([ui.currency, ...(settings.debts || []), ...(data.transactions || []), ...(data.wallets || []), ...(data.assets || [])].map(r => typeof r === 'string' ? r : r.currency).filter(Boolean).map(c => String(c).toUpperCase()))].sort();
     const options = { ...ui, settings, today, travelId: win.state.activeTravelId };
     const report = buildAccountingReport(data, options);
     const previous = buildAccountingReport(data, { ...options, start: priorYear(ui.start), end: priorYear(ui.end) });
@@ -77,12 +78,24 @@ export function installAccountingRuntime(win = window) {
       else root().innerHTML = '<div class="tb-accounting-panel"><p role="alert">Lecture comptable indisponible. Vérifie la connexion et réessaie ; aucune donnée n’a été modifiée.</p><button class="btn" data-ac-refresh type="button">Réessayer</button></div>';
     } finally { if (current()) pending = false; }
   }
+  function persistDebts(debts, archive = settings.archivedDebts || []) {
+    const next = { ...settings, debts, archivedDebts: archive };
+    try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; status = 'Dettes et remboursements enregistrés sur cet appareil.'; draw(); return true; }
+    catch { setStatus('Enregistrement local impossible. Les données précédentes sont conservées.'); return false; }
+  }
   function setStatus(message) { status = message; const el = root()?.querySelector('[role="status"]'); if (el) el.textContent = message; }
   win.document.addEventListener('click', event => {
     const button = event.target.closest?.('#accounting-root button');
     if (!button) return;
     if (button.hasAttribute('data-ac-refresh')) { refresh(); return; }
     if (!ui || scope !== identity()) { reset(); return; }
+    if (button.dataset.acRemoveDebt) {
+      const removed = settings.debts.find(d => d.id === button.dataset.acRemoveDebt);
+      if (removed) persistDebts(settings.debts.filter(d => d.id !== removed.id), [...(settings.archivedDebts || []), { ...removed, archivedAt: new Date().toISOString() }]); return;
+    }
+    if (button.dataset.acUnlinkDebt) {
+      persistDebts((settings.debts || []).map(d => d.id === button.dataset.acUnlinkDebt ? { ...d, detachedRepayments: [...(d.detachedRepayments || []), ...d.repayments.filter(p => String(p.transactionId) === button.dataset.acUnlinkTx).map(p => ({ ...p, detachedAt: new Date().toISOString() }))], repayments: d.repayments.filter(p => String(p.transactionId) !== button.dataset.acUnlinkTx) } : d)); return;
+    }
     if (button.dataset.acTab) { ui.tab = button.dataset.acTab; ui.source = null; draw(); root().querySelector(`.tb-accounting-tabs [data-ac-tab="${ui.tab}"]`)?.focus(); }
     else if (button.dataset.acSource) { ui.source = button.dataset.acSource; draw(); root().querySelector('#tb-accounting-detail')?.focus(); }
     else if (button.hasAttribute('data-ac-back')) { ui.source = null; draw(); root().querySelector(`.tb-accounting-tabs [data-ac-tab="${ui.tab}"]`)?.focus(); }
@@ -94,10 +107,42 @@ export function installAccountingRuntime(win = window) {
     }
   });
   win.document.addEventListener('submit', event => {
-    if (!['tb-accounting-period', 'tb-accounting-settings'].includes(event.target.id)) return;
+    if (!['tb-accounting-period', 'tb-accounting-settings', 'tb-accounting-debts'].includes(event.target.id) && !event.target.hasAttribute('data-ac-repayment') && !event.target.hasAttribute('data-ac-adjustment')) return;
     event.preventDefault();
     if (!ui || scope !== identity()) { reset(); return; }
     const form = new FormData(event.target);
+    if (event.target.id === 'tb-accounting-debts' || event.target.hasAttribute('data-ac-repayment') || event.target.hasAttribute('data-ac-adjustment')) {
+      const today = data.asOf || localToday();
+      let debts = settings.debts || [];
+      if (event.target.id === 'tb-accounting-debts') {
+        const name = String(form.get('name') || '').trim(), currency = String(form.get('debtCurrency') || '').trim().toUpperCase();
+        const openingAmount = Number(form.get('openingAmount')), openingDate = String(form.get('openingDate'));
+        if (!name || name.length > 120 || !/^[A-Z]{3}$/.test(currency) || !Number.isFinite(openingAmount) || openingAmount <= 0 || !validDate(openingDate) || openingDate > today) { setStatus('Renseigne le créancier, une devise à trois lettres, un solde positif et une date passée ou actuelle.'); return; }
+        const assetId = String(form.get('assetId') || ''), originTransactionId = String(form.get('originTransactionId') || '');
+        const debt = { id: win.crypto.randomUUID(), name, currency, openingAmount, openingDate, assetId, originTransactionId, repayments: [] };
+        const origin = data.transactions.find(t => String(t.id) === originTransactionId);
+        const used = debts.some(d => String(d.originTransactionId) === originTransactionId || d.repayments.some(p => String(p.transactionId) === originTransactionId));
+        if (originTransactionId && (!origin || used || !debtOriginEligible(origin, debt, today, data.links))) { setStatus('Origine invalide : choisis une opération externe réglée, de même devise et montant que le capital de départ, datée au plus tard au départ du suivi, sans autre rattachement.'); return; }
+        if (assetId && !data.assets.some(a => String(a.id) === assetId && (!(a.travel_id || a.travelId) || String(a.travel_id || a.travelId) === String(win.state.activeTravelId)))) { setStatus('Bien indisponible dans ce voyage.'); return; }
+        debts = [...debts, debt];
+      } else if (event.target.hasAttribute('data-ac-adjustment')) {
+        const id = String(form.get('debtId')), date = String(form.get('adjustmentDate')), amount = Number(form.get('adjustmentAmount')), reason = String(form.get('reason') || '').trim();
+        const debt = debts.find(d => d.id === id);
+        if (!debt || !validDate(date) || date < debt.openingDate || date > today || !Number.isFinite(amount) || Math.round(amount * 100) === 0 || !reason || reason.length > 300) { setStatus('Ajustement invalide : date comprise dans le suivi, montant signé non nul et motif requis.'); return; }
+        debts = debts.map(d => d.id === id ? { ...d, adjustments: [...(d.adjustments || []), { id: win.crypto.randomUUID(), date, amount, reason, recordedAt: new Date().toISOString() }] } : d);
+      } else {
+        const id = String(form.get('debtId')), transactionId = String(form.get('transactionId')), principal = Number(form.get('principal'));
+        const debt = debts.find(d => d.id === id), tx = data.transactions.find(t => String(t.id) === transactionId);
+        const ledger = debtLedger(settings, data.transactions, today, data.links);
+        const remaining = ledger.rows.find(d => d.id === id)?.remaining;
+        if (!debt || !tx || !repaymentEligible(tx, debt, today, data.links) || debts.some(d => String(d.originTransactionId) === transactionId || d.repayments.some(p => String(p.transactionId) === transactionId)) || !Number.isFinite(principal) || principal <= 0 || !Number.isFinite(remaining) || Math.round(principal * 100) > Math.round(remaining * 100) || Math.round(principal * 100) > Math.round(Number(tx.amount) * 100)) { setStatus('Remboursement invalide : vérifie la devise, le règlement, le capital et le solde restant. Une transaction ne peut être attribuée qu’une fois.'); return; }
+        debts = debts.map(d => d.id === id ? { ...d, repayments: [...d.repayments, { transactionId, principal }] } : d);
+      }
+      const changedId = event.target.id === 'tb-accounting-debts' ? debts.at(-1).id : String(form.get('debtId'));
+      if (debtLedger({ ...settings, debts }, data.transactions, today, data.links).rows.find(d => d.id === changedId)?.remaining === null) { setStatus('Opération refusée : elle rendrait le solde négatif à une date de l’historique ou nécessite un rapprochement des sources.'); return; }
+      if (persistDebts(debts)) prepareFx();
+      return;
+    }
     if (event.target.id === 'tb-accounting-period') {
       const start = String(form.get('start')), end = String(form.get('end'));
       if (!validDate(start) || !validDate(end) || start > end) { setStatus('Choisis une date de début antérieure ou égale à la date de fin.'); return; }
@@ -109,7 +154,7 @@ export function installAccountingRuntime(win = window) {
         const debt = fieldset.querySelector('[data-ac-debt]').value, receivable = fieldset.querySelector('[data-ac-receivable]').value, equity = fieldset.querySelector('[data-ac-equity]').value, evidence = fieldset.querySelector('[data-ac-evidence]').value.trim();
         if (equity !== '' && !Number.isFinite(Number(equity))) { setStatus('Capitaux propres invalides.'); return; }
         if ([debt, receivable].some(v => v !== '' && (!Number.isFinite(Number(v)) || Number(v) < 0))) { setStatus('Les soldes doivent être des nombres positifs ou zéro.'); return; }
-        balances[cur] = { debt, receivable, equity, evidence, asOf: data.asOf || localToday() };
+        balances[cur] = { ...balances[cur], debt, receivable, equity, evidence, asOf: data.asOf || localToday() };
       }
       const mapping = { ...settings.mapping, ...Object.fromEntries([...event.target.querySelectorAll('[data-ac-mapping]')].map(el => [el.dataset.acMapping, el.value])) };
       const inferredMapping = { ...settings.inferredMapping };

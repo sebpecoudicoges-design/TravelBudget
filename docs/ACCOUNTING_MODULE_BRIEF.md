@@ -61,3 +61,18 @@ Tests unitaires : reclassement, remboursements, exclusion interne stricte, prora
 Le code mort directement remplacé (ancien plan court, exception Trip interne, rendu Mouvements, règle de trésorerie pour le résultat et calcul automatique de capitaux propres par différence) a été retiré. Les paramètres historiques sont conservés seulement pour la migration documentée.
 
 Restent hors périmètre : journal persistant en partie double, clôture, bilans historiques, amortissements dérogatoires, traitement automatique des cessions et financements, synchronisation des réglages et export réglementaire. Ils nécessitent des sources et rapprochements supplémentaires.
+
+
+## Dettes individuelles et traçabilité (3 octobre 2026)
+
+Le Bilan affiche les parts connues de l’actif et du passif lorsque des compléments ou taux restent inconnus. Ces sous-totaux ne valident pas le bilan : l’écart et les ratios restent non calculables si leurs sources manquent.
+
+Une dette comporte un nom/créancier, une devise, un capital initial et une date de départ. Les références facultatives à un bien et/ou à une opération sont indépendantes. Une entrée d’argent liée est retirée des revenus (emprunt reçu) sans modifier la trésorerie source. Une dépense d’origine reste soumise aux règles habituelles de résultat/patrimoine. L’origine doit être réglée, dans la même devise et du même montant que le capital initial, datée au plus tard au départ du suivi. Une référence à un bien ne crée aucun actif supplémentaire.
+
+Les remboursements sont rattachés à des dépenses externes réglées dans la même devise, depuis la date de départ. Une opération ne peut être affectée qu’une fois. Le capital est retiré des charges ; le reliquat conserve son classement et ses dates budgétaires (intérêts/frais à classer correctement). L’historique de dette suit les dates de règlement, distinctes de la reconnaissance budgétaire du résultat. Les remboursements en devise différente et les origines partielles nécessitent pour l’instant un rapprochement externe ; aucune conversion de capital implicite n’est inventée.
+
+Des ajustements signés, datés et motivés augmentent/réduisent le capital, sans mouvement bancaire ni produit/charge automatique. Ils conservent aussi l’horodatage de saisie et se corrigent par un ajustement inverse. Les effets éventuels sur les capitaux propres restent à rapprocher. À date égale les ajustements précèdent les remboursements, puis un identifiant stable départage les événements. Aucun solde intermédiaire négatif n’est accepté. L’historique présente le solde après chaque événement, en devise d’origine ; le bilan courant convertit le capital restant au FX de clôture disponible.
+
+Une source absente, modifiée ou incompatible rend la dette non calculable et déclenche un rapprochement. Détacher un paiement conserve une trace locale de l’annulation ; retirer une dette l’archive avec son historique, hors calcul, et libère ses affectations. Les soldes complémentaires historiques restent séparés : ne pas y ressaisir les dettes individuelles, découverts ou factures déjà recensés.
+
+Ces données restent dans le stockage local existant, isolées par utilisateur et voyage, sans synchronisation serveur ni export général. Le formulaire le précise. L’ancien prototype de saisie agrégée directe dans le Bilan a été remplacé par ce suivi individuel ; le paramétrage complémentaire existant est conservé.

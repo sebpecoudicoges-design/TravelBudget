@@ -48,3 +48,7 @@
 .tb-accounting meter::-webkit-meter-bar { background:var(--panel); border:1px solid var(--border); border-radius:var(--tb-radius-sm); }
 .tb-accounting meter::-webkit-meter-optimum-value { background:var(--tb-lagoon); }
 .tb-accounting-flow .tb-accounting-line { border:0; padding-bottom:0; }
+
+.tb-accounting-debt { border-top:1px solid var(--border); margin-top:22px; padding-top:14px; min-width:0; overflow-wrap:anywhere; }
+.tb-accounting-debt form { margin:18px 0; }
+.tb-accounting-debt li { margin:12px 0; }

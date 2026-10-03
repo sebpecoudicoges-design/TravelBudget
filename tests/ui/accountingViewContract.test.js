@@ -21,7 +21,7 @@ it('escapes source content and discloses provisional complements and renders equ
   const model = { data, report, previous: report, settings: {}, currencies: ['EUR'], scopeName: '<img>', ui: { tab: 'result' } };
   expect(renderAccounting(model)).toContain('&lt;script&gt;');
   expect(renderAccounting(model)).not.toContain('<script>');
-  expect(renderAccounting({ ...model, ui: { tab: 'balance' } })).toContain('Total passif recensé</span><strong>Non disponible');
+  expect(renderAccounting({ ...model, ui: { tab: 'balance' } })).toContain('Passif recensé · part connue</span><strong>0,00 EUR');
 });
 
 it('shows a zero signed category subtotal, ascending accounts and accessible performance visuals', () => {
@@ -46,4 +46,15 @@ it('removes the movements tab and exposes a detailed chart and independently con
  expect(html).toContain('281830');
  expect(renderAccounting({...model,ui:{tab:'settings'}})).toContain('data-ac-equity');
  expect(renderAccounting({...model,ui:{tab:'balance'}})).toContain('data-ac-balance-status="incomplete"');
+});
+
+it('shows dated debt entry, optional links and keeps unknown balance gap explicit', () => {
+ const report = buildAccountingReport({}, {start:'2026-01-01',end:'2026-01-31',today:'2026-01-31',currency:'EUR'});
+ const html = renderAccounting({data:{transactions:[]},report,previous:report,settings:{},currencies:['EUR'],scopeName:'Test',ui:{tab:'balance'}});
+ expect(html).toContain('id="tb-accounting-debts"');
+ expect(html).toContain('name="originTransactionId"');
+ expect(html).toContain('name="assetId"');
+ expect(html).toContain('name="openingDate"');
+ expect(html).toContain('Écart actif − passif</span><strong>Non disponible');
+ expect(html).toContain('sur cet appareil uniquement');
 });
