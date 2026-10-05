@@ -238,7 +238,7 @@ test('one-time enrichment preserves user classification and shows signed subtota
   await expect(page.getByRole('region', { name: 'Indicateurs de performance' })).toBeVisible();
   await expect(page.locator('.tb-accounting-kpi').nth(2)).not.toContainText('Non disponible');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')));
-  expect(saved.classificationVersion).toBe(2);
+  expect(saved.classificationVersion).toBe(3);
   expect(saved.mapping['["expense","Repas"]']).toBe('602');
   expect(saved.mapping['["income","Salaire",""]']).toBe('758110');
   await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();

@@ -89,3 +89,27 @@ Les sélecteurs d’opération d’origine et de remboursement proposent une rec
 Les catégories/sous-catégories accèdent aux comptes des classes 1 à 5 en plus des classes 6/7. Les catégories internes sont visibles et classables, tout en restant exclues des charges, revenus et régularisations. Une affectation de bilan ne crée aucun actif ni dette à partir du seul libellé ; les sources de comptes, biens, dettes et Trips déterminent les valeurs.
 
 Chaque wallet reçoit un sous-compte 512xxx unique, conservé dans `walletAccounts` par utilisateur/voyage. Les codes existants du catalogue sont réservés ; une nouvelle banque ne renumérote pas les anciennes. Auto choisit le wallet de chaque opération interne, même si plusieurs banques partagent une catégorie. Une affectation manuelle explicite reste prioritaire. Le plan expose les sous-comptes bancaires nommés. Les anciennes suggestions automatiques des catégories internes cèdent la place à ce choix par wallet, sans modifier les choix manuels.
+
+
+### Correspondances du catalogue personnel — 5 octobre 2026
+
+La classification version 3 reprend les libellés du catalogue existant, sans renommer les catégories ni modifier les transactions. Au prochain chargement de la comptabilité, elle recalcule une seule fois les affectations automatiques existantes ; les choix manuels, sous-comptes bancaires et choix « automatique » sont conservés. Les nouvelles opérations bénéficient également de ces règles par déduction, même après cette migration. Les paramètres restent locaux à chaque appareil et voyage.
+
+| Catégorie / sous-catégorie | Compte |
+| --- | --- |
+| Course / Eau, Marché, Snacks, Supermarché | 606310 — Alimentation |
+| Course / Produits maison | 606320 — Hygiène et entretien |
+| Repas / Eau | 625720 — Cafés et collations |
+| Abonnement/Mobile / Abonnement app | 618120 — Logiciels et services numériques |
+| Projet Personnel / Abonnement, Logiciel | 618120 — Logiciels et services numériques |
+| Projet Personnel / Matériel | 606350 — Petit équipement non immobilisé |
+| Transport / Location vélo | 613510 — Location de véhicule |
+| Transport Internationale / Visa-run déplacement | 625190 — Autres transports |
+| Souvenir / Vêtement | 651140 — Souvenirs |
+| Caution versée / Logement, Location véhicule, Autre caution | 275000 — Dépôts et cautionnements |
+| Immo / Voiture | 218200 — Véhicules |
+| Immo / Matériel, Immobilisation | 218800 — Autres équipements |
+| Mouvement interne / Change devise, Retrait, Transfert cash, Virement | 512xxx — Sous-compte du portefeuille |
+| Ajustement wallet | 471000 — Contrepartie à identifier |
+
+Les autres correspondances détaillées restent déduites des mots-clés du plan. Une caution reçue peut être un remboursement de dépôt ou une dette envers un tiers : elle reste à vérifier. « Retrait ATM » sous Frais bancaire vise les frais seuls et reste à vérifier pour éviter d'y comptabiliser le principal retiré. Les remboursements sans origine, ventes et libellés génériques restent à classifier. L'affectation à un compte de bilan n'invente aucun actif : les immobilisations et dépôts doivent être rapprochés des sources patrimoniales.

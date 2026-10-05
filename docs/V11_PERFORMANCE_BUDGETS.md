@@ -262,3 +262,5 @@ Le suivi daté des dettes ajoute les origines facultatives, remboursements de ca
 La recherche locale des opérations et les explications des soldes portent la comptabilité à 113,9 / 114 KiB, le lazy à 556,4 / 557 KiB et le JS total à 827,3 / 828 KiB. Initial et CSS restent sous 271 et 79 KiB. Aucun appel réseau ni dépendance de recherche ; les options natives et leur sélection sont conservées.
 
 Le bilan patrimonial automatique, les positions Trip, les fenêtres de dette et les sous-comptes bancaires portent les sources comptables à 119,7 / 120 KiB. Plafonds lazy/JS total ajustés à 561/832 KiB pour 560,6/831,5 mesurés ; initial 270,9 / 271 KiB, CSS sous 79 KiB. Aucune bibliothèque de fenêtre ou dépendance graphique ajoutée. La liste de confirmations quotidienne et sa fonction de rendu ont été supprimées.
+
+Le rapprochement contextuel du catalogue de catégories et la migration des seules affectations automatiques (version 3) portent les sources comptables à 121,5 / 122 KiB, le lazy à 561,9 / 562 KiB et le total JS à 832,8 / 833 KiB. Initial et CSS inchangés ; aucun appel réseau supplémentaire.

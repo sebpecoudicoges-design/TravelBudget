@@ -22,7 +22,7 @@ it.each([
   expect(inferAccount({ type, category, subcategory })).toMatchObject({ account, origin:'automatic' });
 });
 it('does not silently treat capital or unidentified refunds as trading flows', () => {
-  for (const category of ['Caution','Remboursement','Vente','Emprunt','Inconnu']) expect(inferAccount({ type:'expense', category }).origin).toBe('review');
+  for (const category of ['Remboursement','Vente','Emprunt','Inconnu']) expect(inferAccount({ type:'expense', category }).origin).toBe('review');
 });
 it('migrates coarse accounts once, archives prior choices, preserves detailed manual decisions and auto', () => {
   const a={type:'expense',category:'Santé',subcategory:'Assurance santé'}, b={type:'expense',category:'Repas'}, c={type:'income',category:'Salaire'};
@@ -54,4 +54,42 @@ it('assigns stable bank subaccounts and maps internal transactions without resul
  const next=assignWalletAccounts([{id:'z'},{id:'b'},{id:'a'}],first);
  expect(next.walletAccounts.a).toBe(first.walletAccounts.a);expect(next.walletAccounts.b).not.toBe(next.walletAccounts.z);
  expect(resolveAccount({type:'expense',category:'Interne',is_internal:true,wallet_id:'b'},next).account).toBe(next.walletAccounts.b);
+});
+
+// Real catalogue labels: context must win over a misleading isolated keyword.
+it.each([
+ ['Course','', '606310'], ['Course','Eau','606310'], ['Course','Marché','606310'],
+ ['Course','Snacks','606310'], ['Course','Produits maison','606320'],
+ ['Repas','Eau','625720'], ['Abonnement/Mobile','Abonnement app','618120'],
+ ['Projet Personnel','Abonnement','618120'], ['Projet Personnel','Matériel','606350'],
+ ['Transport','Location vélo','613510'], ['Transport Internationale','','625190'],
+ ['Transport Internationale','Visa-run déplacement','625190'], ['Souvenir','Vêtement','651140'],
+ ['Caution','Logement','275000'], ['Caution','Location véhicule','275000'],
+ ['Immo','Voiture','218200'], ['Immo','Matériel','218800'], ['Immobilisation','','218800'],
+ ['Santé','Coiffeur','651170'], ['Revenu','Chomage','758210']
+])('matches catalogue %s / %s to %s', (category,subcategory,account)=>{
+ expect(inferAccount({type:category==='Revenu'?'income':'expense',category,subcategory})).toMatchObject({account,origin:'automatic'});
+});
+it('refreshes version 2 inference once without overwriting manual edits, bank codes or exclusions',()=>{
+ const a={type:'expense',category:'Course',subcategory:'Eau'};
+ const b={type:'expense',category:'Souvenir',subcategory:'Vêtement'};
+ const c={type:'expense',category:'Mouvement interne',wallet_id:'bank'};
+ const d={type:'expense',category:'Immo'};
+ const settings={classificationVersion:2,walletAccounts:{bank:'512001'},mapping:{[mappingKey(a)]:'658900',[mappingKey(b)]:'606340',[mappingKey(c)]:'512001',[mappingKey(d)]:'471'},inferredMapping:{[mappingKey(a)]:'658900',[mappingKey(b)]:'651140'}};
+ const next=completeInitialMapping([a,b,c,d],settings);
+ expect(next.mapping[mappingKey(a)]).toBe('606310');
+ expect(next.mapping[mappingKey(b)]).toBe('606340');
+ expect(next.mapping[mappingKey(c)]).toBe('512001');
+ expect(next.mapping[mappingKey(d)]).toBe('471');
+ expect(completeInitialMapping([a,b,c,d],next)).toBe(next);
+ expect(resolveAccount(c,{walletAccounts:settings.walletAccounts}).account).toBe('512001');
+});
+it('keeps ambiguous bank adjustments, ATM fees, proceeds and deposit receipts reviewable',()=>{
+ for(const tx of [
+  {type:'income',category:'Caution'}, {type:'income',category:'Immo'},
+  {type:'expense',category:'Ajustement wallet'},
+  {type:'expense',category:'Frais bancaire',subcategory:'Retrait ATM'},
+  {type:'income',category:'Revenu',subcategory:'Vente'},
+  {type:'income',category:'Autre',subcategory:'Remboursement'}
+ ]) expect(inferAccount(tx).origin).toBe('review');
 });
