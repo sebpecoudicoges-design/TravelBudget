@@ -4,7 +4,7 @@ import { loadAccountingData, readSettings, saveSettings } from './accountingData
 import { renderAccounting } from './accountingView.js';
 import { loadAccountingFx } from './accountingFx.js';
 import { needsAccountingTransaction, accountingFxDate } from './accountingRecognition.js';
-import { completeInitialMapping } from './accountingMapping.js';
+import { completeInitialMapping, assignWalletAccounts } from './accountingMapping.js';
 import './accounting.css';
 
 const localToday = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
@@ -25,7 +25,7 @@ export function installAccountingRuntime(win = window) {
     const inScope = r => !(r.travel_id || r.travelId) || String(r.travel_id || r.travelId) === String(win.state.activeTravelId);
     const assets = data.assets.filter(inScope);
     const transactions = data.transactions.filter(t => needsAccountingTransaction(t, ui.start, ui.end, today) || needsAccountingTransaction(t, priorYear(ui.start), priorYear(ui.end), today));
-    const rows = [...transactions, ...data.wallets, ...assets];
+    const rows = [...transactions, ...data.wallets, ...assets, ...(data.tripBalances || [])];
     const dates = [today, ...assets.map(a => a.purchase_date), ...transactions.map(t => accountingFxDate(t, today))];
     root().innerHTML = '<p role="status">Consolidation avec les taux FX journaliers…</p>';
     const fx = await loadAccountingFx({ currencies: ui.mode === 'native' ? [] : [...rows.map(r => r.currency), ...Object.keys(settings.balances || {}), ...(settings.debts || []).map(d => d.currency)], target: ui.currency, dates, today, offline: win.tbIsOfflineMode?.() === true, manualRates: snapshot.manualRates || {}, signal: request.signal });
@@ -35,11 +35,12 @@ export function installAccountingRuntime(win = window) {
   function draw() {
     if (!root() || !data || !ui || identity() !== scope) return;
     const today = data.asOf || localToday();
-    const currencies = [...new Set([ui.currency, ...(settings.debts || []), ...(data.transactions || []), ...(data.wallets || []), ...(data.assets || [])].map(r => typeof r === 'string' ? r : r.currency).filter(Boolean).map(c => String(c).toUpperCase()))].sort();
+    const currencies = [...new Set([ui.currency, ...(settings.debts || []), ...(data.transactions || []), ...(data.wallets || []), ...(data.tripBalances || []), ...(data.assets || [])].map(r => typeof r === 'string' ? r : r.currency).filter(Boolean).map(c => String(c).toUpperCase()))].sort();
     const options = { ...ui, settings, today, travelId: win.state.activeTravelId };
     const report = buildAccountingReport(data, options);
     const previous = buildAccountingReport(data, { ...options, start: priorYear(ui.start), end: priorYear(ui.end) });
     root().innerHTML = renderAccounting({ report, previous, data, settings, ui, currencies, status, scopeName: win.state.travels?.find(t => String(t.id) === String(win.state.activeTravelId))?.name || 'Voyage actif' });
+    if (ui.dialog) win.document.getElementById(ui.dialog)?.showModal();
   }
   async function refresh() {
     if (!root()) return;
@@ -64,7 +65,8 @@ export function installAccountingRuntime(win = window) {
       }
       if (!current()) return;
       settings = readSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId);
-      const completed = !data.partial && data.transactions.length ? completeInitialMapping(data.transactions, settings) : settings;
+      const mapped = !data.partial && data.transactions.length ? completeInitialMapping(data.transactions, settings) : settings;
+      const completed = assignWalletAccounts(data.wallets, mapped);
       if (completed !== settings) {
         try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, completed); settings = completed; }
         catch { status = 'Classement initial non enregistré : stockage local indisponible.'; }
@@ -80,10 +82,11 @@ export function installAccountingRuntime(win = window) {
   }
   function persistDebts(debts, archive = settings.archivedDebts || []) {
     const next = { ...settings, debts, archivedDebts: archive };
-    try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; status = 'Dettes et remboursements enregistrés sur cet appareil.'; draw(); return true; }
+    try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; ui.dialog = null; status = 'Dettes et remboursements enregistrés sur cet appareil.'; draw(); return true; }
     catch { setStatus('Enregistrement local impossible. Les données précédentes sont conservées.'); return false; }
   }
-  function setStatus(message) { status = message; const el = root()?.querySelector('[role="status"]'); if (el) el.textContent = message; }
+  function setStatus(message) { status = message; const el = root()?.querySelector('[role="status"]'); if (el) el.textContent = message; const alert = root()?.querySelector('dialog[open] [data-ac-dialog-status]'); if (alert) alert.textContent = message; }
+  win.document.addEventListener('close', event => { if (!event.target.matches?.('#accounting-root dialog')) return; const id = event.target.id; if (ui) ui.dialog = null; [...(root()?.querySelectorAll('[data-ac-dialog]') || [])].find(b => b.dataset.acDialog === id)?.focus(); }, true);
   win.document.addEventListener('input', event => {
     if (!event.target.matches?.('#accounting-root [data-ac-operation-search]')) return;
     const picker = event.target.closest('.tb-accounting-operation-picker'), select = picker.querySelector('select');
@@ -100,6 +103,8 @@ export function installAccountingRuntime(win = window) {
     if (!button) return;
     if (button.hasAttribute('data-ac-refresh')) { refresh(); return; }
     if (!ui || scope !== identity()) { reset(); return; }
+    if (button.dataset.acDialog) { ui.dialog = button.dataset.acDialog; win.document.getElementById(ui.dialog)?.showModal(); return; }
+    if (button.hasAttribute('data-ac-dialog-close')) { button.closest('dialog')?.close(); return; }
     if (button.dataset.acRemoveDebt) {
       const removed = settings.debts.find(d => d.id === button.dataset.acRemoveDebt);
       if (removed) persistDebts(settings.debts.filter(d => d.id !== removed.id), [...(settings.archivedDebts || []), { ...removed, archivedAt: new Date().toISOString() }]); return;
@@ -170,8 +175,8 @@ export function installAccountingRuntime(win = window) {
       const mapping = { ...settings.mapping, ...Object.fromEntries([...event.target.querySelectorAll('[data-ac-mapping]')].map(el => [el.dataset.acMapping, el.value])) };
       const inferredMapping = { ...settings.inferredMapping };
       for (const key of Object.keys(mapping)) if (mapping[key] !== settings.mapping?.[key]) delete inferredMapping[key];
-      const next = { ...settings, mapping, balances, inferredMapping };
-      try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; status = 'Paramétrage enregistré sur cet appareil. Les états ont été recalculés.'; draw(); }
+      const next = { ...settings, mapping, balances, inferredMapping, equityMode: form.get('equityMode') || settings.equityMode || 'calculated' };
+      try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; ui.dialog = null; status = 'Paramétrage enregistré sur cet appareil. Les états ont été recalculés.'; draw(); }
       catch { setStatus('Enregistrement local impossible. Les réglages précédents sont conservés.'); }
     }
   });

@@ -43,9 +43,9 @@ describe('personal accounting statements', () => {
     settings.mapping[categoryKey(t)] = '471';
     expect(buildAccountingReport({ transactions: [t] }, { ...options, settings }).expenses).toBe(0);
   });
-  it('requires confirmed complements and independently sourced equity, never plugs a total', () => {
-    expect(buildAccountingReport({ ...base(), walletBalances: [] }, { ...options, settings: {} })).toMatchObject({ debt: null, receivable: null, cash: null, netWorth: null });
-    expect(buildAccountingReport(base(), { ...options, today: '2026-02-01' })).toMatchObject({ netWorth: 1900, totalAssets: 1900, totalFunding: null });
+  it('defaults absent complements to zero but preserves unknown source balances', () => {
+    expect(buildAccountingReport({ ...base(), walletBalances: [] }, { ...options, settings: {} })).toMatchObject({ debt: 0, receivable: 0, cash: null, netWorth: null });
+    expect(buildAccountingReport(base(), { ...options, today: '2026-02-01' })).toMatchObject({ netWorth: 1900, totalAssets: 1900, totalFunding: 1900 });
   });
   it('preserves residual value, ownership and rounding over a full schedule', () => {
     const schedule = depreciationSchedule({ ...asset, purchase_value: 100, residual_value: 1, depreciation_months: 7 }, 0.5);
@@ -101,14 +101,14 @@ it('nets signed reversals in cents and sorts accounts, categories and dates asce
 });
 it('balances positive wallets, overdrafts, debts and negative net worth without plugging an asset', () => {
   const report = buildAccountingReport({ wallets: [{ id: 'p', currency: 'EUR' }, { id: 'n', currency: 'EUR' }], walletBalances: [{ wallet_id: 'p', effective_balance: 100 }, { wallet_id: 'n', effective_balance: -200 }] }, { ...options, settings: { balances: { EUR: { debt: 50, receivable: 10, asOf: '2025-12-01' } } } });
-  expect(report).toMatchObject({ cash: -100, netWorth: -140, totalAssets: 110, liabilities: 250, totalFunding: null });
-  expect(report.unconfirmed.length).toBeGreaterThan(0);
+  expect(report).toMatchObject({ cash: -100, netWorth: -140, totalAssets: 110, liabilities: 250, totalFunding: 110, confirmedEquity: -140 });
+  expect(report.unconfirmed).toEqual([]);
 });
 it('calculates performance using elapsed days and keeps undefined ratios null', () => {
   const data = { transactions: [tx('salary', { type: 'income', amount: 2000 }), tx('food', { amount: 1000 })], wallets: [{ id: 'w', currency: 'EUR' }], walletBalances: [{ wallet_id: 'w', effective_balance: 3000 }] };
   const report = buildAccountingReport(data, { ...options, end: '2026-12-31' });
-  expect(report).toMatchObject({ savingRate: 50, autonomyMonths: 3.06, debtRatio: 0, totalAssets: 3000, totalFunding: null });
-  expect(buildAccountingReport({}, { ...options, settings: {} })).toMatchObject({ netWorth: null, totalAssets: null, totalFunding: null, savingRate: null, debtRatio: null, autonomyMonths: null });
+  expect(report).toMatchObject({ savingRate: 50, autonomyMonths: 3.06, debtRatio: 0, totalAssets: 3000, totalFunding: 3000 });
+  expect(buildAccountingReport({}, { ...options, settings: {} })).toMatchObject({ netWorth: 0, totalAssets: 0, totalFunding: 0, savingRate: null, debtRatio: null, autonomyMonths: null });
 });
 
 it('does not mistake missing transaction amounts for signed zero', () => {
@@ -124,11 +124,11 @@ it('attaches results to budget dates even when cash dates lie outside the select
 });
 it('creates prepaid charges and accrued liabilities from budget recognition without counting them twice', () => {
   const data={transactions:[tx('prepaid',{amount:590,date_start:'2026-01-01',budget_date_start:'2026-01-01',budget_date_end:'2026-02-28'}),tx('unpaid',{amount:100,pay_now:false})],wallets:[{id:'w',currency:'EUR'}],walletBalances:[{wallet_id:'w',effective_balance:410}]};
-  const settings={balances:{EUR:{debt:0,receivable:0,equity:590,evidence:'Situation vérifiée',asOf:options.today}}};
+  const settings={equityMode:'declared',balances:{EUR:{debt:0,receivable:0,equity:590,evidence:'Situation vérifiée',asOf:options.today}}};
   const report=buildAccountingReport(data,{...options,settings});
   expect(report).toMatchObject({expenses:410,accrualAssets:280,accrualLiabilities:100,totalAssets:690,totalFunding:690,balanceGap:0,balanceStatus:'balanced'});
   expect(report.accrualRows.map(r=>r.account).sort()).toEqual(['401000','486000']);
-  const wrong=buildAccountingReport(data,{...options,settings:{balances:{EUR:{...settings.balances.EUR,equity:500}}}});
+  const wrong=buildAccountingReport(data,{...options,settings:{equityMode:'declared',balances:{EUR:{...settings.balances.EUR,equity:500}}}});
   expect(wrong).toMatchObject({balanceGap:90,balanceStatus:'unbalanced'});
 });
 it('accrues unpaid income and defers prepaid income on budget dates', () => {
@@ -146,4 +146,17 @@ it('records a categorized refund as negative expense and preserves cash directio
 it('uses budget start of an asset for its depreciation period', () => {
   const report=buildAccountingReport({...base(),assets:[{...asset,budget_start_date:'2026-02-01'}]},options);
   expect(report).toMatchObject({depreciation:0,netAssets:1200});
+});
+
+it('adds current Trip claims and debts separately, including FX, without internal expenses',()=>{
+ const data={transactions:[tx('internal',{amount:900,is_internal:true})],tripBalances:[{trip_id:'one',trip_name:'A',currency:'EUR',net:100},{trip_id:'two',trip_name:'B',currency:'EUR',net:-40},{trip_id:'three',currency:'AUD',net:20}],fx:{series:{'AUD:EUR':[{date:options.today,rate:0.5}]}}};
+ const r=buildAccountingReport(data,{...options,settings:{}});
+ expect(r).toMatchObject({tripDebt:40,tripReceivable:110,netWorth:70,confirmedEquity:70,totalAssets:110,totalFunding:110,result:0,balanceGap:0});
+ expect(r.tripRows).toHaveLength(3);
+ expect(buildAccountingReport({...data,tripBalances:null},{...options,settings:{}})).toMatchObject({netWorth:null,tripDebt:null,tripReceivable:null,balanceStatus:'incomplete'});
+ expect(buildAccountingReport({...data,fx:{}},{...options,settings:{}}).netWorth).toBeNull();
+});
+it('keeps manual balance classification out of P&L without inventing an asset',()=>{
+ const t=tx('asset'); const r=buildAccountingReport({transactions:[t]}, {...options,settings:{mapping:{[categoryKey(t)]:'218310'}}});
+ expect(r.expenses).toBe(0);expect(r.netAssets).toBe(0);expect(r.warnings.join(' ')).toContain('affectées au bilan');
 });

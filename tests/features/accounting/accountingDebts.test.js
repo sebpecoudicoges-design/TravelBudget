@@ -9,7 +9,7 @@ const report = (transactions, debts, patch={}) => buildAccountingReport({transac
 it('recognizes loan funding as debt and only repayment interest as budget expense', () => {
  const transactions = [tx('fund',4000,{type:'income',date_start:'2026-01-01'}),tx('pay',110)];
  const r = report(transactions,[loan({originTransactionId:'fund',repayments:[{transactionId:'pay',principal:100}]})],{wallets:[{id:'w',currency:'EUR'}],walletBalances:[{walletId:'w',effectiveBalance:3890}]});
- expect(r).toMatchObject({income:0,expenses:10,trackedDebt:3900,cash:3890,totalFunding:3900,balanceGap:-10});
+ expect(r).toMatchObject({income:0,expenses:10,trackedDebt:3900,cash:3890,totalFunding:3890,balanceGap:0,confirmedEquity:-10});
  expect(r.entries[0]).toMatchObject({sourceAmount:110,principalRepaid:100,amount:10});
  expect(r.debtRows[0]).toMatchObject({paid:100,remaining:3900});
  expect(r.excluded.some(e=>e.reason.includes('Emprunt reçu'))).toBe(true);
@@ -24,7 +24,7 @@ it('dates adjustments and repayments, preserves signed cents and rejects histori
 });
 it('manual adjustments change only debt, never cash, income or expenses', () => {
  const r=report([], [loan({adjustments:[{id:'a',amount:-100,date:'2026-01-03',reason:'Remise'}]})]);
- expect(r).toMatchObject({trackedDebt:3900,income:0,expenses:0,cash:0,balanceGap:-3900});
+ expect(r).toMatchObject({trackedDebt:3900,income:0,expenses:0,cash:0,balanceGap:0,confirmedEquity:-3900});
 });
 it('rejects duplicate assignment, unavailable sources, excess principal and currency mismatches', () => {
  const p=tx('p',100), d=loan({repayments:[{transactionId:'p',principal:100}]});
@@ -46,7 +46,7 @@ it('uses closing FX for debt and excludes unknown amounts from known portions', 
  const d=loan({currency:'AUD'});
  const data={wallets:[{id:'w',currency:'EUR'}],walletBalances:[{walletId:'w',effectiveBalance:100}],fx:{series:{'AUD:EUR':[{date:today,rate:0.6}]}}};
  const r=report([], [d], data);
- expect(r.trackedDebt).toBe(2400);expect(r.knownFunding).toBe(2400);expect(r.balanceGap).toBeNull();expect(r.knownAssets).toBe(100);
+ expect(r.trackedDebt).toBe(2400);expect(r.knownFunding).toBe(100);expect(r.balanceGap).toBe(0);expect(r.knownAssets).toBe(100);
  delete data.fx;
  expect(report([], [d], data)).toMatchObject({trackedDebt:null,knownFunding:0,knownAssets:100,totalFunding:null});
 });

@@ -21,7 +21,7 @@ it('escapes source content and discloses provisional complements and renders equ
   const model = { data, report, previous: report, settings: {}, currencies: ['EUR'], scopeName: '<img>', ui: { tab: 'result' } };
   expect(renderAccounting(model)).toContain('&lt;script&gt;');
   expect(renderAccounting(model)).not.toContain('<script>');
-  expect(renderAccounting({ ...model, ui: { tab: 'balance' } })).toContain('Passif recensé · part connue</span><strong>0,00 EUR');
+  expect(renderAccounting({ ...model, ui: { tab: 'balance' } })).toContain('Total passif recensé</span><strong>0,00 EUR');
 });
 
 it('shows a zero signed category subtotal, ascending accounts and accessible performance visuals', () => {
@@ -45,7 +45,7 @@ it('removes the movements tab and exposes a detailed chart and independently con
  expect(html).toContain('118 comptes');
  expect(html).toContain('281830');
  expect(renderAccounting({...model,ui:{tab:'settings'}})).toContain('data-ac-equity');
- expect(renderAccounting({...model,ui:{tab:'balance'}})).toContain('data-ac-balance-status="incomplete"');
+ expect(renderAccounting({...model,ui:{tab:'balance'}})).toContain('data-ac-balance-status="calculated"');
 });
 
 it('shows dated debt entry, optional links and keeps unknown balance gap explicit', () => {
@@ -55,6 +55,15 @@ it('shows dated debt entry, optional links and keeps unknown balance gap explici
  expect(html).toContain('name="originTransactionId"');
  expect(html).toContain('name="assetId"');
  expect(html).toContain('name="openingDate"');
- expect(html).toContain('Écart actif − passif</span><strong>Non disponible');
+ expect(html).toContain('Écart actif − passif</span><strong>0,00 EUR');
  expect(html).toContain('sur cet appareil uniquement');
+});
+
+it('uses modal debt forms, optional complements, Trip sources and a computed personal capital',()=>{
+ const report=buildAccountingReport({}, {start:'2026-01-01',end:'2026-01-31',today:'2026-01-31',currency:'EUR'});
+ const model={data:{transactions:[]},report,previous:report,settings:{},currencies:['EUR'],scopeName:'Test',ui:{tab:'balance'}};
+ const html=renderAccounting(model);
+ expect(html).not.toContain('Comprendre les données à confirmer');
+ expect(html).toContain('<dialog');expect(html).toContain('Capital personnel net calculé');expect(html).toContain('Créances Trip');
+ expect(renderAccounting({...model,data:{transactions:[{id:'x',type:'expense',category:'Inconnue'}]},ui:{tab:'settings'}})).toContain('value="218310"');
 });

@@ -22,3 +22,14 @@ it('isolates local configuration per account and travel and reports storage fail
 it('requires a signed-in identity and travel before requesting data', async () => {
   await expect(loadAccountingData({ client: {}, userId: '', travelId: 'x' })).rejects.toThrow();
 });
+
+it('reads authenticated Trip balances in stable compound order and distinguishes failure from no debt',async()=>{
+ const calls=[]; let failTrip=false;
+ const client={from(table){ const orders=[];const filters=[]; const q={select(){return q;},eq(k,v){filters.push([k,v]);return q;},in(){return q;},order(k){orders.push(k);return q;},async range(){calls.push({table,orders,filters});return table==='v_trip_user_net_balances' ? failTrip ? {error:new Error('unavailable')} : {data:[{trip_id:'group',currency:'EUR',net:40}]} : {data:[]};}};return q;}};
+ const first=await loadAccountingData({client,userId:'u',travelId:'t'});
+ expect(first.tripBalances).toEqual([{trip_id:'group',currency:'EUR',net:40}]);
+ expect(calls.find(c=>c.table==='v_trip_user_net_balances').orders).toEqual(['trip_id','currency']);
+ expect(calls.find(c=>c.table==='transactions').filters).toEqual([['user_id','u'],['travel_id','t']]);
+ failTrip=true;
+ expect((await loadAccountingData({client,userId:'u',travelId:'t'})).tripBalances).toBeNull();
+});

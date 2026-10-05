@@ -50,6 +50,14 @@ async function setup(page, width = 1440, theme = 'light') {
   await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1 400,00'.replace(' ', '\u202f'));
 }
 
+async function openComplements(page) {
+ if (!(await page.locator('#ac-complements').isVisible())) await page.locator('[data-ac-dialog="ac-complements"]').click();
+}
+async function saveAccountingSettings(page) {
+ if (await page.locator('#ac-complements').isVisible()) await page.locator('#ac-complements [data-ac-dialog-close]').click();
+ await page.getByRole('button',{name:'Enregistrer et recalculer',exact:true}).click();
+}
+
 async function openAccountDetails(page) {
   for (const detail of await page.locator('.tb-accounting-content details').all()) {
     if (await detail.getAttribute('open') === null) await detail.locator(':scope > summary').click();
@@ -71,14 +79,18 @@ for (const width of [1440, 900, 600, 390]) for (const theme of ['light', 'dark']
     await expect(page.locator('.tb-accounting-tabs [data-ac-tab="result"]')).toHaveAttribute('aria-pressed', 'true');
     await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
     await expect(page.locator('.tb-accounting-content')).toContainText('Écart actif − passif');
-    await expect(page.locator('.tb-accounting-content')).toContainText('Non disponible');
+    await expect(page.locator('[data-ac-balance-status]')).toHaveAttribute('data-ac-balance-status','calculated');
     await page.getByRole('button', { name: 'Renseigner les soldes' }).click();
-    await page.getByLabel('Autres dettes', { exact: true }).fill('300');
+    await openComplements(page);
+  await page.getByLabel('Autres dettes', { exact: true }).fill('300');
     await page.getByLabel('Créances complémentaires', { exact: true }).fill('50');
-    await page.getByLabel('Capitaux propres confirmés', { exact: true }).fill('3050.30');
-    await page.getByLabel('Référence de confirmation', { exact: true }).fill('Inventaire et relevés vérifiés');
+    await openComplements(page);
+  await page.locator('[name="equityMode"]').selectOption('declared');
+  await page.getByLabel('Capital de référence (facultatif)', { exact: true }).fill('3050.30');
+    await page.getByLabel('Justificatif ou note (facultatif)', { exact: true }).fill('Inventaire et relevés vérifiés');
+    await page.locator('#ac-complements [data-ac-dialog-close]').click();
     await page.locator('[data-ac-mapping]').filter({ has: page.locator('option[value="613220"]') }).first().selectOption('613220');
-    await page.getByRole('button', { name: 'Enregistrer et recalculer' }).click();
+    await saveAccountingSettings(page);
     await expect(page.locator('.tb-accounting-status')).toContainText('enregistré');
     await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
     await expect(page.locator('.tb-accounting-content')).toContainText('3\u202f050,30 EUR');
@@ -110,8 +122,9 @@ for (const width of [1440, 900, 600, 390]) for (const theme of ['light', 'dark']
 test('scope isolation, persistence, invalid periods and refresh failure', async ({ page }) => {
   await setup(page);
   await page.locator('.tb-accounting-tabs [data-ac-tab="settings"]').click();
+  await openComplements(page);
   await page.getByLabel('Autres dettes', { exact: true }).fill('42');
-  await page.getByRole('button', { name: 'Enregistrer et recalculer' }).click();
+  await saveAccountingSettings(page);
   await page.locator('[data-ac-refresh]').click();
   await expect(page.getByLabel('Autres dettes', { exact: true })).toHaveValue('42');
   await page.locator('[name="start"]').fill('2026-02-01');
@@ -142,7 +155,7 @@ test('ignores in-flight data after account change and preserves explicitly dated
     window.delayData = true;
     window.inFlight = window.renderAccounting();
   });
-  await expect.poll(() => page.evaluate(() => window.pendingData?.length)).toBe(4);
+  await expect.poll(() => page.evaluate(() => window.pendingData?.length)).toBe(5);
   await page.evaluate(async () => {
     window.sbUser = { id: 'user-b' };
     window.dispatchEvent(new Event('tb:auth_scope_changed'));
@@ -186,12 +199,12 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await expect(mapping).toHaveValue('auto');
     await expect(mapping.locator('option:checked')).toContainText('616130');
     await mapping.selectOption('622610');
-    await page.getByRole('button', { name: 'Enregistrer et recalculer' }).click();
+    await saveAccountingSettings(page);
     await expect(mapping).toHaveValue('622610');
     await page.locator('[data-ac-refresh]').click();
     await expect(mapping).toHaveValue('622610');
     await mapping.selectOption('auto');
-    await page.getByRole('button', { name: 'Enregistrer et recalculer' }).click();
+    await saveAccountingSettings(page);
     await expect(mapping).toHaveValue('auto');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.locator('[name="mode"]').selectOption('native');
@@ -223,7 +236,7 @@ test('one-time enrichment preserves user classification and shows signed subtota
   });
   await page.locator('[data-ac-refresh]').click();
   await expect(page.getByRole('region', { name: 'Indicateurs de performance' })).toBeVisible();
-  await expect(page.locator('.tb-accounting-kpi').nth(2)).toContainText('Non disponible');
+  await expect(page.locator('.tb-accounting-kpi').nth(2)).not.toContainText('Non disponible');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')));
   expect(saved.classificationVersion).toBe(2);
   expect(saved.mapping['["expense","Repas"]']).toBe('602');
@@ -251,17 +264,22 @@ test('budget dates, real balance reconciliation and removal of internal amounts'
   await expect(page.locator('#tb-accounting-detail')).toContainText('2026-01-01 → 2026-01-31');
   await expect(page.locator('#tb-accounting-detail')).toContainText('2025-12-15');
   await page.locator('.tb-accounting-tabs [data-ac-tab="settings"]').click();
+  await openComplements(page);
   await page.getByLabel('Autres dettes',{exact:true}).fill('0');
   await page.getByLabel('Créances complémentaires',{exact:true}).fill('0');
-  await page.getByLabel('Capitaux propres confirmés',{exact:true}).fill('2990.30');
-  await page.getByLabel('Référence de confirmation',{exact:true}).fill('Inventaire confirmé');
-  await page.getByRole('button',{name:'Enregistrer et recalculer'}).click();
+  await openComplements(page);
+  await page.locator('[name="equityMode"]').selectOption('declared');
+  await page.getByLabel('Capital de référence (facultatif)',{exact:true}).fill('2990.30');
+  await page.getByLabel('Justificatif ou note (facultatif)',{exact:true}).fill('Inventaire confirmé');
+  await saveAccountingSettings(page);
   await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
   await expect(page.locator('[data-ac-balance-status]')).toHaveAttribute('data-ac-balance-status','balanced');
   await expect(page.locator('[data-ac-balance-status]')).toContainText('0,00 EUR');
   await page.locator('.tb-accounting-tabs [data-ac-tab="settings"]').click();
-  await page.getByLabel('Capitaux propres confirmés',{exact:true}).fill('2900');
-  await page.getByRole('button',{name:'Enregistrer et recalculer'}).click();
+  await openComplements(page);
+  await page.locator('[name="equityMode"]').selectOption('declared');
+  await page.getByLabel('Capital de référence (facultatif)',{exact:true}).fill('2900');
+  await saveAccountingSettings(page);
   await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
   await expect(page.locator('[data-ac-balance-status]')).toHaveAttribute('data-ac-balance-status','unbalanced');
   await expect(page.locator('[data-ac-balance-status]')).toContainText('90,30 EUR');
@@ -273,6 +291,7 @@ test('budget dates, real balance reconciliation and removal of internal amounts'
 for (const width of [1440,390]) for (const theme of ['light','dark']) test(`dated debts, funding, repayments and adjustments ${width} ${theme}`, async ({page}) => {
   await setup(page,width,theme);
   await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
+  await page.getByRole('button',{name:'Ajouter une dette',exact:true}).click();
   const create=page.locator('#tb-accounting-debts');
   await create.getByLabel('Nom de la dette / créancier').fill('Prêt <famille>');
   await create.getByLabel('Capital dû à la date de départ').fill('2000');
@@ -284,15 +303,18 @@ for (const width of [1440,390]) for (const theme of ['light','dark']) test(`date
   await expect(debt).toContainText('2\u202f000,00 EUR');
   await expect(debt).toContainText('Prêt <famille>');
   await expect(debt).toContainText('Ordinateur');
+  await debt.getByRole('button',{name:'Rembourser',exact:true}).click();
   await debt.locator('[data-ac-repayment] select').selectOption('food');
   await debt.getByLabel('Capital remboursé (EUR)').fill('400');
   await debt.getByRole('button',{name:'Rattacher le remboursement'}).click();
   await expect(debt).toContainText('1\u202f600,00 EUR');
+  await debt.getByRole('button',{name:'Ajuster',exact:true}).click();
   await debt.getByLabel('Date de l’ajustement').fill('2026-01-06');
   await debt.getByLabel('Variation signée').fill('-100');
   await debt.getByLabel('Motif de l’ajustement').fill('Remise familiale');
   await debt.getByRole('button',{name:'Enregistrer l’ajustement'}).click();
   await expect(debt).toContainText('1\u202f500,00 EUR');
+  await debt.getByRole('button',{name:'Ajuster',exact:true}).click();
   await debt.getByLabel('Date de l’ajustement').fill('2026-01-07');
   await debt.getByLabel('Variation signée').fill('50');
   await debt.getByLabel('Motif de l’ajustement').fill('Correction du relevé');
@@ -302,6 +324,7 @@ for (const width of [1440,390]) for (const theme of ['light','dark']) test(`date
   await expect(debt).toContainText('2026-01-06 · Ajustement manuel : Remise familiale');
   await expect(debt).toContainText('2026-01-07 · Ajustement manuel : Correction du relevé');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.evaluate(()=>scrollTo(0,0));
   await page.screenshot({path:`test-results/accounting-debts-${width}-${theme}.png`,fullPage:true});
   const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')));
   expect(saved.debts[0].adjustments).toHaveLength(2);
@@ -311,10 +334,12 @@ for (const width of [1440,390]) for (const theme of ['light','dark']) test(`date
   await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
   await expect(page.locator('.tb-accounting-content')).toContainText('-200,00 EUR');
   await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
+  await debt.getByRole('button',{name:'Ajuster',exact:true}).click();
   await debt.getByLabel('Variation signée').fill('-9999');
   await debt.getByLabel('Motif de l’ajustement').fill('Erreur');
   await debt.getByRole('button',{name:'Enregistrer l’ajustement'}).click();
-  await expect(page.locator('.tb-accounting-status')).toContainText('Opération refusée');
+  await expect(page.locator('dialog[open] [data-ac-dialog-status]')).toContainText('Opération refusée');
+  await page.getByRole('button',{name:'Fermer',exact:true}).click();
   await debt.getByText('Historique daté (3)',{exact:true}).click();
   await debt.getByRole('button',{name:'Détacher ce remboursement'}).click();
   await expect(debt).toContainText('1\u202f950,00 EUR');
@@ -328,6 +353,7 @@ for (const width of [1440,390]) for (const theme of ['light','dark']) test(`date
 test('debt storage failure preserves previous state and account change hides its history',async({page})=>{
  await setup(page);
  await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
+ await page.getByRole('button',{name:'Ajouter une dette',exact:true}).click();
  const form=page.locator('#tb-accounting-debts');
  await form.getByLabel('Nom de la dette / créancier').fill('Dette privée');
  await form.getByLabel('Capital dû à la date de départ').fill('100');
@@ -346,10 +372,9 @@ for(const width of [1440,390]) for(const theme of ['light','dark']) test(`operat
  await setup(page,width,theme);
  await page.evaluate(async()=>{localStorage.setItem('tb-accounting-v1:user-a:trip-a',JSON.stringify({balances:{EUR:{debt:10,receivable:20,equity:30,asOf:'2026-01-30',evidence:'Relevé'}}}));await window.renderAccounting();});
  await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
- await page.locator('.tb-accounting-balance-checks summary').click();
- await expect(page.locator('.tb-accounting-balance-checks')).toContainText('Autres dettes : 10,00 EUR');
- await expect(page.locator('.tb-accounting-balance-checks')).toContainText('Créances complémentaires : 20,00 EUR');
- await expect(page.locator('.tb-accounting-balance-checks')).toContainText('Ces montants restent utilisés');
+ await expect(page.locator('.tb-accounting-balance-checks')).toHaveCount(0);
+ await expect(page.locator('[data-ac-balance-status]')).toContainText('Capital personnel net');
+ await page.getByRole('button',{name:'Ajouter une dette',exact:true}).click();
  const search=page.getByRole('searchbox',{name:'Rechercher : Opération d’origine (facultative)',exact:true});
  const select=page.locator('[name="originTransactionId"]');
  await search.fill('2 000 salaire 05/01/2026');
@@ -366,4 +391,25 @@ for(const width of [1440,390]) for(const theme of ['light','dark']) test(`operat
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.evaluate(()=>scrollTo(0,0));
  await page.screenshot({path:`test-results/accounting-search-${width}-${theme}.png`,fullPage:true});
+});
+
+test('Trip sources feed net worth once, bank codes classify internals, modal escapes retain focus',async({page})=>{
+ await setup(page);
+ await page.evaluate(()=>{window.fixture.v_trip_user_net_balances=[{trip_id:'g1',trip_name:'Paris',currency:'EUR',net:120},{trip_id:'g2',trip_name:'Berlin',currency:'EUR',net:-50}];});
+ await page.locator('[data-ac-refresh]').click();
+ await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
+ await expect(page.locator('[data-ac-balance-status]')).toContainText('3\u202f420,30 EUR');
+ await expect(page.locator('.tb-accounting-content')).toContainText('3\u202f370,30 EUR');
+ await page.getByRole('button',{name:'Ajouter une dette',exact:true}).click();
+ await expect(page.locator('#ac-debt-create')).toBeVisible();
+ await page.keyboard.press('Escape');
+ await expect(page.locator('#ac-debt-create')).not.toBeVisible();
+ await expect(page.getByRole('button',{name:'Ajouter une dette',exact:true})).toBeFocused();
+ await page.locator('.tb-accounting-tabs [data-ac-tab="settings"]').click();
+ const mapping=page.locator('.tb-accounting-mapping').filter({hasText:'interne · hors résultat'}).locator('select');
+ await expect(mapping).toHaveCount(1);await expect(mapping).toHaveValue('auto');
+ await expect(mapping.locator('option[value="218310"]')).toHaveCount(1);
+ await expect(mapping.locator('option[value="512001"]')).toHaveCount(1);
+ await page.locator('.tb-accounting-tabs [data-ac-tab="chart"]').click();
+ await expect(page.locator('.tb-accounting-content')).toContainText('512001 · Compte principal');
 });

@@ -121,4 +121,4 @@ export const CHART = Object.freeze([
 ]);
 export const ACCOUNTS = Object.freeze(Object.fromEntries(CHART.map(a => [a.code, a.label])));
 export const accountInfo = code => CHART.find(a => a.code === code);
-export const selectableAccounts = () => CHART.filter(a => ["income", "expense", "suspense"].includes(a.kind) && a.code !== "681120");
+export const selectableAccounts = () => CHART.filter(a => a.code !== "681120");

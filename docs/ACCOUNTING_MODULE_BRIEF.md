@@ -2,7 +2,7 @@
 
 ## Périmètre
 
-Module chargé à la demande depuis Finances → Comptabilité, pour les administrateurs et testeurs. Il couvre les comptes et transactions du voyage actif, ainsi que ses biens et les biens sans voyage. Les devises sont consolidées avec les taux FX existants ; une vue en devise seule reste disponible. Les dates de lecture et le périmètre sont affichés.
+Module chargé à la demande depuis Finances → Comptabilité, pour les administrateurs et testeurs. Il couvre les comptes et transactions du voyage actif, ainsi que ses biens et les biens sans voyage. Les soldes Trip personnels couvrent tous les groupes accessibles, distincts du voyage budgétaire actif ; ce périmètre est explicite dans le bilan. Les devises sont consolidées avec les taux FX existants ; une vue en devise seule reste disponible. Les dates de lecture et le périmètre sont affichés.
 
 Les données sources ne sont pas modifiées. Les réglages sont locaux à l’appareil, isolés par utilisateur et voyage (`tb-accounting-v1`), non synchronisés et absents de l’export général. Aucun schéma SQL ni service distant n’est modifié par ce lot. Il ne s’agit pas d’un journal comptable clôturé ou d’états réglementaires d’entreprise.
 
@@ -30,13 +30,17 @@ Toutes les lignes portant `is_internal` / `isInternal` ou un identifiant de tran
 
 L’ancien onglet Mouvements et sa branche de rendu ont été retirés. Les détails restent accessibles dans les comptes du résultat et du bilan. Les autres exclusions et rapprochements sont consultables depuis le résultat, sans réintroduire les opérations internes comme revenus ou charges.
 
-## Bilan réel et contrôle indépendant
+## Bilan patrimonial et contrôle facultatif
 
-L’actif additionne les comptes positifs, biens nets, créances et charges constatées d’avance. Le passif additionne les découverts, dettes, produits constatés d’avance et **capitaux propres confirmés indépendamment**, résultats inclus à la date du bilan. Le résultat sélectionné n’est pas ajouté une seconde fois.
+L’actif additionne les comptes positifs, biens nets, créances (Trip et régularisations) et charges constatées d’avance. Les dettes comprennent les découverts, dettes suivies, soldes Trip à payer et régularisations. Les compléments manuels non saisis valent **0** à la demande de l’utilisateur. Les valeurs historiques restent conservées ; leur date ne déclenche plus de reconfirmation quotidienne.
 
-Les dettes/créances complémentaires, capitaux propres et référence de confirmation sont saisis par devise. Une case vide n’est pas zéro. Une ancienne date, une référence absente ou des sources à rapprocher restent signalées. Les compléments ne doivent jamais recompter les contreparties déjà calculées depuis les transactions, comptes et biens.
+Par défaut, **108000 · Capital personnel net calculé = actifs recensés − dettes recensées**. C’est aussi le patrimoine net. Le bilan est un bilan patrimonial calculé, équilibré par définition, sans prétendre prouver l’exhaustivité des sources ni créer une écriture fictive. Le résultat n’est pas ajouté une deuxième fois. En mode facultatif « Comparer à un capital déclaré », une référence indépendante permet de détecter un véritable écart. L’absence totale de référence rend ce contrôle non calculable ; les autres devises non renseignées valent 0.
 
-Le patrimoine net calculé reste un indicateur distinct : il n’alimente pas le passif pour forcer l’égalité. Le contrôle affiche quatre états : incomplet, écart réel, égalité à vérifier, équilibré et confirmé dans le périmètre recensé. Le dernier exige des valeurs connues, une égalité au centime et aucune alerte restante. La confirmation est celle des sources/déclarations de l’utilisateur ; ce n’est pas une certification externe. Les ouvertures, cessions et financements sans données ne sont pas inventés.
+Les positions Trip viennent de la vue existante `v_trip_user_net_balances`, sous l’identité authentifiée et avec `security_invoker`. Le signe distingue créance et dette, par groupe et devise ; les positions opposées de groupes différents ne sont pas compensées. Les règlements annulés et entrées non dues sont traités par la vue partagée déjà utilisée par le projet. Lecture paginée et ordonnée par `trip_id,currency`, conversion au taux du bilan. Le bilan expose les groupes et montants, sans créer de charge interne.
+
+Une erreur de lecture Trip, un solde bancaire absent, une source invalide ou un taux FX manquant ne devient jamais zéro : le patrimoine net et les totaux dépendants restent incomplets. Les sous-totaux connus sont alors affichés distinctement.
+
+La liste « Comprendre les données à confirmer » a été supprimée. Les compléments, devises et référence de capital sont dans une fenêtre facultative depuis Paramétrage. Les actions Ajouter une dette, Rembourser et Ajuster ouvrent des fenêtres natives accessibles au clavier ; l’historique reste dépliable sur chaque dette.
 
 ## Indicateurs et vues
 
@@ -71,10 +75,17 @@ Une dette comporte un nom/créancier, une devise, un capital initial et une date
 
 Les remboursements sont rattachés à des dépenses externes réglées dans la même devise, depuis la date de départ. Une opération ne peut être affectée qu’une fois. Le capital est retiré des charges ; le reliquat conserve son classement et ses dates budgétaires (intérêts/frais à classer correctement). L’historique de dette suit les dates de règlement, distinctes de la reconnaissance budgétaire du résultat. Les remboursements en devise différente et les origines partielles nécessitent pour l’instant un rapprochement externe ; aucune conversion de capital implicite n’est inventée.
 
-Des ajustements signés, datés et motivés augmentent/réduisent le capital, sans mouvement bancaire ni produit/charge automatique. Ils conservent aussi l’horodatage de saisie et se corrigent par un ajustement inverse. Les effets éventuels sur les capitaux propres restent à rapprocher. À date égale les ajustements précèdent les remboursements, puis un identifiant stable départage les événements. Aucun solde intermédiaire négatif n’est accepté. L’historique présente le solde après chaque événement, en devise d’origine ; le bilan courant convertit le capital restant au FX de clôture disponible.
+Des ajustements signés, datés et motivés augmentent/réduisent le capital, sans mouvement bancaire ni produit/charge automatique. Ils conservent aussi l’horodatage de saisie et se corrigent par un ajustement inverse. Ils modifient le capital net calculé sans flux bancaire ; en mode capital déclaré, leurs effets restent à rapprocher. À date égale les ajustements précèdent les remboursements, puis un identifiant stable départage les événements. Aucun solde intermédiaire négatif n’est accepté. L’historique présente le solde après chaque événement, en devise d’origine ; le bilan courant convertit le capital restant au FX de clôture disponible.
 
 Une source absente, modifiée ou incompatible rend la dette non calculable et déclenche un rapprochement. Détacher un paiement conserve une trace locale de l’annulation ; retirer une dette l’archive avec son historique, hors calcul, et libère ses affectations. Les soldes complémentaires historiques restent séparés : ne pas y ressaisir les dettes individuelles, découverts ou factures déjà recensés.
 
 Ces données restent dans le stockage local existant, isolées par utilisateur et voyage, sans synchronisation serveur ni export général. Le formulaire le précise. L’ancien prototype de saisie agrégée directe dans le Bilan a été remplacé par ce suivi individuel ; le paramétrage complémentaire existant est conservé.
 
-Les sélecteurs d’opération d’origine et de remboursement proposent une recherche combinée sur montant, libellé, catégorie, sous-catégorie, devise, date de règlement et dates budgétaires. Accents ignorés ; montants français et dates JJ/MM/AAAA acceptés. Une sélection antérieure reste visible si elle ne correspond plus au filtre. Les explications du bilan regroupent par devise les compléments absents, les anciennes valeurs à reconfirmer et la référence manquante ; aucune ancienne déclaration n’est effacée ni remplacée par zéro.
+Les sélecteurs d’opération d’origine et de remboursement proposent une recherche combinée sur montant, libellé, catégorie, sous-catégorie, devise, date de règlement et dates budgétaires. Accents ignorés ; montants français et dates JJ/MM/AAAA acceptés. Une sélection antérieure reste visible si elle ne correspond plus au filtre. Les anciennes déclarations sont conservées dans la fenêtre de compléments facultatifs ; aucun ancien montant renseigné n’est remplacé par zéro.
+
+
+## Comptes de bilan et banques (5 octobre 2026)
+
+Les catégories/sous-catégories accèdent aux comptes des classes 1 à 5 en plus des classes 6/7. Les catégories internes sont visibles et classables, tout en restant exclues des charges, revenus et régularisations. Une affectation de bilan ne crée aucun actif ni dette à partir du seul libellé ; les sources de comptes, biens, dettes et Trips déterminent les valeurs.
+
+Chaque wallet reçoit un sous-compte 512xxx unique, conservé dans `walletAccounts` par utilisateur/voyage. Les codes existants du catalogue sont réservés ; une nouvelle banque ne renumérote pas les anciennes. Auto choisit le wallet de chaque opération interne, même si plusieurs banques partagent une catégorie. Une affectation manuelle explicite reste prioritaire. Le plan expose les sous-comptes bancaires nommés. Les anciennes suggestions automatiques des catégories internes cèdent la place à ce choix par wallet, sans modifier les choix manuels.

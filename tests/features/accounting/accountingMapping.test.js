@@ -47,3 +47,11 @@ it('retains review flags after migration and old capital exclusions', () => {
   expect(resolveAccount(tx,completeInitialMapping([tx])).origin).toBe('review');
   expect(resolveAccount(tx,{mapping:{[categoryKey(tx)]:'471'}}).account).toBe('471000');
 });
+
+it('assigns stable bank subaccounts and maps internal transactions without result classification', async()=>{
+ const {assignWalletAccounts,resolveAccount}=await import('../../../src/features/accounting/accountingMapping.js');
+ const first=assignWalletAccounts([{id:'b'},{id:'a'}]);
+ const next=assignWalletAccounts([{id:'z'},{id:'b'},{id:'a'}],first);
+ expect(next.walletAccounts.a).toBe(first.walletAccounts.a);expect(next.walletAccounts.b).not.toBe(next.walletAccounts.z);
+ expect(resolveAccount({type:'expense',category:'Interne',is_internal:true,wallet_id:'b'},next).account).toBe(next.walletAccounts.b);
+});
