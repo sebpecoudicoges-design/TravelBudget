@@ -1,3 +1,4 @@
+import { positionLedger, assetRattachements } from './accountingPositions.js';
 import { debtLedger } from './accountingDebts.js';
 // Personal management statements, not a statutory or closed general ledger.
 import { mappedAccount, resolveAccount, assetAccount, walletAccount } from './accountingMapping.js';
@@ -41,9 +42,13 @@ export function buildAccountingReport(data, { start, end, currency, travelId, to
   const entries = [], excluded = [], accrualRows = [], warnings = new Set();
   const transactions = unique(data.transactions || []).filter(t => inScope(t, travelId));
   const assets = unique(data.assets || []).filter(a => inScope(a, travelId));
-  const links = data.links || [];
+  const attachments = assetRattachements(settings, { ...data, assets, transactions }, today);
+  const links = attachments.links;
+  attachments.errors.forEach(w => warnings.add(w));
   const ledger = debtLedger(settings, transactions, today, links);
   ledger.warnings.forEach(w => warnings.add(w));
+  const positions = positionLedger(settings, transactions, links, today);
+  positions.errors.forEach(w => warnings.add(w));
   const selected = row => mode !== 'native' || currencyOf(row) === currency;
   const missingFx = new Set();
   const convert = (value, from, at) => {
@@ -63,6 +68,7 @@ export function buildAccountingReport(data, { start, end, currency, travelId, to
     const amount = round(Number(tx.amount) - principal), txLinks = links.filter(l => String(l.transaction_id) === String(tx.id));
     let reason = '';
     if (internalAccounting(tx)) reason = 'Mouvement interne exclu, sans exception Trip';
+    else if (positions.claimed.has(String(tx.id))) reason = 'Capital rattaché à une caution ou créance, hors résultat';
     else if (ledger.fundingTransactions.has(String(tx.id))) reason = 'Emprunt reçu affecté à une dette, hors revenus';
     else if (!window) { reason = 'Dates budgétaires invalides'; warnings.add('Des dates budgétaires sont invalides : résultat et bilan à vérifier.'); }
     else if (tx.amount == null || String(tx.amount).trim() === '' || !Number.isFinite(amount)) { reason = 'Montant invalide'; warnings.add('Des montants sources sont invalides.'); }
@@ -141,6 +147,8 @@ export function buildAccountingReport(data, { start, end, currency, travelId, to
     declaredRows.push({ currency: cur, key, amount });
     return amount;
   };
+  const positionRows = positions.rows.filter(selected).map(p => ({ ...p, ...convert(p.amount, p.currency, today), explanation: 'Versements moins remboursements rattachés, sans nouvelle écriture bancaire. Paramétrage local à cet appareil.' }));
+  const positionAssets = sum(positionRows);
   const declaredDebt = sum(declarationCurrencies.map(cur => ({ amount: declaredValue(cur, 'debt') })));
   const declaredReceivable = sum(declarationCurrencies.map(cur => ({ amount: declaredValue(cur, 'receivable') })));
   const declaredEquity = equityMode === 'declared' ? sum(declarationCurrencies.map(cur => ({ amount: declaredValue(cur, 'equity') }))) : null;
@@ -154,10 +162,10 @@ export function buildAccountingReport(data, { start, end, currency, travelId, to
   const tripReceivable = data.tripBalances === null ? null : sum(tripRows.filter(t => t.side === 'asset'));
   const tripDebt = data.tripBalances === null ? null : sum(tripRows.filter(t => t.side === 'liability'));
   const accrualAssets = sum(accrualRows.filter(r => r.side === 'asset')), accrualLiabilities = sum(accrualRows.filter(r => r.side === 'liability'));
-  const debtRows = ledger.rows.filter(selected).map(d => ({ ...d, amount: convert(d.remaining, d.currency, today).amount }));
+  const debtRows = ledger.rows.filter(selected).map(d => { const balanceFx = convert(d.remaining, d.currency, today); return { ...d, balanceFx, amount: balanceFx.amount }; });
   const trackedDebt = sum(debtRows);
   const debt = sum([{ amount: declaredDebt }, { amount: accrualLiabilities }, { amount: trackedDebt }, { amount: tripDebt }]);
-  const receivable = sum([{ amount: declaredReceivable }, { amount: accrualAssets }, { amount: tripReceivable }]);
+  const receivable = sum([{ amount: positionAssets }, { amount: declaredReceivable }, { amount: accrualAssets }, { amount: tripReceivable }]);
   const netAssets = sum(assetRows);
   const netWorth = [cash, debt, receivable, netAssets].every(Number.isFinite) ? round(cash + netAssets + receivable - debt) : null;
   const availableCash = sum(walletRows.filter(w => w.amount === null || w.amount >= 0));
@@ -167,7 +175,7 @@ export function buildAccountingReport(data, { start, end, currency, travelId, to
   const confirmedEquity = equityMode === 'calculated' ? netWorth : unconfirmed.length ? null : declaredEquity;
   const totalFunding = sum([{ amount: confirmedEquity }, { amount: liabilities }]);
   const knownSum = rows => sum(rows.filter(r => Number.isFinite(r.amount)));
-  const knownAssets = knownSum([...tripRows.filter(t => t.side === 'asset'), ...walletRows.filter(w => w.amount >= 0), ...assetRows, ...accrualRows.filter(r => r.side === 'asset'), ...declaredRows.filter(r => r.key === 'receivable')]);
+  const knownAssets = knownSum([...positionRows, ...tripRows.filter(t => t.side === 'asset'), ...walletRows.filter(w => w.amount >= 0), ...assetRows, ...accrualRows.filter(r => r.side === 'asset'), ...declaredRows.filter(r => r.key === 'receivable')]);
   const knownFunding = knownSum([{ amount: confirmedEquity }, ...tripRows.filter(t => t.side === 'liability'), ...debtRows, ...walletRows.filter(w => w.amount < 0).map(w => ({ amount: -w.amount })), ...accrualRows.filter(r => r.side === 'liability'), ...declaredRows.filter(r => r.key === 'debt')]);
   const balanceGap = totalAssets !== null && totalFunding !== null ? round(totalAssets - totalFunding) : null;
   const periodDays = Math.floor((Date.parse(end < today ? end : today) - Date.parse(start)) / 86400000) + 1;
@@ -184,5 +192,5 @@ export function buildAccountingReport(data, { start, end, currency, travelId, to
   if (reviewCount) warnings.add(`${reviewCount} mouvement(s) à classer ou à confirmer dans le paramétrage.`);
   const indicators = financialIndicators({ entries, income, expenses, depreciation, cash, totalAssets, liabilities, confirmedEquity, netAssets, availableCash, result, periodDays });
   const balanceStatus = balanceGap === null ? 'incomplete' : balanceGap !== 0 ? 'unbalanced' : warnings.size || data.partial ? 'review' : equityMode === 'calculated' ? 'calculated' : 'balanced';
-  return { equityMode, tripRows, tripDebt, tripReceivable, accountLabels: Object.fromEntries(wallets.map(w => [walletAccount(w.id, settings), w.name || 'Compte bancaire'])), debtRows, trackedDebt, knownAssets, knownFunding, indicators, balanceGap, balanceStatus, confirmedEquity, declaredDebt, declaredReceivable, accrualRows, accrualAssets, accrualLiabilities, entries: entries.sort((a, b) => a.account.localeCompare(b.account, 'fr', { numeric: true }) || a.category.localeCompare(b.category, 'fr', { numeric: true }) || (a.subcategory || '').localeCompare(b.subcategory || '', 'fr', { numeric: true }) || a.date.localeCompare(b.date) || a.id.localeCompare(b.id)), excluded, assetRows, walletRows, warnings: [...warnings], income, expenses, depreciation, result, cash, debt, receivable, netAssets, netWorth, declarationCurrencies, unconfirmed, availableCash, overdraft, totalAssets, liabilities, totalFunding, autonomyMonths, debtRatio, cashExpenses, mode, savingRate: income > 0 && expenses !== null && depreciation !== null ? round((income - (expenses - depreciation)) / income * 100) : null, currency, start, end, today };
+  return { positionRows, equityMode, tripRows, tripDebt, tripReceivable, accountLabels: Object.fromEntries(wallets.map(w => [walletAccount(w.id, settings), w.name || 'Compte bancaire'])), debtRows, trackedDebt, knownAssets, knownFunding, indicators, balanceGap, balanceStatus, confirmedEquity, declaredDebt, declaredReceivable, accrualRows, accrualAssets, accrualLiabilities, entries: entries.sort((a, b) => a.account.localeCompare(b.account, 'fr', { numeric: true }) || a.category.localeCompare(b.category, 'fr', { numeric: true }) || (a.subcategory || '').localeCompare(b.subcategory || '', 'fr', { numeric: true }) || a.date.localeCompare(b.date) || a.id.localeCompare(b.id)), excluded, assetRows, walletRows, warnings: [...warnings], income, expenses, depreciation, result, cash, debt, receivable, netAssets, netWorth, declarationCurrencies, unconfirmed, availableCash, overdraft, totalAssets, liabilities, totalFunding, autonomyMonths, debtRatio, cashExpenses, mode, savingRate: income > 0 && expenses !== null && depreciation !== null ? round((income - (expenses - depreciation)) / income * 100) : null, currency, start, end, today };
 }

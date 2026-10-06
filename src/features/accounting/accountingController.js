@@ -1,3 +1,4 @@
+import { positionLedger, assetRattachements } from './accountingPositions.js';
 import { debtLedger, repaymentEligible, debtOriginEligible, matchesOperationSearch } from './accountingDebts.js';
 import { buildAccountingReport, validDate } from './accountingRules.js';
 import { loadAccountingData, readSettings, saveSettings } from './accountingData.js';
@@ -28,7 +29,7 @@ export function installAccountingRuntime(win = window) {
     const rows = [...transactions, ...data.wallets, ...assets, ...(data.tripBalances || [])];
     const dates = [today, ...assets.map(a => a.purchase_date), ...transactions.map(t => accountingFxDate(t, today))];
     root().innerHTML = '<p role="status">Consolidation avec les taux FX journaliers…</p>';
-    const fx = await loadAccountingFx({ currencies: ui.mode === 'native' ? [] : [...rows.map(r => r.currency), ...Object.keys(settings.balances || {}), ...(settings.debts || []).map(d => d.currency)], target: ui.currency, dates, today, offline: win.tbIsOfflineMode?.() === true, manualRates: snapshot.manualRates || {}, signal: request.signal });
+    const fx = await loadAccountingFx({ currencies: ui.mode === 'native' ? [] : [...rows.map(r => r.currency), ...Object.keys(settings.balances || {}), ...(settings.debts || []).map(d => d.currency), ...(settings.positions || []).map(p => p.currency)], target: ui.currency, dates, today, offline: win.tbIsOfflineMode?.() === true, manualRates: snapshot.manualRates || {}, signal: request.signal });
     if (request.signal.aborted || identity() !== currentScope || data !== snapshot) return;
     data.fx = fx; draw();
   }
@@ -85,8 +86,19 @@ export function installAccountingRuntime(win = window) {
     try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; ui.dialog = null; status = 'Dettes et remboursements enregistrés sur cet appareil.'; draw(); return true; }
     catch { setStatus('Enregistrement local impossible. Les données précédentes sont conservées.'); return false; }
   }
+  function persistPositions(next) {
+    try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; ui.dialog = null; status = 'Rattachements enregistrés sur cet appareil.'; draw(); return true; }
+    catch { setStatus('Enregistrement local impossible ; aucun rattachement modifié.'); return false; }
+  }
   function setStatus(message) { status = message; const el = root()?.querySelector('[role="status"]'); if (el) el.textContent = message; const alert = root()?.querySelector('dialog[open] [data-ac-dialog-status]'); if (alert) alert.textContent = message; }
   win.document.addEventListener('close', event => { if (!event.target.matches?.('#accounting-root dialog')) return; const id = event.target.id; if (ui) ui.dialog = null; [...(root()?.querySelectorAll('[data-ac-dialog]') || [])].find(b => b.dataset.acDialog === id)?.focus(); }, true);
+  win.document.addEventListener('change', event => {
+    if (!event.target.matches?.('#accounting-root [data-ac-debt-account]')) return;
+    if (!ui || scope !== identity()) { reset(); return; }
+    const account = event.target.value;
+    if (!['467200','164100','164200','168000','165000'].includes(account)) return;
+    persistDebts((settings.debts || []).map(d => d.id === event.target.dataset.acDebtAccount ? {...d, account} : d));
+  });
   win.document.addEventListener('input', event => {
     if (!event.target.matches?.('#accounting-root [data-ac-operation-search]')) return;
     const picker = event.target.closest('.tb-accounting-operation-picker'), select = picker.querySelector('select');
@@ -105,6 +117,15 @@ export function installAccountingRuntime(win = window) {
     if (!ui || scope !== identity()) { reset(); return; }
     if (button.dataset.acDialog) { ui.dialog = button.dataset.acDialog; win.document.getElementById(ui.dialog)?.showModal(); return; }
     if (button.hasAttribute('data-ac-dialog-close')) { button.closest('dialog')?.close(); return; }
+    if (button.dataset.acUnlinkAsset) {
+      persistPositions({ ...settings, assetLinks: (settings.assetLinks || []).filter(l => String(l.transaction_id) !== button.dataset.acUnlinkAsset), positionAudit: [...(settings.positionAudit || []), {action:'Achat détaché',transactionId:button.dataset.acUnlinkAsset,at:new Date().toISOString()}] }); return;
+    }
+    if (button.dataset.acDetach) {
+      const positions = (settings.positions || []).map(p => p.id === button.dataset.acPosition ? { ...p, transactionIds: p.transactionIds.filter(id => String(id) !== button.dataset.acDetach) } : p).filter(p => p.transactionIds.length);
+      const candidate = { ...settings, positions, positionAudit: [...(settings.positionAudit || []), { action: 'Opération détachée', positionId: button.dataset.acPosition, transactionId: button.dataset.acDetach, at: new Date().toISOString() }] };
+      if (positionLedger(candidate, data.transactions, [...data.links, ...(settings.assetLinks || [])], data.asOf || localToday()).errors.length) { setStatus('Détache d’abord les remboursements : le solde deviendrait négatif.'); return; }
+      persistPositions(candidate); return;
+    }
     if (button.dataset.acRemoveDebt) {
       const removed = settings.debts.find(d => d.id === button.dataset.acRemoveDebt);
       if (removed) persistDebts(settings.debts.filter(d => d.id !== removed.id), [...(settings.archivedDebts || []), { ...removed, archivedAt: new Date().toISOString() }]); return;
@@ -123,10 +144,31 @@ export function installAccountingRuntime(win = window) {
     }
   });
   win.document.addEventListener('submit', event => {
-    if (!['tb-accounting-period', 'tb-accounting-settings', 'tb-accounting-debts'].includes(event.target.id) && !event.target.hasAttribute('data-ac-repayment') && !event.target.hasAttribute('data-ac-adjustment')) return;
+    if (!['tb-accounting-period', 'tb-accounting-settings', 'tb-accounting-debts', 'tb-accounting-position'].includes(event.target.id) && !event.target.hasAttribute('data-ac-repayment') && !event.target.hasAttribute('data-ac-adjustment')) return;
     event.preventDefault();
     if (!ui || scope !== identity()) { reset(); return; }
     const form = new FormData(event.target);
+    if (event.target.id === 'tb-accounting-position') {
+      const id = String(form.get('positionId') || ''), transactionId = String(form.get('transactionId') || '');
+      const tx = data.transactions.find(t => String(t.id) === transactionId);
+      if (id.startsWith('asset:')) {
+        const candidate = { ...settings, positionAudit: [...(settings.positionAudit || []), {action:'Achat rattaché',transactionId,at:new Date().toISOString()}], assetLinks: [...(settings.assetLinks || []), { asset_id: id.slice(6), transaction_id: transactionId, recordedAt: new Date().toISOString() }] };
+        const assets = data.assets.filter(a => !(a.travel_id || a.travelId) || String(a.travel_id || a.travelId) === String(win.state.activeTravelId));
+        const check = assetRattachements(candidate, { ...data, assets }, data.asOf || localToday());
+        if (check.errors.length) { setStatus(check.errors.join(' ')); return; }
+        persistPositions(candidate); return;
+      }
+      const existing = (settings.positions || []).find(p => p.id === id);
+      const name = String(form.get('positionName') || '').trim();
+      if (!tx || (id && !existing) || (!id && (!name || name.length > 120))) { setStatus('Choisis une opération et un élément existant, ou nomme le nouvel élément.'); return; }
+      const position = existing || { id: win.crypto.randomUUID(), name, currency: String(tx.currency).toUpperCase(), account: String(form.get('positionAccount')), transactionIds: [] };
+      const updated = { ...position, transactionIds: [...position.transactionIds, transactionId] };
+      const positions = existing ? settings.positions.map(p => p.id === id ? updated : p) : [...(settings.positions || []), updated];
+      const candidate = { ...settings, positions, positionAudit: [...(settings.positionAudit || []), { action: 'Opération rattachée', positionId: position.id, transactionId, at: new Date().toISOString() }] };
+      const check = positionLedger(candidate, data.transactions, [...data.links, ...(settings.assetLinks || [])], data.asOf || localToday());
+      if (check.errors.length) { setStatus(check.errors.join(' ')); return; }
+      if (persistPositions(candidate)) prepareFx(); return;
+    }
     if (event.target.id === 'tb-accounting-debts' || event.target.hasAttribute('data-ac-repayment') || event.target.hasAttribute('data-ac-adjustment')) {
       const today = data.asOf || localToday();
       let debts = settings.debts || [];
@@ -135,9 +177,11 @@ export function installAccountingRuntime(win = window) {
         const openingAmount = Number(form.get('openingAmount')), openingDate = String(form.get('openingDate'));
         if (!name || name.length > 120 || !/^[A-Z]{3}$/.test(currency) || !Number.isFinite(openingAmount) || openingAmount <= 0 || !validDate(openingDate) || openingDate > today) { setStatus('Renseigne le créancier, une devise à trois lettres, un solde positif et une date passée ou actuelle.'); return; }
         const assetId = String(form.get('assetId') || ''), originTransactionId = String(form.get('originTransactionId') || '');
-        const debt = { id: win.crypto.randomUUID(), name, currency, openingAmount, openingDate, assetId, originTransactionId, repayments: [] };
+        const account = String(form.get('debtAccount') || '467200');
+        if (!['467200','164100','164200','168000','165000'].includes(account)) { setStatus('Compte de dette invalide.'); return; }
+        const debt = { id: win.crypto.randomUUID(), account, name, currency, openingAmount, openingDate, assetId, originTransactionId, repayments: [] };
         const origin = data.transactions.find(t => String(t.id) === originTransactionId);
-        const used = debts.some(d => String(d.originTransactionId) === originTransactionId || d.repayments.some(p => String(p.transactionId) === originTransactionId));
+        const used = (settings.assetLinks || []).some(l => l.transaction_id === originTransactionId) || (settings.positions || []).some(p => p.transactionIds.includes(originTransactionId)) || debts.some(d => String(d.originTransactionId) === originTransactionId || d.repayments.some(p => String(p.transactionId) === originTransactionId));
         if (originTransactionId && (!origin || used || !debtOriginEligible(origin, debt, today, data.links))) { setStatus('Origine invalide : choisis une opération externe réglée, de même devise et montant que le capital de départ, datée au plus tard au départ du suivi, sans autre rattachement.'); return; }
         if (assetId && !data.assets.some(a => String(a.id) === assetId && (!(a.travel_id || a.travelId) || String(a.travel_id || a.travelId) === String(win.state.activeTravelId)))) { setStatus('Bien indisponible dans ce voyage.'); return; }
         debts = [...debts, debt];
@@ -151,7 +195,7 @@ export function installAccountingRuntime(win = window) {
         const debt = debts.find(d => d.id === id), tx = data.transactions.find(t => String(t.id) === transactionId);
         const ledger = debtLedger(settings, data.transactions, today, data.links);
         const remaining = ledger.rows.find(d => d.id === id)?.remaining;
-        if (!debt || !tx || !repaymentEligible(tx, debt, today, data.links) || debts.some(d => String(d.originTransactionId) === transactionId || d.repayments.some(p => String(p.transactionId) === transactionId)) || !Number.isFinite(principal) || principal <= 0 || !Number.isFinite(remaining) || Math.round(principal * 100) > Math.round(remaining * 100) || Math.round(principal * 100) > Math.round(Number(tx.amount) * 100)) { setStatus('Remboursement invalide : vérifie la devise, le règlement, le capital et le solde restant. Une transaction ne peut être attribuée qu’une fois.'); return; }
+        if ((settings.assetLinks || []).some(l => l.transaction_id === transactionId) || (settings.positions || []).some(p => p.transactionIds.includes(transactionId)) || !debt || !tx || !repaymentEligible(tx, debt, today, data.links) || debts.some(d => String(d.originTransactionId) === transactionId || d.repayments.some(p => String(p.transactionId) === transactionId)) || !Number.isFinite(principal) || principal <= 0 || !Number.isFinite(remaining) || Math.round(principal * 100) > Math.round(remaining * 100) || Math.round(principal * 100) > Math.round(Number(tx.amount) * 100)) { setStatus('Remboursement invalide : vérifie la devise, le règlement, le capital et le solde restant. Une transaction ne peut être attribuée qu’une fois.'); return; }
         debts = debts.map(d => d.id === id ? { ...d, repayments: [...d.repayments, { transactionId, principal }] } : d);
       }
       const changedId = event.target.id === 'tb-accounting-debts' ? debts.at(-1).id : String(form.get('debtId'));

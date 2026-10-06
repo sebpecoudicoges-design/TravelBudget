@@ -113,3 +113,16 @@ La classification version 3 reprend les libellés du catalogue existant, sans re
 | Ajustement wallet | 471000 — Contrepartie à identifier |
 
 Les autres correspondances détaillées restent déduites des mots-clés du plan. Une caution reçue peut être un remboursement de dépôt ou une dette envers un tiers : elle reste à vérifier. « Retrait ATM » sous Frais bancaire vise les frais seuls et reste à vérifier pour éviter d'y comptabiliser le principal retiré. Les remboursements sans origine, ventes et libellés génériques restent à classifier. L'affectation à un compte de bilan n'invente aucun actif : les immobilisations et dépôts doivent être rapprochés des sources patrimoniales.
+
+
+### Bilan détaillé et rattachements — 6 octobre 2026
+
+Le bilan affiche les acquisitions brutes par compte 21xxxx et les amortissements cumulés négatifs par compte 28xxxx, puis la valeur nette. Les soldes Trip sont dépliables par groupe ; les dettes individuelles sont dépliables par source, avec origine en devise, FX et historique du capital. Leur compte peut être choisi entre 467200, 164100, 164200, 168000 et 165000. Le capital personnel calculé n'est pas présenté comme une validation indépendante de l'exhaustivité du bilan.
+
+La fenêtre « Rattacher une opération » crée une caution (275000) ou une avance à récupérer (467100) depuis une dépense réglée, ou rattache une opération à un élément existant. Une dépense augmente la créance ; une entrée la diminue. Le solde doit rester positif ou nul à chaque date. Le solde restant est converti au taux du bilan ; les versements et remboursements sont exclus du résultat, sans nouvelle écriture bancaire. Les dates budgétaires continuent de piloter les charges et revenus ordinaires.
+
+La même fenêtre permet de rattacher un achat à un bien existant de même devise et valeur brute. Elle ne crée pas un second bien et conserve l'amortissement de Patrimoine. Les achats partagés ou fractionnés doivent être paramétrés dans Patrimoine via son éditeur existant, accessible depuis le bilan. La création de biens et de dettes utilise également leurs formulaires existants.
+
+Les transactions Trip, internes, non réglées, déjà utilisées, absentes ou d'une autre devise sont refusées pour les créances. Les sources devenues incompatibles restent signalées, sans remplacement du solde inconnu par zéro. Un achat déjà rattaché ne peut être réutilisé pour une créance. Les détachements sont tracés et recalculent le résultat et le bilan. Rattachements et historique restent locaux au compte, voyage et appareil, comme les dettes et réglages existants ; ils ne sont pas synchronisés avec Patrimoine ni inclus dans l'export général.
+
+Le contrôle compact affiche les opérations patrimoniales sans rapprochement. Les comptes sans source recensée sont consultables dans un volet séparé ; leur zéro ne constitue pas une attestation d'absence. Les soldes inconnus et FX manquants restent des anomalies distinctes. L'historique complet du bilan à une date antérieure reste hors de cette évolution : le bilan utilise les soldes courants disponibles.

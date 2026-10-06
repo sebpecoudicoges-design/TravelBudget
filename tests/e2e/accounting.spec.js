@@ -382,7 +382,7 @@ for(const width of [1440,390]) for(const theme of ['light','dark']) test(`operat
  await select.selectOption('salary');
  await search.fill('aucun résultat possible');
  await expect(select).toHaveValue('salary');
- await expect(page.locator('[data-ac-search-count]')).toContainText('0 résultat(s) · sélection actuelle conservée');
+ await expect(page.locator('#ac-debt-create [data-ac-search-count]')).toContainText('0 résultat(s) · sélection actuelle conservée');
  await select.selectOption('');
  await search.fill('repas 500');
  await expect(select.locator('option')).toHaveCount(2);
@@ -412,4 +412,61 @@ test('Trip sources feed net worth once, bank codes classify internals, modal esc
  await expect(mapping.locator('option[value="512001"]')).toHaveCount(1);
  await page.locator('.tb-accounting-tabs [data-ac-tab="chart"]').click();
  await expect(page.locator('.tb-accounting-content')).toContainText('512001 · Compte principal');
+});
+
+for (const width of [1440,390]) for (const theme of ['light','dark']) test(`balance attachments and detailed accounts ${width} ${theme}`,async({page})=>{
+ await setup(page,width,theme);
+ await page.evaluate(()=>{
+  const base={...window.fixture.transactions[1],category:'Caution',subcategory:'Logement'};
+  window.fixture.transactions.push({...base,id:'deposit',label:'Caution logement',amount:800},{...base,id:'return',type:'income',label:'Retour caution',amount:300,date_start:'2026-01-20'});
+ });
+ await page.locator('[data-ac-refresh]').click();
+ await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
+ await expect(page.getByText('Amortissements cumulés · déduction de l’actif',{exact:true})).toBeVisible();
+ await page.locator('[data-ac-dialog="ac-position-link"]').click();
+ await page.locator('[name="positionName"]').fill('Caution logement');
+ await page.locator('#tb-accounting-position [name="transactionId"]').selectOption('deposit');
+ await page.getByRole('button',{name:'Rattacher et recalculer'}).click();
+ await expect(page.locator('#ac-position-link')).not.toBeVisible();
+ await page.locator('[data-ac-dialog="ac-position-link"]').click();
+ await page.locator('[name="positionId"]').selectOption({label:'Caution logement · EUR'});
+ await page.locator('#tb-accounting-position [name="transactionId"]').selectOption('return');
+ await page.getByRole('button',{name:'Rattacher et recalculer'}).click();
+ await expect(page.locator('summary').filter({hasText:'Caution logement · 500,00 EUR'})).toBeVisible();
+ await page.locator('[data-ac-refresh]').click();
+ await expect(page.locator('summary').filter({hasText:'Caution logement · 500,00 EUR'})).toBeVisible();
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')));
+ expect(saved.positions[0].transactionIds).toEqual(['deposit','return']);
+ await page.locator('[data-ac-dialog="ac-position-link"]').click();
+ await page.locator('[name="positionId"]').selectOption(saved.positions[0].id);
+ await page.locator('#tb-accounting-position [name="transactionId"]').selectOption('return');
+ await page.getByRole('button',{name:'Rattacher et recalculer'}).click();
+ await expect(page.locator('#ac-position-link [role="alert"]')).toContainText('déjà utilisée');
+ await page.locator('#ac-position-link [data-ac-dialog-close]').click();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:`test-results/balance-attachments-${width}-${theme}.png`,fullPage:true});
+});
+
+test('asset attachment preserves one asset, survives refresh and local storage failure',async({page})=>{
+ await setup(page);
+ await page.evaluate(()=>{window.fixture.asset_transaction_links=[];});
+ await page.locator('[data-ac-refresh]').click();
+ await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
+ await page.locator('[data-ac-dialog="ac-position-link"]').click();
+ await page.locator('[name="positionId"]').selectOption('asset:a');
+ await page.locator('#tb-accounting-position [name="transactionId"]').selectOption('purchase');
+ await page.evaluate(()=>{window.originalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw new Error('full');};});
+ await page.getByRole('button',{name:'Rattacher et recalculer'}).click();
+ await expect(page.locator('#ac-position-link [role="alert"]')).toContainText('Enregistrement local impossible');
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')).assetLinks)).toBeUndefined();
+ await page.evaluate(()=>{Storage.prototype.setItem=window.originalSetItem;});
+ await page.getByRole('button',{name:'Rattacher et recalculer'}).click();
+ await expect(page.locator('[data-ac-unlink-asset="purchase"]')).toBeVisible();
+ await page.locator('[data-ac-refresh]').click();
+ await expect(page.locator('[data-ac-unlink-asset="purchase"]')).toBeVisible();
+ await page.locator('.tb-accounting-tabs [data-ac-tab="summary"]').click();
+ await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1 400,00'.replace(' ','\u202f'));
+ await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
+ await page.locator('[data-ac-unlink-asset="purchase"]').click();
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')).assetLinks)).toEqual([]);
 });

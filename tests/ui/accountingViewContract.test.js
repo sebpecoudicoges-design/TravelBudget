@@ -67,3 +67,16 @@ it('uses modal debt forms, optional complements, Trip sources and a computed per
  expect(html).toContain('<dialog');expect(html).toContain('Capital personnel net calculé');expect(html).toContain('Créances Trip');
  expect(renderAccounting({...model,data:{transactions:[{id:'x',type:'expense',category:'Inconnue'}]},ui:{tab:'settings'}})).toContain('value="218310"');
 });
+
+it('renders gross assets and separate amortisation drilldown without duplicating net assets',()=>{
+ const data={transactions:[],assets:[{id:'a',name:'Ordinateur',currency:'EUR',purchase_value:1200,purchase_date:'2026-01-01',depreciation_months:12,residual_value:0}],wallets:[],tripBalances:[]};
+ const report=buildAccountingReport(data,{start:'2026-01-01',end:'2026-01-31',today:'2026-01-31',currency:'EUR'});
+ const model={data,report,previous:report,settings:{},currencies:['EUR'],scopeName:'Test',ui:{tab:'balance'}};
+ const html=renderAccounting(model);
+ expect(report.netAssets).toBe(1100);
+ expect(html).toContain('data-ac-source="gross:a"');expect(html).toContain('data-ac-source="amort:a"');
+ expect(html).toContain('281830');expect(html).toContain('Comptes du bilan sans solde recensé');
+ const detail=renderAccounting({...model,ui:{tab:'balance',source:'amort:a'}});
+ expect(detail).toContain('Compte 281830');expect(detail).toContain('-100,00 EUR');
+ expect(detail).not.toContain('undefined');
+});

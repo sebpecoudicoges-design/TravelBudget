@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `18b90d500e1e74328c0fc4fb1009b9671e35f742`
-> Empreinte du snapshot : `dd88a222dc26cc3bcf4f7dd05fcd417e3ba56cc8799b3f69dc900b4f716fb4c8`
-> Généré le : `2026-10-05T08:56:38.162Z`
+> Commit analysé : `3defaf218a3743dbf483e46f4e53c3b6787b94d5`
+> Empreinte du snapshot : `42399cd7df2810be5b5548e0d2b1c529202e4bac120da09c3d73c780eb46375e`
+> Généré le : `2026-10-06T07:17:12.131Z`
 
 # Inventaire du projet TravelBudget
 
@@ -16,8 +16,8 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
-| Modules features | 60 |
-| Fichiers de tests | 142 |
+| Modules features | 61 |
+| Fichiers de tests | 143 |
 | Migrations Supabase | 161 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -234,6 +234,7 @@ Modules :
 - `src/features/accounting/accountingFx.js`
 - `src/features/accounting/accountingIndicators.js`
 - `src/features/accounting/accountingMapping.js`
+- `src/features/accounting/accountingPositions.js`
 - `src/features/accounting/accountingRecognition.js`
 - `src/features/accounting/accountingRules.js`
 - `src/features/accounting/accountingView.js`
@@ -400,6 +401,7 @@ Modules :
 - `tests/features/accounting/accountingFx.test.js`
 - `tests/features/accounting/accountingIndicators.test.js`
 - `tests/features/accounting/accountingMapping.test.js`
+- `tests/features/accounting/accountingPositions.test.js`
 - `tests/features/accounting/accountingRecognition.test.js`
 - `tests/features/accounting/accountingRules.test.js`
 - `tests/features/analysis/analysisCashBreakdown.test.js`
