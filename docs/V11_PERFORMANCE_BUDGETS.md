@@ -266,3 +266,5 @@ Le bilan patrimonial automatique, les positions Trip, les fenêtres de dette et 
 Le rapprochement contextuel du catalogue de catégories et la migration des seules affectations automatiques (version 3) portent les sources comptables à 121,5 / 122 KiB, le lazy à 561,9 / 562 KiB et le total JS à 832,8 / 833 KiB. Initial et CSS inchangés ; aucun appel réseau supplémentaire.
 
 Le 6 octobre, les rattachements de cautions/avances/achats et le bilan détaillé ajoutent accountingPositions.js au domaine lazy. Mesures : sources 137,7 KiB, lazy 574,1 KiB, JS total 845 KiB, CSS 79,1 KiB. Plafonds bornés à 139/575/846/79,2 KiB ; initial inchangé à 271 KiB. Aucun nouvel appel réseau ni dépendance graphique. Les lignes agrégées de dettes/Trip du bilan sont remplacées par des comptes dépliables.
+
+Le 10 octobre, la grille des actions wallet réserve une hauteur intrinsèque et autorise le retour à la ligne des boutons. CSS mesuré à 79,3 KiB ; plafond borné à 79,4 KiB, budgets JavaScript inchangés. Les anciennes propriétés flex de la colonne sont remplacées par une grille.
