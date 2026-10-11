@@ -12,7 +12,7 @@ Après les changements de sources et de documentation, exécuter `npm run atlas:
 
 - Le contrôle syntaxique couvre tous les fichiers `.js`, `.mjs` et `.cjs` de `src`, `tests`, `scripts`, `public`, `netlify`, ainsi que les configurations à la racine. L'ancienne liste d'exception limitée à un script historique est supprimée. Les fichiers générés Android, `dist` et les dépendances ne sont pas relus comme des sources.
 - Les constructions APK/AAB arrêtent désormais immédiatement la chaîne si npm, Capacitor ou Gradle échoue. Une vérification jarsigner en échec fait aussi échouer le script. Un test lance réellement un processus natif avec code 23 et vérifie que l'étape suivante ne s'exécute pas ; il ne construit ni ne publie d'APK.
-- L'empreinte des fichiers texte de l'Atlas normalise les fins de ligne CRLF/LF pour être reproductible entre Windows et Linux, tout en détectant les modifications de contenu.
+- L'empreinte des fichiers texte de l'Atlas normalise les fins de ligne CRLF/LF pour être reproductible entre Windows et Linux, tout en détectant les modifications de contenu. Elle exclut les dumps et métadonnées Supabase locaux ignorés par Git ; les migrations, fonctions et la configuration restent suivies.
 
 ## Limites et suite de l'étape architecture/qualité
 

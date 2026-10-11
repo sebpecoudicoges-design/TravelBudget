@@ -15,8 +15,8 @@ function posix(relativePath) {
   return relativePath.split(path.sep).join('/');
 }
 
-function listFiles(relativeDir, predicate = () => true) {
-  const absoluteDir = path.join(ROOT, relativeDir);
+function listFiles(relativeDir, predicate = () => true, root = ROOT) {
+  const absoluteDir = path.join(root, relativeDir);
   if (!fs.existsSync(absoluteDir)) return [];
   const found = [];
   const visit = (dir) => {
@@ -24,7 +24,7 @@ function listFiles(relativeDir, predicate = () => true) {
       const absolute = path.join(dir, entry.name);
       if (entry.isDirectory()) visit(absolute);
       else {
-        const relative = posix(path.relative(ROOT, absolute));
+        const relative = posix(path.relative(root, absolute));
         if (predicate(relative)) found.push(relative);
       }
     }
@@ -94,16 +94,16 @@ function architectureDocuments() {
   return listFiles('docs', (file) => file.endsWith('.md') && !file.startsWith('docs/generated/') && !file.startsWith('docs/features/'));
 }
 
-function snapshotFingerprint() {
-  const roots = ['src', 'public/legacy', 'tests', 'scripts', 'supabase', 'docs'];
+export function snapshotFingerprint(root = ROOT) {
+  const roots = ['src', 'public/legacy', 'tests', 'scripts', 'supabase/migrations', 'supabase/functions', 'docs'];
   const allowed = /\.(?:js|mjs|cjs|ts|json|md|sql|toml|ps1|css|html)$/i;
   const files = roots.flatMap((dir) => listFiles(dir, (file) => (
     allowed.test(file) && !file.startsWith('docs/generated/')
-  )));
-  for (const rootFile of ['package.json', 'package-lock.json', 'index.html', 'vite.config.js', 'vitest.config.js', 'playwright.config.mjs', 'capacitor.config.json', 'netlify.toml']) {
-    if (fs.existsSync(path.join(ROOT, rootFile))) files.push(rootFile);
+  ), root));
+  for (const rootFile of ['package.json', 'package-lock.json', 'index.html', 'vite.config.js', 'vitest.config.js', 'playwright.config.mjs', 'capacitor.config.json', 'netlify.toml', 'supabase/config.toml']) {
+    if (fs.existsSync(path.join(root, rootFile))) files.push(rootFile);
   }
-  return fingerprintTextFiles(ROOT, files);
+  return fingerprintTextFiles(root, files);
 }
 
 export function fingerprintTextFiles(root, files) {
