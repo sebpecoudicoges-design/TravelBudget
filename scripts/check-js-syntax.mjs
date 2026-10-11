@@ -1,14 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
 const ROOT = process.cwd();
-const INCLUDED_DIRS = ['src', 'tests', 'scripts'];
-const INCLUDED_ROOT_FILES = ['playwright.config.mjs'];
-const INCLUDED_LEGACY_FILES = [
-  'public/legacy/js/42_assets_ui.js',
-];
-const EXTENSIONS = new Set(['.js', '.mjs']);
+const INCLUDED_DIRS = ['src', 'tests', 'scripts', 'public', 'netlify'];
+const EXTENSIONS = new Set(['.js', '.mjs', '.cjs']);
 
 function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
@@ -23,33 +20,42 @@ function walk(dir, out = []) {
   return out;
 }
 
-const files = [
-  ...INCLUDED_DIRS.flatMap((dir) => walk(path.join(ROOT, dir))),
-  ...INCLUDED_ROOT_FILES.map((file) => path.join(ROOT, file)).filter((file) => fs.existsSync(file)),
-  ...INCLUDED_LEGACY_FILES.map((file) => path.join(ROOT, file)).filter((file) => fs.existsSync(file)),
-].sort();
+export function collectJavaScriptFiles(root = ROOT) {
+  return [
+    ...INCLUDED_DIRS.flatMap((dir) => walk(path.join(root, dir))),
+    ...fs.readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && EXTENSIONS.has(path.extname(entry.name)))
+      .map((entry) => path.join(root, entry.name)),
+  ].sort();
+}
 
-const failures = [];
-for (const file of files) {
-  const result = spawnSync(process.execPath, ['--check', file], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  });
-  if (result.status !== 0) {
-    failures.push({
-      file: path.relative(ROOT, file),
-      output: [result.stdout, result.stderr].filter(Boolean).join('\n').trim(),
+export function checkJavaScriptSyntax(root = ROOT) {
+  const files = collectJavaScriptFiles(root);
+  const failures = [];
+  for (const file of files) {
+    const result = spawnSync(process.execPath, ['--check', file], {
+      cwd: root,
+      encoding: 'utf8',
     });
+    if (result.status !== 0) {
+      failures.push({
+        file: path.relative(root, file),
+        output: [result.error?.message, result.stdout, result.stderr].filter(Boolean).join('\n').trim(),
+      });
+    }
   }
+  return { files, failures };
 }
 
-if (failures.length) {
-  console.error(`JS syntax check failed for ${failures.length} file(s):`);
-  for (const failure of failures) {
-    console.error(`\n- ${failure.file}`);
-    if (failure.output) console.error(failure.output);
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  const { files, failures } = checkJavaScriptSyntax();
+  if (failures.length) {
+    console.error(`JS syntax check failed for ${failures.length} file(s):`);
+    for (const failure of failures) {
+      console.error(`\n- ${failure.file}`);
+      if (failure.output) console.error(failure.output);
+    }
+    process.exit(1);
   }
-  process.exit(1);
+  console.log(`JS syntax OK: ${files.length} file(s) checked.`);
 }
-
-console.log(`JS syntax OK: ${files.length} file(s) checked.`);

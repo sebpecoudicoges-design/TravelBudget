@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `6f1433a2b1bbd7157077917093b7cfc2c3b6eae7`
-> Empreinte du snapshot : `2d2aef7773820d1005113cf8f52f09a07faa65aaacb019061cdc32c42a8a9267`
-> Généré le : `2026-10-11T01:03:45.461Z`
+> Commit analysé : `532710e3bd990bdff8dc2c46a37c1f6a143348b8`
+> Empreinte du snapshot : `324bdffc0ef34ba37dc8bd7e53f1c954c3be82f75f64c0400457b0dbed599ce9`
+> Généré le : `2026-10-11T01:10:35.347Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 148 |
+| Fichiers de tests | 150 |
 | Migrations Supabase | 161 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -40,6 +40,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `links:check` | `node scripts/check-public-links.mjs` |
 | `perf:budget` | `node scripts/check-module-budgets.mjs` |
 | `lint:syntax` | `node scripts/check-js-syntax.mjs` |
+| `quality` | `npm run lint:syntax && npm test && npm run docs:check && npm run build && npm run perf:budget` |
 | `lint:db` | `node scripts/lint_db_strings.cjs` |
 | `cap:sync` | `npm run build && npx cap sync android` |
 | `android:open` | `npx cap open android` |
@@ -452,6 +453,8 @@ Modules :
 - `tests/features/trip/tripStore.test.js`
 - `tests/features/trip/tripView.test.js`
 - `tests/features/work/workView.test.js`
+- `tests/scripts/androidCommand.test.js`
+- `tests/scripts/atlasFingerprint.test.js`
 - `tests/ui/accountingViewContract.test.js`
 - `tests/ui/analysisDrilldownViewContract.test.js`
 - `tests/ui/analysisFilterViewContract.test.js`
@@ -710,6 +713,7 @@ Modules :
 - `docs/PLAY_STORE_READINESS.md`
 - `docs/PROJECT_ATLAS.md`
 - `docs/PROJECT_PAGE_CHECKLIST.md`
+- `docs/QUALITY_PIPELINE.md`
 - `docs/README.md`
 - `docs/STABILIZATION_CHECKLIST_10.5.316.md`
 - `docs/SUBSCRIPTIONS_NEXT_CHECKLIST.md`

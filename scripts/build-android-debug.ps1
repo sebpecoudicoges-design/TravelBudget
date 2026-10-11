@@ -4,6 +4,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "android-command.ps1")
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $JavaHome = "D:\Push\jdk-21\jdk-21.0.11+10"
@@ -44,8 +45,8 @@ try {
   Get-ChildItem -LiteralPath $DownloadsDir -Filter "*.apk" -File -ErrorAction SilentlyContinue | Remove-Item -Force
   Get-ChildItem -LiteralPath $DownloadsDir -Filter "*.aab" -File -ErrorAction SilentlyContinue | Remove-Item -Force
 
-  npm.cmd run build
-  npx.cmd cap sync android
+  Invoke-CheckedAndroidCommand -Command "npm.cmd" -Arguments @("run", "build")
+  Invoke-CheckedAndroidCommand -Command "npx.cmd" -Arguments @("cap", "sync", "android")
 
   $NestedApks = @()
   if (Test-Path $AndroidPublicDir) {
@@ -58,7 +59,7 @@ try {
 
   Push-Location "android"
   try {
-    .\gradlew.bat clean assembleDebug
+    Invoke-CheckedAndroidCommand -Command ".\gradlew.bat" -Arguments @("clean", "assembleDebug")
   } finally {
     Pop-Location
   }

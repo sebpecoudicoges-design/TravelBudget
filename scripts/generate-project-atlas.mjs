@@ -103,11 +103,16 @@ function snapshotFingerprint() {
   for (const rootFile of ['package.json', 'package-lock.json', 'index.html', 'vite.config.js', 'vitest.config.js', 'playwright.config.mjs', 'capacitor.config.json', 'netlify.toml']) {
     if (fs.existsSync(path.join(ROOT, rootFile))) files.push(rootFile);
   }
+  return fingerprintTextFiles(ROOT, files);
+}
+
+export function fingerprintTextFiles(root, files) {
   const hash = createHash('sha256');
   for (const relativePath of [...new Set(files)].sort()) {
     hash.update(relativePath);
     hash.update('\0');
-    hash.update(fs.readFileSync(path.join(ROOT, relativePath)));
+    // Git may check text files out as CRLF on Windows and LF in Linux CI.
+    hash.update(fs.readFileSync(path.join(root, relativePath), 'utf8').replace(/\r\n/g, '\n'));
     hash.update('\0');
   }
   return hash.digest('hex');

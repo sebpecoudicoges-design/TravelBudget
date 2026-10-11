@@ -27,7 +27,7 @@ describe('Android release bundle contract', () => {
     expect(gradle).toContain('signingConfigs');
     expect(script).toContain('bundleRelease');
     expect(script).toContain('Signature release manquante');
-    expect(script).toContain('jarsigner.exe -verify -certs');
+    expect(script).toContain('-Command "jarsigner.exe" -Arguments @("-verify", "-certs", $TargetBundle)');
     expect(debugScript).toContain('Filter "*.aab"');
     expect(debugScript).toContain('Upload Supabase Storage echoue');
     expect(debugScript).toContain('SUPABASE_TELEMETRY_DISABLED');

@@ -27,7 +27,8 @@ Les sources applicatives Trip déjà modifiées avant ce lot sont conservées et
 - APK **7 015 964 octets**, signature v2 vérifiée ; même certificat debug que l'APK 10.5.372 précédent.
 - Publication Supabase Storage réussie ; téléchargement public relu et SHA-256 identique au fichier local : `68BC3312976FAB4565B18A1D35700C6487BC7B4B331D949DA63B114690F0C6AA`.
 - [APK 10.5.373](https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.373-20261010-092634-debug.apk).
-- Logs, audit npm et relecture distante conservés localement dans `.codex/releases/10.5.373/`, exclus de Git. Le contrat E2E historique du H1 de la page Projet, déjà défaillant lors de l'audit initial, n'est pas corrigé dans ce lot.
+- Logs, audit npm et relecture distante conservés localement dans `.codex/releases/10.5.373/`, exclus de Git. Le contrat E2E historique du H1 et son sélecteur de lien Pecloud ont été actualisés lors de la publication ; le scénario Projet passe à 1440/390 px, clair/sombre.
+- Push `532710e` effectué ; page Projet et Atlas 10.5.373 relus sur le site public le 11 octobre 2026. La page pointe bien vers l'APK vérifié ci-dessus.
 
 ## Contrôles sur téléphone restant à effectuer
 
@@ -40,4 +41,4 @@ Aucun appareil ADB n'était connecté lors de la préparation. Ne pas déclarer 
 
 ## Portée
 
-Ce lot corrige le runtime natif. Les autres alertes npm, l'architecture, la base de données et les défauts fonctionnels restent suivis dans `.codex/audits/2026-10-10/SUIVI_CORRECTIONS.md`, dans l'ordre demandé. Les sources web mises à jour localement ne sont pas un déploiement web.
+Ce lot corrige le runtime natif. Les autres alertes npm, l'architecture, la base de données et les défauts fonctionnels restent suivis dans `.codex/audits/2026-10-10/SUIVI_CORRECTIONS.md`, dans l'ordre demandé. La publication web a été vérifiée après le push ; elle ne remplace pas l'installation du nouvel APK sur les appareils.

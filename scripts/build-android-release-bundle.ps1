@@ -4,6 +4,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "android-command.ps1")
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $JavaHome = "D:\Push\jdk-21\jdk-21.0.11+10"
@@ -78,8 +79,8 @@ try {
   Get-ChildItem -LiteralPath $DownloadsDir -Filter "*.apk" -File -ErrorAction SilentlyContinue | Remove-Item -Force
   Get-ChildItem -LiteralPath $DownloadsDir -Filter "*.aab" -File -ErrorAction SilentlyContinue | Remove-Item -Force
 
-  npm.cmd run build
-  npx.cmd cap sync android
+  Invoke-CheckedAndroidCommand -Command "npm.cmd" -Arguments @("run", "build")
+  Invoke-CheckedAndroidCommand -Command "npx.cmd" -Arguments @("cap", "sync", "android")
 
   $NestedPackages = @()
   if (Test-Path $AndroidPublicDir) {
@@ -92,7 +93,7 @@ try {
 
   Push-Location "android"
   try {
-    .\gradlew.bat clean bundleRelease
+    Invoke-CheckedAndroidCommand -Command ".\gradlew.bat" -Arguments @("clean", "bundleRelease")
   } finally {
     Pop-Location
   }
@@ -114,7 +115,7 @@ try {
   Write-Host "AAB SHA256: $Hash"
 
   if ($HasSigning) {
-    jarsigner.exe -verify -certs $TargetBundle | Out-Host
+    Invoke-CheckedAndroidCommand -Command "jarsigner.exe" -Arguments @("-verify", "-certs", $TargetBundle)
   }
 } finally {
   Pop-Location
