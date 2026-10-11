@@ -424,7 +424,7 @@ export function buildTripSettlementRpcArgs({ tripId, currency, amount, fromMembe
   };
 }
 
-export function computeTripAnalysis({ expenses = [], members = [], shares = [], pivot, convertAmount, categoryForExpense }) {
+export function computeTripAnalysis({ expenses = [], members = [], shares = [], settlementEvents = [], pivot, convertAmount, categoryForExpense }) {
   const toPivot = typeof convertAmount === 'function'
     ? convertAmount
     : ((amount) => Number(amount) || 0);
@@ -448,6 +448,7 @@ export function computeTripAnalysis({ expenses = [], members = [], shares = [], 
     participantTotals.set(id, {
       paid: 0,
       owed: 0,
+      settlementNet: 0,
       expenseCount: 0,
       name: member?.name || '',
       isMe: !!member?.isMe,
@@ -476,6 +477,17 @@ export function computeTripAnalysis({ expenses = [], members = [], shares = [], 
     }
   }
 
+  // A payment reduces the receiver's claim and the sender's debt.
+  // Keep spending/category totals independent of these reimbursements.
+  for (const event of settlementEvents || []) {
+    if (!event || event.cancelledAt || event.cancelled_at) continue;
+    const amount = Number(toPivot(event.amount, event.currency, event)) || 0;
+    const sender = participantTotals.get(String(event.fromMemberId || event.from_member_id || ''));
+    const receiver = participantTotals.get(String(event.toMemberId || event.to_member_id || ''));
+    if (sender) sender.settlementNet += amount;
+    if (receiver) receiver.settlementNet -= amount;
+  }
+
   const categories = Array.from(categoryTotals.entries())
     .map(([name, amount]) => ({ name, amount: round2(amount) }))
     .filter((row) => Math.abs(row.amount) > 0.004)
@@ -488,7 +500,7 @@ export function computeTripAnalysis({ expenses = [], members = [], shares = [], 
       isMe: row.isMe,
       paid: round2(row.paid),
       owed: round2(row.owed),
-      net: round2(row.paid - row.owed),
+      net: round2(row.paid - row.owed + row.settlementNet),
       expenseCount: row.expenseCount || 0,
     }))
     .sort((a, b) => Math.abs(b.net) - Math.abs(a.net) || b.paid - a.paid || String(a.name).localeCompare(String(b.name)));

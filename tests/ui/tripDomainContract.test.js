@@ -52,6 +52,15 @@ describe('Trip domain contract', () => {
     }
   });
 
+  it('passes settlements to the only participant analysis calculator', () => {
+    const analysis = legacy.slice(legacy.indexOf('function _buildTripAnalysis('), legacy.indexOf('function _tripHistoryFilterState('));
+    expect(analysis).toContain('window.Core.tripRules.computeTripAnalysis');
+    expect(analysis).toContain('settlementEvents: tripState.settlementEvents || []');
+    expect(analysis).not.toContain('participantTotals');
+    expect(view).toContain('Solde après règlements');
+    expect(view).not.toContain('Net = payé - part due');
+  });
+
   it('centralizes Supabase reads and writes in the Trip repository', () => {
     for (const token of [
       'loadActiveTripData',

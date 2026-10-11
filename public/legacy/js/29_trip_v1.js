@@ -637,65 +637,16 @@ async function _copyToClipboard(text) {
   function _buildTripAnalysis(expenses, members, shares) {
     const pivot = _tripPivotCurrency();
     const txMap = _txByIdMap();
-    const core = window.Core?.tripRules;
-    if (core?.computeTripAnalysis) {
-      return core.computeTripAnalysis({
-        expenses,
-        members,
-        shares,
-        pivot,
-        convertAmount: (amount, currency) => _tripConvertToPivot(amount, currency),
-        categoryForExpense: (expense) => _tripAnalysisCategoryKey(expense, txMap),
-      });
-    }
-
-    const sharesByExpense = _groupBy(shares || [], s => s.expenseId);
-    const categoryTotals = new Map();
-    const participantTotals = new Map();
-    for (const m of (members || [])) {
-      participantTotals.set(m.id, { paid: 0, owed: 0, net: 0, expenseCount: 0, name: m.name, isMe: !!m.isMe });
-    }
-
-    for (const ex of (expenses || [])) {
-      const exAmountPivot = _tripConvertToPivot(ex?.amount, ex?.currency);
-      const category = _tripAnalysisCategoryKey(ex, txMap);
-      categoryTotals.set(category, (categoryTotals.get(category) || 0) + exAmountPivot);
-
-      const payerId = ex?.paidByMemberId;
-      if (payerId && participantTotals.has(payerId)) {
-        const row = participantTotals.get(payerId);
-        row.paid += exAmountPivot;
-        row.expenseCount += 1;
-      }
-
-      const sh = sharesByExpense.get(ex?.id) || [];
-      for (const row of sh) {
-        const memberId = row?.memberId;
-        if (!memberId || !participantTotals.has(memberId)) continue;
-        participantTotals.get(memberId).owed += _tripConvertToPivot(row?.shareAmount, ex?.currency);
-      }
-    }
-
-    const categories = Array.from(categoryTotals.entries())
-      .map(([name, amount]) => ({ name, amount: _round2(amount) }))
-      .filter(x => x.amount > 0.004)
-      .sort((a, b) => b.amount - a.amount);
-
-    const participants = Array.from(participantTotals.entries())
-      .map(([id, row]) => ({
-        id,
-        name: row.name,
-        isMe: row.isMe,
-        paid: _round2(row.paid),
-        owed: _round2(row.owed),
-        net: _round2(row.paid - row.owed),
-        expenseCount: row.expenseCount || 0,
-      }))
-      .sort((a, b) => Math.abs(b.net) - Math.abs(a.net) || b.paid - a.paid || a.name.localeCompare(b.name));
-
-    return { pivot, categories, participants };
+    return window.Core.tripRules.computeTripAnalysis({
+      expenses,
+      members,
+      shares,
+      settlementEvents: tripState.settlementEvents || [],
+      pivot,
+      convertAmount: (amount, currency) => _tripConvertToPivot(amount, currency),
+      categoryForExpense: (expense) => _tripAnalysisCategoryKey(expense, txMap),
+    });
   }
-
 
   function _tripHistoryFilterState() {
     const core = window.Core?.tripRules;
@@ -2793,6 +2744,13 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     const shares = (tripState.shares || []).filter(s => s.expenseId === expenseId);
     const amounts = {};
     shares.forEach(s => { amounts[s.memberId] = Number(s.shareAmount || 0); });
+    const me = (tripState.members || []).find(m => m.isMe);
+    const myShare = me ? Number(amounts[me.id] || 0) : 0;
+    const localShareLink = (tripState.budgetLinks || []).find(link =>
+      link.expenseId === expenseId && link.memberId === me?.id);
+    let budgetTx = localShareLink?.transactionId
+      ? (state?.transactions || []).find(tx => tx.id === localShareLink.transactionId)
+      : null;
 
     let walletId = "";
     let category = ex.category || "Autre";
@@ -2807,7 +2765,6 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
       walletId = localTx.walletId || localTx.wallet_id || walletId;
       category = localTx.category || category;
       subcategory = localTx.subcategory || subcategory;
-      outOfBudget = (localTx.outOfBudget === true || localTx.out_of_budget === true);
       budgetDateStart = localTx.budgetDateStart || localTx.budget_date_start || budgetDateStart;
       budgetDateEnd = localTx.budgetDateEnd || localTx.budget_date_end || budgetDateEnd;
     }
@@ -2815,18 +2772,24 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
       || (typeof navigator !== "undefined" && navigator.onLine === false);
     try {
       const audit = offline ? null : await _fetchExpenseAuditDetails(expenseId);
-      const tx = (audit?.myShareLink ? audit.budgetTransactionsById.get(audit.myShareLink.transactionId) : null)
-        || audit?.walletTransaction
-        || null;
+      budgetTx = (audit?.myShareLink ? audit.budgetTransactionsById.get(audit.myShareLink.transactionId) : null) || budgetTx;
+      // Only a payment entirely owed by the current payer can also be their budget share.
+      if (!budgetTx && me?.id === ex.paidByMemberId && myShare > 0 && Math.abs(myShare - Number(ex.amount)) < 0.005) budgetTx = audit?.walletTransaction || localTx;
+      const tx = budgetTx;
       if (tx) {
         walletId = tx.walletId || "";
         category = tx.category || category;
         subcategory = tx.subcategory || subcategory;
-        outOfBudget = tx.outOfBudget === true;
         budgetDateStart = tx.budgetDateStart || budgetDateStart;
         budgetDateEnd = tx.budgetDateEnd || budgetDateEnd;
       }
     } catch (_) {}
+
+    if (!budgetTx && me?.id === ex.paidByMemberId && myShare > 0 && Math.abs(myShare - Number(ex.amount)) < 0.005) budgetTx = localTx;
+    if (!budgetTx && myShare > 0 && (ex.transactionId || localShareLink)) {
+      throw new Error("Impossible de vérifier ta part Budget. Rétablis la connexion puis réessaie.");
+    }
+    if (budgetTx) outOfBudget = (budgetTx.outOfBudget ?? budgetTx.out_of_budget) === true;
 
     return {
       expenseId: ex.id,
@@ -2856,8 +2819,9 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     const ex = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!ex) throw new Error("Dépense introuvable.");
 
+    const draft = await _buildEditDraftForExpense(expenseId);
     tripState.editingExpenseId = expenseId;
-    tripState.editingExpenseDraft = await _buildEditDraftForExpense(expenseId);
+    tripState.editingExpenseDraft = draft;
     await _renderUI();
   }
 

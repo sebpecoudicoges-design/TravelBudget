@@ -171,10 +171,10 @@ test('keeps the public Project page premium and uncluttered at 1440px and 390px'
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/projet.html');
 
-  await expect(page.locator('h1')).toContainText('BudgetPacker');
+  await expect(page.locator('h1')).toContainText('Ton budget, tes documents et tes objectifs. Un seul cockpit.');
   await expect(page.locator('#admin-tests')).toHaveCount(0);
   await expect(page.locator('#checklist')).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Pecloud' })).toHaveAttribute('href', 'https://pecloud.fr/');
+  await expect(page.getByRole('link', { name: 'Pecloud', exact: true })).toHaveAttribute('href', 'https://pecloud.fr/');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--tb-coral').trim())).toBe('#ff6b4a');
 

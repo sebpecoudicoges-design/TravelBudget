@@ -537,7 +537,7 @@ export function renderTripAnalysisBars({
                 </div>
                 <div class="trip-analysis-row-values">
                   <strong style="color:${tone};">${escapeHTML(formatMoney(net, pivot))}</strong>
-                  <div class="muted" style="font-size:12px;">${escapeHTML(txt('Net = payé - part due', 'Net = paid - owed share'))}</div>
+                  <div class="muted" style="font-size:12px;">${escapeHTML(txt('Solde après règlements', 'Balance after settlements'))}</div>
                 </div>
               </div>
               <div style="display:grid; gap:6px;">

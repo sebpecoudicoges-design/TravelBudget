@@ -6,10 +6,10 @@ Statut : **en attente de la campagne de stabilisation module par module ouverte 
 
 ## Etat actuel
 
-- Version web courante : `10.5.354` ; dernier APK de test : `10.5.341` (aucun APK genere pour les lots web `10.5.342` a `10.5.354`).
+- Version locale : `10.5.373` ; APK de test publié : `10.5.373`, avec Capacitor Android `8.5.3`. Déploiement web non effectué dans ce lot.
 - Package Android : `com.travelbudget.app`.
 - Version Android derivee de `package.json`.
-- APK de test `travelbudget-10.5.341-20260810-192605-debug.apk` publie via Supabase Storage ; SHA-256 `3CC0F8597939B3F47AD9F325AD21C0C5E9C5DC3319B4B408E26F023FCAEDE37D`.
+- APK de test `travelbudget-10.5.373-20261010-092634-debug.apk` publié via Supabase Storage ; SHA-256 `68BC3312976FAB4565B18A1D35700C6487BC7B4B331D949DA63B114690F0C6AA`. Signature et relecture distante vérifiées ; validation téléphone restante. Voir [le lot sécurité Android](ANDROID_SECURITY_10_5_373.md).
 - Workflow AAB disponible :
   - `npm run android:bundle-check`
   - `npm run android:bundle-release`

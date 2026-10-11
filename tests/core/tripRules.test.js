@@ -489,6 +489,44 @@ describe('trip rules core', () => {
     ]);
   });
 
+  it('nets active multi-currency reimbursements without changing spending totals', () => {
+    const input = {
+      pivot: 'EUR',
+      members: [{ id: 'seb', name: 'Seb' }, { id: 'd', name: 'Dimitri' }],
+      expenses: [
+        { id: 'aud', amount: 138.73, currency: 'AUD', paidByMemberId: 'seb' },
+        { id: 'eur', amount: 96.78, currency: 'EUR', paidByMemberId: 'seb' },
+      ],
+      shares: [
+        { expenseId: 'aud', memberId: 'd', shareAmount: 138.73 },
+        { expenseId: 'eur', memberId: 'd', shareAmount: 96.78 },
+      ],
+      convertAmount: (amount, currency) => Number(amount) * (currency === 'AUD' ? 0.61625 : 1),
+    };
+    const before = computeTripAnalysis(input);
+    expect(before.participants.find(row => row.id === 'seb').net).toBe(182.27);
+    const after = computeTripAnalysis({ ...input, settlementEvents: [
+      { amount: 100, currency: 'AUD', fromMemberId: 'd', toMemberId: 'seb' },
+      { amount: 100, currency: 'AUD', fromMemberId: 'd', toMemberId: 'seb' },
+      { amount: 8.99, currency: 'EUR', fromMemberId: 'd', toMemberId: 'seb', cancelledAt: '2026-08-15' },
+      { amount: 20, currency: 'EUR', from_member_id: 'd', to_member_id: 'seb', cancelled_at: '2026-08-15' },
+    ] });
+    expect(after.participants.find(row => row.id === 'seb').net).toBe(59.02);
+    expect(after.participants.find(row => row.id === 'd').net).toBe(-59.02);
+    expect(after.categories).toEqual(before.categories);
+    expect(after.participants.map(({ net, ...row }) => row)).toEqual(before.participants.map(({ net, ...row }) => row));
+  });
+
+  it('includes repayments even when no expenses remain', () => {
+    const data = computeTripAnalysis({
+      members: [{ id: 'a' }, { id: 'b' }],
+      settlementEvents: [{ amount: 10, currency: 'EUR', from_member_id: 'a', to_member_id: 'b' }],
+    });
+    expect(data.participants.find(row => row.id === 'a').net).toBe(10);
+    expect(data.participants.find(row => row.id === 'b').net).toBe(-10);
+    expect(data.categories).toEqual([]);
+  });
+
   it('normalizes and matches Trip history filters', () => {
     const membersById = new Map([
       ['me', { id: 'me', name: 'Moi' }],

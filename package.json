@@ -1,7 +1,7 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.5.372",
+  "version": "10.5.373",
   "type": "module",
   "scripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -27,9 +27,9 @@
     "android:bundle-release": "powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1 -RequireSigned"
   },
   "devDependencies": {
-    "@capacitor/android": "^8.3.4",
-    "@capacitor/cli": "^8.3.4",
-    "@capacitor/core": "^8.3.4",
+    "@capacitor/android": "8.5.3",
+    "@capacitor/cli": "8.5.3",
+    "@capacitor/core": "8.5.0",
     "@playwright/test": "^1.61.1",
     "playwright": "^1.60.0",
     "vite": "^5.4.0",

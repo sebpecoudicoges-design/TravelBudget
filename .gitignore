@@ -2,6 +2,7 @@
 node_modules/
 .ms-playwright/
 test-results/
+.codex/releases/
 
 # Build
 dist/

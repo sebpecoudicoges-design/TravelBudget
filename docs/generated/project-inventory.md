@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `24454b9795cbeb5c8f6777099c9f0d9a3e5ebfe8`
-> Empreinte du snapshot : `811ed0c2b23fecea857cf38bb8342771d98c72748a7d5f03ee6e83dc3c903ae0`
-> Généré le : `2026-10-09T23:10:05.167Z`
+> Commit analysé : `6f1433a2b1bbd7157077917093b7cfc2c3b6eae7`
+> Empreinte du snapshot : `2d2aef7773820d1005113cf8f52f09a07faa65aaacb019061cdc32c42a8a9267`
+> Généré le : `2026-10-11T01:03:45.461Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.372` |
+| Version | `10.5.373` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 144 |
+| Fichiers de tests | 148 |
 | Migrations Supabase | 161 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -298,6 +298,7 @@ Modules :
 - `tests/ui/analysisFilterViewContract.test.js`
 - `tests/ui/analysisViewContract.test.js`
 - `tests/ui/androidReleaseBundleContract.test.js`
+- `tests/ui/androidSecurityContract.test.js`
 - `tests/ui/architectureDocsContract.test.js`
 - `tests/ui/assetsDomainContract.test.js`
 - `tests/ui/assetsModalContract.test.js`
@@ -347,9 +348,11 @@ Modules :
 
 - `tests/e2e/accounting.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
+- `tests/e2e/android-release.spec.js`
 - `tests/e2e/asset-budget-loading.spec.js`
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 
 ### Tous les fichiers de tests
@@ -376,6 +379,7 @@ Modules :
 - `tests/core/transactionGuards.test.js`
 - `tests/core/transactionRpcPayload.test.js`
 - `tests/core/transactionRules.test.js`
+- `tests/core/tripEditNetwork.test.js`
 - `tests/core/tripRules.test.js`
 - `tests/core/walletBalanceRules.test.js`
 - `tests/core/webhookSecurityRules.test.js`
@@ -394,9 +398,11 @@ Modules :
 - `tests/data/tripRepository.test.js`
 - `tests/e2e/accounting.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
+- `tests/e2e/android-release.spec.js`
 - `tests/e2e/asset-budget-loading.spec.js`
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 - `tests/features/accounting/accountingData.test.js`
 - `tests/features/accounting/accountingDebts.test.js`
@@ -451,6 +457,7 @@ Modules :
 - `tests/ui/analysisFilterViewContract.test.js`
 - `tests/ui/analysisViewContract.test.js`
 - `tests/ui/androidReleaseBundleContract.test.js`
+- `tests/ui/androidSecurityContract.test.js`
 - `tests/ui/architectureDocsContract.test.js`
 - `tests/ui/assetsDomainContract.test.js`
 - `tests/ui/assetsModalContract.test.js`
@@ -694,6 +701,7 @@ Modules :
 - `docs/ACCOUNTING_MODULE_BRIEF.md`
 - `docs/ACCOUNT_DATA_LIFECYCLE.md`
 - `docs/ADMIN_TEST_RETURNS.md`
+- `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`
 - `docs/GPT6_AND_ACCOUNTING_PLAN.md`

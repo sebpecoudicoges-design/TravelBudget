@@ -14,8 +14,9 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 - Retest Analyse `10.5.369` : contrôler les listes séparées « Sorties à payer » et « Frais estimés », chacune avec son total filtré. Les estimations restent dans le budget prévisionnel mais ne génèrent plus d'alerte d'échéance en retard. Vérifier les cas sans estimation et avec seulement des estimations, en clair/sombre et PC/mobile.
 
-- Versions web et Android à valider : `10.5.372`.
-- APK : `travelbudget-10.5.372-20260919-105602-debug.apk` publié dans Supabase Storage ; SHA-256 `CF14E1B1A4645DA5E4A3651DCEBD0ABE36871D3EEF9F761F980B91E1979EE328`. Version embarquée `10.5.372`, signature debug v2 et fichier distant identique au local vérifiés. Validation sur téléphone à effectuer.
+- Version locale et APK à valider : `10.5.373` ; déploiement web non effectué dans ce lot.
+- APK : `travelbudget-10.5.373-20261010-092634-debug.apk` publié dans Supabase Storage ; SHA-256 `68BC3312976FAB4565B18A1D35700C6487BC7B4B331D949DA63B114690F0C6AA`. Version embarquée `10.5.373`, signature debug v2 identique au certificat précédent et fichier distant identique au local vérifiés. Validation sur téléphone à effectuer.
+- Retest sécurité Android `10.5.373` : installer en mise à jour, conserver les données, vérifier connexion/OAuth, documents/liens externes, notifications et reprise hors ligne/réseau. Voir [preuve et limites du correctif Capacitor](ANDROID_SECURITY_10_5_373.md).
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
