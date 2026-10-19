@@ -135,31 +135,16 @@ export function createTripRepository(getClient) {
       return unwrap(await client.from(table).delete().eq('trip_id', tripId).eq('id', memberId));
     },
 
-    async createSettlementEvent({ table, event }) {
+    async applySettlement({ args }) {
       const client = requireClient(getClient);
-      return unwrap(await client.from(table).insert([event]));
+      const id = unwrap(await client.rpc('trip_apply_settlement_v2', args));
+      if (typeof id !== 'string' || !id) throw new Error('Règlement non confirmé par le serveur.');
+      return id;
     },
 
-    async cancelSettlementEvent({ table, eventId, cancelledAt }) {
+    async cancelSettlement({ eventId }) {
       const client = requireClient(getClient);
-      return unwrap(await client.from(table).update({ cancelled_at: cancelledAt }).eq('id', eventId));
-    },
-
-    async findLatestTransaction({ table, match }) {
-      const client = requireClient(getClient);
-      let query = client.from(table).select('id');
-      for (const [column, value] of Object.entries(match || {})) query = query.eq(column, value);
-      return unwrap(await query.order('created_at', { ascending: false }).limit(1).maybeSingle());
-    },
-
-    async linkSettlementTransaction({ table, eventId, transactionId }) {
-      const client = requireClient(getClient);
-      return unwrap(await client.from(table).update({ transaction_id: transactionId }).eq('id', eventId));
-    },
-
-    async recordSettlementLog({ table, row }) {
-      const client = requireClient(getClient);
-      return unwrap(await client.from(table).insert(row));
+      return unwrap(await client.rpc('trip_cancel_settlement_v1', { p_event_id: eventId }));
     },
 
     async deleteExpenseFallback({ tables, deleteTransactionRpc, expenseId, transactionId }) {

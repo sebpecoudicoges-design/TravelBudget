@@ -196,25 +196,6 @@ try {
     return _kpiHealthSummaryForDate(dateISO, activity || _kpiActivitySummaryForDate(dateISO));
   };
 } catch (_) {}
-function remainingBudgetBaseFrom(dateStr) {
-  return window.TBKpiProjectionRules?.sumRemainingDailyBudget?.({
-    startISO: dateStr,
-    endISO: state.period.end,
-    getDailyBudgetForDate,
-    toISO: toLocalISODate,
-  }) || 0;
-}
-
-function projectedEndEUR() {
-  const today = toLocalISODate(new Date());
-  const remainingBase = remainingBudgetBaseFrom(today);
-  return window.TBKpiProjectionRules?.projectedEndAmount?.({
-    currentTotal: totalInEUR(),
-    remainingBudget: remainingBase,
-    convertRemainingBudget: (amount) => amountToEUR(amount, state.period.baseCurrency),
-  }) ?? (totalInEUR() - amountToEUR(remainingBase, state.period.baseCurrency));
-}
-
 function netPendingEUR(rangeStartISO, rangeEndISO) {
   return window.TBKpiProjectionRules?.netPendingAmount?.({
     transactions: state.transactions || [],
@@ -376,7 +357,11 @@ try {
         }
       } catch (_) {}
 
-      forecastEUR += _toEURSafe(Math.max(0, daily), cur, ds);
+      const dailyEUR = _toEURSafe(Math.max(0, daily), cur, ds);
+      forecastEUR += ds === todayISO ? dailyEUR : window.Core.dailyBudgetRules.remainingCashBudgetForDate({
+        transactions: state.transactions || [], dateISO: ds, dailyBudget: dailyEUR,
+        convertAmount: (amount, currency) => _toEURSafe(amount, currency, ds),
+      });
     });
   }
 

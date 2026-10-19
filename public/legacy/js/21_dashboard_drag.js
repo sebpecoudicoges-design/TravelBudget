@@ -3,6 +3,8 @@
 // This script intentionally does NOT move dashboard cards/columns.
 
 (function () {
+  const boundCards = new WeakSet();
+  const boundLists = new WeakSet();
   function key() {
     try {
       return (window.TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.wallet_order)
@@ -19,12 +21,8 @@
 
   function getWalletEls(container) {
     if (!container) return [];
-    // Prefer elements annotated by 12_dashboard_render (data-wallet-id), fallback to .wallet cards.
-    const byData = [...container.querySelectorAll("[data-wallet-id]")];
-    if (byData.length) return byData;
-    const byDataset = [...container.querySelectorAll("[data-walletid]")];
-    if (byDataset.length) return byDataset;
-    return [...container.querySelectorAll(".wallet")];
+    // Actions share data-wallet-id with their card; only direct cards may move.
+    return [...container.children].filter(el => el.matches(".wallet"));
   }
 
   function getElKey(el) {
@@ -82,6 +80,8 @@
 
     // Make draggable & add handlers
     for (const el of els) {
+      if (boundCards.has(el)) continue;
+      boundCards.add(el);
       el.draggable = true;
 
       el.addEventListener("dragstart", (e) => {
@@ -100,9 +100,11 @@
       });
     }
 
+    if (boundLists.has(container)) return;
+    boundLists.add(container);
     container.addEventListener("dragover", (e) => {
       e.preventDefault();
-      const dragging = container.querySelector(".dragging");
+      const dragging = getWalletEls(container).find(el => el.classList.contains("dragging"));
       if (!dragging) return;
       const after = getAfterElement(container, e.clientY);
       if (after == null) container.appendChild(dragging);

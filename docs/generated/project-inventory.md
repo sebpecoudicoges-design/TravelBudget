@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `cabdcb4a2055b1e0500969b93d233d81f9fbb909`
-> Empreinte du snapshot : `60ad7e494c7728618b14c4968a8fad2e2730077fb5032c968c1c37a6c14a2e54`
-> Généré le : `2026-10-11T01:15:46.007Z`
+> Commit analysé : `7e851bb5920f39444e1eac0083522d2076cc6c64`
+> Empreinte du snapshot : `0a92fd3ecf9ff661c8302d146c12d2e0d80278c432a7e7ac947e3ca2308484d7`
+> Généré le : `2026-10-19T09:22:35.892Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.373` |
+| Version | `10.5.375` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 150 |
-| Migrations Supabase | 161 |
+| Fichiers de tests | 152 |
+| Migrations Supabase | 162 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
 
@@ -373,6 +373,7 @@ Modules :
 - `tests/core/money.test.js`
 - `tests/core/notificationRules.test.js`
 - `tests/core/nutritionRules.test.js`
+- `tests/core/prepaidProjection.test.js`
 - `tests/core/recurringRules.test.js`
 - `tests/core/sportLibraryRules.test.js`
 - `tests/core/sportRules.test.js`
@@ -382,6 +383,7 @@ Modules :
 - `tests/core/transactionRules.test.js`
 - `tests/core/tripEditNetwork.test.js`
 - `tests/core/tripRules.test.js`
+- `tests/core/tripSettlementRetry.test.js`
 - `tests/core/walletBalanceRules.test.js`
 - `tests/core/webhookSecurityRules.test.js`
 - `tests/core/workRules.test.js`
@@ -690,6 +692,7 @@ Modules :
 - `supabase/migrations/20260907094506_sport_timer_load_and_mobile_tabs_10_5_367.sql`
 - `supabase/migrations/20260918003053_analysis_trip_signed_balances.sql`
 - `supabase/migrations/20260925012905_assistant_ai_quota.sql`
+- `supabase/migrations/20261017015741_trip_settlement_atomic.sql`
 
 ## Android et budgets de modules
 
@@ -711,12 +714,14 @@ Modules :
 - `docs/MANUAL_TESTS.md`
 - `docs/MODULE_TEST_CAMPAIGN.md`
 - `docs/PLAY_STORE_READINESS.md`
+- `docs/PREPAID_PROJECTION_10_5_375.md`
 - `docs/PROJECT_ATLAS.md`
 - `docs/PROJECT_PAGE_CHECKLIST.md`
 - `docs/QUALITY_PIPELINE.md`
 - `docs/README.md`
 - `docs/STABILIZATION_CHECKLIST_10.5.316.md`
 - `docs/SUBSCRIPTIONS_NEXT_CHECKLIST.md`
+- `docs/TRIP_WALLET_FIX_10_5_374.md`
 - `docs/V11_ARCHITECTURE.md`
 - `docs/V11_DATA_LAYER.md`
 - `docs/V11_PERFORMANCE_BUDGETS.md`

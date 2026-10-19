@@ -844,7 +844,11 @@ function buildSeries() {
         budgetUsedVal.push({ x: k, y: round2(used) });
       } else {
         // forecast starts from last actual balance
-        forecastBal -= getDailyBudgetInRenderCurrency(k, lineCurrency);
+        forecastBal -= window.Core.dailyBudgetRules.remainingCashBudgetForDate({
+          transactions: window.state?.transactions || [], dateISO: k,
+          dailyBudget: getDailyBudgetInRenderCurrency(k, lineCurrency),
+          convertAmount: (amount, currency) => toRenderForDate(amount, currency, k, lineCurrency),
+        });
 
         if (includePendingExpenses) forecastBal += safeNum(pendingNetExp[k] || 0);
         if (includePendingIncomes)  forecastBal += safeNum(pendingNetInc[k] || 0);

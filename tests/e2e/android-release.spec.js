@@ -16,6 +16,6 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole('button', { name: 'EN', exact: true }).click();
     await expect(download).toContainText(`APK ${version}`);
-    await expect(page.locator('[data-i18n^="app.cta.body."]')).toContainText('security fix');
+    await expect(page.locator('[data-i18n^="app.cta.body."]')).toContainText(`Install APK ${version}`);
   });
 }

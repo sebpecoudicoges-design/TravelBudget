@@ -120,6 +120,20 @@ export function transactionAmountForDate(tx, dateISO) {
   return days > 0 && Number.isFinite(amount) ? amount / days : 0;
 }
 
+// Paid expenses have already reduced the wallets. Only the unspent portion of
+// each future day's budget remains a cash outflow; never carry a surplus to another day.
+export function remainingCashBudgetForDate({ transactions = [], dateISO, dailyBudget = 0, convertAmount = (amount) => amount } = {}) {
+  let paid = 0;
+  for (const tx of transactions) {
+    if (tx?.type !== 'expense' || !transactionAffectsDailyBudget(tx) || !transactionAffectsCash(tx)) continue;
+    const amount = transactionAmountForDate(tx, dateISO);
+    if (!amount) continue;
+    const converted = Number(convertAmount(amount, tx.currency, dateISO, tx));
+    if (Number.isFinite(converted)) paid += converted;
+  }
+  return Math.max(0, (Number(dailyBudget) || 0) - paid);
+}
+
 export function buildDailyBudgetAllocations(tx, options = {}) {
   if (!transactionAffectsDailyBudget(tx, options)) return [];
 

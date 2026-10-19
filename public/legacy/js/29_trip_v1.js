@@ -1814,6 +1814,8 @@ function _ensureSettleModal() {
     actionsHTML: window.UI?.tripView?.renderTripSettlementModalActions?.({ escapeHTML }) || "",
     initialFocus: "#tripSettleWallet",
     closeLabel: "Fermer",
+    closeOnBackdrop: false,
+    closeOnEscape: false,
     onClose(){ _settleModalState = null; }
   });
   const modal = handle.root;
@@ -1822,6 +1824,7 @@ function _ensureSettleModal() {
 }
 
 function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }) {
+  if (_settleModalState?.pending) return;
   const modal = _ensureSettleModal();
   _settleModalState = { fromId, toId, currency, amount, isOut };
   const from = members.find(x => x.id === fromId)?.name || "—";
@@ -1879,6 +1882,7 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
   refreshNote();
 
   modal.querySelector("#tripSettleOnly").onclick = async () => {
+    if (_settleModalState?.pending) return;
     try {
       await _persistSettlementEventOnly();
       modal._tbModalHandle?.close();
@@ -1890,6 +1894,7 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
   };
 
   modal.querySelector("#tripSettleConfirm").onclick = async () => {
+    if (_settleModalState?.pending) return;
     try {
       const wid = sel.value;
       const wallets2 = _activeWallets();
@@ -2510,149 +2515,61 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
 }
 
 
-async function _createSettlementEventOnly({ tripId, currency, amount, fromId, toId }) {
-  const core = window.Core?.tripRules;
-  const rpcArgs = core?.buildTripSettlementRpcArgs
-    ? core.buildTripSettlementRpcArgs({ tripId, currency, amount, fromMemberId: fromId, toMemberId: toId })
-    : {
-        p_trip_id: tripId,
-        p_currency: String(currency || "").trim().toUpperCase(),
-        p_amount: _round2(Number(amount) || 0),
-        p_from_member_id: fromId,
-        p_to_member_id: toId,
-      };
-  if (!rpcArgs.p_trip_id || !rpcArgs.p_from_member_id || !rpcArgs.p_to_member_id || !rpcArgs.p_currency || !(Number(rpcArgs.p_amount) > 0)) throw new Error("Règlement invalide.");
-
-  if (sb?.rpc && TB_CONST?.RPCS?.trip_create_settlement_v1) {
-    const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_create_settlement_v1, rpcArgs);
-    if (!error) return data;
-    console.warn("[Trip] trip_create_settlement_v1 fallback", error);
-  }
-
-  const uid = await _ensureSession();
-  const eventId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(16).slice(2);
-  await _tripRepository().createSettlementEvent({ table: TB_CONST.TABLES.trip_settlement_events, event: {
-    id: eventId,
-    trip_id: rpcArgs.p_trip_id,
-    currency: rpcArgs.p_currency,
-    amount: rpcArgs.p_amount,
-    from_member_id: rpcArgs.p_from_member_id,
-    to_member_id: rpcArgs.p_to_member_id,
-    created_by: uid,
-  } });
-  return eventId;
+async function _cancelSettlementEvent(settlementEventId) {
+  if (!settlementEventId) throw new Error("Règlement introuvable.");
+  await _tripRepository().cancelSettlement({ eventId: settlementEventId });
 }
 
-async function _cancelSettlementEvent(settlementEventId) {
-  const id = String(settlementEventId || "").trim();
-  if (!id) throw new Error("Règlement introuvable.");
-
-  if (sb?.rpc && TB_CONST?.RPCS?.trip_cancel_settlement_v1) {
-    const { error } = await sb.rpc(TB_CONST.RPCS.trip_cancel_settlement_v1, { p_event_id: id });
-    if (!error) return;
-    console.warn("[Trip] trip_cancel_settlement_v1 fallback", error);
-  }
-
-  await _tripRepository().cancelSettlementEvent({
-    table: TB_CONST.TABLES.trip_settlement_events,
-    eventId: id,
-    cancelledAt: new Date().toISOString(),
+async function _persistSettlement(wallet = null) {
+  const model = _settleModalState;
+  if (!model) throw new Error("Aucun règlement en cours.");
+  if (model.pending) return model.pending;
+  if (model.saved) return;
+  // Freeze the request for retries; a lost response must not create a new intent.
+  if (!model.request) model.request = {
+    p_event_id: crypto.randomUUID(),
+    ...window.Core.tripRules.buildTripSettlementRpcArgs({
+      tripId: tripState.activeTripId,
+      fromMemberId: model.fromId,
+      toMemberId: model.toId,
+      currency: wallet?.walletCurrency || model.currency,
+      amount: wallet ? wallet.walletAmount : model.amount,
+    }),
+    p_wallet_id: wallet?.walletId || null,
+    p_wallet_currency: wallet?.walletCurrency || null,
+    p_wallet_amount: wallet ? _round2(wallet.walletAmount) : null,
+    p_date: wallet ? _isoToday() : null,
+    p_fx: wallet ? _rpcFxSnapshotArgs(_isoToday(), wallet.walletCurrency) : {},
+  };
+  const controls = [...(document.querySelectorAll('#tripSettleModal button, #tripSettleModal input, #tripSettleModal select') || [])];
+  controls.forEach(control => { control.disabled = true; });
+  model.pending = (async () => {
+    await _tripRepository().applySettlement({ args: model.request });
+    model.saved = true;
+    // Persistence succeeded: a refresh failure must never invite a second payment.
+    try {
+      if (typeof window.tbAfterMutationRefresh === 'function') {
+        await window.tbAfterMutationRefresh('trip:settlement', { trip: true });
+      } else if (typeof window.__tripRefresh === 'function') {
+        await window.__tripRefresh({ activeOnly: true });
+      }
+    } catch (error) {
+      console.warn('[Trip] settlement saved; refresh failed', error);
+      toastWarn('Règlement enregistré. Actualise la page pour mettre les soldes à jour.');
+    }
+  })().finally(() => {
+    model.pending = null;
+    controls.forEach(control => { control.disabled = false; });
   });
+  return model.pending;
 }
 
 async function _persistSettlementEventOnly() {
-  if (!_settleModalState) throw new Error("Aucun règlement en cours.");
-  const { fromId, toId, currency, amount } = _settleModalState;
-  await _createSettlementEventOnly({
-    tripId: tripState.activeTripId,
-    currency,
-    amount,
-    fromId,
-    toId,
-  });
-  if (typeof window.tbAfterMutationRefresh === "function") {
-    await window.tbAfterMutationRefresh("trip:settlement_only", { trip: true });
-  } else if (typeof window.__tripRefresh === "function") {
-    await window.__tripRefresh({ activeOnly: true });
-  }
+  return _persistSettlement();
 }
 
-async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAmount, walletNativeCurrency }) {
-  if (!_settleModalState) throw new Error("Aucun règlement en cours.");
-  const uid = await _ensureSession();
-  const members = tripState.members || [];
-  const { fromId, toId, currency, amount, isOut } = _settleModalState;
-
-  const eventId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(16).slice(2);
-
-  // 1) Persist settlement event (Trip currency & amount)
-  const curTrip = String(walletCurrency || currency || "").trim().toUpperCase();
-  const amtTrip = _round2(Number(walletAmount) || 0);
-  await _tripRepository().createSettlementEvent({ table: TB_CONST.TABLES.trip_settlement_events, event: {
-    id: eventId,
-    trip_id: tripState.activeTripId,
-    currency: curTrip,
-    amount: amtTrip,
-    from_member_id: fromId,
-    to_member_id: toId,
-    created_by: uid,
-  } });
-
-  // 2) Create wallet transaction (wallet currency & amount)
-  const nativeCur = String(walletNativeCurrency || walletCurrency || '').toUpperCase();
-  const label = isOut
-    ? `[Trip] SETTLE:${eventId} • Règlement à ${(members.find(x => x.id === toId)?.name) || "—"} (${curTrip} ${_round2(amtTrip)} → ${walletCurrency} ${_round2(walletAmount)}${nativeCur && nativeCur !== walletCurrency ? ` ; wallet ${nativeCur}` : ''})`
-    : `[Trip] SETTLE:${eventId} • Règlement reçu de ${(members.find(x => x.id === fromId)?.name) || "—"} (${curTrip} ${_round2(amtTrip)} → ${walletCurrency} ${_round2(walletAmount)}${nativeCur && nativeCur !== walletCurrency ? ` ; wallet ${nativeCur}` : ''})`;
-
-  const date = _isoToday();
-  const txType = isOut ? "expense" : "income";
-
-  const { error: rpcErr } = await _rpcApplyTransactionV2(sb, {
-    p_user_id: uid,
-    p_wallet_id: walletId,
-    p_type: txType,
-    p_label: label,
-    p_amount: _round2(walletAmount),
-    p_currency: walletCurrency,
-    p_date_start: date,
-    p_date_end: date,
-    p_budget_date_start: date,
-    p_budget_date_end: date,
-    // category is NOT NULL in transactions; settlement wallet tx is an internal movement
-    p_category: (TB_CONST?.CATS?.internal_movement || "Mouvement interne"),
-    p_subcategory: null,
-    p_pay_now: true,
-    p_out_of_budget: true,
-    p_night_covered: false,
-    p_affects_budget: false,
-    p_trip_expense_id: null,
-    p_trip_share_link_id: null,
-    ..._rpcFxSnapshotArgs(date, walletCurrency)
-  });
-  if (rpcErr) throw rpcErr;
-
-  // 3) Best-effort link tx id back to settlement event
-  try {
-    const txRow = await _tripRepository().findLatestTransaction({
-      table: TB_CONST.TABLES.transactions,
-      match: { user_id: uid, label, currency: walletCurrency, amount: _round2(walletAmount), date_start: date },
-    });
-    if (txRow?.id) {
-      await _tripRepository().linkSettlementTransaction({
-        table: TB_CONST.TABLES.trip_settlement_events,
-        eventId,
-        transactionId: txRow.id,
-      });
-    }
-  } catch (e) {
-    console.warn("[Trip] settlement tx link failed", e);
-  }
-
-  if (typeof window.tbAfterMutationRefresh === "function") {
-    await window.tbAfterMutationRefresh("trip:settlement_wallet", { trip: true });
-  } else if (typeof window.__tripRefresh === "function") {
-    await window.__tripRefresh({ activeOnly: true });
-  }
+async function _persistSettlementWithWallet(wallet) {
+  return _persistSettlement(wallet);
 }
 
   async function _createTrip(name) {
@@ -4831,6 +4748,8 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
 
     root.querySelectorAll("[data-settle-only][data-settle-from][data-settle-to]").forEach(btn => {
       btn.onclick = async () => {
+        if (btn.disabled || _settleModalState?.pending) return;
+        btn.disabled = true;
         try {
           const fromId = btn.getAttribute("data-settle-from");
           const toId = btn.getAttribute("data-settle-to");
@@ -4839,13 +4758,16 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
           if (!fromId || !toId || !cur || !(amt > 0)) throw new Error("Règlement invalide.");
 
           // Create a settlement event ONLY (does not touch wallets)
-          _settleModalState = { fromId, toId, currency: cur, amount: amt, isOut: null };
+          btn._settlementState ||= { fromId, toId, currency: cur, amount: amt, isOut: null };
+          _settleModalState = btn._settlementState;
           await _persistSettlementEventOnly();
           _settleModalState = null;
 
           toastOk("Règlement enregistré (sans wallet).");
         } catch (e) {
           toastWarn("[Trip] " + normalizeSbError(e));
+        } finally {
+          btn.disabled = false;
         }
       };
     });
@@ -4857,7 +4779,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
         try {
           const id = btn.getAttribute("data-cancel-settle");
           if (!id) return;
-          const ok = confirm("Annuler ce règlement ?\n\nNote: cela ne supprime PAS la transaction wallet associée (si elle existe).");
+          const ok = confirm("Annuler ce règlement et supprimer sa transaction wallet associée (si elle existe) ?");
           if (!ok) return;
           await _cancelSettlementEvent(id);
           if (typeof window.tbAfterMutationRefresh === "function") {

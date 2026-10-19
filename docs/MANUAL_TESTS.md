@@ -6,6 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
+- Projection 10.5.375 : sur un jeu de test, payer une dépense future sous le budget journalier et vérifier que le total final reste stable lorsque ces dates sont dans l’horizon. Vérifier ensuite un dépassement sur certains jours : seule cette part dégrade la projection. Voir [règle et preuves](PREPAID_PROJECTION_10_5_375.md).
+
 - Retest Analyse `10.5.372` : avec une dépense Trip payée par soi, comparer le débit wallet brut et la transaction `[Trip]` de quote-part. Dans les totaux, catégories, tendances et périmètres Hors budget/Les deux, seule la quote-part personnelle doit compter. Exemple réel : **Bière** du 17/09/2026 vaut 99,70 AUD au wallet mais 49,85 AUD au budget ; Analyse doit retenir 49,85 AUD. La carte Trésorerie pure peut conserver le débit cash réel de 99,70 AUD.
 
 - Retest Analyse `10.5.371` : sur le voyage Asie de l'Est et une plage incluant le 15/09/2026, choisir **Hors budget** puis **Les deux**. La dépense `Réparation et Entretien voiture`, catégorie **Autre / Divers**, montant 729,20 AUD, doit apparaître dans les totaux et détails hors budget. Elle ne doit jamais gonfler le budget consommé ni la projection du budget.
@@ -14,8 +16,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 - Retest Analyse `10.5.369` : contrôler les listes séparées « Sorties à payer » et « Frais estimés », chacune avec son total filtré. Les estimations restent dans le budget prévisionnel mais ne génèrent plus d'alerte d'échéance en retard. Vérifier les cas sans estimation et avec seulement des estimations, en clair/sombre et PC/mobile.
 
-- Version locale et APK à valider : `10.5.373` ; déploiement web non effectué dans ce lot.
-- APK : `travelbudget-10.5.373-20261010-092634-debug.apk` publié dans Supabase Storage ; SHA-256 `68BC3312976FAB4565B18A1D35700C6487BC7B4B331D949DA63B114690F0C6AA`. Version embarquée `10.5.373`, signature debug v2 identique au certificat précédent et fichier distant identique au local vérifiés. Validation sur téléphone à effectuer.
+- Version locale et APK à valider : `10.5.375`. Livraison Trip/wallets : voir [preuves et distribution](TRIP_WALLET_FIX_10_5_374.md).
+- APK courant : `travelbudget-10.5.375-20261019-210000-debug.apk`. Validation sur téléphone à effectuer : sur un Trip de test, enregistrer un remboursement partiel avec double appui, vérifier un seul règlement et une seule transaction, puis annuler et vérifier leur disparition des montants actifs. Réordonner les wallets puis recharger : Archiver et Désarchiver doivent rester dans leurs cartes en clair/sombre à 390 et 1440 px.
 - Retest sécurité Android `10.5.373` : installer en mise à jour, conserver les données, vérifier connexion/OAuth, documents/liens externes, notifications et reprise hors ligne/réseau. Voir [preuve et limites du correctif Capacitor](ANDROID_SECURITY_10_5_373.md).
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.

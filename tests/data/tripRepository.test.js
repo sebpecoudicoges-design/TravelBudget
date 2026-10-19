@@ -187,23 +187,27 @@ describe('trip repository', () => {
     ]));
   });
 
-  it('persists, finds, links and cancels a settlement event', async () => {
-    const client = mutationClient(({ table, operation }) => ({
-      data: table === 'transactions' && operation === 'select' ? { id: 'tx-1' } : null,
-      error: null,
-    }));
+  it('uses atomic settlement RPCs without independent table writes', async () => {
+    const client = mutationClient(() => ({ data: 'event-1', error: null }));
     const repository = createTripRepository(client);
-    await repository.createSettlementEvent({ table: 'events', event: { id: 'event-1', amount: 20 } });
-    const tx = await repository.findLatestTransaction({ table: 'transactions', match: { label: 'Settlement', amount: 20 } });
-    await repository.linkSettlementTransaction({ table: 'events', eventId: 'event-1', transactionId: tx.id });
-    await repository.recordSettlementLog({ table: 'settlements', row: { trip_id: 'trip-1', amount: 20 } });
-    await repository.cancelSettlementEvent({ table: 'events', eventId: 'event-1', cancelledAt: '2026-07-05T09:00:00Z' });
-    expect(client.calls).toEqual(expect.arrayContaining([
-      expect.objectContaining({ table: 'events', method: 'insert' }),
-      { table: 'events', method: 'update', value: { transaction_id: 'tx-1' } },
-      { table: 'settlements', method: 'insert', value: { trip_id: 'trip-1', amount: 20 } },
-      { table: 'events', method: 'update', value: { cancelled_at: '2026-07-05T09:00:00Z' } },
-    ]));
+    const args = { p_event_id: 'event-1', p_amount: 50 };
+    await expect(repository.applySettlement({ args })).resolves.toBe('event-1');
+    await repository.cancelSettlement({ eventId: 'event-1' });
+    expect(client.calls).toEqual([
+      { method: 'rpc', name: 'trip_apply_settlement_v2', args },
+      { method: 'rpc', name: 'trip_cancel_settlement_v1', args: { p_event_id: 'event-1' } },
+    ]);
+  });
+
+  it('propagates RPC failures without a non-atomic fallback', async () => {
+    const client = mutationClient(() => ({ data: null, error: new Error('response lost') }));
+    const repository = createTripRepository(client);
+    await expect(repository.applySettlement({ args: {} })).rejects.toThrow('response lost');
+    await expect(repository.cancelSettlement({ eventId: 'event-1' })).rejects.toThrow('response lost');
+    expect(client.calls.every(call => call.method === 'rpc')).toBe(true);
+    for (const retired of ['createSettlementEvent','findLatestTransaction','linkSettlementTransaction','cancelSettlementEvent','recordSettlementLog']) {
+      expect(repository[retired]).toBeUndefined();
+    }
   });
 
   it('deletes an expense fallback and every linked transaction', async () => {
