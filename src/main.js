@@ -2,6 +2,7 @@ import './app/bridge.js';
 import './ui/premium-theme.css';
 import './features/testing/testCampaign.css';
 import { registerPwa } from './app/pwa.js';
+import { createRetryableLoader, createRetryableImport } from './app/retryableLoader.js';
 import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
 import * as moduleAccessRules from './core/moduleAccessRules.js';
 import * as dashboardView from './features/dashboard/dashboardView.js';
@@ -159,9 +160,19 @@ const LEGACY_DOMAIN_SCRIPTS = {
     '/legacy/js/49_notifications_ui.js',
   ],
 };
-const legacyDomainPromises = new Map();
+const legacyDomainLoader = createRetryableLoader(async (key) => {
+  await waitForBridgeReady();
+  if (key === 'analysis') await ensureAnalysisModules();
+  await ensureDomainModules(key);
+  for (const src of LEGACY_DOMAIN_SCRIPTS[key]) await loadScript(src);
+  return true;
+});
 let bridgeReadyPromise = null;
-let analysisModulesPromise = null;
+const importAnalysisRuntime = createRetryableImport(() => import('./features/analysis/analysisRuntime.js'), {
+  origin: window.location.origin,
+  acceptsPath: path => path === '/src/features/analysis/analysisRuntime.js' || /^\/assets\/analysisRuntime-[\w-]+\.js$/.test(path),
+});
+const analysisModuleLoader = createRetryableLoader(async () => (await importAnalysisRuntime()).installAnalysisRuntime(window));
 const domainModulePromises = new Map();
 let kpiViewPromise = null;
 
@@ -238,27 +249,32 @@ function waitForBridgeReady() {
     };
     window.addEventListener('tb:bridge_ready', done, { once: true });
     timer = window.setTimeout(done, 2500);
+  }).catch((error) => {
+    bridgeReadyPromise = null;
+    throw error;
   });
   return bridgeReadyPromise;
 }
 
-function loadScript(src) {
+const scriptLoader = createRetryableLoader((src) => {
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src;
     s.async = false; // enforce execution order
     s.onload = () => resolve(src);
-    s.onerror = () => reject(new Error(`Failed to load legacy script: ${src}`));
+    s.onerror = () => {
+      s.remove();
+      reject(new Error(`Failed to load legacy script: ${src}`));
+    };
     document.head.appendChild(s);
   });
-}
+});
+
+function loadScript(src) { return scriptLoader.load(src); }
 
 async function ensureAnalysisModules() {
   if (window.TBAnalysisView && window.TBAnalysisCharts) return true;
-  if (analysisModulesPromise) return analysisModulesPromise;
-  analysisModulesPromise = import('./features/analysis/analysisRuntime.js')
-    .then((runtime) => runtime.installAnalysisRuntime(window));
-  return analysisModulesPromise;
+  return analysisModuleLoader.load('analysis');
 }
 
 async function ensureDomainModules(domain) {
@@ -356,23 +372,11 @@ async function boot() {
     const key = String(domain || '').trim();
     const scripts = LEGACY_DOMAIN_SCRIPTS[key];
     if (!scripts) return Promise.resolve(false);
-    if (legacyDomainPromises.has(key)) return legacyDomainPromises.get(key);
-    const promise = (async () => {
-      await waitForBridgeReady();
-      if (key === 'analysis') await ensureAnalysisModules();
-      await ensureDomainModules(key);
-      for (const src of scripts) {
-        // eslint-disable-next-line no-await-in-loop
-        await loadScript(src);
-      }
-      return true;
-    })();
-    legacyDomainPromises.set(key, promise);
-    return promise;
+    return legacyDomainLoader.load(key);
   };
   window.tbIsLegacyDomainLoaded = function tbIsLegacyDomainLoaded(domain) {
     const key = String(domain || '').trim();
-    return legacyDomainPromises.has(key);
+    return legacyDomainLoader.isLoaded(key);
   };
   window.tbEnsureCashflowCurve = function tbEnsureCashflowCurve(reason) {
     const currentView = String(window.activeView || '').trim();

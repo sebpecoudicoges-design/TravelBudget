@@ -15,7 +15,7 @@ describe('legacy domain loader', () => {
 
   it('keeps startup focused on global shell, Dashboard and Settings while deferring heavy domains', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     for (const startupScript of [
       '/legacy/js/10_navigation.js',
@@ -46,7 +46,7 @@ describe('legacy domain loader', () => {
 
   it('keeps Assets out of the boot legacy list and registers it as a deferred domain', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/41_assets_core.js');
     expect(bootList).not.toContain('/legacy/js/42_assets_ui.js');
@@ -58,7 +58,7 @@ describe('legacy domain loader', () => {
 
   it('keeps Cashflow out of boot and lazy-loads it when Dashboard needs the curve', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/27_cashflow_curve.js');
     expect(domains).toContain('cashflow:');
@@ -70,7 +70,7 @@ describe('legacy domain loader', () => {
 
   it('keeps FX decision out of boot and loads it with the Analysis domain', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/34_fx_decision.js');
     expect(domains).toContain('analysis:');
@@ -87,11 +87,11 @@ describe('legacy domain loader', () => {
     expect(main).toContain('window.Data?.createTripStore');
     expect(main).not.toContain('window.Core?.sportCatalog');
 
-    const domainLoader = main.slice(main.indexOf('window.tbLoadLegacyDomain'), main.indexOf('window.tbIsLegacyDomainLoaded'));
+    const domainLoader = main.slice(main.indexOf('const legacyDomainLoader'), main.indexOf('let bridgeReadyPromise'));
     expect(domainLoader).toContain('await waitForBridgeReady();');
     expect(domainLoader).toContain('await ensureDomainModules(key);');
 
-    const bootLoader = main.slice(main.indexOf('await waitForBridgeReady();'), main.indexOf('boot().catch'));
+    const bootLoader = main.slice(main.indexOf('async function boot()'), main.indexOf('boot().catch'));
     expect(bootLoader).toContain('for (const src of BOOT_LEGACY_SCRIPTS)');
     expect(bootLoader.indexOf('await waitForBridgeReady();')).toBeLessThan(bootLoader.indexOf('for (const src of BOOT_LEGACY_SCRIPTS)'));
   });
@@ -103,7 +103,7 @@ describe('legacy domain loader', () => {
 
   it('keeps the retired Cautions module out of boot, lazy domains and navigation', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/46_cautions_ui.js');
     expect(domains).not.toContain('cautions:');
@@ -117,7 +117,7 @@ describe('legacy domain loader', () => {
 
   it('keeps Documents out of boot and lazy-loads it before rendering the Documents view', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/43_documents_ui.js');
     expect(domains).toContain('documents:');
@@ -137,7 +137,7 @@ describe('legacy domain loader', () => {
 
   it('keeps Inbox out of boot and lazy-loads it before rendering the Inbox view', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/44_inbox_ui.js');
     expect(domains).toContain('inbox:');
@@ -151,7 +151,7 @@ describe('legacy domain loader', () => {
 
   it('keeps Help FAQ out of boot while preserving the global assistant and guide at startup', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/31_help_faq.js');
     expect(bootList).toContain('/legacy/js/32_help_assistant.js');
@@ -167,7 +167,7 @@ describe('legacy domain loader', () => {
 
   it('keeps Nutrition out of boot and lazy-loads it before rendering the Nutrition view', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/48_nutrition_ui.js');
     expect(domains).toContain('nutrition:');
@@ -183,7 +183,7 @@ describe('legacy domain loader', () => {
 
   it('keeps Work out of boot and lazy-loads it before rendering the Work view', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/47_work_ui.js');
     expect(bootList).not.toContain('/legacy/js/50_work_career_ui.js');
@@ -199,7 +199,7 @@ describe('legacy domain loader', () => {
 
   it('keeps Trip and Members out of boot and lazy-loads them before rendering related views', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/29_trip_v1.js');
     expect(bootList).not.toContain('/legacy/js/30_members_admin.js');
@@ -219,7 +219,7 @@ describe('legacy domain loader', () => {
 
   it('keeps Sport out of boot and lazy-loads it before rendering or replaying local sync', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/45_sport_ui.js');
     expect(domains).toContain('sport:');
@@ -238,7 +238,7 @@ describe('legacy domain loader', () => {
 
   it('keeps Notifications settings out of boot and lazy-loads them before rendering the Notifications view', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/49_notifications_ui.js');
     expect(domains).toContain('notifications:');
@@ -252,7 +252,7 @@ describe('legacy domain loader', () => {
 
   it('keeps Analysis out of boot and lazy-loads it with its Vite view modules', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
-    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/33_analysis_filter_view.js');
     expect(bootList).not.toContain('/legacy/js/33_analysis_drilldown_view.js');

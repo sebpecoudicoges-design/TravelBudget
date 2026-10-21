@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `7e851bb5920f39444e1eac0083522d2076cc6c64`
-> Empreinte du snapshot : `0a92fd3ecf9ff661c8302d146c12d2e0d80278c432a7e7ac947e3ca2308484d7`
-> Généré le : `2026-10-19T09:22:35.892Z`
+> Commit analysé : `eeb03978510440373bf0d0772f447e8735c90d36`
+> Empreinte du snapshot : `1a6092250aad51651fca44a884f9a53a55d3c7ce2ac237cb7729fbac2ded5990`
+> Généré le : `2026-10-21T07:39:03.912Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.375` |
+| Version | `10.5.376` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 152 |
+| Fichiers de tests | 153 |
 | Migrations Supabase | 162 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -375,6 +375,7 @@ Modules :
 - `tests/core/nutritionRules.test.js`
 - `tests/core/prepaidProjection.test.js`
 - `tests/core/recurringRules.test.js`
+- `tests/core/retryableLoader.test.js`
 - `tests/core/sportLibraryRules.test.js`
 - `tests/core/sportRules.test.js`
 - `tests/core/subscriptionRules.test.js`
@@ -711,6 +712,7 @@ Modules :
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`
 - `docs/GPT6_AND_ACCOUNTING_PLAN.md`
+- `docs/LOADER_RECOVERY_10_5_376.md`
 - `docs/MANUAL_TESTS.md`
 - `docs/MODULE_TEST_CAMPAIGN.md`
 - `docs/PLAY_STORE_READINESS.md`

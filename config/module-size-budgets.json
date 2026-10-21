@@ -2,7 +2,7 @@
   "version": 1,
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
-    "initialJsMaxKiB": 271,
+    "initialJsMaxKiB": 272,
     "lazyJsMaxKiB": 575,
     "totalJsMaxKiB": 846,
     "totalCssMaxKiB": 79.4,

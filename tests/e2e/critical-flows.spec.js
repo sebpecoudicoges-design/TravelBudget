@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import fs from 'node:fs';
+import path from 'node:path';
+test.use({ serviceWorkers: 'block' });
 
 async function installThirdPartyStubs(page) {
   const supabaseStub = (route) => route.fulfill({
@@ -98,6 +101,55 @@ test('lazy-loads a domain tab and preserves mobile layout access', async ({ page
   await expect(page.locator('#nutrition-root')).toHaveCount(1);
   await expect.poll(() => page.locator('#nutrition-root').evaluate((node) => node.textContent.length)).toBeGreaterThan(20);
   await expect.poll(() => page.evaluate(() => window.activeView)).toBe('nutrition');
+});
+
+test('retries a partial legacy domain load without rerunning successful scripts', async ({ page }) => {
+  let attempts = 0;
+  let offline = true;
+  await page.route('**/legacy/js/47_work_ui.js', async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: 'window.__workExecutions = (window.__workExecutions || 0) + 1;\n' + await response.text() });
+  });
+  await page.route('**/legacy/js/50_work_career_ui.js', route => { attempts++; return offline ? route.abort() : route.continue(); });
+  await page.goto('/?freeze=1');
+  await expectBootShell(page);
+  const failed = await page.evaluate(async () => {
+    try { await window.tbLoadLegacyDomain('work'); } catch (error) { return error.message; }
+  });
+  expect(failed).toContain('50_work_career_ui.js');
+  expect(await page.evaluate(() => window.tbIsLegacyDomainLoaded('work'))).toBe(false);
+  offline = false;
+  const recovered = await page.evaluate(async () => {
+    const first = window.tbLoadLegacyDomain('work');
+    const shared = first === window.tbLoadLegacyDomain('work');
+    const pending = window.tbIsLegacyDomainLoaded('work');
+    await first;
+    return { shared, pending, loaded: window.tbIsLegacyDomainLoaded('work'), executions: window.__workExecutions };
+  });
+  expect(recovered).toEqual({ shared: true, pending: false, loaded: true, executions: 1 });
+  expect(attempts).toBe(2);
+  await expect(page.locator('script[src="/legacy/js/50_work_career_ui.js"]')).toHaveCount(1);
+});
+
+for (const built of [false, true]) test(`retries the Analysis runtime import after a network failure (built=${built})`, async ({ page }) => {
+  let attempts = 0;
+  if (built) {
+    await page.route('**/?freeze=1', route => route.fulfill({ contentType: 'text/html', body: fs.readFileSync('dist/index.html', 'utf8') }));
+    await page.route('**/assets/*', route => {
+      const name = path.basename(new URL(route.request().url()).pathname);
+      return route.fulfill({ contentType: name.endsWith('.css') ? 'text/css' : 'application/javascript', body: fs.readFileSync(path.join('dist/assets', name)) });
+    });
+  }
+  await page.route('**/*analysisRuntime*.js*', route => ++attempts === 1 ? route.abort() : route.fallback());
+  await page.goto('/?freeze=1');
+  await expectBootShell(page);
+  expect(await page.evaluate(async () => {
+    try { await window.tbLoadLegacyDomain('analysis'); return false; } catch { return true; }
+  })).toBe(true);
+  expect(await page.evaluate(() => window.tbIsLegacyDomainLoaded('analysis'))).toBe(false);
+  await page.evaluate(() => window.tbLoadLegacyDomain('analysis'));
+  expect(await page.evaluate(() => window.tbIsLegacyDomainLoaded('analysis'))).toBe(true);
+  expect(attempts).toBe(2);
 });
 
 test('opens validated modules to standard accounts while testers keep full campaign access', async ({ page }) => {
