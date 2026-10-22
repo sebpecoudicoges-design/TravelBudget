@@ -6,6 +6,10 @@ const packageData = JSON.parse(readFileSync(new URL('./package.json', import.met
 export default defineConfig({
   // Use relative base for easy static hosting (GitHub Pages, Netlify drop, etc.)
   base: './',
+  // Preserve the Vite 5 browser baseline across toolchain upgrades.
+  build: {
+    target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
+  },
   define: {
     __TB_VERSION__: JSON.stringify(packageData.version),
   },

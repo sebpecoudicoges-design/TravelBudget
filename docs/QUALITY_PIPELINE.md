@@ -21,3 +21,7 @@ Validation locale du 11 octobre 2026 : `npm run quality` réussi, 322 fichiers c
 La création du workflow n'active pas à elle seule une protection de branche et n'empêche pas le déploiement Netlify indépendant. Les fonctions Edge TypeScript et les scripts inclus dans le HTML ne sont pas couverts par `node --check`. Les alertes des dépendances d'outillage, la mesure du vrai chargement initial et la reprise du chargeur de domaines restent à corriger. Les scripts Android conservent également leur configuration locale de SDK et leur nettoyage existant des anciennes copies dans `public/downloads`.
 
 L'APK 10.5.373 déjà publié reste inchangé : ce lot porte sur les outils de contrôle, pas sur son code applicatif. Les contrôles sur téléphone restent nécessaires.
+
+## Actualisation du 22 octobre 2026
+
+Le lot 10.5.377 migre vers Vite 7.3.6 et Vitest 4.1.10, aligne Netlify sur Node 24 et ajoute le contrôle npm critique en CI. Les neuf alertes restantes, les limites et les preuves sont détaillées dans [Dépendances 10.5.377](DEPENDENCIES_10_5_377.md). La reprise des chargeurs a fait l'objet du [lot 10.5.376](LOADER_RECOVERY_10_5_376.md) ; sa couverture reste partielle. La mesure complète du démarrage reste ouverte.

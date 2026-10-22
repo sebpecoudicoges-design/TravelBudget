@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `eeb03978510440373bf0d0772f447e8735c90d36`
-> Empreinte du snapshot : `1a6092250aad51651fca44a884f9a53a55d3c7ce2ac237cb7729fbac2ded5990`
-> Généré le : `2026-10-21T07:39:03.912Z`
+> Commit analysé : `f141ab28a072732740868ef593fa22ec79b1a3ce`
+> Empreinte du snapshot : `3fd00da2ea23ad69014f7c7c6271f4224849d401b010541d592db08966f14cc9`
+> Généré le : `2026-10-22T06:52:46.010Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,7 +11,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.376` |
+| Version | `10.5.377` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
@@ -48,6 +48,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `android:release-debug` | `powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1 -UploadSupabase` |
 | `android:bundle-check` | `powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1` |
 | `android:bundle-release` | `powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1 -RequireSigned` |
+| `audit:dependencies` | `npm audit --audit-level=critical` |
 
 ## Écrans déclarés dans index.html
 
@@ -711,6 +712,7 @@ Modules :
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`
+- `docs/DEPENDENCIES_10_5_377.md`
 - `docs/GPT6_AND_ACCOUNTING_PLAN.md`
 - `docs/LOADER_RECOVERY_10_5_376.md`
 - `docs/MANUAL_TESTS.md`

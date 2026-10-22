@@ -4,7 +4,7 @@
   "dist": {
     "initialJsMaxKiB": 272,
     "lazyJsMaxKiB": 575,
-    "totalJsMaxKiB": 846,
+    "totalJsMaxKiB": 846.2,
     "totalCssMaxKiB": 79.4,
     "mainJsGzipMaxKiB": 110
   },

@@ -6,7 +6,7 @@ Statut : **en attente de la campagne de stabilisation module par module ouverte 
 
 ## Etat actuel
 
-- Version locale : `10.5.376`, avec Capacitor Android `8.5.3`. Correctifs Trip/wallets et distribution courante : [suivi 10.5.376](LOADER_RECOVERY_10_5_376.md).
+- Version locale : `10.5.377`, avec Capacitor Android `8.5.3`. Correctifs Trip/wallets et distribution courante : [suivi 10.5.377](DEPENDENCIES_10_5_377.md).
 - Package Android : `com.travelbudget.app`.
 - Version Android derivee de `package.json`.
 - Historique sécurité : APK de test `travelbudget-10.5.373-20261010-092634-debug.apk` publié via Supabase Storage ; SHA-256 `68BC3312976FAB4565B18A1D35700C6487BC7B4B331D949DA63B114690F0C6AA`. Signature et relecture distante vérifiées ; validation téléphone restante. Voir [le lot sécurité Android](ANDROID_SECURITY_10_5_373.md).

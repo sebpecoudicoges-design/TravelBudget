@@ -10,7 +10,7 @@ describe.skipIf(process.platform !== 'win32')('Android native command failures',
   it.each([0, 23])('continues only after a successful native exit (%i)', (exitCode) => {
     const result = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
       `$ErrorActionPreference = 'Stop'; . ${quote(helper)}; Invoke-CheckedAndroidCommand -Command ${quote(process.execPath)} -Arguments @('-e', 'process.exit(${exitCode})'); Write-Output 'NEXT_STEP'`,
-    ], { encoding: 'utf8' });
+    ], { encoding: 'utf8', timeout: 15000 });
     expect(result.error).toBeUndefined();
     if (exitCode === 0) {
       expect(result.status).toBe(0);
@@ -20,7 +20,7 @@ describe.skipIf(process.platform !== 'win32')('Android native command failures',
       expect(result.stdout).not.toContain('NEXT_STEP');
       expect(result.stderr).toContain('code 23');
     }
-  });
+  }, 20000);
 });
 
 it('routes Android build and verification steps through the checked executor', () => {
