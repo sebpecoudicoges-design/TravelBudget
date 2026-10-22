@@ -6,6 +6,7 @@ test-results/
 
 # Build
 dist/
+public/vendor/
 public/downloads/*.apk
 public/downloads/*.aab
 

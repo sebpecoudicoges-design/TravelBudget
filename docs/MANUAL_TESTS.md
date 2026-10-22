@@ -6,6 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
+- Retest 10.5.378 : connexion et restauration de session, courbe Dashboard, graphiques Analyse/Patrimoine ; ouvrir en ligne puis rouvrir hors ligne. Bibliothèques désormais locales, ECharts 6.1.0 avec thème v5. Validation téléphone à faire.
+
 - Retest 10.5.377 : démarrage à froid, navigation Analyse/Trip/Sport et mode hors ligne sur téléphone après migration Vite. Validation appareil à faire.
 
 - Retest 10.5.376 : interrompre le réseau à la première ouverture d’un module, rétablir le réseau puis rouvrir le module. Vérifier la reprise sans double action. Voir [périmètre et limites](LOADER_RECOVERY_10_5_376.md).
@@ -21,7 +23,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Retest Analyse `10.5.369` : contrôler les listes séparées « Sorties à payer » et « Frais estimés », chacune avec son total filtré. Les estimations restent dans le budget prévisionnel mais ne génèrent plus d'alerte d'échéance en retard. Vérifier les cas sans estimation et avec seulement des estimations, en clair/sombre et PC/mobile.
 
 - Version locale et APK à valider : `10.5.376`. Livraison Trip/wallets : voir [preuves et distribution](TRIP_WALLET_FIX_10_5_374.md).
-- APK courant : `travelbudget-10.5.377-20261022-170000-debug.apk`. Validation sur téléphone à effectuer : sur un Trip de test, enregistrer un remboursement partiel avec double appui, vérifier un seul règlement et une seule transaction, puis annuler et vérifier leur disparition des montants actifs. Réordonner les wallets puis recharger : Archiver et Désarchiver doivent rester dans leurs cartes en clair/sombre à 390 et 1440 px.
+- APK courant : `travelbudget-10.5.378-20261023-090000-debug.apk`. Validation sur téléphone à effectuer : sur un Trip de test, enregistrer un remboursement partiel avec double appui, vérifier un seul règlement et une seule transaction, puis annuler et vérifier leur disparition des montants actifs. Réordonner les wallets puis recharger : Archiver et Désarchiver doivent rester dans leurs cartes en clair/sombre à 390 et 1440 px.
 - Retest sécurité Android `10.5.373` : installer en mise à jour, conserver les données, vérifier connexion/OAuth, documents/liens externes, notifications et reprise hors ligne/réseau. Voir [preuve et limites du correctif Capacitor](ANDROID_SECURITY_10_5_373.md).
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.

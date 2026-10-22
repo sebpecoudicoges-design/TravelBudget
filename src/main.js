@@ -3,6 +3,7 @@ import './ui/premium-theme.css';
 import './features/testing/testCampaign.css';
 import { registerPwa } from './app/pwa.js';
 import { createRetryableLoader, createRetryableImport } from './app/retryableLoader.js';
+import vendorLibraries from '../config/vendor-libraries.json';
 import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
 import * as moduleAccessRules from './core/moduleAccessRules.js';
 import * as dashboardView from './features/dashboard/dashboardView.js';
@@ -162,6 +163,11 @@ const LEGACY_DOMAIN_SCRIPTS = {
 };
 const legacyDomainLoader = createRetryableLoader(async (key) => {
   await waitForBridgeReady();
+  if (key === 'analysis' || key === 'assets') {
+    await loadScript(`/vendor/${vendorLibraries.echarts.file}`);
+    await loadScript(`/vendor/${vendorLibraries.echartsTheme.file}`);
+  }
+  if (key === 'cashflow') await loadScript(`/vendor/${vendorLibraries.apexcharts.file}`);
   if (key === 'analysis') await ensureAnalysisModules();
   await ensureDomainModules(key);
   for (const src of LEGACY_DOMAIN_SCRIPTS[key]) await loadScript(src);
@@ -379,6 +385,7 @@ async function boot() {
     return legacyDomainLoader.isLoaded(key);
   };
   window.tbEnsureCashflowCurve = function tbEnsureCashflowCurve(reason) {
+    if (!window.sbUser) return Promise.resolve(false);
     const currentView = String(window.activeView || '').trim();
     if (currentView && currentView !== 'dashboard') return Promise.resolve(false);
     if (typeof window.tbRequestCashflowCurveRender === 'function') {
@@ -403,6 +410,7 @@ async function boot() {
   };
 
   await waitForBridgeReady();
+  await loadScript(`/vendor/${vendorLibraries.supabase.file}`);
   for (const src of BOOT_LEGACY_SCRIPTS) {
     // eslint-disable-next-line no-await-in-loop
     try {
@@ -415,6 +423,8 @@ async function boot() {
       throw e;
     }
   }
+  performance.mark('tb:legacy-ready');
+  window.__tbBootReady = true;
 }
 
 boot().catch((err) => {

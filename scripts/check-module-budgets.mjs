@@ -35,6 +35,21 @@ function measureSourceGroups(config = readConfig()) {
   });
 }
 
+export function staticEntryFiles(manifest, entry = 'index.html') {
+  const files = new Set();
+  const visited = new Set();
+  function visit(key) {
+    if (visited.has(key)) return;
+    visited.add(key);
+    const chunk = manifest[key];
+    if (!chunk) throw new Error(`Missing manifest chunk: ${key}`);
+    if (chunk.file.endsWith('.js')) files.add(chunk.file);
+    for (const imported of chunk.imports || []) visit(imported);
+  }
+  visit(entry);
+  return [...files];
+}
+
 function measureDist(config = readConfig()) {
   const assetsDir = path.join(root, 'dist/assets');
   if (!fs.existsSync(assetsDir)) {
@@ -52,9 +67,15 @@ function measureDist(config = readConfig()) {
   });
   const js = files.filter((file) => file.type === 'js');
   const css = files.filter((file) => file.type === 'css');
-  const mainJs = js.slice().sort((a, b) => b.bytes - a.bytes)[0] || null;
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'dist/.vite/manifest.json'), 'utf8'));
+  const initialFiles = staticEntryFiles(manifest);
+  const initial = initialFiles.map(file => {
+    const found = js.find(asset => `assets/${asset.name}` === file);
+    if (!found) throw new Error(`Missing built entry file: ${file}`);
+    return found;
+  });
   const totalJsBytes = js.reduce((sum, file) => sum + file.bytes, 0);
-  const initialJsBytes = mainJs ? mainJs.bytes : 0;
+  const initialJsBytes = initial.reduce((sum, file) => sum + file.bytes, 0);
   const lazyJsBytes = Math.max(0, totalJsBytes - initialJsBytes);
   return {
     available: true,
@@ -62,7 +83,9 @@ function measureDist(config = readConfig()) {
     lazyJsKiB: bytesToKiB(lazyJsBytes),
     totalJsKiB: bytesToKiB(totalJsBytes),
     totalCssKiB: bytesToKiB(css.reduce((sum, file) => sum + file.bytes, 0)),
-    mainJsGzipKiB: mainJs ? bytesToKiB(mainJs.gzipBytes) : 0,
+    mainJsGzipKiB: bytesToKiB(initial.reduce((sum, file) => sum + file.gzipBytes, 0)),
+    initialFiles,
+    vendorJsKiB: bytesToKiB(fs.readdirSync(path.join(root, 'dist/vendor')).filter(file => file.endsWith('.js')).reduce((sum, file) => sum + fs.statSync(path.join(root, 'dist/vendor', file)).size, 0)),
     budgets: config.dist,
     files,
   };
@@ -84,6 +107,7 @@ function collectBudgetReport(config = readConfig()) {
     if (dist.totalJsKiB > dist.budgets.totalJsMaxKiB) failures.push(`dist js: ${dist.totalJsKiB} KiB > ${dist.budgets.totalJsMaxKiB} KiB`);
     if (dist.totalCssKiB > dist.budgets.totalCssMaxKiB) failures.push(`dist css: ${dist.totalCssKiB} KiB > ${dist.budgets.totalCssMaxKiB} KiB`);
     if (dist.mainJsGzipKiB > dist.budgets.mainJsGzipMaxKiB) failures.push(`main js gzip: ${dist.mainJsGzipKiB} KiB > ${dist.budgets.mainJsGzipMaxKiB} KiB`);
+    if (dist.vendorJsKiB > dist.budgets.vendorJsMaxKiB) failures.push(`vendor js: ${dist.vendorJsKiB} KiB > ${dist.budgets.vendorJsMaxKiB} KiB`);
   }
 
   return { sourceGroups, dist, failures };
@@ -99,11 +123,13 @@ function formatReport(report) {
   }
   lines.push('');
   if (report.dist.available) {
-    lines.push(`Initial JS: ${report.dist.initialJsKiB} / ${report.dist.budgets.initialJsMaxKiB} KiB`);
+    lines.push(`Initial JS (static ESM only): ${report.dist.initialJsKiB} / ${report.dist.budgets.initialJsMaxKiB} KiB`);
     lines.push(`Lazy JS: ${report.dist.lazyJsKiB} / ${report.dist.budgets.lazyJsMaxKiB} KiB`);
     lines.push(`Dist JS: ${report.dist.totalJsKiB} / ${report.dist.budgets.totalJsMaxKiB} KiB`);
     lines.push(`Dist CSS: ${report.dist.totalCssKiB} / ${report.dist.budgets.totalCssMaxKiB} KiB`);
     lines.push(`Main JS gzip: ${report.dist.mainJsGzipKiB} / ${report.dist.budgets.mainJsGzipMaxKiB} KiB`);
+    lines.push(`Vendor JS (separate, including deferred charts): ${report.dist.vendorJsKiB} / ${report.dist.budgets.vendorJsMaxKiB} KiB`);
+    lines.push('Startup also loads legacy scripts and runtime imports: run npm run perf:startup for the observed journey.');
   } else {
     lines.push(report.dist.reason);
   }

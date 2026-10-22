@@ -1380,7 +1380,7 @@
           </div>
         </div>
         <div class="hero-status" aria-label="Statut du projet">
-          <div class="hero-status-item"><small data-i18n="status.release">Version actuelle</small><strong>10.5.377</strong></div>
+          <div class="hero-status-item"><small data-i18n="status.release">Version actuelle</small><strong>10.5.378</strong></div>
           <div class="hero-status-item"><small data-i18n="status.mobile">Android</small><strong data-i18n="status.mobile.value">APK de test</strong></div>
           <a class="hero-status-item owner" href="https://pecloud.fr/" target="_blank" rel="noopener noreferrer"><small data-i18n="status.owner">Projet par</small><strong>Pecloud ↗</strong></a>
         </div>
@@ -1600,7 +1600,7 @@
           <p data-i18n="app.lead">La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.</p>
         </div>
         <div class="app-grid">
-          <article class="app-card app-card-primary"><strong>10.5.377</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105377">APK debug 10.5.377 : outillage mis à niveau et APK reconstruit.</p></article>
+          <article class="app-card app-card-primary"><strong>10.5.378</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105378">APK debug 10.5.378 : bibliothèques locales et graphiques chargés à la demande.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.</p></article>
           <article class="app-card"><strong>Projet vivant</strong><h3 data-i18n="app.project.title">Atlas et fresque synchronises</h3><p data-i18n="app.project.body">La version, l inventaire du depot, les preuves de validation et l APK restent lisibles au meme endroit.</p></article>
         </div>
@@ -1621,6 +1621,7 @@
           <div class="release-spotlight" id="releaseSpotlight"></div>
           <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
           <div class="release-list" id="releaseSource" hidden>
+            <div class="release-row"><strong>10.5.378</strong><span data-i18n="release.105378">Démarrage sans dépendance aux scripts CDN : bibliothèques locales versionnées, graphiques chargés à la demande et reprise hors ligne après une première visite. Mesure du démarrage complet ajoutée, ECharts corrigé et Atlas actualisé.</span></div>
             <div class="release-row"><strong>10.5.377</strong><span data-i18n="release.105377">Outillage de compilation et de test mis à niveau. Les alertes critiques npm recensées sont corrigées ; neuf alertes restent suivies. APK reconstruit, Atlas actualisé.</span></div>
             <div class="release-row"><strong>10.5.376</strong><span data-i18n="release.105376">Reprise des modules après une coupure réseau : les scripts déjà chargés sont conservés et Analyse peut reprendre son chargement. Statuts de chargement corrigés, tests de panne ajoutés, Atlas actualisé.</span></div>
             <div class="release-row"><strong>10.5.375</strong><span data-i18n="release.105375">Règlements Trip : une validation crée un seul paiement, même en cas de clics répétés ou de reprise réseau. Annuler un règlement supprime aussi sa transaction wallet. La réorganisation des wallets conserve désormais tous les boutons dans leur carte. Les dépenses budgétées payées en avance réduisent le budget restant à décaisser, sans double comptage dans la projection. Atlas actualisé.</span></div>
@@ -2020,9 +2021,9 @@
         <div class="cta">
           <div>
             <h2 data-i18n="app.cta.title">App Android en test interne.</h2>
-            <p data-i18n="app.cta.body.105377">Installe l’APK 10.5.377 pour tester la nouvelle compilation.</p>
+            <p data-i18n="app.cta.body.105378">Installe l’APK 10.5.378 pour tester la nouvelle compilation.</p>
           </div>
-          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.377-20261022-170000-debug.apk" download data-latest-apk data-i18n="app.cta.button.105377">Télécharger l'APK 10.5.377</a>
+          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.378-20261023-090000-debug.apk" download data-latest-apk data-i18n="app.cta.button.105378">Télécharger l'APK 10.5.378</a>
         </div>
       </div>
     </section>
@@ -2130,7 +2131,8 @@
           "atlas.title": "L'Atlas vivant du projet.", "atlas.lead": "Explore les onze fonctions critiques, leurs domaines et les impacts a verifier avant chaque evolution.", "atlas.status": "Architecture V11 indexee", "atlas.impacts": "Impacts a verifier", "atlas.screens": "Ecrans", "atlas.critical": "Fonctions critiques", "atlas.tests": "Fichiers de tests", "atlas.migrations": "Migrations",
           "app.title": "App Android de test, lien direct et version lisible.",
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
-          "app.apk.body.105377": "APK debug 10.5.377 : outillage mis à niveau et APK reconstruit.",
+          "app.apk.body.105378": "APK debug 10.5.378 : bibliothèques locales et graphiques chargés à la demande.",
+          "release.105378": "Démarrage sans dépendance aux scripts CDN : bibliothèques locales versionnées, graphiques chargés à la demande et reprise hors ligne après une première visite. Mesure du démarrage complet ajoutée, ECharts corrigé et Atlas actualisé.",
           "release.105377": "Outillage de compilation et de test mis à niveau. Les alertes critiques npm recensées sont corrigées ; neuf alertes restent suivies. APK reconstruit, Atlas actualisé.",
 
           "release.105376": "Reprise des modules après une coupure réseau : les scripts déjà chargés sont conservés et Analyse peut reprendre son chargement. Statuts de chargement corrigés, tests de panne ajoutés, Atlas actualisé.",
@@ -2158,7 +2160,7 @@
           "release.105319": "Stabilisation : choix clair/sombre/systeme sur la page Projet, premier rendu Dashboard fiabilise, Cautions retire de l interface et retours traites archives avec leurs dates.",
           "release.105318": "Interface generale : la page Projet adopte la palette corail/lagon, retire ses panneaux de suivi internes et l ecran de chargement devient plus clair, rassurant et compatible theme sombre.",
           "release.105317": "Stabilisation Dashboard : le Hero premium respecte maintenant le theme sombre, la courbe se recree au changement de theme et les mutations wallet reverifient la connexion avant Supabase.",
-          "app.cta.body.105377": "Installe l’APK 10.5.377 pour tester la nouvelle compilation.", "app.cta.button.105377": "Télécharger l'APK 10.5.377",
+          "app.cta.body.105378": "Installe l’APK 10.5.378 pour tester la nouvelle compilation.", "app.cta.button.105378": "Télécharger l'APK 10.5.378",
           "app.apk.body.105316": "APK debug 10.5.316 prete pour la campagne de tests modules.",
           "app.version.title.105316": "Stabilisation", "app.version.body.105316": "Campagne module par module ouverte.",
           "release.105316": "Stabilisation : les modules sont figes pour les utilisateurs standards. Le nouveau role test donne acces aux modules et a une campagne integree de 45 scenarios avec resultat OK, Pas OK, notes et cloture par module.",
@@ -2326,7 +2328,8 @@
           "atlas.title": "The project's living Atlas.", "atlas.lead": "Explore eleven critical capabilities, their domains and the impacts to verify before every change.", "atlas.status": "V11 architecture indexed", "atlas.impacts": "Impacts to verify", "atlas.screens": "Screens", "atlas.critical": "Critical capabilities", "atlas.tests": "Test files", "atlas.migrations": "Migrations",
           "app.title": "Android test app, direct link and readable version.",
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
-          "app.apk.body.105377": "Debug APK 10.5.377: upgraded tooling and rebuilt application.",
+          "app.apk.body.105378": "Debug APK 10.5.378: local libraries and on-demand chart loading.",
+          "release.105378": "Startup uses versioned local libraries and loads charts on demand. Offline recovery after a first visit, measured full startup, patched ECharts and updated Atlas.",
           "release.105377": "Build and test tooling upgraded. Reported critical npm alerts resolved; nine alerts remain tracked. Rebuilt APK and updated Atlas.",
 
           "release.105376": "Module loading can recover from network interruptions without rerunning successful scripts. Analysis loading recovery, accurate loading states, failure tests and updated Atlas.",
@@ -2351,7 +2354,7 @@
           "release.105319": "Stabilization: light, dark and system choices on the Project page, reliable first Dashboard render, Cautions removed from the interface, and treated feedback archived with its dates.",
           "release.105318": "General interface: the Project page adopts the coral and lagoon palette, removes internal tracking panels, and the loading screen becomes clearer, reassuring and dark-mode compatible.",
           "release.105317": "Dashboard stabilization: the premium Hero now follows dark mode, the cashflow chart is recreated when the theme changes, and wallet mutations recheck connectivity before Supabase.",
-          "app.cta.body.105377": "Install APK 10.5.377 to test the upgraded build.", "app.cta.button.105377": "Download APK 10.5.377",
+          "app.cta.body.105378": "Install APK 10.5.378 to test the upgraded build.", "app.cta.button.105378": "Download APK 10.5.378",
           "app.apk.body.105316": "Debug APK 10.5.316 is ready for the module testing campaign.",
           "app.version.title.105316": "Stabilization", "app.version.body.105316": "The module-by-module campaign is open.",
           "release.105316": "Stabilization: modules are frozen for standard users. The new test role can access modules and an integrated 45-scenario campaign with OK, Not OK, notes and per-module completion.",

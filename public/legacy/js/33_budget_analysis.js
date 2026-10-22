@@ -1547,7 +1547,7 @@ function _openTxDrilldown(kind, key, model){
   function _ensureChart(name, id){
     const el = _el(id);
     if (!el || !window.echarts) return null;
-    if (!charts[name] || charts[name].isDisposed()) charts[name] = window.echarts.init(el, null, { renderer:'canvas' });
+    if (!charts[name] || charts[name].isDisposed()) charts[name] = window.echarts.init(el, "v5", { renderer:'canvas' });
     return charts[name];
   }
   function _renderTrajectory(model){

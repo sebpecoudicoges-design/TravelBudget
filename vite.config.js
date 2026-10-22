@@ -8,6 +8,7 @@ export default defineConfig({
   base: './',
   // Preserve the Vite 5 browser baseline across toolchain upgrades.
   build: {
+    manifest: true,
     target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
   },
   define: {

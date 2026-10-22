@@ -25,3 +25,7 @@ L'APK 10.5.373 déjà publié reste inchangé : ce lot porte sur les outils de c
 ## Actualisation du 22 octobre 2026
 
 Le lot 10.5.377 migre vers Vite 7.3.6 et Vitest 4.1.10, aligne Netlify sur Node 24 et ajoute le contrôle npm critique en CI. Les neuf alertes restantes, les limites et les preuves sont détaillées dans [Dépendances 10.5.377](DEPENDENCIES_10_5_377.md). La reprise des chargeurs a fait l'objet du [lot 10.5.376](LOADER_RECOVERY_10_5_376.md) ; sa couverture reste partielle. La mesure complète du démarrage reste ouverte.
+
+## Actualisation du 23 octobre 2026
+
+La CI mesure aussi le parcours compilé anonyme via npm run perf:startup et conserve son rapport JSON. Les requêtes et volumes réels complètent les budgets de fichiers. Les bibliothèques sont préparées depuis npm avant dev/build ; config est désormais inclus dans l'empreinte Atlas. Voir [Démarrage 10.5.378](STARTUP_10_5_378.md).

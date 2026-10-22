@@ -30,17 +30,7 @@ async function installThirdPartyStubs(page) {
       };
     `,
   });
-  await page.route('**/npm/@supabase/supabase-js@2**', supabaseStub);
-  await page.route('**/@supabase/supabase-js@2**', supabaseStub);
-  await page.route('**/supabase-js@2**', supabaseStub);
-  await page.route('**/npm/apexcharts**', (route) => route.fulfill({
-    contentType: 'application/javascript',
-    body: 'window.ApexCharts = class { render(){ return Promise.resolve(); } updateOptions(){} destroy(){} };',
-  }));
-  await page.route('**/npm/echarts@5/**', (route) => route.fulfill({
-    contentType: 'application/javascript',
-    body: 'window.echarts = { init(){ return { setOption(){}, resize(){}, dispose(){} }; } };',
-  }));
+  await page.route('**/vendor/supabase-*.js', supabaseStub);
 }
 
 test.beforeEach(async ({ page }) => {

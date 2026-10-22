@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `f141ab28a072732740868ef593fa22ec79b1a3ce`
-> Empreinte du snapshot : `3fd00da2ea23ad69014f7c7c6271f4224849d401b010541d592db08966f14cc9`
-> Généré le : `2026-10-22T06:52:46.010Z`
+> Commit analysé : `7edf63a08e2aff7a9c270fba4b8d84af6c9ede3b`
+> Empreinte du snapshot : `ac2dd18f63749afe3cf8e078ed717be6c8a03fe00181728a0a8034588602d2fb`
+> Généré le : `2026-10-22T22:42:03.878Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.377` |
+| Version | `10.5.378` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 153 |
+| Fichiers de tests | 155 |
 | Migrations Supabase | 162 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -27,9 +27,9 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Script | Commande |
 |---|---|
 | `version:sync` | `node scripts/sync-version.mjs` |
-| `predev` | `npm run version:sync` |
+| `predev` | `npm run version:sync && npm run vendors:prepare` |
 | `dev` | `vite` |
-| `prebuild` | `npm run version:sync` |
+| `prebuild` | `npm run version:sync && npm run vendors:prepare` |
 | `build` | `vite build` |
 | `preview` | `vite preview --port 4173` |
 | `test` | `vitest run` |
@@ -49,6 +49,8 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `android:bundle-check` | `powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1` |
 | `android:bundle-release` | `powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1 -RequireSigned` |
 | `audit:dependencies` | `npm audit --audit-level=critical` |
+| `vendors:prepare` | `node scripts/prepare-vendors.mjs` |
+| `perf:startup` | `node scripts/measure-startup.mjs` |
 
 ## Écrans déclarés dans index.html
 
@@ -354,6 +356,7 @@ Modules :
 - `tests/e2e/asset-budget-loading.spec.js`
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 
@@ -407,6 +410,7 @@ Modules :
 - `tests/e2e/asset-budget-loading.spec.js`
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 - `tests/features/accounting/accountingData.test.js`
@@ -459,6 +463,7 @@ Modules :
 - `tests/features/work/workView.test.js`
 - `tests/scripts/androidCommand.test.js`
 - `tests/scripts/atlasFingerprint.test.js`
+- `tests/scripts/entryManifest.test.js`
 - `tests/ui/accountingViewContract.test.js`
 - `tests/ui/analysisDrilldownViewContract.test.js`
 - `tests/ui/analysisFilterViewContract.test.js`
@@ -724,6 +729,7 @@ Modules :
 - `docs/QUALITY_PIPELINE.md`
 - `docs/README.md`
 - `docs/STABILIZATION_CHECKLIST_10.5.316.md`
+- `docs/STARTUP_10_5_378.md`
 - `docs/SUBSCRIPTIONS_NEXT_CHECKLIST.md`
 - `docs/TRIP_WALLET_FIX_10_5_374.md`
 - `docs/V11_ARCHITECTURE.md`

@@ -1,0 +1,30 @@
+{
+  "supabase": {
+    "package": "@supabase/supabase-js",
+    "version": "2.110.6",
+    "source": "dist/umd/supabase.js",
+    "license": "LICENSE",
+    "file": "supabase-2.110.6.js"
+  },
+  "apexcharts": {
+    "package": "apexcharts",
+    "version": "8.4.1",
+    "source": "dist/apexcharts.min.js",
+    "license": "LICENSE.md",
+    "file": "apexcharts-8.4.1.js"
+  },
+  "echarts": {
+    "package": "echarts",
+    "version": "6.1.0",
+    "source": "dist/echarts.min.js",
+    "license": "LICENSE",
+    "file": "echarts-6.1.0.js"
+  },
+  "echartsTheme": {
+    "package": "echarts",
+    "version": "6.1.0",
+    "source": "theme/v5.js",
+    "license": "LICENSE",
+    "file": "echarts-theme-v5-6.1.0.js"
+  }
+}

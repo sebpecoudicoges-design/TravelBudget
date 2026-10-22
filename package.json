@@ -1,13 +1,13 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.5.377",
+  "version": "10.5.378",
   "type": "module",
   "scripts": {
     "version:sync": "node scripts/sync-version.mjs",
-    "predev": "npm run version:sync",
+    "predev": "npm run version:sync && npm run vendors:prepare",
     "dev": "vite",
-    "prebuild": "npm run version:sync",
+    "prebuild": "npm run version:sync && npm run vendors:prepare",
     "build": "vite build",
     "preview": "vite preview --port 4173",
     "test": "vitest run",
@@ -26,7 +26,9 @@
     "android:release-debug": "powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1 -UploadSupabase",
     "android:bundle-check": "powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1",
     "android:bundle-release": "powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1 -RequireSigned",
-    "audit:dependencies": "npm audit --audit-level=critical"
+    "audit:dependencies": "npm audit --audit-level=critical",
+    "vendors:prepare": "node scripts/prepare-vendors.mjs",
+    "perf:startup": "node scripts/measure-startup.mjs"
   },
   "devDependencies": {
     "@capacitor/android": "8.5.3",
@@ -41,7 +43,10 @@
     "@capacitor/app": "^8.0.0",
     "@capacitor/browser": "^8.0.0",
     "@capacitor/local-notifications": "^8.0.0",
-    "@capacitor/push-notifications": "^8.0.0"
+    "@capacitor/push-notifications": "^8.0.0",
+    "@supabase/supabase-js": "2.110.6",
+    "apexcharts": "8.4.1",
+    "echarts": "6.1.0"
   },
   "engines": {
     "node": ">=24 <25"

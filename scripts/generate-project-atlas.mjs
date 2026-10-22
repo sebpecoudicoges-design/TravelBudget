@@ -95,7 +95,7 @@ function architectureDocuments() {
 }
 
 export function snapshotFingerprint(root = ROOT) {
-  const roots = ['src', 'public/legacy', 'tests', 'scripts', 'supabase/migrations', 'supabase/functions', 'docs'];
+  const roots = ['src', 'public/legacy', 'tests', 'scripts', 'config', 'supabase/migrations', 'supabase/functions', 'docs'];
   const allowed = /\.(?:js|mjs|cjs|ts|json|md|sql|toml|ps1|css|html)$/i;
   const files = roots.flatMap((dir) => listFiles(dir, (file) => (
     allowed.test(file) && !file.startsWith('docs/generated/')
