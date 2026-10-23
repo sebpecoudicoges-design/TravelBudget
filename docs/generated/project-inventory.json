@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "5a4e61aa79cc3dd0494bea03a574b303941a6212",
-  "snapshotFingerprint": "5da09b11a58193961e3dd8b898110793898ac66fa1e2bd7066b8c92a530298dd",
-  "generatedAt": "2026-10-22T22:49:21.983Z",
+  "commit": "293e4b721c31cfac4e709f1acf92e6081ee2dec2",
+  "snapshotFingerprint": "be1151929de1920e469756abdeaddc8ad9493d9f007c167e54b45dd4c793b93a",
+  "generatedAt": "2026-10-23T04:05:21.024Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.378"
+    "version": "10.5.379"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -388,6 +388,7 @@
     "tests/ui/helpViewContract.test.js",
     "tests/ui/inboxDomainContract.test.js",
     "tests/ui/initialBootLoaderContract.test.js",
+    "tests/ui/kpiDataRecovery.test.js",
     "tests/ui/kpiRangePickerContract.test.js",
     "tests/ui/kpiViewContract.test.js",
     "tests/ui/legacyBusinessRulesContract.test.js",
@@ -682,6 +683,7 @@
     "docs/ASSISTANT_AI_OPERATIONS.md",
     "docs/DEPENDENCIES_10_5_377.md",
     "docs/GPT6_AND_ACCOUNTING_PLAN.md",
+    "docs/KPI_RECOVERY_10_5_379.md",
     "docs/LOADER_RECOVERY_10_5_376.md",
     "docs/MANUAL_TESTS.md",
     "docs/MODULE_TEST_CAMPAIGN.md",

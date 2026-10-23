@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `5a4e61aa79cc3dd0494bea03a574b303941a6212`
-> Empreinte du snapshot : `5da09b11a58193961e3dd8b898110793898ac66fa1e2bd7066b8c92a530298dd`
-> Généré le : `2026-10-22T22:49:21.983Z`
+> Commit analysé : `293e4b721c31cfac4e709f1acf92e6081ee2dec2`
+> Empreinte du snapshot : `be1151929de1920e469756abdeaddc8ad9493d9f007c167e54b45dd4c793b93a`
+> Généré le : `2026-10-23T04:05:21.024Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.378` |
+| Version | `10.5.379` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 155 |
+| Fichiers de tests | 156 |
 | Migrations Supabase | 162 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -484,6 +484,7 @@ Modules :
 - `tests/ui/helpViewContract.test.js`
 - `tests/ui/inboxDomainContract.test.js`
 - `tests/ui/initialBootLoaderContract.test.js`
+- `tests/ui/kpiDataRecovery.test.js`
 - `tests/ui/kpiRangePickerContract.test.js`
 - `tests/ui/kpiViewContract.test.js`
 - `tests/ui/legacyBusinessRulesContract.test.js`
@@ -719,6 +720,7 @@ Modules :
 - `docs/ASSISTANT_AI_OPERATIONS.md`
 - `docs/DEPENDENCIES_10_5_377.md`
 - `docs/GPT6_AND_ACCOUNTING_PLAN.md`
+- `docs/KPI_RECOVERY_10_5_379.md`
 - `docs/LOADER_RECOVERY_10_5_376.md`
 - `docs/MANUAL_TESTS.md`
 - `docs/MODULE_TEST_CAMPAIGN.md`

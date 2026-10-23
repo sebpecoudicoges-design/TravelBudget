@@ -94,10 +94,11 @@ window.tbEnsureActivityData = async function tbEnsureActivityData(options = {}) 
       workCount: (window.state.workDays || []).length,
     };
   })();
-  window.__TB_ACTIVITY_LOAD_PROMISE__ = run.finally(() => {
-    if (window.__TB_ACTIVITY_LOAD_PROMISE__ === run) window.__TB_ACTIVITY_LOAD_PROMISE__ = null;
+  const pending = run.finally(() => {
+    if (window.__TB_ACTIVITY_LOAD_PROMISE__ === pending) window.__TB_ACTIVITY_LOAD_PROMISE__ = null;
   });
-  return window.__TB_ACTIVITY_LOAD_PROMISE__;
+  window.__TB_ACTIVITY_LOAD_PROMISE__ = pending;
+  return pending;
 };
 
 function tbPublishNutritionKpiRows({ meals, items, sleep, reason } = {}) {
@@ -170,10 +171,11 @@ window.tbEnsureNutritionKpiData = async function tbEnsureNutritionKpiData(option
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
     return { loaded: true, mealCount: meals.length, itemCount: items.length };
   })();
-  window.__TB_NUTRITION_KPI_LOAD_PROMISE__ = run.finally(() => {
-    if (window.__TB_NUTRITION_KPI_LOAD_PROMISE__ === run) window.__TB_NUTRITION_KPI_LOAD_PROMISE__ = null;
+  const pending = run.finally(() => {
+    if (window.__TB_NUTRITION_KPI_LOAD_PROMISE__ === pending) window.__TB_NUTRITION_KPI_LOAD_PROMISE__ = null;
   });
-  return window.__TB_NUTRITION_KPI_LOAD_PROMISE__;
+  window.__TB_NUTRITION_KPI_LOAD_PROMISE__ = pending;
+  return pending;
 };
 
 window.addEventListener("tb:auth_scope_changed", () => {
