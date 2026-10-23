@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `293e4b721c31cfac4e709f1acf92e6081ee2dec2`
-> Empreinte du snapshot : `be1151929de1920e469756abdeaddc8ad9493d9f007c167e54b45dd4c793b93a`
-> Généré le : `2026-10-23T04:05:21.024Z`
+> Commit analysé : `e0b0ffdd071ae2e2eeee65fa78cac66547027255`
+> Empreinte du snapshot : `b31d2f8ff22047a254d79a3718a329d0293851268288c942f814c20a9cac7950`
+> Généré le : `2026-10-23T12:31:30.586Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.379` |
+| Version | `10.5.380` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 156 |
+| Fichiers de tests | 157 |
 | Migrations Supabase | 162 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -356,6 +356,7 @@ Modules :
 - `tests/e2e/asset-budget-loading.spec.js`
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
@@ -410,6 +411,7 @@ Modules :
 - `tests/e2e/asset-budget-loading.spec.js`
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
@@ -721,6 +723,7 @@ Modules :
 - `docs/DEPENDENCIES_10_5_377.md`
 - `docs/GPT6_AND_ACCOUNTING_PLAN.md`
 - `docs/KPI_RECOVERY_10_5_379.md`
+- `docs/KPI_SCOPE_10_5_380.md`
 - `docs/LOADER_RECOVERY_10_5_376.md`
 - `docs/MANUAL_TESTS.md`
 - `docs/MODULE_TEST_CAMPAIGN.md`

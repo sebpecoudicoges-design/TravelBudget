@@ -44,6 +44,21 @@ function tbPublishActivityRows({ sportSessions, workDays, reason } = {}) {
   } catch (_) {}
 }
 
+// A new auth scope or forced request invalidates earlier results, even A -> B -> A.
+const tbKpiDataVersions = { activity: 0, nutrition: 0 };
+function tbBeginKpiDataRequest(domain) {
+  const version = ++tbKpiDataVersions[domain];
+  const targetState = window.state;
+  const client = window.sb;
+  const userId = window.sbUser?.id;
+  return {
+    client, userId,
+    stale: { loaded: false, skipped: true, reason: "stale-scope" },
+    isCurrent: () => version === tbKpiDataVersions[domain]
+      && targetState === window.state && client === window.sb && userId === window.sbUser?.id,
+  };
+}
+
 window.tbEnsureActivityData = async function tbEnsureActivityData(options = {}) {
   const force = !!options.force;
   const reason = String(options.reason || "activity");
@@ -52,9 +67,9 @@ window.tbEnsureActivityData = async function tbEnsureActivityData(options = {}) 
   if (!force && window.state.activityDataLoaded === true && Array.isArray(window.state.sportSessions) && Array.isArray(window.state.workDays)) {
     return { loaded: false, cached: true, sportCount: window.state.sportSessions.length, workCount: window.state.workDays.length };
   }
+  const request = tbBeginKpiDataRequest("activity");
   const run = (async () => {
-    const client = window.sb;
-    const userId = window.sbUser?.id;
+    const { client, userId } = request;
     if (!client || !userId || !window.TB_CONST?.TABLES) {
       return { loaded: false, skipped: true, reason: "missing-client" };
     }
@@ -62,6 +77,7 @@ window.tbEnsureActivityData = async function tbEnsureActivityData(options = {}) 
     const shouldSkipNetwork = (typeof window.tbShouldUseOfflineMode === "function")
       ? await window.tbShouldUseOfflineMode(`activity:${reason}`)
       : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (!request.isCurrent()) return request.stale;
     if (shouldSkipNetwork) return { loaded: false, skipped: true, reason: "offline" };
 
     const canUseActivityCache = !force && window.state.activityDataLoaded === true;
@@ -83,6 +99,7 @@ window.tbEnsureActivityData = async function tbEnsureActivityData(options = {}) 
         .limit(120);
 
     const [sport, work] = await Promise.all([sportPromise, workPromise]);
+    if (!request.isCurrent()) return request.stale;
     if (sport?.error) throw sport.error;
     if (work?.error) throw work.error;
     tbPublishActivityRows({ sportSessions: sport?.data || [], workDays: work?.data || [], reason });
@@ -94,7 +111,10 @@ window.tbEnsureActivityData = async function tbEnsureActivityData(options = {}) 
       workCount: (window.state.workDays || []).length,
     };
   })();
-  const pending = run.finally(() => {
+  const pending = run.catch(error => {
+    if (!request.isCurrent()) return request.stale;
+    throw error;
+  }).finally(() => {
     if (window.__TB_ACTIVITY_LOAD_PROMISE__ === pending) window.__TB_ACTIVITY_LOAD_PROMISE__ = null;
   });
   window.__TB_ACTIVITY_LOAD_PROMISE__ = pending;
@@ -128,15 +148,16 @@ window.tbEnsureNutritionKpiData = async function tbEnsureNutritionKpiData(option
     && Array.isArray(window.state.nutritionMealItems)) {
     return { loaded: false, cached: true };
   }
+  const request = tbBeginKpiDataRequest("nutrition");
   const run = (async () => {
-    const client = window.sb;
-    const userId = window.sbUser?.id;
+    const { client, userId } = request;
     const tables = window.TB_CONST?.TABLES;
     if (!client || !userId || !tables) return { loaded: false, skipped: true, reason: "missing-client" };
     const shouldSkipNetwork = (typeof window.tbShouldUseOfflineMode === "function")
       ? await window.tbShouldUseOfflineMode(`nutrition-kpi:${reason}`)
       : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode())
         || (typeof navigator !== "undefined" && navigator.onLine === false));
+    if (!request.isCurrent()) return request.stale;
     if (shouldSkipNetwork) return { loaded: false, skipped: true, reason: "offline" };
 
     const sinceDate = addDays(new Date(), -21).toISOString().slice(0, 10);
@@ -153,6 +174,7 @@ window.tbEnsureNutritionKpiData = async function tbEnsureNutritionKpiData(option
         .gte("sleep_date", sinceDate)
         .order("sleep_date", { ascending: false }),
     ]);
+    if (!request.isCurrent()) return request.stale;
     if (mealsResult?.error) throw mealsResult.error;
     if (sleepResult?.error) throw sleepResult.error;
     const meals = mealsResult?.data || [];
@@ -163,6 +185,7 @@ window.tbEnsureNutritionKpiData = async function tbEnsureNutritionKpiData(option
       .select("id,user_id,meal_id,food_key,label,grams,kcal,protein_g,carbs_g,fat_g,fiber_g,sort_order,created_at")
       .in("meal_id", ids)
       .order("sort_order", { ascending: true })));
+    if (!request.isCurrent()) return request.stale;
     const itemError = itemResults.find(result => result?.error)?.error;
     if (itemError) throw itemError;
     const items = itemResults.flatMap(result => result?.data || []);
@@ -171,7 +194,10 @@ window.tbEnsureNutritionKpiData = async function tbEnsureNutritionKpiData(option
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
     return { loaded: true, mealCount: meals.length, itemCount: items.length };
   })();
-  const pending = run.finally(() => {
+  const pending = run.catch(error => {
+    if (!request.isCurrent()) return request.stale;
+    throw error;
+  }).finally(() => {
     if (window.__TB_NUTRITION_KPI_LOAD_PROMISE__ === pending) window.__TB_NUTRITION_KPI_LOAD_PROMISE__ = null;
   });
   window.__TB_NUTRITION_KPI_LOAD_PROMISE__ = pending;
@@ -179,7 +205,16 @@ window.tbEnsureNutritionKpiData = async function tbEnsureNutritionKpiData(option
 };
 
 window.addEventListener("tb:auth_scope_changed", () => {
+  tbKpiDataVersions.activity += 1;
+  tbKpiDataVersions.nutrition += 1;
+  window.__TB_ACTIVITY_LOAD_PROMISE__ = null;
+  window.__TB_NUTRITION_KPI_LOAD_PROMISE__ = null;
+  window.__TB_KPI_ACTIVITY_LOADING__ = false;
+  window.__TB_KPI_NUTRITION_LOADING__ = false;
   if (!window.state) return;
+  window.state.activityDataLoaded = false;
+  window.state.sportSessions = [];
+  window.state.workDays = [];
   window.state.nutritionKpiDataLoaded = false;
   window.state.nutritionMeals = [];
   window.state.nutritionMealItems = [];

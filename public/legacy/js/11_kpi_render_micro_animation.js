@@ -752,13 +752,15 @@ function renderKPI() {
       && Array.isArray(window.state?.sportSessions)
       && Array.isArray(window.state?.workDays);
     if (!hasActivity && !window.__TB_KPI_ACTIVITY_LOADING__ && typeof window.tbEnsureActivityData === "function") {
-      window.__TB_KPI_ACTIVITY_LOADING__ = true;
-      window.tbEnsureActivityData({ reason: "kpi" })
+      const pending = window.tbEnsureActivityData({ reason: "kpi" });
+      window.__TB_KPI_ACTIVITY_LOADING__ = pending;
+      pending
         .then((result) => {
+          if (window.__TB_KPI_ACTIVITY_LOADING__ !== pending) return;
           window.__TB_KPI_ACTIVITY_LOADING__ = false;
           if (result?.loaded && typeof renderKPI === "function") renderKPI();
         })
-        .catch(() => { window.__TB_KPI_ACTIVITY_LOADING__ = false; });
+        .catch(() => { if (window.__TB_KPI_ACTIVITY_LOADING__ === pending) window.__TB_KPI_ACTIVITY_LOADING__ = false; });
     }
   } catch (_) {}
   try {
@@ -766,13 +768,15 @@ function renderKPI() {
       && Array.isArray(window.state?.nutritionMeals)
       && Array.isArray(window.state?.nutritionMealItems);
     if (!hasNutrition && !window.__TB_KPI_NUTRITION_LOADING__ && typeof window.tbEnsureNutritionKpiData === "function") {
-      window.__TB_KPI_NUTRITION_LOADING__ = true;
-      window.tbEnsureNutritionKpiData({ reason: "kpi" })
+      const pending = window.tbEnsureNutritionKpiData({ reason: "kpi" });
+      window.__TB_KPI_NUTRITION_LOADING__ = pending;
+      pending
         .then((result) => {
+          if (window.__TB_KPI_NUTRITION_LOADING__ !== pending) return;
           window.__TB_KPI_NUTRITION_LOADING__ = false;
           if (result?.loaded && typeof renderKPI === "function") renderKPI();
         })
-        .catch(() => { window.__TB_KPI_NUTRITION_LOADING__ = false; });
+        .catch(() => { if (window.__TB_KPI_NUTRITION_LOADING__ === pending) window.__TB_KPI_NUTRITION_LOADING__ = false; });
     }
   } catch (_) {}
   const infoToday = (typeof getDailyBudgetInfoForDate === "function")

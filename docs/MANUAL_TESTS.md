@@ -6,6 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
+- Retest 10.5.380 : avec deux comptes de test, changer de compte pendant le chargement des KPI Activité/Nutrition ; vérifier que les anciennes réponses ne réapparaissent pas. Tester déconnexion puis reconnexion et retour réseau. Validation téléphone à faire.
+
 - Retest 10.5.379 : après une panne réseau pendant le chargement Activité/Nutrition, rétablir le réseau et provoquer un nouveau rendu KPI ; vérifier que les données se chargent. Vérifier aussi le lancement hors ligne puis le retour réseau. Validation téléphone à faire.
 - Retest 10.5.378 : connexion et restauration de session, courbe Dashboard, graphiques Analyse/Patrimoine ; ouvrir en ligne puis rouvrir hors ligne. Bibliothèques désormais locales, ECharts 6.1.0 avec thème v5. Validation téléphone à faire.
 
@@ -23,8 +25,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 - Retest Analyse `10.5.369` : contrôler les listes séparées « Sorties à payer » et « Frais estimés », chacune avec son total filtré. Les estimations restent dans le budget prévisionnel mais ne génèrent plus d'alerte d'échéance en retard. Vérifier les cas sans estimation et avec seulement des estimations, en clair/sombre et PC/mobile.
 
-- Version locale et APK à valider : `10.5.379`. Livraison Trip/wallets : voir [preuves et distribution](TRIP_WALLET_FIX_10_5_374.md).
-- APK courant : `travelbudget-10.5.379-20261023-140000-debug.apk`. Validation sur téléphone à effectuer : sur un Trip de test, enregistrer un remboursement partiel avec double appui, vérifier un seul règlement et une seule transaction, puis annuler et vérifier leur disparition des montants actifs. Réordonner les wallets puis recharger : Archiver et Désarchiver doivent rester dans leurs cartes en clair/sombre à 390 et 1440 px.
+- Version locale et APK à valider : `10.5.380`. Livraison Trip/wallets : voir [preuves et distribution](TRIP_WALLET_FIX_10_5_374.md).
+- APK courant : `travelbudget-10.5.380-20261023-223000-debug.apk`. Validation sur téléphone à effectuer : sur un Trip de test, enregistrer un remboursement partiel avec double appui, vérifier un seul règlement et une seule transaction, puis annuler et vérifier leur disparition des montants actifs. Réordonner les wallets puis recharger : Archiver et Désarchiver doivent rester dans leurs cartes en clair/sombre à 390 et 1440 px.
 - Retest sécurité Android `10.5.373` : installer en mise à jour, conserver les données, vérifier connexion/OAuth, documents/liens externes, notifications et reprise hors ligne/réseau. Voir [preuve et limites du correctif Capacitor](ANDROID_SECURITY_10_5_373.md).
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
