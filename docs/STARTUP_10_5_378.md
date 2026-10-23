@@ -28,7 +28,7 @@ Les nouveaux tests utilisent les vrais moteurs graphiques, dont les options de t
 
 Code mort lié au périmètre : scripts CDN et anciennes interceptions CDN des tests supprimés ; le générateur retire seulement les anciens fichiers déclarés dans son propre manifeste. Les consommateurs des deux moteurs sont conservés. L’empreinte Atlas inclut désormais config, notamment le manifeste des bibliothèques et les budgets.
 
-APK de ce lot : `travelbudget-10.5.378-20261023-090000-debug.apk`. Vérifications de signature, version, bundle/Atlas/vendor embarqués et empreinte distante requises avant clôture. Validation téléphone et session authentifiée réelle restantes.
+APK de ce lot : `travelbudget-10.5.378-20261023-090100-debug.apk`. Vérifications de signature, version, bundle/Atlas/vendor embarqués et empreinte distante requises avant clôture. Validation téléphone et session authentifiée réelle restantes.
 
 F9 est partiellement traité : dépendances locales verrouillées et parcours anonyme mesuré. Restent le parcours connecté représentatif, les appareils réels et la réduction progressive des 38 scripts legacy. F8 reste partiellement ouvert pour les autres imports/moteurs. La phase base de données n’est pas commencée par ce lot.
 
