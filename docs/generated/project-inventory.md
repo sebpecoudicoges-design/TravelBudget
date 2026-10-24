@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `e0b0ffdd071ae2e2eeee65fa78cac66547027255`
-> Empreinte du snapshot : `b31d2f8ff22047a254d79a3718a329d0293851268288c942f814c20a9cac7950`
-> Généré le : `2026-10-23T12:31:30.586Z`
+> Commit analysé : `27a8fbe30c8e348f4e8ac0bb5e5a50b293901d83`
+> Empreinte du snapshot : `317892ad2869aa14d819586f909af042c05a684ec4ccd475e07d990370791a7c`
+> Généré le : `2026-10-24T21:31:00.053Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 157 |
+| Fichiers de tests | 158 |
 | Migrations Supabase | 162 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -465,6 +465,7 @@ Modules :
 - `tests/features/work/workView.test.js`
 - `tests/scripts/androidCommand.test.js`
 - `tests/scripts/atlasFingerprint.test.js`
+- `tests/scripts/connectedStartupFixture.test.js`
 - `tests/scripts/entryManifest.test.js`
 - `tests/ui/accountingViewContract.test.js`
 - `tests/ui/analysisDrilldownViewContract.test.js`
@@ -720,6 +721,7 @@ Modules :
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`
+- `docs/CONNECTED_STARTUP.md`
 - `docs/DEPENDENCIES_10_5_377.md`
 - `docs/GPT6_AND_ACCOUNTING_PLAN.md`
 - `docs/KPI_RECOVERY_10_5_379.md`

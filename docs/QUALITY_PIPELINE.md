@@ -29,3 +29,7 @@ Le lot 10.5.377 migre vers Vite 7.3.6 et Vitest 4.1.10, aligne Netlify sur Node 
 ## Actualisation du 23 octobre 2026
 
 La CI mesure aussi le parcours compilé anonyme via npm run perf:startup et conserve son rapport JSON. Les requêtes et volumes réels complètent les budgets de fichiers. Les bibliothèques sont préparées depuis npm avant dev/build ; config est désormais inclus dans l'empreinte Atlas. Voir [Démarrage 10.5.378](STARTUP_10_5_378.md).
+
+## Actualisation du 25 octobre 2026
+
+`npm run perf:startup` exécute désormais quatre parcours : anonyme et connecté synthétique, chacun sur desktop et mobile simulé. Le parcours connecté utilise le vrai client, le bootstrap et les graphiques compilés avec 1 200 transactions fictives, sans accès aux services réels. Les seuils et limites sont détaillés dans [Mesure du démarrage connecté](CONNECTED_STARTUP.md). Les transferts des fichiers locaux sont séparés des octets des réponses API synthétiques. Le rapport reste disponible dans l’artefact CI `startup-report`.

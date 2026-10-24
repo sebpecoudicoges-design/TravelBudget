@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import zlib from 'node:zlib';
+import { installConnectedFixture, fixtureUser, transactionCount } from './fixtures/connectedStartup.mjs';
 
-// A cold, anonymous, compiled journey; not authenticated TTI or a real device benchmark.
+// Cold compiled journeys; connected uses synthetic HTTP, not a live account or TTI.
 process.env.PLAYWRIGHT_BROWSERS_PATH ||= '.ms-playwright';
 const { chromium } = await import('playwright');
 const dist = path.resolve('dist');
@@ -18,12 +19,24 @@ const server = http.createServer((req, res) => {
   res.end(zlib.gzipSync(fs.readFileSync(file)));
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const browser = await chromium.launch();
+let browser;
 const reports = [];
 try {
-  for (const profile of [{ name: 'desktop', width: 1440, cpu: 1 }, { name: 'mobile-simulated', width: 390, cpu: 4 }]) {
+  browser = await chromium.launch();
+  for (const journey of ['anonymous', 'connected-fixture']) for (const profile of [{ name: 'desktop', width: 1440, cpu: 1 }, { name: 'mobile-simulated', width: 390, cpu: 4 }]) {
     const context = await browser.newContext({ viewport: { width: profile.width, height: 900 }, serviceWorkers: 'block' });
     const page = await context.newPage();
+    const localOrigin = `http://127.0.0.1:${server.address().port}`;
+    const fixture = journey === 'connected-fixture' ? await installConnectedFixture(page, localOrigin) : null;
+    const unexpectedRequests = [];
+    if (!fixture) {
+      await page.route('**/*', route => {
+        if (new URL(route.request().url()).origin === localOrigin) return route.continue();
+        unexpectedRequests.push(new URL(route.request().url()).origin);
+        return route.abort();
+      });
+      await page.routeWebSocket('**/*', socket => { unexpectedRequests.push('WebSocket'); socket.close(); });
+    }
     const session = await context.newCDPSession(page);
     await session.send('Network.enable');
     await session.send('Network.setCacheDisabled', { cacheDisabled: true });
@@ -37,24 +50,43 @@ try {
     session.on('Network.dataReceived', e => { const r = requests.get(e.requestId); if (r) r.decodedBytes += e.dataLength; });
     session.on('Network.loadingFinished', e => { const r = requests.get(e.requestId); if (r) { r.transferredBytes = e.encodedDataLength; r.finished = true; } });
     page.on('pageerror', e => errors.push(e.message));
-    await page.goto(`http://127.0.0.1:${server.address().port}/?freeze=1`, { waitUntil: 'load', timeout: 60000 });
-    await page.waitForFunction(() => window.__tbBootReady === true, { timeout: 30000 });
+    await page.goto(`${localOrigin}/${fixture ? '' : '?freeze=1'}`, { waitUntil: 'load', timeout: 60000 });
+    await page.waitForFunction(() => window.__tbBootReady === true, null, { timeout: 30000 });
+    if (fixture) {
+      try {
+        await page.waitForFunction(({ fixtureUser, transactionCount }) => {
+          const ready = window.__TB_BOOT_COMPLETED__ && window.sbUser?.id === fixtureUser
+            && window.activeView === 'dashboard' && window.state?.transactions?.length === transactionCount
+            && new Set(window.state.transactions.map(row => row.id)).size === transactionCount
+            && window.state?.wallets?.length === 1 && window.__cashflowChart
+            && window.state?.activityDataLoaded && window.state?.nutritionKpiDataLoaded
+            && document.querySelector('#cashflowCurve svg')
+            && getComputedStyle(document.querySelector('#auth-overlay')).display === 'none';
+          if (ready && !performance.getEntriesByName('tb:connected-ready').length) performance.mark('tb:connected-ready');
+          return Boolean(ready);
+        }, { fixtureUser, transactionCount }, { timeout: 45000 });
+      } catch (error) {
+        const state = await page.evaluate(() => ({ boot: window.__TB_BOOT_COMPLETED__, user: window.sbUser?.id, view: window.activeView, tx: window.state?.transactions?.length, wallets: window.state?.wallets?.length, chart: Boolean(window.__cashflowChart) }));
+        reports.push({ journey, profile, errors, state, fixture });
+        throw new Error(`Connected startup failed: ${JSON.stringify({ state, failures: fixture.failures })}`, { cause: error });
+      }
+    }
     await page.waitForTimeout(1500); // same observation window for deferred KPI imports in both profiles
-    const timings = await page.evaluate(() => ({ legacyReadyMs: performance.getEntriesByName('tb:legacy-ready')[0]?.startTime, authVisible: !!document.querySelector('#auth-email') && getComputedStyle(document.querySelector('#auth-overlay')).display !== 'none' }));
+    const timings = await page.evaluate(() => ({ legacyReadyMs: performance.getEntriesByName('tb:legacy-ready')[0]?.startTime, connectedReadyMs: performance.getEntriesByName('tb:connected-ready')[0]?.startTime, authVisible: !!document.querySelector('#auth-email') && getComputedStyle(document.querySelector('#auth-overlay')).display !== 'none' }));
     const metrics = Object.fromEntries((await session.send('Performance.getMetrics')).metrics.map(m => [m.name, m.value]));
     const resources = [...requests.values()];
     const scripts = resources.filter(r => r.type === 'Script');
-    const report = { profile, ...timings, scriptExecutionMs: metrics.ScriptDuration * 1000, scripts: scripts.length, scriptDecodedKiB: scripts.reduce((n, r) => n + r.decodedBytes, 0) / 1024, transferredKiB: resources.reduce((n, r) => n + r.transferredBytes, 0) / 1024, errors, resources };
+    const report = { journey, profile, ...timings, fixture, unexpectedRequests, scriptExecutionMs: metrics.ScriptDuration * 1000, scripts: scripts.length, scriptDecodedKiB: scripts.reduce((n, r) => n + r.decodedBytes, 0) / 1024, localTransferredKiB: resources.filter(r => new URL(r.url).origin === localOrigin).reduce((n, r) => n + r.transferredBytes, 0) / 1024, fixtureResponseKiB: fixture ? fixture.calls.reduce((n, call) => n + call.responseBytes, 0) / 1024 : 0, errors, resources };
     reports.push(report);
     // Size/request gates are deterministic; timings are recorded, not hardware-dependent CI gates.
-    if (!timings.authVisible || errors.length || scripts.some(r => !r.finished || r.status !== 200 || new URL(r.url).hostname !== '127.0.0.1') || report.scriptDecodedKiB <= 0 || report.scriptDecodedKiB > 1500 || scripts.length > 60 || scripts.some(r => /apexcharts|echarts/.test(r.url))) throw new Error(`Startup contract failed: ${profile.name}`);
+    if (!Number.isFinite(timings.legacyReadyMs) || (fixture && (!Number.isFinite(timings.connectedReadyMs) || fixture.calls.length > 40)) || timings.authVisible === Boolean(fixture) || errors.length || unexpectedRequests.length || fixture?.failures.length || scripts.some(r => !r.finished || r.status !== 200 || new URL(r.url).origin !== localOrigin) || report.scriptDecodedKiB <= 0 || report.scriptDecodedKiB > (fixture ? 2450 : 1500) || scripts.length > 60 || scripts.some(r => (fixture ? /echarts/ : /apexcharts|echarts/).test(r.url))) throw new Error(`Startup contract failed: ${journey}/${profile.name}`);
     await context.close();
   }
 } finally {
   const output = process.argv[2] || 'test-results/startup.json';
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify(reports, null, 2));
-  console.log(JSON.stringify(reports.map(({ resources, ...summary }) => summary), null, 2));
-  await browser.close();
+  console.log(JSON.stringify(reports.map(({ resources, fixture, ...summary }) => ({ ...summary, ...(fixture ? { fixtureCalls: fixture.calls.length, fixtureFailures: fixture.failures } : {}) })), null, 2));
+  await browser?.close();
   await new Promise(resolve => server.close(resolve));
 }
