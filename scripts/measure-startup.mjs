@@ -8,6 +8,8 @@ import { installConnectedFixture, fixtureUser, transactionCount } from './fixtur
 process.env.PLAYWRIGHT_BROWSERS_PATH ||= '.ms-playwright';
 const { chromium } = await import('playwright');
 const dist = path.resolve('dist');
+const output = process.argv[2] || 'test-results/startup.json';
+const captureCpu = process.env.TB_CPU_PROFILE === '1';
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
   const file = path.resolve(dist, '.' + (pathname === '/' ? '/index.html' : pathname));
@@ -41,6 +43,11 @@ try {
     await session.send('Network.enable');
     await session.send('Network.setCacheDisabled', { cacheDisabled: true });
     await session.send('Performance.enable');
+    if (captureCpu) {
+      await session.send('Profiler.enable');
+      await session.send('Profiler.setSamplingInterval', { interval: 1000 });
+      await session.send('Profiler.start');
+    }
     await session.send('Emulation.setCPUThrottlingRate', { rate: profile.cpu });
     if (profile.cpu > 1) await session.send('Network.emulateNetworkConditions', { offline: false, latency: 40, downloadThroughput: 1_250_000, uploadThroughput: 625_000 });
     const requests = new Map();
@@ -72,6 +79,11 @@ try {
       }
     }
     await page.waitForTimeout(1500); // same observation window for deferred KPI imports in both profiles
+    if (captureCpu) {
+      const { profile: cpuProfile } = await session.send('Profiler.stop');
+      fs.mkdirSync(path.dirname(output), { recursive: true });
+      fs.writeFileSync(`${output}.${journey}.${profile.name}.cpuprofile`, JSON.stringify(cpuProfile));
+    }
     const timings = await page.evaluate(() => ({ legacyReadyMs: performance.getEntriesByName('tb:legacy-ready')[0]?.startTime, connectedReadyMs: performance.getEntriesByName('tb:connected-ready')[0]?.startTime, authVisible: !!document.querySelector('#auth-email') && getComputedStyle(document.querySelector('#auth-overlay')).display !== 'none' }));
     const metrics = Object.fromEntries((await session.send('Performance.getMetrics')).metrics.map(m => [m.name, m.value]));
     const resources = [...requests.values()];
@@ -83,7 +95,6 @@ try {
     await context.close();
   }
 } finally {
-  const output = process.argv[2] || 'test-results/startup.json';
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify(reports, null, 2));
   console.log(JSON.stringify(reports.map(({ resources, fixture, ...summary }) => ({ ...summary, ...(fixture ? { fixtureCalls: fixture.calls.length, fixtureFailures: fixture.failures } : {}) })), null, 2));

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `27a8fbe30c8e348f4e8ac0bb5e5a50b293901d83`
-> Empreinte du snapshot : `317892ad2869aa14d819586f909af042c05a684ec4ccd475e07d990370791a7c`
-> Généré le : `2026-10-24T21:31:00.053Z`
+> Commit analysé : `b9af44dd53b413a75528962ad3bfe9ca92288b00`
+> Empreinte du snapshot : `2de14292d205aca0b940a4e7fa2866228371094461bc710e7f0a6cac936a7d21`
+> Généré le : `2026-10-25T02:31:03.037Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.380` |
+| Version | `10.5.381` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 158 |
+| Fichiers de tests | 159 |
 | Migrations Supabase | 162 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -367,6 +367,7 @@ Modules :
 - `tests/core/assistantRules.test.js`
 - `tests/core/budgetAnalysisRules.test.js`
 - `tests/core/canonicalRecords.test.js`
+- `tests/core/cashflowBudgetPreparation.test.js`
 - `tests/core/dailyBudgetRules.test.js`
 - `tests/core/documentRules.test.js`
 - `tests/core/frankfurterRules.test.js`
@@ -721,6 +722,7 @@ Modules :
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`
+- `docs/CASHFLOW_CPU_10_5_381.md`
 - `docs/CONNECTED_STARTUP.md`
 - `docs/DEPENDENCIES_10_5_377.md`
 - `docs/GPT6_AND_ACCOUNTING_PLAN.md`

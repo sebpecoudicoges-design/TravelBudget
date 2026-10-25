@@ -1,5 +1,7 @@
 # Mesure du démarrage connecté — 25 octobre 2026
 
+Suite : [profilage et optimisation de la courbe en 10.5.381](CASHFLOW_CPU_10_5_381.md). L'option `TB_CPU_PROFILE=1` enregistre les profils CPU Chromium ; elle reste désactivée pour les comparaisons temporelles ordinaires.
+
 La commande `npm run perf:startup` complète la mesure anonyme par un démarrage avec session synthétique restaurée. Chaque parcours utilise un contexte Chromium neuf, sans cache ni service worker, sur la compilation `dist`. Le profil mobile mesure une largeur de 390 px, un CPU ralenti ×4 et les ressources locales avec 40 ms de latence et 10 Mbit/s en réception. Le desktop utilise 1440 px.
 
 Le vrai client Supabase, les chargeurs, le bootstrap, les calculs et ApexCharts sont exécutés. Seules les réponses HTTP et la session sont synthétiques : un utilisateur testeur, un voyage, une période de 92 jours, un wallet EUR de 10 000 et 1 200 dépenses EUR de 1, payées sur les 23 premiers jours d’octobre 2026. La lecture des transactions traverse deux pages. Sport, Travail et Nutrition sont vides. La date civile est décalée au 24 octobre 2026, avec horloge, temporisateurs et marqueurs de performance qui continuent à avancer.

@@ -9,30 +9,6 @@
    ========================= */
 
 
-/**
- * Alias container for regression checks:
- * - Keep existing engine container id="cashflowCurve" (used by JS)
- * - Ensure a stable wrapper id="cashflowChart" exists for diagnostics
- */
-function ensureCashflowChartAlias() {
-  try {
-    const curveEl = document.getElementById("cashflowCurve");
-
-    if (!curveEl) return;
-    if (document.getElementById("cashflowChart")) return;
-
-    const wrapper = document.createElement("div");
-    wrapper.id = "cashflowChart";
-
-    // Preserve layout by inserting wrapper where curveEl currently sits
-    const parent = curveEl.parentNode;
-    if (!parent) return;
-
-    parent.insertBefore(wrapper, curveEl);
-    wrapper.appendChild(curveEl);
-  } catch (_) {}
-}
-
 (function () {
 
   // --- local fallbacks (avoid hard dependency on other helpers) ---
@@ -373,12 +349,10 @@ function getKpiScope() {
     }
   }
 
-  function budgetSpentForDateInRenderCurrency(dateStr, renderCurrency) {
+  function prepareBudgetExpenses() {
     try {
       const txs = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
-      const target = String(dateStr || '');
-      if (!target) return 0;
-      let sum = 0;
+      const rows = [];
       for (const t of txs) {
         if (shouldHideFromBudgetViews(t)) continue;
         const type = String(t?.type || '').toLowerCase();
@@ -396,7 +370,7 @@ function getKpiScope() {
         if (!rng) continue;
         const sds = (window.toLocalISODate ? window.toLocalISODate(rng.start) : _toISODate(rng.start));
         const eds = (window.toLocalISODate ? window.toLocalISODate(rng.end) : _toISODate(rng.end));
-        if (target < sds || target > eds) continue;
+        if (sds > eds) continue;
 
         const p = (t.payNow ?? t.pay_now);
         const isPaid = (p === undefined) ? true : !!p;
@@ -415,7 +389,20 @@ function getKpiScope() {
         const days = daysInclusive(rng.start, rng.end);
         if (!days) continue;
         const perDay = amt / days;
-        sum += toRenderForDate(perDay, t.currency || renderCurrency, target, renderCurrency);
+        rows.push({ start: sds, end: eds, perDay, currency: t.currency });
+      }
+      return rows;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function budgetSpentForDateInRenderCurrency(dateStr, renderCurrency, rows) {
+    try {
+      let sum = 0;
+      for (const row of rows) {
+        if (dateStr < row.start || dateStr > row.end) continue;
+        sum += toRenderForDate(row.perDay, row.currency || renderCurrency, dateStr, renderCurrency);
       }
       return sum;
     } catch (_) {
@@ -821,6 +808,8 @@ function buildSeries() {
     const forecast = [];
     const spentBars = [];
     const budgetUsedVal = [];
+    // Rebuild per series: account, categories and transaction edits cannot leave a stale cache.
+    const budgetExpenses = prepareBudgetExpenses();
 
     let bal = startBalance;
     let forecastBal = startBalance;
@@ -828,7 +817,7 @@ function buildSeries() {
     (window.forEachDateInclusive ? window.forEachDateInclusive : _forEachDateInclusive)(start, end, (d) => {
       const k = (window.toLocalISODate ? window.toLocalISODate(d) : _toISODate(d));
 
-      const used = safeNum(budgetSpentForDateInRenderCurrency(k, barCurrency) || paidSpentBudget[k] || 0);
+      const used = safeNum(budgetSpentForDateInRenderCurrency(k, barCurrency, budgetExpenses) || paidSpentBudget[k] || 0);
 
       if (tDate && d <= tDate) {
         const paidNet = safeNum(paidWalletNet[k] || 0);

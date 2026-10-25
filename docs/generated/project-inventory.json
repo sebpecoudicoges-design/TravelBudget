@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "27a8fbe30c8e348f4e8ac0bb5e5a50b293901d83",
-  "snapshotFingerprint": "317892ad2869aa14d819586f909af042c05a684ec4ccd475e07d990370791a7c",
-  "generatedAt": "2026-10-24T21:31:00.053Z",
+  "commit": "b9af44dd53b413a75528962ad3bfe9ca92288b00",
+  "snapshotFingerprint": "2de14292d205aca0b940a4e7fa2866228371094461bc710e7f0a6cac936a7d21",
+  "generatedAt": "2026-10-25T02:31:03.037Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.380"
+    "version": "10.5.381"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -270,6 +270,7 @@
     "tests/core/assistantRules.test.js",
     "tests/core/budgetAnalysisRules.test.js",
     "tests/core/canonicalRecords.test.js",
+    "tests/core/cashflowBudgetPreparation.test.js",
     "tests/core/dailyBudgetRules.test.js",
     "tests/core/documentRules.test.js",
     "tests/core/frankfurterRules.test.js",
@@ -684,6 +685,7 @@
     "docs/ANDROID_SECURITY_10_5_373.md",
     "docs/ARCHITECTURE_DECISIONS.md",
     "docs/ASSISTANT_AI_OPERATIONS.md",
+    "docs/CASHFLOW_CPU_10_5_381.md",
     "docs/CONNECTED_STARTUP.md",
     "docs/DEPENDENCIES_10_5_377.md",
     "docs/GPT6_AND_ACCOUNTING_PLAN.md",
