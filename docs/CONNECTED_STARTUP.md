@@ -1,5 +1,7 @@
 # Mesure du démarrage connecté — 25 octobre 2026
 
+Suite 10.5.382 : [file unique de rendu de la courbe et correction des filtres rapides](CASHFLOW_QUEUE_10_5_382.md).
+
 Suite : [profilage et optimisation de la courbe en 10.5.381](CASHFLOW_CPU_10_5_381.md). L'option `TB_CPU_PROFILE=1` enregistre les profils CPU Chromium ; elle reste désactivée pour les comparaisons temporelles ordinaires.
 
 La commande `npm run perf:startup` complète la mesure anonyme par un démarrage avec session synthétique restaurée. Chaque parcours utilise un contexte Chromium neuf, sans cache ni service worker, sur la compilation `dist`. Le profil mobile mesure une largeur de 390 px, un CPU ralenti ×4 et les ressources locales avec 40 ms de latence et 10 Mbit/s en réception. Le desktop utilise 1440 px.

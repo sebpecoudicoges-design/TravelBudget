@@ -134,8 +134,7 @@ describe('dashboard view extraction contract', () => {
     expect(premiumTheme).toContain('body.theme-dark .tb-overview-budget');
     expect(premiumTheme).toContain('body.theme-dark .tb-premium-overview .dashboard-focus-card');
     expect(cashflow).toContain('const chartTheme = document.body.classList.contains("theme-dark") ? "dark" : "light";');
-    expect(cashflow).toContain('`${_cashflowCacheKey()}|theme:${__theme}`');
-    expect(cashflow).toContain('"|theme:" + theme');
+    expect(cashflow).toContain('window.tbRequestCashflowCurveRender = queueRenderCashflow;');
     expect(cashflow).toContain('tooltip: {\n        theme: chartTheme,');
     expect(cashflow).not.toContain('const sName =');
   });
@@ -191,9 +190,9 @@ describe('dashboard view extraction contract', () => {
     expect(index).toContain('.tb-wallet-action-col .tb-wallet-archive-btn');
   });
 
-  it('includes the selected KPI scope in cashflow scheduling and resolves explicit periods', () => {
+  it('reads the selected KPI scope on render and resolves explicit periods', () => {
     expect(cashflow).toContain('localStorage.getItem(KPI_SCOPE_KEY)');
-    expect(cashflow).toContain('"|scope:" + kpiScope + "|theme:" + theme');
+    expect(cashflow).toContain('window.tbRequestCashflowCurveRender = queueRenderCashflow;');
     expect(kpiLegacy).toContain('function _kpiSegmentResolver(parsed)');
     expect(kpiLegacy).toContain('getBudgetSegmentForDate: _kpiSegmentResolver(parsed)');
     expect(kpiLegacy).toContain('"Tout le voyage"');

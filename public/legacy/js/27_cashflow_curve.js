@@ -163,38 +163,30 @@ function getKpiScope() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }
 
-  // Defer render to avoid re-rendering while the click/change event is still bubbling.
-  // Also handle rapid successive changes without requiring a second click.
-  let _renderScheduled = false;
-  let _renderInFlight = false;
+  // One queue for UI, data, theme and public render requests. A pending change
+  // is rendered after Apex settles, without polling or a time-based suppression.
   let _renderWanted = false;
-
-  function _runQueuedRender() {
-    _renderScheduled = false;
-    if (_renderInFlight) {
-      // Apex render/update still in progress; retry as soon as it yields.
-      _renderScheduled = true;
-      setTimeout(_runQueuedRender, 0);
-      return;
-    }
-    _renderWanted = false;
-    _renderInFlight = true;
-
-    Promise.resolve()
-      .then(() => new Promise((resolve) => setTimeout(resolve, 0))) // let DOM/localStorage settle
-      .then(() => renderCashflowChart())
-      .catch(() => {})
-      .finally(() => {
-        _renderInFlight = false;
-        if (_renderWanted) queueRenderCashflow();
-      });
-  }
+  let _renderPromise = null;
 
   function queueRenderCashflow() {
+    if (window.__TB_BOOTING) {
+      window.__TB_BOOT_NEEDS_CASHFLOW_CURVE = true;
+      return Promise.resolve();
+    }
     _renderWanted = true;
-    if (_renderScheduled) return;
-    _renderScheduled = true;
-    setTimeout(_runQueuedRender, 0);
+    if (_renderPromise) return _renderPromise;
+    _renderPromise = Promise.resolve().then(async () => {
+      while (_renderWanted) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        _renderWanted = false;
+        try { await renderCashflowChart(); }
+        catch (error) { console.error("CashflowCurve render failed:", error); }
+      }
+    }).finally(() => {
+      _renderPromise = null;
+      if (_renderWanted) queueRenderCashflow();
+    });
+    return _renderPromise;
   }
 
   function _segmentBaseForDate(dateStr) {
@@ -731,38 +723,6 @@ function getKpiScope() {
 
     return round2(total);
   }
-  // =========================
-  // Cache (V6.6) - avoids heavy recompute on reload
-  // =========================
-  function _cashflowCacheKey() {
-    try {
-      const rev = Number(window.__TB_DATA_REV || 0);
-      const scope = (typeof getKpiScope === "function" ? getKpiScope() : {});
-      const seg = (scope && (scope.segId || scope.seg_id)) || "";
-      const start = (scope && scope.start) || "";
-      const end = (scope && scope.end) || "";
-      const baseCur = String((state && state.user && (state.user.baseCurrency || state.user.base_currency)) || (scope && (scope.segBase || scope.seg_base)) || (state && state.period && (state.period.baseCurrency || state.period.base_currency)) || "").toUpperCase();
-      return `tb_cashflow_cache_v1|${rev}|${seg}|${start}|${end}|${baseCur}`;
-    } catch (_) {
-      return "tb_cashflow_cache_v1|0";
-    }
-  }
-  function _cashflowCacheGet() {
-    try {
-      const k = _cashflowCacheKey();
-      const raw = localStorage.getItem(k);
-      if (!raw) return null;
-      const obj = JSON.parse(raw);
-      if (!obj || typeof obj !== "object") return null;
-      return obj;
-    } catch (_) { return null; }
-  }
-  function _cashflowCacheSet(obj) {
-    try {
-      const k = _cashflowCacheKey();
-      localStorage.setItem(k, JSON.stringify(obj));
-    } catch (_) {}
-  }
 function buildSeries() {
     const period = window.state?.period;
     if (!period?.start || !period?.end) return { ok:false, reason:"Aucune période définie." };
@@ -921,18 +881,6 @@ function buildSeries() {
     });
     // keep in sync with existing navigation
     if (typeof window.activeView !== "undefined" && window.activeView !== "dashboard") return;
-// Dedup guard: avoid double render on first load / refresh if called twice rapidly with same scope
-try {
-  const __theme = document.body.classList.contains("theme-dark") ? "dark" : "light";
-  const __k = `${_cashflowCacheKey()}|theme:${__theme}`;
-  const __now = Date.now();
-  if (renderCashflowChart.__lastKey === __k && (__now - (renderCashflowChart.__lastTs || 0)) < 1200) {
-    return;
-  }
-  renderCashflowChart.__lastKey = __k;
-  renderCashflowChart.__lastTs = __now;
-} catch (_) {}
-
     // Load category filter from localStorage (idempotent)
     if (!renderCashflowChart.__catsLoaded) {
       loadExcludedCats();
@@ -950,13 +898,7 @@ try {
     let built = null;
     try {
       if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("cashflow:render");
-      const __cached = _cashflowCacheGet();
-      if (__cached && __cached.ok && __cached.series && __cached.options) {
-        built = __cached;
-      } else {
-        built = buildSeries();
-        if (built && built.ok) _cashflowCacheSet(built);
-      }
+      built = buildSeries();
     } catch (err) {
       window.__cashflowChart = null;
       container.innerHTML = `
@@ -1240,28 +1182,12 @@ dataLabels: { enabled: false },
   }
 
   // expose for checks
-  window.renderCashflowChart = renderCashflowChart;
+  window.renderCashflowChart = queueRenderCashflow;
+  window.tbRequestCashflowCurveRender = queueRenderCashflow;
 
   
 
-  // Hooks: redrawCharts / refreshAll / dataUpdated bus
-  function hook(name) {
-    const fn = window[name];
-    if (typeof fn !== "function") return false;
-    if (fn.__cashflowHooked) return;
-    const wrapped = async function (...args) {
-      const out = await fn.apply(this, args);
-      try { queueRenderCashflow(); } catch (_) {}
-      return out;
-    };
-    wrapped.__cashflowHooked = true;
-    window[name] = wrapped;
-    return true;
-  }
-
   function _runCashflowInit() {
-    try { hookRedrawCharts(); } catch (e) {}
-    try { hookRefreshAll(); } catch (e) {}
     // Re-render when data/state is refreshed.
     // The app event bus emits both typed events (tb:*) and the legacy 'data:updated'.
     try {
@@ -1285,56 +1211,4 @@ dataLabels: { enabled: false },
   } else {
     _runCashflowInit();
   }
-})();
-
-// =========================
-// Cashflow Curve render scheduler (coalesce + dedup)
-// =========================
-(function () {
-  const KEY = "__TB_CASHFLOW_CURVE_SCHED";
-  if (window[KEY]) return;
-
-  let scheduled = false;
-  let lastKey = "";
-
-  function _scopeKey() {
-    const rev = String(window.__TB_DATA_REV || 0);
-    const seg = String(window.__TB_ACTIVE_SEGMENT_ID || "");
-    const start = String(window.__TB_ACTIVE_START || "");
-    const end = String(window.__TB_ACTIVE_END || "");
-    let kpiScope = "segment";
-    try { kpiScope = String(localStorage.getItem(KPI_SCOPE_KEY) || "segment"); } catch (_) {}
-    const theme = document.body.classList.contains("theme-dark") ? "dark" : "light";
-    return rev + "|" + seg + "|" + start + "|" + end + "|scope:" + kpiScope + "|theme:" + theme;
-  }
-
-  window.tbRequestCashflowCurveRender = function tbRequestCashflowCurveRender(reason) {
-    if (window.__TB_BOOTING) {
-      window.__TB_BOOT_NEEDS_CASHFLOW_CURVE = true;
-      return;
-    }
-
-    const k = _scopeKey();
-    if (k === lastKey) return;
-    if (scheduled) return;
-    scheduled = true;
-
-    requestAnimationFrame(() => {
-      scheduled = false;
-      const k2 = _scopeKey();
-      if (k2 === lastKey) return;
-      lastKey = k2;
-
-      try {
-        try {
-          if (window.__tbDebugRender) console.log("[TB] cashflow:render", { reason: reason || "unknown", key: k2 });
-        } catch (_) {}
-        if (typeof renderCashflowChart === "function") renderCashflowChart();
-      } catch (e) {
-        console.error("CashflowCurve render failed:", e);
-      }
-    });
-  };
-
-  window[KEY] = true;
 })();
