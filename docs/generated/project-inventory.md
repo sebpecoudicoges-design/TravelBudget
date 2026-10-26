@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `9e6c8ef712705822da32e7d62c0de7db53b0b88c`
-> Empreinte du snapshot : `3db3fcc83e8ab01039bb36186676474987ef7ea17a18fd7849a6289914fd0da5`
-> Généré le : `2026-10-25T03:01:34.226Z`
+> Commit analysé : `9b78755c2868b1485cb7d98588614896437ab6f3`
+> Empreinte du snapshot : `965652923b00545e801977f54585356fa5792f906470376e7098ee39f2e88359`
+> Généré le : `2026-10-26T08:17:14.431Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.382` |
+| Version | `10.5.383` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 161 |
+| Fichiers de tests | 162 |
 | Migrations Supabase | 162 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -419,6 +419,7 @@ Modules :
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
+- `tests/features/accounting/accountingChargeRegression.test.js`
 - `tests/features/accounting/accountingData.test.js`
 - `tests/features/accounting/accountingDebts.test.js`
 - `tests/features/accounting/accountingFx.test.js`
@@ -719,6 +720,7 @@ Modules :
 
 ## Documents d'architecture et de navigation
 
+- `docs/ACCOUNTING_CHARGES_10_5_383.md`
 - `docs/ACCOUNTING_MODULE_BRIEF.md`
 - `docs/ACCOUNT_DATA_LIFECYCLE.md`
 - `docs/ADMIN_TEST_RETURNS.md`

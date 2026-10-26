@@ -25,8 +25,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 - Retest Analyse `10.5.369` : contrôler les listes séparées « Sorties à payer » et « Frais estimés », chacune avec son total filtré. Les estimations restent dans le budget prévisionnel mais ne génèrent plus d'alerte d'échéance en retard. Vérifier les cas sans estimation et avec seulement des estimations, en clair/sombre et PC/mobile.
 
-- Version locale et APK à valider : `10.5.382`. Livraison Trip/wallets : voir [preuves et distribution](TRIP_WALLET_FIX_10_5_374.md).
-- APK courant : `travelbudget-10.5.382-20261025-133000-debug.apk`. Validation sur téléphone à effectuer : sur un Trip de test, enregistrer un remboursement partiel avec double appui, vérifier un seul règlement et une seule transaction, puis annuler et vérifier leur disparition des montants actifs. Réordonner les wallets puis recharger : Archiver et Désarchiver doivent rester dans leurs cartes en clair/sombre à 390 et 1440 px.
+- Version locale et APK à valider : `10.5.383`. Livraison Trip/wallets : voir [preuves et distribution](TRIP_WALLET_FIX_10_5_374.md).
+- APK courant : `travelbudget-10.5.383-20261026-120100-debug.apk`. Validation sur téléphone à effectuer : sur un Trip de test, enregistrer un remboursement partiel avec double appui, vérifier un seul règlement et une seule transaction, puis annuler et vérifier leur disparition des montants actifs. Réordonner les wallets puis recharger : Archiver et Désarchiver doivent rester dans leurs cartes en clair/sombre à 390 et 1440 px.
 - Retest sécurité Android `10.5.373` : installer en mise à jour, conserver les données, vérifier connexion/OAuth, documents/liens externes, notifications et reprise hors ligne/réseau. Voir [preuve et limites du correctif Capacitor](ANDROID_SECURITY_10_5_373.md).
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.

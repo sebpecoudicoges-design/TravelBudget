@@ -47,11 +47,37 @@ async function setup(page, width = 1440, theme = 'light') {
   await page.addScriptTag({ url: '/legacy/js/10_navigation.js' });
   if (await page.locator('#tb-mobile-nav-toggle').isVisible()) await page.locator('#tb-mobile-nav-toggle').click();
   await page.locator('#tab-accounting').click();
-  await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1 400,00'.replace(' ', '\u202f'));
+  await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1 350,15'.replace(' ', '\u202f'));
 }
 
 async function openComplements(page) {
  if (!(await page.locator('#ac-complements').isVisible())) await page.locator('[data-ac-dialog="ac-complements"]').click();
+}
+
+for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
+  test(`repairs stored automatic bank classifications and preserves manual choices ${width} ${theme}`, async ({ page }) => {
+    await setup(page, width, theme);
+    await page.evaluate(() => {
+      const storageKey = 'tb-accounting-v1:user-a:trip-a';
+      const settings = JSON.parse(localStorage.getItem(storageKey));
+      settings.classificationVersion = 3;
+      settings.mapping['["expense","Repas",""]'] = '512100';
+      settings.inferredMapping['["expense","Repas",""]'] = '512100';
+      settings.mapping['["income","Salaire",""]'] = '758110';
+      delete settings.inferredMapping['["income","Salaire",""]'];
+      localStorage.setItem(storageKey, JSON.stringify(settings));
+    });
+    await page.locator('[data-ac-refresh]').click();
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')).classificationVersion)).toBe(4);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')));
+    expect(saved.mapping['["expense","Repas",""]']).toBe('625710');
+    expect(saved.mapping['["income","Salaire",""]']).toBe('758110');
+    expect(saved.inferredMapping['["income","Salaire",""]']).toBeUndefined();
+    await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f350,15');
+    await page.locator('[data-ac-refresh]').click();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')))).toEqual(saved);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
 }
 async function saveAccountingSettings(page) {
  if (await page.locator('#ac-complements').isVisible()) await page.locator('#ac-complements [data-ac-dialog-close]').click();
@@ -182,7 +208,7 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
       window.fixture.wallets.push({ ...window.fixture.wallets[0], id: 'aud', name: 'Compte AUD', currency: 'AUD', balance: 1000 });
     });
     await page.locator('[data-ac-refresh]').click();
-    await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f350,00 EUR');
+    await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f300,15 EUR');
     await expect(page.locator('.tb-accounting-kpi').nth(1)).toContainText('2\u202f740,30 EUR');
     await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
     await page.getByText('616130 · Assurance santé', { exact: true }).click();
@@ -210,7 +236,7 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await page.locator('[name="mode"]').selectOption('native');
     await page.getByRole('button', { name: 'Appliquer', exact: true }).click();
     await page.locator('.tb-accounting-tabs [data-ac-tab="summary"]').click();
-    await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f400,00 EUR');
+    await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f350,15 EUR');
   });
 }
 
@@ -238,28 +264,28 @@ test('one-time enrichment preserves user classification and shows signed subtota
   await expect(page.getByRole('region', { name: 'Indicateurs de performance' })).toBeVisible();
   await expect(page.locator('.tb-accounting-kpi').nth(2)).not.toContainText('Non disponible');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')));
-  expect(saved.classificationVersion).toBe(3);
+  expect(saved.classificationVersion).toBe(4);
   expect(saved.mapping['["expense","Repas"]']).toBe('602');
   expect(saved.mapping['["income","Salaire",""]']).toBe('758110');
   await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
   await page.getByText('625710 · Restaurants et repas', { exact: true }).click();
   await expect(page.locator('.tb-accounting-account[open] > strong')).toHaveCount(0);
-  await expect(page.locator('.tb-accounting-account[open] > summary')).toContainText('0,00 EUR');
+  await expect(page.locator('.tb-accounting-account[open] > summary')).toContainText('49,85 EUR');
   await page.locator('[data-ac-refresh]').click();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')))).toEqual(saved);
 });
 
-test('budget dates, real balance reconciliation and removal of internal amounts', async ({ page }) => {
+test('budget dates, real balance reconciliation and personal Trip amounts', async ({ page }) => {
   await setup(page, 390, 'dark');
   await expect(page.locator('[data-ac-tab="entries"]')).toHaveCount(0);
   await page.evaluate(() => {
     window.fixture.transactions.push({ ...window.fixture.transactions[1], id:'budget-rent', category:'Logement', subcategory:'Loyer', label:'Loyer janvier', amount:310, date_start:'2025-12-15', budget_date_start:'2026-01-01', budget_date_end:'2026-01-31' });
   });
   await page.locator('[data-ac-refresh]').click();
-  await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f090,00 EUR');
+  await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1\u202f040,15 EUR');
   await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
   await openAccountDetails(page);
-  await expect(page.locator('[data-ac-source="tx:share"]')).toHaveCount(0);
+  await expect(page.locator('[data-ac-source="tx:share"]')).toHaveCount(1);
   await page.locator('[data-ac-source="tx:budget-rent"]').click();
   await expect(page.locator('#tb-accounting-detail')).toContainText('2026-01-01 → 2026-01-31');
   await expect(page.locator('#tb-accounting-detail')).toContainText('2025-12-15');
@@ -332,7 +358,7 @@ for (const width of [1440,390]) for (const theme of ['light','dark']) test(`date
   await page.getByRole('button',{name:'Actualiser',exact:true}).click();
   await expect(debt).toContainText('1\u202f550,00 EUR');
   await page.locator('.tb-accounting-tabs [data-ac-tab="result"]').click();
-  await expect(page.locator('.tb-accounting-content')).toContainText('-200,00 EUR');
+  await expect(page.locator('.tb-accounting-content')).toContainText('-249,85 EUR');
   await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
   await debt.getByRole('button',{name:'Ajuster',exact:true}).click();
   await debt.getByLabel('Variation signée').fill('-9999');
@@ -395,7 +421,7 @@ for(const width of [1440,390]) for(const theme of ['light','dark']) test(`operat
 
 test('Trip sources feed net worth once, bank codes classify internals, modal escapes retain focus',async({page})=>{
  await setup(page);
- await page.evaluate(()=>{window.fixture.v_trip_user_net_balances=[{trip_id:'g1',trip_name:'Paris',currency:'EUR',net:120},{trip_id:'g2',trip_name:'Berlin',currency:'EUR',net:-50}];});
+ await page.evaluate(()=>{window.fixture.transactions.push({...window.fixture.transactions[1],id:'transfer',category:'Mouvement interne',amount:0,is_internal:true,internal_transfer_id:'transfer'});window.fixture.v_trip_user_net_balances=[{trip_id:'g1',trip_name:'Paris',currency:'EUR',net:120},{trip_id:'g2',trip_name:'Berlin',currency:'EUR',net:-50}];});
  await page.locator('[data-ac-refresh]').click();
  await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
  await expect(page.locator('[data-ac-balance-status]')).toContainText('3\u202f420,30 EUR');
@@ -465,7 +491,7 @@ test('asset attachment preserves one asset, survives refresh and local storage f
  await page.locator('[data-ac-refresh]').click();
  await expect(page.locator('[data-ac-unlink-asset="purchase"]')).toBeVisible();
  await page.locator('.tb-accounting-tabs [data-ac-tab="summary"]').click();
- await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1 400,00'.replace(' ','\u202f'));
+ await expect(page.locator('.tb-accounting-kpi').first()).toContainText('1 350,15'.replace(' ','\u202f'));
  await page.locator('.tb-accounting-tabs [data-ac-tab="balance"]').click();
  await page.locator('[data-ac-unlink-asset="purchase"]').click();
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')).assetLinks)).toEqual([]);

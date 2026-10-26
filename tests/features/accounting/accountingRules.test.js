@@ -14,11 +14,12 @@ describe('personal accounting statements', () => {
     expect(report.assetRows[0]).toMatchObject({ gross: 1200, accumulated: 100, amount: 1100 });
     expect(report.excluded[0].reason).toContain('Achat immobilisé');
   });
-  it('excludes all internal Trip shares and gross out-of-budget payments from accounting', () => {
+  it('recognizes the personal Trip share once, excluding the gross payment and disabled share', () => {
     const data = { transactions: [tx('cash', { amount: 99.70, trip_expense_id: 'trip-e', out_of_budget: true }), tx('share', { amount: 49.85, label: '[Trip] Repas', is_internal: true, pay_now: false, affects_budget: true }), tx('old', { label: '[Trip] Repas', is_internal: true, pay_now: false, affects_budget: false, out_of_budget: true })] };
     const report = buildAccountingReport(data, options);
-    expect(report.expenses).toBe(0);
-    expect(report.entries).toEqual([]);
+    expect(report.expenses).toBe(49.85);
+    expect(report.entries.map(e => e.sourceId)).toEqual(['share']);
+    expect(report.accrualRows).toEqual([]);
   });
   it('retains a fully personal Trip payment if it affects the budget', () => {
     expect(buildAccountingReport({ transactions: [tx('own', { trip_expense_id: 'e', affects_budget: true, out_of_budget: false })] }, options).expenses).toBe(100);

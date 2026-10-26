@@ -49,19 +49,23 @@ export function resolveAccount(tx, settings = {}) {
 }
 export const mappedAccount = (tx, settings = {}) => resolveAccount(tx, settings).account;
 export function completeInitialMapping(transactions, settings = {}) {
-  if (settings.classificationVersion === 3) return settings;
+  if (settings.classificationVersion === 4) return settings;
   const mapping = { ...settings.mapping }, inferredMapping = { ...settings.inferredMapping };
   for (const tx of transactions.filter(t => ['income', 'expense'].includes(t.type))) {
+    // Internal cash movements must never seed a shared category classification.
+    if (internalAccounting(tx) || normal(tx.category) === 'mouvement interne') continue;
     const key = mappingKey(tx), existing = mapping[key];
     const valid = code => accountInfo(code) || code === '471' || Object.values(settings.walletAccounts || {}).includes(code);
     const inferred = existing && settings.inferredMapping?.[key] === existing;
+    // Version 3 repair is deliberately limited to demonstrably automatic bank mappings.
+    if (settings.classificationVersion === 3 && !(inferred && /^512/.test(existing))) continue;
     if (existing === 'auto' || (valid(existing) && !inferred) || (!existing && valid(mapping[categoryKey(tx)]))) continue;
     const resolved = inferred ? inferAccount(tx) : resolveAccount(tx, settings);
     mapping[key] = resolved.account;
     // Uncertain accounts retain their review state through a dedicated list.
     inferredMapping[key] = resolved.account;
   }
-  return { ...settings, mapping, inferredMapping, classificationVersion: 3, mappingBeforeDetailedChart: settings.mappingBeforeDetailedChart || { ...settings.mapping } };
+  return { ...settings, mapping, inferredMapping, classificationVersion: 4, mappingBeforeDetailedChart: settings.mappingBeforeDetailedChart || { ...settings.mapping } };
 }
 export function assetAccount(asset) {
   const name = normal(asset.name);

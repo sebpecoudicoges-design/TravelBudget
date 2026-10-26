@@ -3,7 +3,7 @@ import { debtLedger } from './accountingDebts.js';
 // Personal management statements, not a statutory or closed general ledger.
 import { mappedAccount, resolveAccount, assetAccount, walletAccount } from './accountingMapping.js';
 import { accountInfo } from './accountingChart.js';
-import { budgetWindow, allocateBudgetAmount, internalAccounting, accountingFxDate, settledAt, needsAccountingTransaction } from './accountingRecognition.js';
+import { budgetWindow, allocateBudgetAmount, internalAccounting, personalTripShare, accountingFxDate, settledAt, needsAccountingTransaction } from './accountingRecognition.js';
 import { financialIndicators } from './accountingIndicators.js';
 import { convertAccountingAmount } from './accountingFx.js';
 export { ACCOUNTS, categoryKey, mappedAccount } from './accountingMapping.js';
@@ -67,7 +67,7 @@ export function buildAccountingReport(data, { start, end, currency, travelId, to
     const principal = ledger.principalByTransaction.get(String(tx.id)) || 0;
     const amount = round(Number(tx.amount) - principal), txLinks = links.filter(l => String(l.transaction_id) === String(tx.id));
     let reason = '';
-    if (internalAccounting(tx)) reason = 'Mouvement interne exclu, sans exception Trip';
+    if (internalAccounting(tx)) reason = 'Mouvement interne de trésorerie exclu';
     else if (positions.claimed.has(String(tx.id))) reason = 'Capital rattaché à une caution ou créance, hors résultat';
     else if (ledger.fundingTransactions.has(String(tx.id))) reason = 'Emprunt reçu affecté à une dette, hors revenus';
     else if (!window) { reason = 'Dates budgétaires invalides'; warnings.add('Des dates budgétaires sont invalides : résultat et bilan à vérifier.'); }
@@ -91,12 +91,15 @@ export function buildAccountingReport(data, { start, end, currency, travelId, to
     const converted = convert(amount, currencyOf(tx), accountingFxDate(tx, today));
     const recognized = allocateBudgetAmount(converted.amount, window, window.start, today);
     const deferred = converted.amount === null ? null : round(converted.amount - recognized);
-    if (!paid) addAccrual(tx, recognized, tx.type === 'expense' ? 'liability' : 'asset', tx.type === 'expense' ? '401000' : '411000', tx.type === 'expense' ? 'Charge à payer' : 'Revenu à recevoir');
-    else if (window.end > today) addAccrual(tx, deferred, tx.type === 'expense' ? 'asset' : 'liability', tx.type === 'expense' ? '486000' : '487000', tx.type === 'expense' ? 'Charge constatée d’avance' : 'Produit constaté d’avance');
+    // Trip balances already carry settlements/claims: a personal share is not a second payable.
+    if (!personalTripShare(tx)) {
+      if (!paid) addAccrual(tx, recognized, tx.type === 'expense' ? 'liability' : 'asset', tx.type === 'expense' ? '401000' : '411000', tx.type === 'expense' ? 'Charge à payer' : 'Revenu à recevoir');
+      else if (window.end > today) addAccrual(tx, deferred, tx.type === 'expense' ? 'asset' : 'liability', tx.type === 'expense' ? '486000' : '487000', tx.type === 'expense' ? 'Charge constatée d’avance' : 'Produit constaté d’avance');
+    }
     const until = end < today ? end : today;
     if (window.start > until || window.end < start) continue;
     const allocated = allocateBudgetAmount(converted.amount, window, start, until);
-    entries.push({ id: `tx:${tx.id}`, sourceId: tx.id, sourceType: 'transaction', date: window.start > start ? window.start : start, ...converted, amount: allocated === null ? null : direction * allocated, originalAmount: direction * allocateBudgetAmount(amount, window, start, until), sourceAmount: Number(tx.amount), principalRepaid: principal, budgetStart: window.start, budgetEnd: window.end, cashDate, paid, kind, ...resolved, category: tx.category || 'Sans catégorie', subcategory: tx.subcategory || '', label: tx.label || tx.category || 'Transaction', explanation: `${principal ? `Capital remboursé exclu des charges : ${principal} ${currencyOf(tx)}. ` : ''}Rattachement budgétaire du ${window.start} au ${window.end}, au prorata des jours inclus dans la période. ${paid ? 'Réglé' : 'Non réglé : contrepartie au bilan'}. Les dates de trésorerie ne déterminent pas la période du résultat.` });
+    entries.push({ id: `tx:${tx.id}`, sourceId: tx.id, sourceType: 'transaction', date: window.start > start ? window.start : start, ...converted, amount: allocated === null ? null : direction * allocated, originalAmount: direction * allocateBudgetAmount(amount, window, start, until), sourceAmount: Number(tx.amount), principalRepaid: principal, budgetStart: window.start, budgetEnd: window.end, cashDate, paid, kind, ...resolved, category: tx.category || 'Sans catégorie', subcategory: tx.subcategory || '', label: tx.label || tx.category || 'Transaction', explanation: `${principal ? `Capital remboursé exclu des charges : ${principal} ${currencyOf(tx)}. ` : ''}Rattachement budgétaire du ${window.start} au ${window.end}, au prorata des jours inclus dans la période. ${personalTripShare(tx) ? 'Quote-part personnelle ; créances et dettes suivies dans les soldes Trip, sans seconde régularisation' : paid ? 'Réglé' : 'Non réglé : contrepartie au bilan'}. Les dates de trésorerie ne déterminent pas la période du résultat.` });
   }
   const assetRows = [];
   for (const asset of assets.filter(selected)) {

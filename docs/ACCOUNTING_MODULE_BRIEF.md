@@ -26,7 +26,7 @@ Les amortissements restent linéaires en fin de mois, à la quote-part personnel
 
 ## Exclusion des opérations internes
 
-Toutes les lignes portant `is_internal` / `isInternal` ou un identifiant de transfert interne sont exclues du résultat et des régularisations, **sans exception pour les quotes-parts Trip internes**. Cette règle est propre à Comptabilité, conformément à la nouvelle demande ; la règle de quote-part de l’Analyse budgétaire reste inchangée. Les décaissements bruts Trip explicitement hors budget restent hors résultat personnel. Les positions bancaires sont les soldes réels calculés par le domaine de trésorerie, pas des soldes reconstruits à partir des seules charges du résultat.
+Les virements internes sont exclus du résultat et des régularisations. Les quotes-parts personnelles Trip participant au budget sont incluses dans le résultat selon leurs dates budgétaires, même avec `is_internal`. Elles ne créent pas de régularisation supplémentaire : les créances et dettes proviennent déjà des soldes Trip. Un identifiant de transfert interne reste toujours prioritaire pour exclure un mouvement. Les décaissements bruts Trip explicitement hors budget restent hors résultat personnel. Les positions bancaires sont les soldes réels calculés par le domaine de trésorerie, pas des soldes reconstruits à partir des seules charges du résultat.
 
 L’ancien onglet Mouvements et sa branche de rendu ont été retirés. Les détails restent accessibles dans les comptes du résultat et du bilan. Les autres exclusions et rapprochements sont consultables depuis le résultat, sans réintroduire les opérations internes comme revenus ou charges.
 
@@ -86,7 +86,7 @@ Les sélecteurs d’opération d’origine et de remboursement proposent une rec
 
 ## Comptes de bilan et banques (5 octobre 2026)
 
-Les catégories/sous-catégories accèdent aux comptes des classes 1 à 5 en plus des classes 6/7. Les catégories internes sont visibles et classables, tout en restant exclues des charges, revenus et régularisations. Une affectation de bilan ne crée aucun actif ni dette à partir du seul libellé ; les sources de comptes, biens, dettes et Trips déterminent les valeurs.
+Les catégories/sous-catégories accèdent aux comptes des classes 1 à 5 en plus des classes 6/7. Les catégories de mouvements internes de trésorerie sont visibles et classables, tout en restant exclues des charges, revenus et régularisations. Une affectation de bilan ne crée aucun actif ni dette à partir du seul libellé ; les sources de comptes, biens, dettes et Trips déterminent les valeurs.
 
 Chaque wallet reçoit un sous-compte 512xxx unique, conservé dans `walletAccounts` par utilisateur/voyage. Les codes existants du catalogue sont réservés ; une nouvelle banque ne renumérote pas les anciennes. Auto choisit le wallet de chaque opération interne, même si plusieurs banques partagent une catégorie. Une affectation manuelle explicite reste prioritaire. Le plan expose les sous-comptes bancaires nommés. Les anciennes suggestions automatiques des catégories internes cèdent la place à ce choix par wallet, sans modifier les choix manuels.
 
@@ -126,3 +126,8 @@ La même fenêtre permet de rattacher un achat à un bien existant de même devi
 Les transactions Trip, internes, non réglées, déjà utilisées, absentes ou d'une autre devise sont refusées pour les créances. Les sources devenues incompatibles restent signalées, sans remplacement du solde inconnu par zéro. Un achat déjà rattaché ne peut être réutilisé pour une créance. Les détachements sont tracés et recalculent le résultat et le bilan. Rattachements et historique restent locaux au compte, voyage et appareil, comme les dettes et réglages existants ; ils ne sont pas synchronisés avec Patrimoine ni inclus dans l'export général.
 
 Le contrôle compact affiche les opérations patrimoniales sans rapprochement. Les comptes sans source recensée sont consultables dans un volet séparé ; leur zéro ne constitue pas une attestation d'absence. Les soldes inconnus et FX manquants restent des anomalies distinctes. L'historique complet du bilan à une date antérieure reste hors de cette évolution : le bilan utilise les soldes courants disponibles.
+
+
+### Réparation des charges — 10.5.383
+
+La migration `classificationVersion=4` répare uniquement les affectations bancaires 512xxx de version 3 encore identiques à leur marqueur de déduction initiale. Les choix manuels, Auto explicite et autres comptes restent conservés. Les mouvements internes ne peuvent plus initialiser le compte partagé d’une catégorie. Voir [diagnostic et validation](ACCOUNTING_CHARGES_10_5_383.md).

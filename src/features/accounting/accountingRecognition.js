@@ -1,6 +1,10 @@
-import { transactionBudgetStart, transactionBudgetEnd } from '../../core/dailyBudgetRules.js';
+import { transactionBudgetStart, transactionBudgetEnd, isTripBudgetShare, isTripBudgetIncomeShare } from '../../core/dailyBudgetRules.js';
 export const validDay = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
-export const internalAccounting = tx => !!(tx.isInternal ?? tx.is_internal) || !!(tx.internalTransferId ?? tx.internal_transfer_id);
+export const personalTripShare = tx => !(tx.internalTransferId ?? tx.internal_transfer_id)
+  && (tx.affectsBudget ?? tx.affects_budget) !== false && !(tx.outOfBudget ?? tx.out_of_budget)
+  && (isTripBudgetShare(tx) || isTripBudgetIncomeShare(tx));
+export const internalAccounting = tx => !!(tx.internalTransferId ?? tx.internal_transfer_id)
+  || (!!(tx.isInternal ?? tx.is_internal) && !personalTripShare(tx));
 export function budgetWindow(tx) {
   const start = transactionBudgetStart(tx), end = transactionBudgetEnd(tx);
   return validDay(start) && validDay(end) && start <= end ? { start, end } : null;
@@ -30,6 +34,6 @@ export function needsAccountingTransaction(tx, start, end, today) {
   if (!window) return false;
   const until = end < today ? end : today;
   const period = window.start <= until && window.end >= start;
-  const accrual = settledAt(tx, today) ? window.end > today : window.start <= today;
+  const accrual = !personalTripShare(tx) && (settledAt(tx, today) ? window.end > today : window.start <= today);
   return period || accrual;
 }

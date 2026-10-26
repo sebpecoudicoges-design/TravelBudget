@@ -15,8 +15,9 @@ it('conserves cents across periods, leap years and signed reversals',()=>{
  expect(allocateBudgetAmount(null,w,'2024-02-01','2024-02-29')).toBeNull();
  expect(allocateBudgetAmount(null,w,'2023-01-01','2023-01-31')).toBe(0);
 });
-it('excludes internal shares without modifying the separate budget Analysis policy',()=>{
- expect(internalAccounting({is_internal:true,trip_share_link_id:'share',affects_budget:true})).toBe(true);
+it('distinguishes personal Trip shares from internal cash transfers',()=>{
+ expect(internalAccounting({type:'expense',pay_now:false,is_internal:true,trip_share_link_id:'share',affects_budget:true})).toBe(false);
+ expect(internalAccounting({type:'expense',pay_now:false,is_internal:true,trip_share_link_id:'share',affects_budget:true,internal_transfer_id:'transfer'})).toBe(true);
  expect(internalAccounting({internalTransferId:'transfer'})).toBe(true);
  expect(internalAccounting({type:'expense',pay_now:false})).toBe(false);
 });
