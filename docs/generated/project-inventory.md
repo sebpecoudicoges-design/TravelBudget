@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `9b78755c2868b1485cb7d98588614896437ab6f3`
-> Empreinte du snapshot : `965652923b00545e801977f54585356fa5792f906470376e7098ee39f2e88359`
-> Généré le : `2026-10-26T08:17:14.431Z`
+> Commit analysé : `8c2628d291d804cce6750dd98b1b7fbd5ddd4b51`
+> Empreinte du snapshot : `2cffbeb4e66779185c8b1ef5742fbb2eefa916aebb8733f0fcfbc7d865210347`
+> Généré le : `2026-10-27T04:42:46.843Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.383` |
+| Version | `10.5.384` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 162 |
+| Fichiers de tests | 163 |
 | Migrations Supabase | 162 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -378,6 +378,7 @@ Modules :
 - `tests/core/i18nRules.test.js`
 - `tests/core/inboxRules.test.js`
 - `tests/core/moduleAccessRules.test.js`
+- `tests/core/moduleRegistry.test.js`
 - `tests/core/money.test.js`
 - `tests/core/notificationRules.test.js`
 - `tests/core/nutritionRules.test.js`
@@ -736,6 +737,7 @@ Modules :
 - `docs/KPI_SCOPE_10_5_380.md`
 - `docs/LOADER_RECOVERY_10_5_376.md`
 - `docs/MANUAL_TESTS.md`
+- `docs/MODULE_RECOVERY_10_5_384.md`
 - `docs/MODULE_TEST_CAMPAIGN.md`
 - `docs/PLAY_STORE_READINESS.md`
 - `docs/PREPAID_PROJECTION_10_5_375.md`

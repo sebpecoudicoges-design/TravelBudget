@@ -73,7 +73,7 @@ describe('dashboard view extraction contract', () => {
 
   it('loads Dashboard daily budget state on demand instead of booting it eagerly', () => {
     expect(main).toContain('window.TBLoadDashboardDailyBudgetState');
-    expect(main).toContain("await import('./features/dashboard/dashboardDailyBudgetState.js')");
+    expect(main).toContain("await deferredModules.load('dashboardDailyBudgetState')");
     expect(main).not.toContain("import * as dashboardDailyBudgetState from './features/dashboard/dashboardDailyBudgetState.js'");
     expect(legacy).toContain('window.TBLoadDashboardDailyBudgetState');
     expect(legacy).toContain('window.TBDashboardDailyBudgetState');
@@ -82,7 +82,7 @@ describe('dashboard view extraction contract', () => {
   it('loads Dashboard wallet rules on demand instead of booting them eagerly', () => {
     expect(main).toContain('window.TBDashboardWalletRules');
     expect(main).toContain('window.TBLoadDashboardWalletRules');
-    expect(main).toContain("await import('./features/dashboard/dashboardWalletRules.js')");
+    expect(main).toContain("await deferredModules.load('dashboardWalletRules')");
     expect(main).not.toContain("import * as dashboardWalletRules from './features/dashboard/dashboardWalletRules.js'");
     expect(legacy).toContain('await window.TBLoadDashboardWalletRules();');
   });

@@ -2,7 +2,8 @@ import './app/bridge.js';
 import './ui/premium-theme.css';
 import './features/testing/testCampaign.css';
 import { registerPwa } from './app/pwa.js';
-import { createRetryableLoader, createRetryableImport } from './app/retryableLoader.js';
+import { createRetryableLoader } from './app/retryableLoader.js';
+import { createModuleRegistry } from './app/moduleRegistry.js';
 import vendorLibraries from '../config/vendor-libraries.json';
 import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
 import * as moduleAccessRules from './core/moduleAccessRules.js';
@@ -10,6 +11,31 @@ import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as transactionView from './features/transactions/transactionView.js';
 import * as settingsView from './features/settings/settingsView.js';
 import { installGlobalFeedback } from './ui/feedback.js';
+
+const deferredModules = createModuleRegistry({
+  analysisRuntime: ['/src/features/analysis/analysisRuntime.js', () => import('./features/analysis/analysisRuntime.js')],
+  testCampaignController: ['/src/features/testing/testCampaignController.js', () => import('./features/testing/testCampaignController.js')],
+  dashboardWalletRules: ['/src/features/dashboard/dashboardWalletRules.js', () => import('./features/dashboard/dashboardWalletRules.js')],
+  dashboardDailyBudgetState: ['/src/features/dashboard/dashboardDailyBudgetState.js', () => import('./features/dashboard/dashboardDailyBudgetState.js')],
+  settingsCategoriesView: ['/src/features/settings/settingsCategoriesView.js', () => import('./features/settings/settingsCategoriesView.js')],
+  settingsAccountController: ['/src/features/settings/settingsAccountController.js', () => import('./features/settings/settingsAccountController.js')],
+  kpiView: ['/src/features/kpi/kpiView.js', () => import('./features/kpi/kpiView.js')],
+  kpiHealthRules: ['/src/features/kpi/kpiHealthRules.js', () => import('./features/kpi/kpiHealthRules.js')],
+  kpiProjectionRules: ['/src/features/kpi/kpiProjectionRules.js', () => import('./features/kpi/kpiProjectionRules.js')],
+  kpiCashRules: ['/src/features/kpi/kpiCashRules.js', () => import('./features/kpi/kpiCashRules.js')],
+  nutritionView: ['/src/features/nutrition/nutritionView.js', () => import('./features/nutrition/nutritionView.js')],
+  assetView: ['/src/features/assets/assetView.js', () => import('./features/assets/assetView.js')],
+  workView: ['/src/features/work/workView.js', () => import('./features/work/workView.js')],
+  subscriptionRules: ['/src/core/subscriptionRules.js', () => import('./core/subscriptionRules.js')],
+  subscriptionView: ['/src/features/subscriptions/subscriptionView.js', () => import('./features/subscriptions/subscriptionView.js')],
+  documentView: ['/src/features/documents/documentView.js', () => import('./features/documents/documentView.js')],
+  sportRuntime: ['/src/features/sport/sportRuntime.js', () => import('./features/sport/sportRuntime.js')],
+  tripDocumentView: ['/src/features/trip/tripDocumentView.js', () => import('./features/trip/tripDocumentView.js')],
+  tripExpenseDetailView: ['/src/features/trip/tripExpenseDetailView.js', () => import('./features/trip/tripExpenseDetailView.js')],
+  tripRecapView: ['/src/features/trip/tripRecapView.js', () => import('./features/trip/tripRecapView.js')],
+  inboxView: ['/src/features/inbox/inboxView.js', () => import('./features/inbox/inboxView.js')],
+  accountingController: ['/src/features/accounting/accountingController.js', () => import('./features/accounting/accountingController.js')],
+}, { origin: window.location.origin });
 
 installGlobalFeedback();
 
@@ -30,7 +56,7 @@ window.TBModuleAccess = {
   ...moduleAccessRules,
 };
 window.renderTestCampaignApp = window.renderTestCampaignApp || (async (reason = 'navigation') => {
-  const mod = await import('./features/testing/testCampaignController.js');
+  const mod = await deferredModules.load('testCampaignController');
   return mod.renderTestCampaignApp(reason);
 });
 window.TBTransactionView = {
@@ -38,7 +64,7 @@ window.TBTransactionView = {
   ...transactionView,
 };
 window.TBLoadDashboardWalletRules = window.TBLoadDashboardWalletRules || (async () => {
-  const mod = await import('./features/dashboard/dashboardWalletRules.js');
+  const mod = await deferredModules.load('dashboardWalletRules');
   window.TBDashboardWalletRules = {
     ...(window.TBDashboardWalletRules || {}),
     ...mod,
@@ -46,14 +72,14 @@ window.TBLoadDashboardWalletRules = window.TBLoadDashboardWalletRules || (async 
   return window.TBDashboardWalletRules;
 });
 window.TBLoadDashboardDailyBudgetState = window.TBLoadDashboardDailyBudgetState || (async () => (
-  window.TBDashboardDailyBudgetState ||= await import('./features/dashboard/dashboardDailyBudgetState.js')
+  window.TBDashboardDailyBudgetState ||= await deferredModules.load('dashboardDailyBudgetState')
 ));
 window.TBSettingsView = {
   ...(window.TBSettingsView || {}),
   ...settingsView,
 };
 window.TBLoadSettingsCategoriesView = window.TBLoadSettingsCategoriesView || (async () => {
-  const mod = await import('./features/settings/settingsCategoriesView.js');
+  const mod = await deferredModules.load('settingsCategoriesView');
   window.TBSettingsCategoriesView = {
     ...(window.TBSettingsCategoriesView || {}),
     ...mod,
@@ -62,7 +88,7 @@ window.TBLoadSettingsCategoriesView = window.TBLoadSettingsCategoriesView || (as
 });
 window.TBLoadSettingsAccountController = window.TBLoadSettingsAccountController || (async () => {
   if (window.TBSettingsAccountController?.bindSettingsAccountPanel) return window.TBSettingsAccountController;
-  const mod = await import('./features/settings/settingsAccountController.js');
+  const mod = await deferredModules.load('settingsAccountController');
   window.TBSettingsAccountController = {
     ...(window.TBSettingsAccountController || {}),
     ...mod,
@@ -174,12 +200,7 @@ const legacyDomainLoader = createRetryableLoader(async (key) => {
   return true;
 });
 let bridgeReadyPromise = null;
-const importAnalysisRuntime = createRetryableImport(() => import('./features/analysis/analysisRuntime.js'), {
-  origin: window.location.origin,
-  acceptsPath: path => path === '/src/features/analysis/analysisRuntime.js' || /^\/assets\/analysisRuntime-[\w-]+\.js$/.test(path),
-});
-const analysisModuleLoader = createRetryableLoader(async () => (await importAnalysisRuntime()).installAnalysisRuntime(window));
-const domainModulePromises = new Map();
+const analysisModuleLoader = createRetryableLoader(async () => (await deferredModules.load('analysisRuntime')).installAnalysisRuntime(window));
 let kpiViewPromise = null;
 
 function ensureKpiStylesheet() {
@@ -197,10 +218,10 @@ async function ensureKpiView() {
   if (window.TBKpiView?.renderKpiHealthCard) return true;
   if (!kpiViewPromise) {
     kpiViewPromise = Promise.all([
-      import('./features/kpi/kpiView.js'),
-      import('./features/kpi/kpiHealthRules.js'),
-      import('./features/kpi/kpiProjectionRules.js'),
-      import('./features/kpi/kpiCashRules.js'),
+      deferredModules.load('kpiView'),
+      deferredModules.load('kpiHealthRules'),
+      deferredModules.load('kpiProjectionRules'),
+      deferredModules.load('kpiCashRules'),
     ])
       .then(([kpiView, kpiHealthRules, kpiProjectionRules, kpiCashRules]) => {
         window.TBKpiView = {
@@ -283,94 +304,89 @@ async function ensureAnalysisModules() {
   return analysisModuleLoader.load('analysis');
 }
 
-async function ensureDomainModules(domain) {
-  const key = String(domain || '').trim();
-  if (domainModulePromises.has(key)) return domainModulePromises.get(key);
-  const promise = (async () => {
-    window.UI = window.UI || {};
-    if (key === 'nutrition') {
-      const nutritionView = await import('./features/nutrition/nutritionView.js');
-      window.UI.nutritionView = {
-        ...(window.UI.nutritionView || {}),
-        ...nutritionView,
-      };
-    }
-    if (key === 'assets') {
-      const assetView = await import('./features/assets/assetView.js');
-      window.UI.assetView = {
-        ...(window.UI.assetView || {}),
-        ...assetView,
-      };
-    }
-    if (key === 'work') {
-      const workView = await import('./features/work/workView.js');
-      window.UI.workView = {
-        ...(window.UI.workView || {}),
-        ...workView,
-      };
-    }
-    if (key === 'subscriptions') {
-      const [subscriptionRules, subscriptionView] = await Promise.all([
-        import('./core/subscriptionRules.js'),
-        import('./features/subscriptions/subscriptionView.js'),
-      ]);
-      window.Core = window.Core || {};
-      window.Core.subscriptionRules = subscriptionRules;
-      window.UI.subscriptionView = {
-        ...(window.UI.subscriptionView || {}),
-        ...subscriptionView,
-      };
-    }
-    if (key === 'documents') {
-      const documentView = await import('./features/documents/documentView.js');
-      window.UI.documentView = {
-        ...(window.UI.documentView || {}),
-        ...documentView,
-      };
-    }
-    if (key === 'sport') {
-      const sportRuntime = await import('./features/sport/sportRuntime.js');
-      sportRuntime.installSportRuntime(window);
-    }
-    if (key === 'trip') {
-      const [tripDocumentView, tripExpenseDetailView, tripRecapView] = await Promise.all([
-        import('./features/trip/tripDocumentView.js'),
-        import('./features/trip/tripExpenseDetailView.js'),
-        import('./features/trip/tripRecapView.js'),
-      ]);
-      window.UI.tripDocumentView = {
-        ...(window.UI.tripDocumentView || {}),
-        ...tripDocumentView,
-      };
-      window.UI.tripExpenseDetailView = {
-        ...(window.UI.tripExpenseDetailView || {}),
-        ...tripExpenseDetailView,
-      };
-      window.UI.tripRecapView = {
-        ...(window.UI.tripRecapView || {}),
-        ...tripRecapView,
-      };
-    }
-    if (key === 'inbox') {
-      const inboxView = await import('./features/inbox/inboxView.js');
-      window.UI.inboxView = {
-        ...(window.UI.inboxView || {}),
-        ...inboxView,
-      };
-    }
-    return true;
-  })().catch((error) => {
-    domainModulePromises.delete(key);
-    throw error;
-  });
-  domainModulePromises.set(key, promise);
-  return promise;
+const domainModules = createRetryableLoader(async key => {
+  window.UI = window.UI || {};
+  if (key === 'nutrition') {
+    const nutritionView = await deferredModules.load('nutritionView');
+    window.UI.nutritionView = {
+      ...(window.UI.nutritionView || {}),
+      ...nutritionView,
+    };
+  }
+  if (key === 'assets') {
+    const assetView = await deferredModules.load('assetView');
+    window.UI.assetView = {
+      ...(window.UI.assetView || {}),
+      ...assetView,
+    };
+  }
+  if (key === 'work') {
+    const workView = await deferredModules.load('workView');
+    window.UI.workView = {
+      ...(window.UI.workView || {}),
+      ...workView,
+    };
+  }
+  if (key === 'subscriptions') {
+    const [subscriptionRules, subscriptionView] = await Promise.all([
+      deferredModules.load('subscriptionRules'),
+      deferredModules.load('subscriptionView'),
+    ]);
+    window.Core = window.Core || {};
+    window.Core.subscriptionRules = subscriptionRules;
+    window.UI.subscriptionView = {
+      ...(window.UI.subscriptionView || {}),
+      ...subscriptionView,
+    };
+  }
+  if (key === 'documents') {
+    const documentView = await deferredModules.load('documentView');
+    window.UI.documentView = {
+      ...(window.UI.documentView || {}),
+      ...documentView,
+    };
+  }
+  if (key === 'sport') {
+    const sportRuntime = await deferredModules.load('sportRuntime');
+    sportRuntime.installSportRuntime(window);
+  }
+  if (key === 'trip') {
+    const [tripDocumentView, tripExpenseDetailView, tripRecapView] = await Promise.all([
+      deferredModules.load('tripDocumentView'),
+      deferredModules.load('tripExpenseDetailView'),
+      deferredModules.load('tripRecapView'),
+    ]);
+    window.UI.tripDocumentView = {
+      ...(window.UI.tripDocumentView || {}),
+      ...tripDocumentView,
+    };
+    window.UI.tripExpenseDetailView = {
+      ...(window.UI.tripExpenseDetailView || {}),
+      ...tripExpenseDetailView,
+    };
+    window.UI.tripRecapView = {
+      ...(window.UI.tripRecapView || {}),
+      ...tripRecapView,
+    };
+  }
+  if (key === 'inbox') {
+    const inboxView = await deferredModules.load('inboxView');
+    window.UI.inboxView = {
+      ...(window.UI.inboxView || {}),
+      ...inboxView,
+    };
+  }
+  return true;
+});
+
+function ensureDomainModules(domain) {
+  return domainModules.load(String(domain || '').trim());
 }
 
 async function boot() {
   ensureKpiView();
   window.tbOpenAccounting = async function tbOpenAccounting() {
-    const runtime = await import('./features/accounting/accountingController.js');
+    const runtime = await deferredModules.load('accountingController');
     runtime.installAccountingRuntime(window);
     if (window.activeView === 'accounting') await window.renderAccounting();
   };

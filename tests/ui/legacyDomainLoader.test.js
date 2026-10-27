@@ -13,6 +13,16 @@ describe('legacy domain loader', () => {
   const sportRuntime = fs.readFileSync('src/features/sport/sportRuntime.js', 'utf8');
   const index = fs.readFileSync('index.html', 'utf8');
 
+  it('routes declared imports through the shared registry and retires the duplicate domain cache', () => {
+    expect(main).toContain('const deferredModules = createModuleRegistry(');
+    expect(main).toContain('const domainModules = createRetryableLoader(');
+    expect(main).not.toContain('domainModulePromises');
+    expect(main).not.toContain('importAnalysisRuntime');
+    const callers = main.slice(main.indexOf('installGlobalFeedback();'));
+    expect(callers).not.toMatch(/\bimport\s*\(/);
+    expect(callers).toContain("await deferredModules.load('accountingController')");
+  });
+
   it('keeps startup focused on global shell, Dashboard and Settings while deferring heavy domains', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
     const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));

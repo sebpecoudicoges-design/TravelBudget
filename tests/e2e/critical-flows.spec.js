@@ -121,7 +121,8 @@ test('retries a partial legacy domain load without rerunning successful scripts'
   await expect(page.locator('script[src="/legacy/js/50_work_career_ui.js"]')).toHaveCount(1);
 });
 
-for (const built of [false, true]) test(`retries the Analysis runtime import after a network failure (built=${built})`, async ({ page }) => {
+for (const [domain, entry] of [['analysis', 'analysisRuntime'], ['accounting', 'accountingController'], ['nutrition', 'nutritionView'], ['work', 'workView'], ['trip', 'tripRecapView']])
+for (const built of [false, true]) test(`retries the ${domain} runtime import after a network failure (built=${built})`, async ({ page }) => {
   let attempts = 0;
   if (built) {
     await page.route('**/?freeze=1', route => route.fulfill({ contentType: 'text/html', body: fs.readFileSync('dist/index.html', 'utf8') }));
@@ -130,15 +131,16 @@ for (const built of [false, true]) test(`retries the Analysis runtime import aft
       return route.fulfill({ contentType: name.endsWith('.css') ? 'text/css' : 'application/javascript', body: fs.readFileSync(path.join('dist/assets', name)) });
     });
   }
-  await page.route('**/*analysisRuntime*.js*', route => ++attempts === 1 ? route.abort() : route.fallback());
+  await page.route(`**/*${entry}*.js*`, route => ++attempts === 1 ? route.abort() : route.fallback());
   await page.goto('/?freeze=1');
   await expectBootShell(page);
-  expect(await page.evaluate(async () => {
-    try { await window.tbLoadLegacyDomain('analysis'); return false; } catch { return true; }
-  })).toBe(true);
-  expect(await page.evaluate(() => window.tbIsLegacyDomainLoaded('analysis'))).toBe(false);
-  await page.evaluate(() => window.tbLoadLegacyDomain('analysis'));
-  expect(await page.evaluate(() => window.tbIsLegacyDomainLoaded('analysis'))).toBe(true);
+  expect(await page.evaluate(async domain => {
+    try { await (domain === 'accounting' ? window.tbOpenAccounting() : window.tbLoadLegacyDomain(domain)); return false; } catch { return true; }
+  }, domain)).toBe(true);
+  if (domain !== 'accounting') expect(await page.evaluate(domain => window.tbIsLegacyDomainLoaded(domain), domain)).toBe(false);
+  await page.evaluate(domain => domain === 'accounting' ? window.tbOpenAccounting() : window.tbLoadLegacyDomain(domain), domain);
+  if (domain !== 'accounting') expect(await page.evaluate(domain => window.tbIsLegacyDomainLoaded(domain), domain)).toBe(true);
+  else expect(await page.evaluate(() => typeof window.renderAccounting)).toBe('function');
   expect(attempts).toBe(2);
 });
 
