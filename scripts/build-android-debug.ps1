@@ -79,8 +79,8 @@ try {
     $LocalUploadPath = "public\downloads\$ApkName"
     $RemotePath = "$SupabaseBucketPath/$ApkName"
     $env:SUPABASE_TELEMETRY_DISABLED = "1"
-    supabase --experimental --yes storage rm $RemotePath | Out-Host
-    supabase --experimental --yes storage cp --content-type "application/vnd.android.package-archive" $LocalUploadPath $RemotePath
+    # Never delete a published object before uploading. Use a fresh BuildStamp for each release.
+    supabase --experimental --yes storage cp --linked --content-type "application/vnd.android.package-archive" $LocalUploadPath $RemotePath
     if ($LASTEXITCODE -ne 0) {
       throw "Upload Supabase Storage echoue pour $RemotePath"
     }

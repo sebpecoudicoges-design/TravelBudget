@@ -33,3 +33,13 @@ La CI mesure aussi le parcours compilé anonyme via npm run perf:startup et cons
 ## Actualisation du 25 octobre 2026
 
 `npm run perf:startup` exécute désormais quatre parcours : anonyme et connecté synthétique, chacun sur desktop et mobile simulé. Le parcours connecté utilise le vrai client, le bootstrap et les graphiques compilés avec 1 200 transactions fictives, sans accès aux services réels. Les seuils et limites sont détaillés dans [Mesure du démarrage connecté](CONNECTED_STARTUP.md). Les transferts des fichiers locaux sont séparés des octets des réponses API synthétiques. Le rapport reste disponible dans l’artefact CI `startup-report`.
+
+## Actualisation du 29 octobre 2026 — publication Android
+
+La branche `-UploadSupabase` supprimait l'objet distant du même nom avant la copie. Une panne de copie après cette suppression pouvait rendre un lien publié indisponible. Cette commande de suppression est retirée ; la copie cible explicitement le projet lié avec `--linked`. Une copie en échec arrête le script avant le message de publication. Utiliser un nouveau `BuildStamp` pour chaque livraison ; ne pas réutiliser une URL publiée pour remplacer un binaire. Le script ne fait pas de nettoyage des APK distants.
+
+Trois tests Windows exécutent la vraie branche de publication extraite par le parseur PowerShell, avec une commande Supabase simulée : réussite, échec et refus. Ils interdisent la suppression et vérifient l'absence de message de réussite après erreur. Ils échouaient tous avant la correction. Le contrat multiplateforme interdit aussi le retour de `storage rm` ou `storage mv`. Ces tests sont inclus dans le job Windows existant ; ils ne nécessitent ni SDK, ni secret, ni écriture distante. L'ancien chemin de suppression est le seul code retiré ; les autres étapes de construction restent utilisées.
+
+Référence de commande : [Supabase CLI — copie Storage](https://supabase.com/docs/reference/cli/supabase-storage-cp), aide locale CLI 2.108.0 vérifiée. Les tests ne prouvent pas le comportement d'écrasement interne du service : la règle reste une URL neuve par livraison. La vérification de signature, des fichiers embarqués et du SHA-256 téléchargé reste obligatoire avant d'annoncer une livraison.
+
+Lot d'outillage : application et APK 10.5.385 inchangés, aucune reconstruction ni écriture Storage nécessaire. Page Projet et Atlas web actualisés ; leur copie embarquée dans l'APK reste celle du lot 10.5.385. La phase architecture/qualité reste ouverte.

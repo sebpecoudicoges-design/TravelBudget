@@ -12,10 +12,12 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await expect(download).toHaveAttribute('href', /\/app-downloads\/apk\/travelbudget-\d+\.\d+\.\d+-\d{8}-\d{6}-debug\.apk$/);
     await expect(download).toContainText(`APK ${version}`);
     await expect(download).toBeVisible();
+    await expect(page.locator('[data-i18n="release.uploadSafety"]')).toContainText('sans suppression');
     await expect(page.locator('.hero-status-item').first()).toContainText(version);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole('button', { name: 'EN', exact: true }).click();
     await expect(download).toContainText(`APK ${version}`);
+    await expect(page.locator('[data-i18n="release.uploadSafety"]')).toContainText('no longer deletes');
     await expect(page.locator('[data-i18n^="app.cta.body."]')).toContainText(`Install APK ${version}`);
   });
 }

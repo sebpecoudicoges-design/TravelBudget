@@ -31,6 +31,8 @@ describe('Android release bundle contract', () => {
     expect(debugScript).toContain('Filter "*.aab"');
     expect(debugScript).toContain('Upload Supabase Storage echoue');
     expect(debugScript).toContain('SUPABASE_TELEMETRY_DISABLED');
+    expect(debugScript).not.toMatch(/storage\s+(?:rm|mv)\b/);
+    expect(debugScript).toContain('storage cp --linked');
     expect(script).not.toMatch(/storePassword\s+["'][^"']+["']/);
     expect(script).not.toMatch(/keyPassword\s+["'][^"']+["']/);
   });
