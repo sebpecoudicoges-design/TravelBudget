@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "83b9bc54f9989c802cd52716ec0b09022ecd45f4",
-  "snapshotFingerprint": "9a8f0edd0171b611795bd03c08c02b7d6b9ad96c985c93c6e96405870447102d",
-  "generatedAt": "2026-10-28T21:00:10.288Z",
+  "commit": "b0fb747c29948ad4bd8d10335277d4a2b2b00970",
+  "snapshotFingerprint": "bfc0d7541697a2cc9d48414b430007ac1848ad75308410cf7b1e81f097d17e7e",
+  "generatedAt": "2026-10-28T21:30:12.341Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.385"
@@ -22,7 +22,8 @@
     "links:check": "node scripts/check-public-links.mjs",
     "perf:budget": "node scripts/check-module-budgets.mjs",
     "lint:syntax": "node scripts/check-js-syntax.mjs",
-    "quality": "npm run lint:syntax && npm test && npm run docs:check && npm run build && npm run perf:budget",
+    "quality": "npm run lint:syntax && npm run lint:edge && npm test && npm run docs:check && npm run build && npm run perf:budget",
+    "lint:edge": "node scripts/check-edge-types.mjs",
     "lint:db": "node scripts/lint_db_strings.cjs",
     "cap:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
@@ -282,6 +283,7 @@
     "tests/core/moduleAccessRules.test.js",
     "tests/core/moduleRegistry.test.js",
     "tests/core/money.test.js",
+    "tests/core/notificationHealthTemplate.test.js",
     "tests/core/notificationRules.test.js",
     "tests/core/nutritionRules.test.js",
     "tests/core/prepaidProjection.test.js",
@@ -374,6 +376,7 @@
     "tests/scripts/androidCommand.test.js",
     "tests/scripts/atlasFingerprint.test.js",
     "tests/scripts/connectedStartupFixture.test.js",
+    "tests/scripts/edgeTypes.test.js",
     "tests/scripts/entryManifest.test.js",
     "tests/ui/accountingViewContract.test.js",
     "tests/ui/analysisDrilldownViewContract.test.js",

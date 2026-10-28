@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `83b9bc54f9989c802cd52716ec0b09022ecd45f4`
-> Empreinte du snapshot : `9a8f0edd0171b611795bd03c08c02b7d6b9ad96c985c93c6e96405870447102d`
-> Généré le : `2026-10-28T21:00:10.288Z`
+> Commit analysé : `b0fb747c29948ad4bd8d10335277d4a2b2b00970`
+> Empreinte du snapshot : `bfc0d7541697a2cc9d48414b430007ac1848ad75308410cf7b1e81f097d17e7e`
+> Généré le : `2026-10-28T21:30:12.341Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 61 |
-| Fichiers de tests | 163 |
+| Fichiers de tests | 165 |
 | Migrations Supabase | 162 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -40,7 +40,8 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `links:check` | `node scripts/check-public-links.mjs` |
 | `perf:budget` | `node scripts/check-module-budgets.mjs` |
 | `lint:syntax` | `node scripts/check-js-syntax.mjs` |
-| `quality` | `npm run lint:syntax && npm test && npm run docs:check && npm run build && npm run perf:budget` |
+| `quality` | `npm run lint:syntax && npm run lint:edge && npm test && npm run docs:check && npm run build && npm run perf:budget` |
+| `lint:edge` | `node scripts/check-edge-types.mjs` |
 | `lint:db` | `node scripts/lint_db_strings.cjs` |
 | `cap:sync` | `npm run build && npx cap sync android` |
 | `android:open` | `npx cap open android` |
@@ -380,6 +381,7 @@ Modules :
 - `tests/core/moduleAccessRules.test.js`
 - `tests/core/moduleRegistry.test.js`
 - `tests/core/money.test.js`
+- `tests/core/notificationHealthTemplate.test.js`
 - `tests/core/notificationRules.test.js`
 - `tests/core/nutritionRules.test.js`
 - `tests/core/prepaidProjection.test.js`
@@ -472,6 +474,7 @@ Modules :
 - `tests/scripts/androidCommand.test.js`
 - `tests/scripts/atlasFingerprint.test.js`
 - `tests/scripts/connectedStartupFixture.test.js`
+- `tests/scripts/edgeTypes.test.js`
 - `tests/scripts/entryManifest.test.js`
 - `tests/ui/accountingViewContract.test.js`
 - `tests/ui/analysisDrilldownViewContract.test.js`

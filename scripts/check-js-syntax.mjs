@@ -4,8 +4,8 @@ import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
 const ROOT = process.cwd();
-const INCLUDED_DIRS = ['src', 'tests', 'scripts', 'public', 'netlify'];
-const EXTENSIONS = new Set(['.js', '.mjs', '.cjs']);
+const INCLUDED_DIRS = ['src', 'tests', 'scripts', 'public', 'netlify', 'supabase/functions'];
+const EXTENSIONS = new Set(['.js', '.mjs', '.cjs', '.ts']);
 
 function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
@@ -57,5 +57,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     }
     process.exit(1);
   }
-  console.log(`JS syntax OK: ${files.length} file(s) checked.`);
+  console.log(`JS/TS syntax OK (not type checking): ${files.length} file(s) checked.`);
 }

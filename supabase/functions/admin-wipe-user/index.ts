@@ -192,6 +192,6 @@ serve(async (req) => {
       actor: callerUserId,
     })
   } catch (e) {
-    return json({ error: e?.message || String(e) }, 500)
+    return json({ error: (e as { message?: unknown } | null | undefined)?.message || String(e) }, 500)
   }
 })

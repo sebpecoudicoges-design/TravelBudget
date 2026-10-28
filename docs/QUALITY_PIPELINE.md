@@ -2,7 +2,7 @@
 
 ## Commandes
 
-Après les changements de sources et de documentation, exécuter `npm run atlas:generate`, puis `npm run quality`. Cette dernière commande arrête la chaîne au premier échec : syntaxe JavaScript, tests Vitest, cohérence documentaire, construction web, budgets de taille existants. La CI ne régénère pas l'Atlas : un inventaire oublié doit échouer.
+Après les changements de sources et de documentation, exécuter `npm run atlas:generate`, puis `npm run quality`. Cette dernière commande arrête la chaîne au premier échec : syntaxe JavaScript/TypeScript, types des fonctions Edge, tests Vitest, cohérence documentaire, construction web, budgets de taille existants. La CI ne régénère pas l'Atlas : un inventaire oublié doit échouer.
 
 `npm run test:e2e -- --project=desktop-chromium` exécute ensuite tous les scénarios navigateur. Plusieurs scénarios couvrent explicitement 1440/390 px et les thèmes clair/sombre. Les projets mobile/tablette restent disponibles séparément ; ce workflow ne prétend pas les exécuter.
 
@@ -43,3 +43,15 @@ Trois tests Windows exécutent la vraie branche de publication extraite par le p
 Référence de commande : [Supabase CLI — copie Storage](https://supabase.com/docs/reference/cli/supabase-storage-cp), aide locale CLI 2.108.0 vérifiée. Les tests ne prouvent pas le comportement d'écrasement interne du service : la règle reste une URL neuve par livraison. La vérification de signature, des fichiers embarqués et du SHA-256 téléchargé reste obligatoire avant d'annoncer une livraison.
 
 Lot d'outillage : application et APK 10.5.385 inchangés, aucune reconstruction ni écriture Storage nécessaire. Page Projet et Atlas web actualisés ; leur copie embarquée dans l'APK reste celle du lot 10.5.385. La phase architecture/qualité reste ouverte.
+
+## Contrôle Edge du 29 octobre 2026
+
+Le contrôle syntaxique inclut désormais `supabase/functions`, ses sources JavaScript et TypeScript, ainsi que le module partagé. Node 24 vérifie leur syntaxe sans exécuter les handlers ni résoudre les imports. Deux tests de couverture échouaient avant correction : les fichiers étaient entièrement ignorés.
+
+`npm run lint:edge`, inclus dans `npm run quality` et donc dans le job web GitHub, lance un véritable `deno check` sur tous les fichiers TypeScript du dossier. Deno 2.9.6 est verrouillé par npm ; `config/edge-check.lock` fige le graphe de contrôle, avec `--frozen=true` en validation. Les imports actuels sont tous explicites (URL/npm/jsr) ; `--no-config` évite de charger les alias de déploiement inutilisés de certains sous-dossiers. Une évolution vers des imports par alias devra adapter ce contrôle explicitement. Pour actualiser volontairement son lock : `npx deno check --no-config --lock=config/edge-check.lock <liste des fichiers TypeScript>` puis relancer la validation figée.
+
+Le premier diagnostic Deno comportait 62 erreurs. Les signatures `ReturnType<typeof createClient>` déduisaient un client générique incompatible dans les notifications ; elles utilisent maintenant le type public `SupabaseClient`. Le paramètre JavaScript `allowedUsers` est documenté comme `string[]` au lieu d'être inféré `never[]`. L'accès au message d'erreur d'administration est annoté, sans modifier son expression exécutée. Après ces corrections, Deno a également révélé deux comparaisons inaccessibles sous une constante `mode = "maintenance"` : ces branches et l'offset nul ont été retirés. Le coefficient existant 1,6 et le plancher sont conservés, avec tests de résultat et contrat anti-retour.
+
+Des tests synthétiques prouvent que le contrôle accepte des types corrects, refuse une affectation `string` vers `number` et n'exécute pas le code. Les 14 fichiers TypeScript passent. Le JavaScript importé participe à l'inférence, mais `checkJs` n'est pas activé globalement : cela ne certifie pas tous les types internes de l'assistant. Le schéma SQL n'est pas généré dans ces types ; les autorisations, la persistance et les réponses réelles restent à auditer séparément.
+
+Ce lot modifie l'outillage et les sources serveur : aucun déploiement Edge, aucune requête de données, aucun envoi de notification et aucun nouvel APK. La page Projet et l'Atlas web reflètent l'avancement du dépôt, pas une mise à jour des fonctions en production. Référence : [Deno check](https://docs.deno.com/runtime/reference/cli/check/).

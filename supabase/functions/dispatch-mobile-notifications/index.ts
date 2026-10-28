@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 
 type Slot = "morning" | "midday" | "evening" | "health" | "manual" | "custom";
 
@@ -188,7 +188,7 @@ function composeTemplateNotification(
   return { title, body, values };
 }
 
-async function budgetSummary(admin: ReturnType<typeof createClient>, userId: string, date: string) {
+async function budgetSummary(admin: SupabaseClient, userId: string, date: string) {
   const { data: period } = await admin
     .from("periods")
     .select("id,travel_id,base_currency,daily_budget_base,start_date,end_date")
@@ -236,7 +236,7 @@ async function budgetSummary(admin: ReturnType<typeof createClient>, userId: str
   return { base, daily, spent, remaining: daily - spent };
 }
 
-async function activitySummary(admin: ReturnType<typeof createClient>, userId: string, date: string) {
+async function activitySummary(admin: SupabaseClient, userId: string, date: string) {
   const next = new Date(`${date}T00:00:00Z`);
   next.setUTCDate(next.getUTCDate() + 1);
   const nextDate = next.toISOString().slice(0, 10);
@@ -253,7 +253,7 @@ async function activitySummary(admin: ReturnType<typeof createClient>, userId: s
   };
 }
 
-async function healthTemplateValues(admin: ReturnType<typeof createClient>, userId: string, date: string, hour: number, activity: { sportKcal: number; workKcal: number }) {
+async function healthTemplateValues(admin: SupabaseClient, userId: string, date: string, hour: number, activity: { sportKcal: number; workKcal: number }) {
   const [{ data: meals }, { data: sleep }, { data: settings }] = await Promise.all([
     admin.from("nutrition_meals").select("id,water_ml,nutrition_meal_items(kcal,protein_g)").eq("user_id", userId).eq("meal_date", date),
     admin.from("nutrition_sleep").select("hours,quality").eq("user_id", userId).eq("sleep_date", addDaysISO(date, -1)).maybeSingle(),
@@ -275,10 +275,8 @@ async function healthTemplateValues(admin: ReturnType<typeof createClient>, user
   const birthDate = String(settings?.birth_date || "").slice(0, 10);
   const age = birthDate ? ageOnDate(birthDate, date) : 30;
   const bmr = Math.max(1200, (10 * weight) + (6.25 * height) - (5 * age) + 5);
-  const mode = "maintenance";
-  const offset = 0;
-  const needs = Math.max(1200, bmr + Number(activity.sportKcal || 0) + Number(activity.workKcal || 0) + offset);
-  const proteinTarget = Math.max(70, weight * (mode === "bulk" ? 1.8 : mode === "cut" ? 1.9 : 1.6));
+  const needs = Math.max(1200, bmr + Number(activity.sportKcal || 0) + Number(activity.workKcal || 0));
+  const proteinTarget = Math.max(70, weight * 1.6);
   const hydrationScore = Math.min(24, (water / 2000) * 24);
   const proteinScore = Math.min(18, (protein / proteinTarget) * 18);
   const kcalScore = Math.max(0, 28 - Math.min(28, Math.abs(kcal - needs) / Math.max(1, needs) * 42));
@@ -297,7 +295,7 @@ async function healthTemplateValues(admin: ReturnType<typeof createClient>, user
   };
 }
 
-async function plannedSessionLabel(admin: ReturnType<typeof createClient>, userId: string, date: string, weekday: number) {
+async function plannedSessionLabel(admin: SupabaseClient, userId: string, date: string, weekday: number) {
   const dayOfWeek = weekday === 0 ? 7 : weekday;
   const { data: program } = await admin
     .from("sport_programs")
@@ -324,7 +322,7 @@ async function plannedSessionLabel(admin: ReturnType<typeof createClient>, userI
   return [session.session_key, session.name].filter(Boolean).join(" - ");
 }
 
-async function financeTemplateValues(admin: ReturnType<typeof createClient>, userId: string, date: string, budget: { base: string; daily: number; spent: number; remaining: number }) {
+async function financeTemplateValues(admin: SupabaseClient, userId: string, date: string, budget: { base: string; daily: number; spent: number; remaining: number }) {
   const { data: period } = await admin
     .from("periods")
     .select("id,travel_id,start_date,end_date,base_currency")

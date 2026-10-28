@@ -18,7 +18,8 @@
     "links:check": "node scripts/check-public-links.mjs",
     "perf:budget": "node scripts/check-module-budgets.mjs",
     "lint:syntax": "node scripts/check-js-syntax.mjs",
-    "quality": "npm run lint:syntax && npm test && npm run docs:check && npm run build && npm run perf:budget",
+    "quality": "npm run lint:syntax && npm run lint:edge && npm test && npm run docs:check && npm run build && npm run perf:budget",
+    "lint:edge": "node scripts/check-edge-types.mjs",
     "lint:db": "node scripts/lint_db_strings.cjs",
     "cap:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
@@ -35,6 +36,7 @@
     "@capacitor/cli": "8.5.3",
     "@capacitor/core": "8.5.0",
     "@playwright/test": "^1.61.1",
+    "deno": "2.9.6",
     "playwright": "^1.60.0",
     "vite": "7.3.6",
     "vitest": "4.1.10"
