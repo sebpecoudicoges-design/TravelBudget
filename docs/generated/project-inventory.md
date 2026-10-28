@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `8c2628d291d804cce6750dd98b1b7fbd5ddd4b51`
-> Empreinte du snapshot : `2cffbeb4e66779185c8b1ef5742fbb2eefa916aebb8733f0fcfbc7d865210347`
-> Généré le : `2026-10-27T04:42:46.843Z`
+> Commit analysé : `3363a722eb7bcac6c42300ad6fd8d5d508c5d8f2`
+> Empreinte du snapshot : `4e77f049dffd6347cb0a1fcb7419b482d21d49acab4eb3a792ccb956d110f599`
+> Généré le : `2026-10-28T08:30:05.750Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,7 +11,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.384` |
+| Version | `10.5.385` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
@@ -728,6 +728,7 @@ Modules :
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`
+- `docs/BRIDGE_RECOVERY_10_5_385.md`
 - `docs/CASHFLOW_CPU_10_5_381.md`
 - `docs/CASHFLOW_QUEUE_10_5_382.md`
 - `docs/CONNECTED_STARTUP.md`

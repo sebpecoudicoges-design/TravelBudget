@@ -35,6 +35,13 @@ import { storageQuota } from '../data/storageQuota.js';
 import * as sportRules from '../core/sportRules.js';
 import * as uiComponents from '../ui/components.js';
 import '../ui/shared.css';
+import { createModuleRegistry } from './moduleRegistry.js';
+
+const bridgeModules = createModuleRegistry({
+  assetBudgetData: ['/src/features/assets/assetBudgetData.js', () => import('../features/assets/assetBudgetData.js')],
+  assistantAiClient: ['/src/features/assistant/assistantAiClient.js', () => import('../features/assistant/assistantAiClient.js')],
+  sportProgressionRules: ['/src/core/sportProgressionRules.js', () => import('../core/sportProgressionRules.js')],
+}, { origin: window.location.origin });
 
 window.Core = window.Core || {};
 window.Core.money = money;
@@ -61,7 +68,7 @@ window.addEventListener('tb:auth_scope_changed', () => {
 window.tbLoadAssetBudgetData = async () => {
   const scope = assetBudgetScope;
   const state = window.state;
-  const { loadAssetBudgetData } = await import('../features/assets/assetBudgetData.js');
+  const { loadAssetBudgetData } = await bridgeModules.load('assetBudgetData');
   return loadAssetBudgetData({ client: window.sb, state,
     offline: navigator.onLine === false || window.tbIsOfflineMode?.(),
     isCurrent: () => scope === assetBudgetScope && state === window.state,
@@ -69,7 +76,7 @@ window.tbLoadAssetBudgetData = async () => {
 };
 window.Core.assistantRules = assistantRules;
 window.tbRequestAssistantHelp = async (options) => {
-  const { requestAssistantHelp } = await import('../features/assistant/assistantAiClient.js');
+  const { requestAssistantHelp } = await bridgeModules.load('assistantAiClient');
   return requestAssistantHelp(options);
 };
 window.Core.notificationRules = notificationRules;
@@ -81,7 +88,7 @@ window.Core.dailyBudgetRules = dailyBudgetRules;
 window.Core.recurringRules = recurringRules;
 window.Core.canonicalRecords = canonicalRecords;
 window.Core.sportRules = sportRules;
-window.Core.loadSportProgressionRules = () => import('../core/sportProgressionRules.js');
+window.Core.loadSportProgressionRules = () => bridgeModules.load('sportProgressionRules');
 window.Core.sportProgramRules = sportProgramRules;
 
 window.Data = window.Data || {};

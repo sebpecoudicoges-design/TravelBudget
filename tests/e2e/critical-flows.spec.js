@@ -144,6 +144,41 @@ for (const built of [false, true]) test(`retries the ${domain} runtime import af
   expect(attempts).toBe(2);
 });
 
+for (const entry of ['assetBudgetData', 'assistantAiClient', 'sportProgressionRules'])
+for (const built of [false, true]) test(`retries bridge ${entry} after a network failure (built=${built})`, async ({ page }) => {
+  let attempts = 0;
+  if (built) {
+    await page.route('**/?freeze=1', route => route.fulfill({ contentType: 'text/html', body: fs.readFileSync('dist/index.html', 'utf8') }));
+    await page.route('**/assets/*', route => {
+      const name = path.basename(new URL(route.request().url()).pathname);
+      return route.fulfill({ contentType: name.endsWith('.css') ? 'text/css' : 'application/javascript', body: fs.readFileSync(path.join('dist/assets', name)) });
+    });
+  }
+  await page.route(`**/*${entry}*.js*`, route => ++attempts === 1 ? route.abort() : route.fallback());
+  await page.goto('/?freeze=1');
+  await expectBootShell(page);
+  await page.evaluate(entry => {
+    window.__bridgeTestCalls = 0;
+    window.__callBridge = async () => {
+      if (entry === 'assetBudgetData') {
+        window.tbIsOfflineMode = () => true;
+        return window.tbLoadAssetBudgetData();
+      }
+      if (entry === 'assistantAiClient') return window.tbRequestAssistantHelp({ question: 'Test synthétique', client: { functions: { invoke: async () => {
+        window.__bridgeTestCalls++;
+        return { data: { source: 'ai', answer: 'Réponse synthétique', view: null } };
+      } } } });
+      return window.Core.loadSportProgressionRules();
+    };
+  }, entry);
+  expect(await page.evaluate(async () => { try { await window.__callBridge(); return false; } catch { return true; } })).toBe(true);
+  expect(await page.evaluate(() => window.__bridgeTestCalls)).toBe(0);
+  await page.evaluate(() => window.__callBridge());
+  await page.evaluate(() => window.__callBridge());
+  expect(attempts).toBe(2);
+  expect(await page.evaluate(() => window.__bridgeTestCalls)).toBe(entry === 'assistantAiClient' ? 2 : 0);
+});
+
 test('opens validated modules to standard accounts while testers keep full campaign access', async ({ page }) => {
   await page.goto('/?freeze=1');
   await expectBootShell(page);

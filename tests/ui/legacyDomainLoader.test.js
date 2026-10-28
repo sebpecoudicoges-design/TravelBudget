@@ -23,6 +23,17 @@ describe('legacy domain loader', () => {
     expect(callers).toContain("await deferredModules.load('accountingController')");
   });
 
+  it('routes bridge imports through the same registry without caching business calls', () => {
+    expect(bridge).toContain('const bridgeModules = createModuleRegistry(');
+    const callers = bridge.slice(bridge.indexOf('window.Core ='));
+    expect(callers).not.toMatch(/\bimport\s*\(/);
+    for (const key of ['assetBudgetData', 'assistantAiClient', 'sportProgressionRules']) {
+      expect(callers).toContain(`bridgeModules.load('${key}')`);
+    }
+    expect(callers).toContain('return requestAssistantHelp(options)');
+    expect(callers).toContain('scope === assetBudgetScope && state === window.state');
+  });
+
   it('keeps startup focused on global shell, Dashboard and Settings while deferring heavy domains', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
     const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
