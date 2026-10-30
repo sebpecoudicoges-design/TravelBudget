@@ -1,0 +1,129 @@
+
+> travelbudget@10.5.386 quality
+> npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm test && npm run docs:check && npm run build && npm run perf:budget
+
+
+> travelbudget@10.5.386 lint:syntax
+> node scripts/check-js-syntax.mjs
+
+JS/TS syntax OK (not type checking): 369 file(s) checked.
+
+> travelbudget@10.5.386 lint:inline
+> node scripts/check-inline-syntax.mjs
+
+Inline syntax: 38 scripts/handlers in 6 HTML files, 0 error(s).
+
+> travelbudget@10.5.386 lint:edge
+> node scripts/check-edge-types.mjs
+
+Edge types OK: 14 TypeScript source(s).
+
+> travelbudget@10.5.386 test
+> vitest run
+
+
+ RUN  v4.1.10 D:/Push/travelmodularV10.1.0
+
+
+ Test Files  157 passed (157)
+      Tests  1040 passed (1040)
+   Start at  08:29:47
+   Duration  27.66s (transform 3.56s, setup 0ms, import 10.48s, tests 48.07s, environment 58ms)
+
+
+> travelbudget@10.5.386 docs:check
+> node scripts/check-project-docs.mjs
+
+Documentation Atlas valide: 11 fiches, commit a6c55bcbc7e4.
+
+> travelbudget@10.5.386 prebuild
+> npm run version:sync && npm run vendors:prepare
+
+
+> travelbudget@10.5.386 version:sync
+> node scripts/sync-version.mjs
+
+Version synchronisée: 10.5.386 (0 fichier(s) mis à jour)
+
+> travelbudget@10.5.386 vendors:prepare
+> node scripts/prepare-vendors.mjs
+
+Local vendors prepared from locked npm packages.
+
+> travelbudget@10.5.386 build
+> vite build
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 114 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/.vite/manifest.json                                  8.53 kB │ gzip:  1.29 kB
+dist/index.html                                         278.23 kB │ gzip: 42.69 kB
+dist/assets/accountingController-BzMmfJXr.css             5.70 kB │ gzip:  1.42 kB
+dist/assets/index-BmzeI1ft.css                           77.03 kB │ gzip: 13.15 kB
+dist/assets/assetBudgetData-Dvu9dGKL.js                   0.42 kB │ gzip:  0.29 kB
+dist/assets/dashboardDailyBudgetState-D1e4cHu_.js         0.92 kB │ gzip:  0.52 kB
+dist/assets/assistantAiClient-BDraQJ-T.js                 1.14 kB │ gzip:  0.61 kB
+dist/assets/tripDocumentView-BNdJNMtE.js                  2.79 kB │ gzip:  1.05 kB
+dist/assets/dashboardWalletRules-B1n-6Oot.js              2.85 kB │ gzip:  1.27 kB
+dist/assets/sportMobilityController-DDW2Rp1J.js           2.96 kB │ gzip:  1.32 kB
+dist/assets/kpiCashRules-BV3hOOcM.js                      3.77 kB │ gzip:  1.53 kB
+dist/assets/tripExpenseDetailView-BchwSuiX.js             6.86 kB │ gzip:  2.17 kB
+dist/assets/walletJournal-CwR4cw6V.js                     7.16 kB │ gzip:  2.97 kB
+dist/assets/kpiProjectionRules-BGsBz8b-.js                7.61 kB │ gzip:  2.69 kB
+dist/assets/tripRecapView-CAY-KrM9.js                     8.09 kB │ gzip:  2.57 kB
+dist/assets/sportBodyMeasurementController-BAT3HKM4.js    8.73 kB │ gzip:  2.87 kB
+dist/assets/sportProgressionRules-DJuHUKvj.js             9.97 kB │ gzip:  3.51 kB
+dist/assets/workView-CSm-vACs.js                         10.62 kB │ gzip:  3.60 kB
+dist/assets/subscriptionRules-Bko52_sq.js                11.50 kB │ gzip:  3.97 kB
+dist/assets/kpiHealthRules-Cuny30I8.js                   11.81 kB │ gzip:  4.62 kB
+dist/assets/settingsCategoriesView-Cjc2tH6K.js           12.72 kB │ gzip:  3.94 kB
+dist/assets/kpiView-CAlBZqL1.js                          13.38 kB │ gzip:  4.15 kB
+dist/assets/subscriptionView-BJbZ9Ag3.js                 14.97 kB │ gzip:  4.40 kB
+dist/assets/settingsAccountController-CeXyFNtC.js        15.94 kB │ gzip:  5.23 kB
+dist/assets/inboxView-CjQ0zRHP.js                        18.09 kB │ gzip:  5.26 kB
+dist/assets/testCampaignController-C4w-ykb4.js           22.27 kB │ gzip:  6.55 kB
+dist/assets/documentView-xAkQoSBm.js                     25.64 kB │ gzip:  5.77 kB
+dist/assets/assetView-C5xZCUki.js                        26.86 kB │ gzip:  6.99 kB
+dist/assets/sportProfileRules-Bx2wlDGG.js                28.51 kB │ gzip:  9.96 kB
+dist/assets/sportProfileView-Bm-SDIwt.js                 35.23 kB │ gzip: 11.43 kB
+dist/assets/nutritionView-2NSs0Qb2.js                    38.23 kB │ gzip: 10.75 kB
+dist/assets/analysisRuntime-BXRi0-5B.js                  42.51 kB │ gzip: 12.46 kB
+dist/assets/accountingController-Dif0RrID.js            100.62 kB │ gzip: 31.36 kB
+dist/assets/sportRuntime-6jqop9Dz.js                    103.50 kB │ gzip: 23.80 kB
+dist/assets/index-CYL8eAtf.js                           282.95 kB │ gzip: 81.00 kB
+✓ built in 1.31s
+
+> travelbudget@10.5.386 perf:budget
+> node scripts/check-module-budgets.mjs
+
+Module size budget report
+
+Source groups:
+- OK accounting-domain: 139 / 139 KiB
+- OK boot-legacy: 864.7 / 1500 KiB
+- OK subscriptions-domain: 80.5 / 82 KiB
+- OK cashflow-domain: 50.5 / 70 KiB
+- OK analysis-domain: 141.4 / 160 KiB
+- OK analysis-period-filters: 26.5 / 27 KiB
+- OK analysis-cash-breakdown: 9.9 / 10 KiB
+- OK fx-decision-domain: 40.4 / 45 KiB
+- OK dashboard-settings: 362.8 / 365 KiB
+- OK testing-domain: 38.7 / 39 KiB
+- OK inbox-domain: 110.5 / 112 KiB
+- OK trip-domain: 318.5 / 340 KiB
+- OK sport-domain: 477.3 / 478 KiB
+- OK nutrition-domain: 234.5 / 235 KiB
+- OK work-domain: 65 / 90 KiB
+- OK assets-domain: 118 / 125 KiB
+- OK documents-domain: 112.7 / 115 KiB
+- OK wallet-journal: 9.3 / 14 KiB
+
+Initial JS (static ESM only): 276.3 / 277 KiB
+Lazy JS: 581.7 / 583 KiB
+Dist JS: 858 / 860 KiB
+Dist CSS: 80.8 / 81 KiB
+Main JS gzip: 79.1 / 110 KiB
+Vendor JS (separate, including deferred charts): 2236.7 / 2340 KiB
+Startup also loads legacy scripts and runtime imports: run npm run perf:startup for the observed journey.

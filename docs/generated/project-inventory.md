@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `684de9b0140c48fa9d6c78f081e904cab08951d2`
-> Empreinte du snapshot : `0cb9f0d2758700b3dff9e90471842203141b82375248d37576b3143672985fe2`
-> Généré le : `2026-10-30T08:41:15.778Z`
+> Commit analysé : `a6c55bcbc7e481a131a84445b08e2f7874e8df07`
+> Empreinte du snapshot : `adf41f861ce6b9252da97403a3872e9e68eb81a8a174121f2c5f234eab0bb743`
+> Généré le : `2026-10-30T22:29:15.701Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 62 |
-| Fichiers de tests | 168 |
+| Fichiers de tests | 169 |
 | Migrations Supabase | 163 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -478,6 +478,7 @@ Modules :
 - `tests/features/work/workView.test.js`
 - `tests/scripts/androidCommand.test.js`
 - `tests/scripts/atlasFingerprint.test.js`
+- `tests/scripts/buildHistory.test.js`
 - `tests/scripts/connectedStartupFixture.test.js`
 - `tests/scripts/edgeTypes.test.js`
 - `tests/scripts/entryManifest.test.js`

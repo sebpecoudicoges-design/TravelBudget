@@ -2,7 +2,7 @@
 
 ## Commandes
 
-Après les changements de sources et de documentation, exécuter `npm run atlas:generate`, puis `npm run quality`. Cette dernière commande arrête la chaîne au premier échec : syntaxe JavaScript/TypeScript, types des fonctions Edge, tests Vitest, cohérence documentaire, construction web, budgets de taille existants. La CI ne régénère pas l'Atlas : un inventaire oublié doit échouer.
+Après les changements de sources et de documentation, exécuter `npm run atlas:generate`, puis `npm run quality`. Cette dernière commande arrête la chaîne au premier échec : syntaxe JavaScript/TypeScript et HTML inline, types des fonctions Edge, tests Vitest, cohérence documentaire, construction web, budgets de taille existants. La CI ne régénère pas l'Atlas : un inventaire oublié doit échouer.
 
 `npm run test:e2e -- --project=desktop-chromium` exécute ensuite tous les scénarios navigateur. Plusieurs scénarios couvrent explicitement 1440/390 px et les thèmes clair/sombre. Les projets mobile/tablette restent disponibles séparément ; ce workflow ne prétend pas les exécuter.
 
@@ -55,3 +55,13 @@ Le premier diagnostic Deno comportait 62 erreurs. Les signatures `ReturnType<typ
 Des tests synthétiques prouvent que le contrôle accepte des types corrects, refuse une affectation `string` vers `number` et n'exécute pas le code. Les 14 fichiers TypeScript passent. Le JavaScript importé participe à l'inférence, mais `checkJs` n'est pas activé globalement : cela ne certifie pas tous les types internes de l'assistant. Le schéma SQL n'est pas généré dans ces types ; les autorisations, la persistance et les réponses réelles restent à auditer séparément.
 
 Ce lot modifie l'outillage et les sources serveur : aucun déploiement Edge, aucune requête de données, aucun envoi de notification et aucun nouvel APK. La page Projet et l'Atlas web reflètent l'avancement du dépôt, pas une mise à jour des fonctions en production. Référence : [Deno check](https://docs.deno.com/runtime/reference/cli/check/).
+
+## Publication Netlify — 31 octobre 2026
+
+La commande Netlify exécutait seulement `npm ci && npm run build` : un build réussi pouvait être publié avant qu'un test GitHub échoue. Elle exécute désormais, dans l'ordre, l'installation verrouillée, la préparation de l'historique Git, `audit:dependencies` et `quality`. Les opérateurs `&&` arrêtent la chaîne au premier échec ; aucun second build simplifié ne contourne les contrôles. Le seuil de dépendances reste critique, comme en CI ; les alertes modérées/élevées restantes ne sont pas présentées comme résolues.
+
+`scripts/ensure-build-history.mjs` détecte un checkout tronqué et récupère son historique depuis origin, sans checkout ni modification de HEAD. Cela permet à `docs:check` de vérifier ses anciens commits de référence. L'échec de récupération bloque la commande ; aucun contrôle documentaire n'est supprimé. Un dépôt complet ne provoque aucune requête Git. Les tests créent de vrais petits dépôts locaux, clonés avec depth=1 : récupération d'un ancien commit, conservation de HEAD et d'un fichier local, absence de remote sur dépôt complet et échec explicite sur dépôt tronqué sans remote. Le contrat Netlify échouait avant la correction.
+
+Le chemin de publication build seul a été retiré. Aucun autre code mort directement lié n'a été identifié. L'Atlas n'est pas régénéré dans le build distant : il doit être commité à jour. Les parcours navigateur et les mesures de démarrage restent exécutés par GitHub séparément ; cette modification n'instaure pas une dépendance Netlify envers leur résultat ni une protection de branche. Référence : [configuration des builds Netlify](https://docs.netlify.com/build/configure-builds/overview/).
+
+Lot d'outillage : application et APK 10.5.386 conservés ; page Projet et Atlas web actualisés, sans reconstruction Android ni modification de données.
