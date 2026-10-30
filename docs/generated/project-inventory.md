@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `a6c55bcbc7e481a131a84445b08e2f7874e8df07`
-> Empreinte du snapshot : `adf41f861ce6b9252da97403a3872e9e68eb81a8a174121f2c5f234eab0bb743`
-> Généré le : `2026-10-30T22:29:15.701Z`
+> Commit analysé : `f9d39141c1697f309600e1fe7e84591df1ec71a3`
+> Empreinte du snapshot : `6ab29482bb264b4bd8f9cecebb4085265c006a2eea008fd29e8217be1c905e22`
+> Généré le : `2026-10-30T22:38:35.817Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,7 +11,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.386` |
+| Version | `10.5.387` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
@@ -768,6 +768,7 @@ Modules :
 - `docs/V11_UI_COMPONENTS.md`
 - `docs/V11_VISUAL_REDESIGN_CHECKLIST.md`
 - `docs/VISUAL_SYSTEM.md`
+- `docs/WALLET_BULK_RECONCILIATION_10_5_387.md`
 - `docs/WALLET_JOURNAL_10_5_386.md`
 - `docs/assistant-ai-evaluation.md`
 - `docs/deployment_settings_checklist.md`

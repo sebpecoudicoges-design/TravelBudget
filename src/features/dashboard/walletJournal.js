@@ -63,6 +63,10 @@ export async function openWalletJournal(walletId, { client, userId, onClose } = 
       <label>${esc(text('Pointage', 'Reconciliation'))}<select data-journal-filter="status">${[['all', text('Toutes', 'All')], ['unmarked', text('Non pointées', 'Unreconciled')], ['marked', text('Pointées', 'Reconciled')]].map(([value, label]) => `<option value="${value}" ${filters.status === value ? 'selected' : ''}>${esc(label)}</option>`).join('')}</select></label>
       <label>${esc(text('Rechercher', 'Search'))}<input data-journal-filter="q" type="search" value="${esc(filters.q)}"></label>
       <button class="btn" data-journal-reload>${esc(text('Actualiser', 'Refresh'))}</button></div>
+      <div class="tb-journal-filters" role="group" aria-label="${esc(text('Pointage des opérations filtrées', 'Reconcile filtered movements'))}">
+      <span>${visible.length} ${esc(text('opération(s) filtrée(s)', 'filtered movement(s)'))}</span>
+      <button class="btn" data-journal-bulk="mark" ${visible.some(row => !row.reconciled) ? '' : 'disabled'}>${esc(text('Tout pointer', 'Reconcile all'))} (${visible.filter(row => !row.reconciled).length})</button>
+      <button class="btn" data-journal-bulk="unmark" ${visible.some(row => row.reconciled || row.changed) ? '' : 'disabled'}>${esc(text('Tout dépointer', 'Unreconcile all'))} (${visible.filter(row => row.reconciled || row.changed).length})</button></div>
       <p data-journal-message role="status"></p>
       <div class="tb-journal-table"><table><thead><tr><th>${esc(text('Pointée', 'Reconciled'))}</th><th>Date</th><th>${esc(text('Libellé', 'Description'))}</th><th>${esc(text('Débit', 'Debit'))}</th><th>${esc(text('Crédit', 'Credit'))}</th></tr></thead><tbody>
       ${visible.map(row => `<tr><td><input type="checkbox" data-journal-mark="${esc(row.id)}" aria-label="${esc(text('Pointer', 'Reconcile'))} ${esc(row.label || row.category)}" ${row.reconciled ? 'checked' : ''}></td><td>${esc(row.date_start)}</td><td>${esc(row.label || row.category)}${row.changed ? `<small>${esc(text('Modifiée : à vérifier', 'Edited: review required'))}</small>` : ''}</td><td>${row.type === 'expense' ? esc(money(Number(row.amount), row.currency)) : ''}</td><td>${row.type === 'income' ? esc(money(Number(row.amount), row.currency)) : ''}</td></tr>`).join('') || `<tr><td colspan="5">${esc(text('Aucune opération pour ces filtres.', 'No movements match these filters.'))}</td></tr>`}</tbody></table></div>`;
@@ -77,21 +81,42 @@ export async function openWalletJournal(walletId, { client, userId, onClose } = 
     };
     balance.oninput = updateDifference;
     updateDifference();
-    for (const checkbox of dialog.querySelectorAll('[data-journal-mark]')) checkbox.onchange = async () => {
-      if (busy || !stillCurrent()) return;
-      busy = true;
-      dialog.querySelectorAll('input,select,button:not([data-journal-close])').forEach(node => { node.disabled = true; });
-      try {
-        const row = transactions.find(tx => tx.id === checkbox.dataset.journalMark);
-        const { data, error } = await client.rpc('set_wallet_transaction_reconciliation', { p_transaction_id: row.id, p_reconciled: checkbox.checked, p_expected_updated_at: row.updated_at });
+    for (const button of dialog.querySelectorAll('[data-journal-bulk]')) button.onclick = () => {
+      const reconciled = button.dataset.journalBulk === 'mark';
+      // Freeze the filtered set before any row disappears from a status filter.
+      const targets = visible.filter(row => reconciled ? !row.reconciled : row.reconciled || row.changed);
+      void saveMarks(targets, reconciled);
+    };
+    for (const checkbox of dialog.querySelectorAll('[data-journal-mark]')) checkbox.onchange = () => {
+      void saveMarks([transactions.find(tx => tx.id === checkbox.dataset.journalMark)], checkbox.checked);
+    };
+  }
+  async function saveMarks(rows, reconciled) {
+    if (busy || !stillCurrent() || !rows.length) return;
+    busy = true;
+    let completed = 0;
+    const progress = () => `${completed}/${rows.length} ${text('opération(s) enregistrée(s)', 'movement(s) saved')}`;
+    dialog.querySelectorAll('input,select,button:not([data-journal-close])').forEach(node => { node.disabled = true; });
+    message(progress());
+    try {
+      for (const row of rows) {
+        if (!stillCurrent()) return;
+        const { data, error } = await client.rpc('set_wallet_transaction_reconciliation', { p_transaction_id: row.id, p_reconciled: reconciled, p_expected_updated_at: row.updated_at });
         if (error) throw error;
         if (!stillCurrent()) return;
         marks = marks.filter(mark => mark.transaction_id !== row.id);
         if (data) marks.push(data);
+        completed++;
+        message(progress());
+      }
+      render();
+      message(progress());
+    } catch (error) {
+      if (stillCurrent()) {
         render();
-      } catch (error) { if (stillCurrent()) { render(); message(error.message || String(error)); } }
-      finally { busy = false; }
-    };
+        message(`${progress()}. ${text('Traitement interrompu', 'Processing stopped')} : ${error.message || String(error)}`);
+      }
+    } finally { busy = false; }
   }
   async function load() {
     if (busy) return;

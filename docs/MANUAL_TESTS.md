@@ -25,8 +25,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 - Retest Analyse `10.5.369` : contrôler les listes séparées « Sorties à payer » et « Frais estimés », chacune avec son total filtré. Les estimations restent dans le budget prévisionnel mais ne génèrent plus d'alerte d'échéance en retard. Vérifier les cas sans estimation et avec seulement des estimations, en clair/sombre et PC/mobile.
 
-- Version locale et APK à valider : `10.5.386`. Livraison Trip/wallets : voir [preuves et distribution](TRIP_WALLET_FIX_10_5_374.md).
-- APK courant : `travelbudget-10.5.386-20261030-180000-debug.apk`. Validation sur téléphone à effectuer : sur un Trip de test, enregistrer un remboursement partiel avec double appui, vérifier un seul règlement et une seule transaction, puis annuler et vérifier leur disparition des montants actifs. Réordonner les wallets puis recharger : Archiver et Désarchiver doivent rester dans leurs cartes en clair/sombre à 390 et 1440 px.
+- Version locale et APK à valider : `10.5.387`. Livraison Trip/wallets : voir [preuves et distribution](TRIP_WALLET_FIX_10_5_374.md).
+- APK courant : `travelbudget-10.5.387-20261031-120000-debug.apk`. Validation sur téléphone à effectuer : sur un Trip de test, enregistrer un remboursement partiel avec double appui, vérifier un seul règlement et une seule transaction, puis annuler et vérifier leur disparition des montants actifs. Réordonner les wallets puis recharger : Archiver et Désarchiver doivent rester dans leurs cartes en clair/sombre à 390 et 1440 px.
 - Retest sécurité Android `10.5.373` : installer en mise à jour, conserver les données, vérifier connexion/OAuth, documents/liens externes, notifications et reprise hors ligne/réseau. Voir [preuve et limites du correctif Capacitor](ANDROID_SECURITY_10_5_373.md).
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
@@ -168,4 +168,6 @@ Ajouter un parcours uniquement si la livraison introduit une vérification utili
 - Attente console simple : aucune erreur non gérée, ou un log précis si utile.
 - Statut et, en cas d'échec, lien vers le retour détaillé.
 
-Pointage et sélection Transactions : voir [lot 10.5.386](WALLET_JOURNAL_10_5_386.md).
+Pointage et sélection Transactions : voir [lot 10.5.387](WALLET_JOURNAL_10_5_386.md).
+
+Pointage groupé : voir [lot 10.5.387](WALLET_BULK_RECONCILIATION_10_5_387.md). Vérifier les filtres et une interruption réseau sur téléphone.
