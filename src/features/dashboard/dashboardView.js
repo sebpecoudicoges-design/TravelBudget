@@ -233,12 +233,14 @@ export function renderWalletCard({
   const pct = Math.max(0, Math.min(100, Number(barPct) || 0));
   const actionButtons = archived
     ? `
+      <button class="btn" type="button" data-wallet-action="journal" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.journal'))}</button>
       <button class="btn" type="button" data-wallet-action="edit" data-wallet-id="${esc(id)}">&#9998; ${esc(tr('wallet.action.edit'))}</button>
       <button class="btn tb-wallet-delete-btn" type="button" data-wallet-action="delete" data-wallet-id="${esc(id)}">&#128465; ${esc(tr('wallet.action.delete'))}</button>
       <button class="btn tb-wallet-archive-btn" type="button" data-wallet-archive-action="unarchive" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.unarchive'))}</button>
     `
     : `
       <button class="btn primary" type="button" data-wallet-action="tx-expense" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.add_expense'))}</button>
+      <button class="btn" type="button" data-wallet-action="journal" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.journal'))}</button>
       <button class="btn" type="button" data-wallet-action="tx-income" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.add_income'))}</button>
       <button class="btn" type="button" data-wallet-action="edit" data-wallet-id="${esc(id)}">&#9998; ${esc(tr('wallet.action.edit'))}</button>
       <button class="btn" type="button" data-wallet-action="adjust" data-wallet-id="${esc(id)}">&#9881; ${esc(tr('wallet.action.adjust'))}</button>

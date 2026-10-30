@@ -1,5 +1,29 @@
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
+export function selectionAmounts(rows = []) {
+  const currencies = new Map();
+  for (const row of rows) {
+    const amount = Number(row.amount);
+    if (!Number.isFinite(amount) || !['income', 'expense'].includes(row.type)) continue;
+    const currency = String(row.currency || '').toUpperCase();
+    const group = currencies.get(currency) || { currency, count: 0, income: 0, expense: 0 };
+    group.count++;
+    group[row.type] += amount;
+    currencies.set(currency, group);
+  }
+  return [...currencies.values()].map(group => ({ ...group, total: group.income - group.expense,
+    average: (group.income - group.expense) / group.count }));
+}
+
+export function renderSelectionAmounts({ rows = [], t, format }) {
+  return selectionAmounts(rows).map(group => `<div class="tb-selection-amounts" data-selection-currency="${esc(group.currency)}">
+    <span>${esc(t('transactions.selection.total'))} : <strong>${esc(format(group.total, group.currency))}</strong></span>
+    <span>${esc(t('transactions.selection.average'))} : <strong>${esc(format(group.average, group.currency))}</strong></span>
+    <span>${esc(t('transactions.selection.income'))} : ${esc(format(group.income, group.currency))}</span>
+    <span>${esc(t('transactions.selection.expense'))} : ${esc(format(group.expense, group.currency))}</span>
+  </div>`).join('');
+}
+
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ESC[char]);
 }

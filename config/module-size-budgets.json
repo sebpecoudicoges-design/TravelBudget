@@ -2,10 +2,10 @@
   "version": 1,
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
-    "initialJsMaxKiB": 275,
-    "lazyJsMaxKiB": 575,
-    "totalJsMaxKiB": 849.7,
-    "totalCssMaxKiB": 79.4,
+    "initialJsMaxKiB": 277,
+    "lazyJsMaxKiB": 583,
+    "totalJsMaxKiB": 860,
+    "totalCssMaxKiB": 81,
     "mainJsGzipMaxKiB": 110,
     "vendorJsMaxKiB": 2340
   },
@@ -238,6 +238,13 @@
         "public/legacy/js/43_documents_ui.js",
         "src/core/documentRules.js",
         "src/features/documents/documentView.js"
+      ]
+    },
+    {
+      "name": "wallet-journal",
+      "maxKiB": 14,
+      "paths": [
+        "src/features/dashboard/walletJournal.js"
       ]
     }
   ]

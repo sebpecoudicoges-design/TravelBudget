@@ -10,6 +10,11 @@
 
   const DICTS = {
     fr: {
+      "wallet.action.journal": "Journal / pointage",
+      "transactions.selection.total": "Total net",
+      "transactions.selection.average": "Moyenne nette / opération",
+      "transactions.selection.income": "Entrées",
+      "transactions.selection.expense": "Dépenses",
       // Generic
       "app.lang": "Langue",
       "app.lang_fr": "Français",

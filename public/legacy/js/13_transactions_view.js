@@ -611,14 +611,7 @@ function _txFillSubcategoryFilterSelect(categoryValue, preserveValue) {
   const cat = String(categoryValue || "").trim();
   const activeCategory = cat && cat !== "all" ? cat : "";
 
-  if (!activeCategory) {
-    fSub.innerHTML = `<option value="all">${_txT("transactions.option.all_f")}</option>`;
-    fSub.value = "all";
-    fSub.disabled = true;
-    return;
-  }
-
-  const rows = (typeof getCategorySubcategories === "function")
+  const rows = activeCategory && (typeof getCategorySubcategories === "function")
     ? getCategorySubcategories(activeCategory)
     : [];
 
@@ -1264,7 +1257,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
     if (toD && d && d > toD) return false;
     if (walletId !== "all" && tx.walletId !== walletId) return false;
     if (cat !== "all" && tx.category !== cat) return false;
-    if (subcategory === "__none__" && String(tx.subcategory || "") !== "") return false;
+    if (subcategory === "__none__" && String(tx.subcategory || "").trim() !== "") return false;
     if (subcategory !== "all" && subcategory !== "__none__" && String(tx.subcategory || "") !== subcategory) return false;
     if (type === "expense" && tx.type !== "expense") return false;
     if (type === "income" && tx.type !== "income") return false;
@@ -1324,6 +1317,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
         <span class="muted">${_txT("transactions.bulk.selection")} : <strong id="tx-bulk-count">${bulkCount}</strong></span>
         <span class="muted">${_txT("transactions.bulk.common_category")} : <strong id="tx-bulk-common-category">${escapeHTML(bulkCommonCategory || _txT("transactions.bulk.mixed"))}</strong></span>
       </div>
+      <div id="tx-selection-amounts" aria-live="polite">${window.TBTransactionView.renderSelectionAmounts({ rows: _txBulkSelectedRows(), t: _txT, format: _fmtMoney })}</div>
       <div class="tx-bulk-controls">
         <div class="field">
           <label>${_txT("transactions.bulk.new_category")}</label>

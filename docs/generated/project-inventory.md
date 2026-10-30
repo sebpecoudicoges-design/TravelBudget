@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `b0fb747c29948ad4bd8d10335277d4a2b2b00970`
-> Empreinte du snapshot : `bfc0d7541697a2cc9d48414b430007ac1848ad75308410cf7b1e81f097d17e7e`
-> Généré le : `2026-10-28T21:30:12.341Z`
+> Commit analysé : `684de9b0140c48fa9d6c78f081e904cab08951d2`
+> Empreinte du snapshot : `0cb9f0d2758700b3dff9e90471842203141b82375248d37576b3143672985fe2`
+> Généré le : `2026-10-30T08:41:15.778Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.385` |
+| Version | `10.5.386` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
 | Modules data | 8 |
-| Modules features | 61 |
-| Fichiers de tests | 165 |
-| Migrations Supabase | 162 |
+| Modules features | 62 |
+| Fichiers de tests | 168 |
+| Migrations Supabase | 163 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
 
@@ -40,7 +40,8 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `links:check` | `node scripts/check-public-links.mjs` |
 | `perf:budget` | `node scripts/check-module-budgets.mjs` |
 | `lint:syntax` | `node scripts/check-js-syntax.mjs` |
-| `quality` | `npm run lint:syntax && npm run lint:edge && npm test && npm run docs:check && npm run build && npm run perf:budget` |
+| `quality` | `npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm test && npm run docs:check && npm run build && npm run perf:budget` |
+| `lint:inline` | `node scripts/check-inline-syntax.mjs` |
 | `lint:edge` | `node scripts/check-edge-types.mjs` |
 | `lint:db` | `node scripts/lint_db_strings.cjs` |
 | `cap:sync` | `npm run build && npx cap sync android` |
@@ -255,6 +256,7 @@ Modules :
 - `src/features/dashboard/dashboardDailyBudgetState.js`
 - `src/features/dashboard/dashboardView.js`
 - `src/features/dashboard/dashboardWalletRules.js`
+- `src/features/dashboard/walletJournal.js`
 - `src/features/documents/documentView.js`
 - `src/features/inbox/inboxView.js`
 - `src/features/kpi/kpiCashRules.js`
@@ -361,6 +363,7 @@ Modules :
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
+- `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 
 ### Tous les fichiers de tests
@@ -397,6 +400,7 @@ Modules :
 - `tests/core/tripRules.test.js`
 - `tests/core/tripSettlementRetry.test.js`
 - `tests/core/walletBalanceRules.test.js`
+- `tests/core/walletJournal.test.js`
 - `tests/core/webhookSecurityRules.test.js`
 - `tests/core/workRules.test.js`
 - `tests/data/assetTransactionLinksMigration.test.js`
@@ -421,6 +425,7 @@ Modules :
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
+- `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 - `tests/features/accounting/accountingChargeRegression.test.js`
 - `tests/features/accounting/accountingData.test.js`
@@ -476,6 +481,7 @@ Modules :
 - `tests/scripts/connectedStartupFixture.test.js`
 - `tests/scripts/edgeTypes.test.js`
 - `tests/scripts/entryManifest.test.js`
+- `tests/scripts/inlineSyntax.test.js`
 - `tests/ui/accountingViewContract.test.js`
 - `tests/ui/analysisDrilldownViewContract.test.js`
 - `tests/ui/analysisFilterViewContract.test.js`
@@ -713,6 +719,7 @@ Modules :
 - `supabase/migrations/20260918003053_analysis_trip_signed_balances.sql`
 - `supabase/migrations/20260925012905_assistant_ai_quota.sql`
 - `supabase/migrations/20261017015741_trip_settlement_atomic.sql`
+- `supabase/migrations/20261030082844_wallet_transaction_reconciliation.sql`
 
 ## Android et budgets de modules
 
@@ -760,6 +767,7 @@ Modules :
 - `docs/V11_UI_COMPONENTS.md`
 - `docs/V11_VISUAL_REDESIGN_CHECKLIST.md`
 - `docs/VISUAL_SYSTEM.md`
+- `docs/WALLET_JOURNAL_10_5_386.md`
 - `docs/assistant-ai-evaluation.md`
 - `docs/deployment_settings_checklist.md`
 

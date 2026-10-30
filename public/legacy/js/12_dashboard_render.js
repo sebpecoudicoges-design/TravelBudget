@@ -304,6 +304,12 @@ if (!wallets.length) {
     if (action === "tx-expense" && typeof openTxModal === "function") return openTxModal("expense", walletId);
     if (action === "tx-income" && typeof openTxModal === "function") return openTxModal("income", walletId);
     if (action === "edit") return editWallet(walletId);
+    if (action === "journal") {
+      return window.tbOpenWalletJournal(walletId, {
+        client: typeof sb !== 'undefined' ? sb : window.sb,
+        userId: typeof sbUser !== 'undefined' ? sbUser?.id : window.sbUser?.id,
+      }).catch(error => alert(error?.message || String(error)));
+    }
     if (action === "adjust" && typeof adjustWalletBalance === "function") return adjustWalletBalance(walletId);
     if (action === "delete") return deleteWallet(walletId);
   };

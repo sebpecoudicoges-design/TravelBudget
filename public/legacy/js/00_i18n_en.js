@@ -1,6 +1,11 @@
 /* English dictionary loaded on demand by 00_i18n.js. */
 (function () {
   const dict = {
+      "wallet.action.journal": "Journal / reconcile",
+      "transactions.selection.total": "Net total",
+      "transactions.selection.average": "Net average / transaction",
+      "transactions.selection.income": "Income",
+      "transactions.selection.expense": "Expenses",
       // Generic
       "app.lang": "Language",
       "app.lang_fr": "Français",

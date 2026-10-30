@@ -13,6 +13,7 @@ import * as settingsView from './features/settings/settingsView.js';
 import { installGlobalFeedback } from './ui/feedback.js';
 
 const deferredModules = createModuleRegistry({
+  walletJournal: ['/src/features/dashboard/walletJournal.js', () => import('./features/dashboard/walletJournal.js')],
   analysisRuntime: ['/src/features/analysis/analysisRuntime.js', () => import('./features/analysis/analysisRuntime.js')],
   testCampaignController: ['/src/features/testing/testCampaignController.js', () => import('./features/testing/testCampaignController.js')],
   dashboardWalletRules: ['/src/features/dashboard/dashboardWalletRules.js', () => import('./features/dashboard/dashboardWalletRules.js')],
@@ -38,6 +39,11 @@ const deferredModules = createModuleRegistry({
 }, { origin: window.location.origin });
 
 installGlobalFeedback();
+
+window.tbOpenWalletJournal = async (walletId, options) => {
+  const module = await deferredModules.load('walletJournal');
+  return module.openWalletJournal(walletId, options);
+};
 
 window.TB_VERSION = typeof __TB_VERSION__ !== 'undefined'
   ? __TB_VERSION__

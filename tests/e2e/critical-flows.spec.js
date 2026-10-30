@@ -59,6 +59,39 @@ async function expectBootShell(page) {
   }
 }
 
+for (const width of [1440, 390]) for (const dark of [false, true]) test(`transaction selection amounts and missing subcategory ${width} dark=${dark}`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto('/?freeze=1');
+  await expectBootShell(page);
+  await page.evaluate(dark => {
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('app-root').style.display = 'block';
+    document.body.classList.toggle('theme-dark', dark);
+    state.activeTravelId = 'selection-travel';
+    state.travels = [{ id: 'selection-travel', name: 'Test' }];
+    state.wallets = [{ id: 'selection-wallet', name: 'Banque test', currency: 'AUD', balance: 100 }];
+    state.transactions = [
+      { id: 's1', type: 'expense', amount: 10, currency: 'AUD', category: 'Transport', subcategory: '', label: 'Bateau', walletId: 'selection-wallet', travelId: 'selection-travel', dateStart: '2026-10-30', payNow: true, createdAt: 1 },
+      { id: 's2', type: 'income', amount: 50, currency: 'AUD', category: 'Autre', subcategory: null, label: 'Remboursement', walletId: 'selection-wallet', travelId: 'selection-travel', dateStart: '2026-10-30', payNow: true, createdAt: 2 },
+      { id: 's3', type: 'expense', amount: 100, currency: 'AUD', category: 'Transport', subcategory: 'Bus', label: 'Bus', walletId: 'selection-wallet', travelId: 'selection-travel', dateStart: '2026-10-30', payNow: true, createdAt: 3 },
+    ];
+    window.showView('transactions');
+    _txSetFilters({});
+    renderTransactions();
+  }, dark);
+  await expect(page.locator('#f-subcategory')).toBeEnabled();
+  await page.locator('#f-subcategory').selectOption('__none__');
+  await expect(page.locator('.tx-select')).toHaveCount(2);
+  await page.locator('.tx-bulk-head input[type="checkbox"]').check();
+  await expect(page.locator('#tx-bulk-count')).toHaveText('2');
+  const stats = page.locator('#tx-selection-amounts');
+  await expect(stats).toContainText('40');
+  await expect(stats).toContainText('20');
+  await page.screenshot({ path: `test-results/selection-${width}-${dark}.png` });
+  await page.locator('.tx-bulk-head input[type="checkbox"]').uncheck();
+  await expect(stats).toBeEmpty();
+});
+
 test('boots to auth without fatal errors and keeps core navigation usable', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
