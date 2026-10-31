@@ -25,7 +25,7 @@ Ce journal contient uniquement les décisions transversales nécessaires pour or
 
 ## ADR-004 — Préparer une connexion ChatGPT individuelle en lecture seule
 
-- **Statut :** socle de lecture préparé ; authentification et transport à implémenter avant activation.
+- **Statut :** socle de lecture et cycle serveur des jetons préparés ; consentement web, transport et raccordement aux lectures à réaliser avant activation.
 - **Décision :** identité issue du compte TravelBudget de chaque utilisateur, outils fermés finance uniquement, aucun accès administrateur partagé. Pilote limité au compte administrateur possible.
-- **Conséquence :** les scopes OAuth ne suffisent pas à restreindre les jetons Supabase ; vérifier accès directs et RPC avant de les confier à un client tiers. Pas d'activation publique dans le lot préparatoire.
+- **Conséquence :** les scopes OAuth ne suffisent pas à restreindre les jetons Supabase. La connexion utilisera des jetons opaques propres à MCP, stockés uniquement sous forme d'empreintes dans un schéma privé, avec renouvellement atomique et révocation. Aucun jeton de session Supabase confié à ChatGPT. Le registre utilise un client serveur privilégié uniquement pour les autorisations ; il ne lit aucune table financière. Le raccordement des lectures devra conserver une identité utilisateur et des droits bornés. Pas d'activation publique dans ces lots préparatoires.
 - **Source :** [Feuille de route ChatGPT/MCP](CHATGPT_MCP_ROADMAP.md).

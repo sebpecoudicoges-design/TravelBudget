@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `c3dcd7a2a8e9819117bb35eaf4f274f4df8815b8`
-> Empreinte du snapshot : `297936e79693cc43ea06e7db2fa88255990af61ccc255d8a168c4013cb86b037`
-> Généré le : `2026-10-31T22:49:41.121Z`
+> Commit analysé : `ce82c8ec45faeeded67c7a150360ceb8cfbe43c3`
+> Empreinte du snapshot : `6cd00ac24cfc575cc80205c9548ab761025f4f4f7e52a225ef13c1f54ca0a219`
+> Généré le : `2026-10-31T23:05:02.549Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,8 +17,8 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 9 |
 | Modules features | 63 |
-| Fichiers de tests | 171 |
-| Migrations Supabase | 163 |
+| Fichiers de tests | 172 |
+| Migrations Supabase | 164 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
 
@@ -447,6 +447,7 @@ Modules :
 - `tests/features/assets/assetBudgetData.test.js`
 - `tests/features/assets/assetView.test.js`
 - `tests/features/assistant/assistantAi.test.js`
+- `tests/features/assistant/mcpOAuth.test.js`
 - `tests/features/dashboard/dashboardView.test.js`
 - `tests/features/dashboard/dashboardWalletRules.test.js`
 - `tests/features/documents/documentView.test.js`
@@ -726,6 +727,7 @@ Modules :
 - `supabase/migrations/20260925012905_assistant_ai_quota.sql`
 - `supabase/migrations/20261017015741_trip_settlement_atomic.sql`
 - `supabase/migrations/20261030082844_wallet_transaction_reconciliation.sql`
+- `supabase/migrations/20261031230109_mcp_oauth_grants.sql`
 
 ## Android et budgets de modules
 
