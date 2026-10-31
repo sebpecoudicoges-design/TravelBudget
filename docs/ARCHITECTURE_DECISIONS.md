@@ -22,3 +22,10 @@ Ce journal contient uniquement les décisions transversales nécessaires pour or
 - **Décision :** documenter en priorité les dix fonctions dont les conséquences traversent plusieurs couches ou domaines.
 - **Conséquence :** un nouveau bouton ou écran n'entraîne pas automatiquement une nouvelle fiche. Le registre ne grandit qu'en présence d'un besoin de maintenance durable.
 - **Source :** [Registre critique](PROJECT_ATLAS.md#registre-critique-initial).
+
+## ADR-004 — Préparer une connexion ChatGPT individuelle en lecture seule
+
+- **Statut :** socle de lecture préparé ; authentification et transport à implémenter avant activation.
+- **Décision :** identité issue du compte TravelBudget de chaque utilisateur, outils fermés finance uniquement, aucun accès administrateur partagé. Pilote limité au compte administrateur possible.
+- **Conséquence :** les scopes OAuth ne suffisent pas à restreindre les jetons Supabase ; vérifier accès directs et RPC avant de les confier à un client tiers. Pas d'activation publique dans le lot préparatoire.
+- **Source :** [Feuille de route ChatGPT/MCP](CHATGPT_MCP_ROADMAP.md).

@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "8e95359402f667e93b8e158fc036c6ac3baca73a",
-  "snapshotFingerprint": "2a178bb5d653e98d11d490ce23e7d0dff5b9c97939dd26ef2b0da48b2c967b02",
-  "generatedAt": "2026-10-31T11:17:29.660Z",
+  "commit": "c3dcd7a2a8e9819117bb35eaf4f274f4df8815b8",
+  "snapshotFingerprint": "297936e79693cc43ea06e7db2fa88255990af61ccc255d8a168c4013cb86b037",
+  "generatedAt": "2026-10-31T22:49:41.121Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.387"
@@ -179,6 +179,7 @@
   ],
   "dataModules": [
     "src/data/entityStore.js",
+    "src/data/mcpFinanceReadRepository.js",
     "src/data/mutationQueueStore.js",
     "src/data/nutritionRepository.js",
     "src/data/sportRepository.js",
@@ -226,6 +227,7 @@
     "src/features/assets/assetBudgetData.js",
     "src/features/assets/assetView.js",
     "src/features/assistant/assistantAiClient.js",
+    "src/features/assistant/mcpReadTools.js",
     "src/features/dashboard/dashboardDailyBudgetState.js",
     "src/features/dashboard/dashboardView.js",
     "src/features/dashboard/dashboardWalletRules.js",
@@ -307,6 +309,7 @@
     "tests/core/workRules.test.js",
     "tests/data/assetTransactionLinksMigration.test.js",
     "tests/data/entityStore.test.js",
+    "tests/data/mcpFinanceRead.test.js",
     "tests/data/mutationQueueStore.test.js",
     "tests/data/nutritionRepository.test.js",
     "tests/data/recurringBudgetPeriodMigration.test.js",
@@ -707,6 +710,7 @@
     "docs/BRIDGE_RECOVERY_10_5_385.md",
     "docs/CASHFLOW_CPU_10_5_381.md",
     "docs/CASHFLOW_QUEUE_10_5_382.md",
+    "docs/CHATGPT_MCP_ROADMAP.md",
     "docs/CONNECTED_STARTUP.md",
     "docs/DEPENDENCIES_10_5_377.md",
     "docs/GPT6_AND_ACCOUNTING_PLAN.md",

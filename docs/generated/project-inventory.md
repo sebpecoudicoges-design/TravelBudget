@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `8e95359402f667e93b8e158fc036c6ac3baca73a`
-> Empreinte du snapshot : `2a178bb5d653e98d11d490ce23e7d0dff5b9c97939dd26ef2b0da48b2c967b02`
-> Généré le : `2026-10-31T11:17:29.660Z`
+> Commit analysé : `c3dcd7a2a8e9819117bb35eaf4f274f4df8815b8`
+> Empreinte du snapshot : `297936e79693cc43ea06e7db2fa88255990af61ccc255d8a168c4013cb86b037`
+> Généré le : `2026-10-31T22:49:41.121Z`
 
 # Inventaire du projet TravelBudget
 
@@ -15,9 +15,9 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
-| Modules data | 8 |
-| Modules features | 62 |
-| Fichiers de tests | 170 |
+| Modules data | 9 |
+| Modules features | 63 |
+| Fichiers de tests | 171 |
 | Migrations Supabase | 163 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -203,6 +203,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 ## Modules src/data
 
 - `src/data/entityStore.js`
+- `src/data/mcpFinanceReadRepository.js`
 - `src/data/mutationQueueStore.js`
 - `src/data/nutritionRepository.js`
 - `src/data/sportRepository.js`
@@ -254,6 +255,7 @@ Modules :
 - `src/features/assets/assetBudgetData.js`
 - `src/features/assets/assetView.js`
 - `src/features/assistant/assistantAiClient.js`
+- `src/features/assistant/mcpReadTools.js`
 - `src/features/dashboard/dashboardDailyBudgetState.js`
 - `src/features/dashboard/dashboardView.js`
 - `src/features/dashboard/dashboardWalletRules.js`
@@ -406,6 +408,7 @@ Modules :
 - `tests/core/workRules.test.js`
 - `tests/data/assetTransactionLinksMigration.test.js`
 - `tests/data/entityStore.test.js`
+- `tests/data/mcpFinanceRead.test.js`
 - `tests/data/mutationQueueStore.test.js`
 - `tests/data/nutritionRepository.test.js`
 - `tests/data/recurringBudgetPeriodMigration.test.js`
@@ -744,6 +747,7 @@ Modules :
 - `docs/BRIDGE_RECOVERY_10_5_385.md`
 - `docs/CASHFLOW_CPU_10_5_381.md`
 - `docs/CASHFLOW_QUEUE_10_5_382.md`
+- `docs/CHATGPT_MCP_ROADMAP.md`
 - `docs/CONNECTED_STARTUP.md`
 - `docs/DEPENDENCIES_10_5_377.md`
 - `docs/GPT6_AND_ACCOUNTING_PLAN.md`
