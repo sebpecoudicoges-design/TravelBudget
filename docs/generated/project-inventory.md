@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `ce82c8ec45faeeded67c7a150360ceb8cfbe43c3`
-> Empreinte du snapshot : `6cd00ac24cfc575cc80205c9548ab761025f4f4f7e52a225ef13c1f54ca0a219`
-> Généré le : `2026-10-31T23:05:02.549Z`
+> Commit analysé : `307f3b6e21596519e5726163a375500d618d4631`
+> Empreinte du snapshot : `b6a23ca7b36be8ad082f3e08cb5d75e1bc7d14769a241302f3b9b420f493eb95`
+> Généré le : `2026-10-31T23:31:00.453Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,9 +17,9 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 9 |
 | Modules features | 63 |
-| Fichiers de tests | 172 |
-| Migrations Supabase | 164 |
-| Fonctions Edge | 13 |
+| Fichiers de tests | 174 |
+| Migrations Supabase | 165 |
+| Fonctions Edge | 14 |
 | Projet Android présent | Oui |
 
 ## Scripts npm
@@ -365,6 +365,7 @@ Modules :
 - `tests/e2e/critical-flows.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
+- `tests/e2e/mcp-consent.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
@@ -428,6 +429,7 @@ Modules :
 - `tests/e2e/critical-flows.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
+- `tests/e2e/mcp-consent.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
@@ -447,6 +449,7 @@ Modules :
 - `tests/features/assets/assetBudgetData.test.js`
 - `tests/features/assets/assetView.test.js`
 - `tests/features/assistant/assistantAi.test.js`
+- `tests/features/assistant/mcpHttp.test.js`
 - `tests/features/assistant/mcpOAuth.test.js`
 - `tests/features/dashboard/dashboardView.test.js`
 - `tests/features/dashboard/dashboardWalletRules.test.js`
@@ -560,6 +563,7 @@ Modules :
 - `process-account-deletions`
 - `request-account-deletion`
 - `send-mobile-notification`
+- `travelbudget-mcp`
 - `whatsapp-inbox`
 
 ### Migrations
@@ -728,6 +732,7 @@ Modules :
 - `supabase/migrations/20261017015741_trip_settlement_atomic.sql`
 - `supabase/migrations/20261030082844_wallet_transaction_reconciliation.sql`
 - `supabase/migrations/20261031230109_mcp_oauth_grants.sql`
+- `supabase/migrations/20261031232255_mcp_scoped_reads.sql`
 
 ## Android et budgets de modules
 

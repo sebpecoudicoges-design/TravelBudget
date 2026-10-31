@@ -125,6 +125,8 @@ it('revokes token families without exposing unknown-token existence', async () =
   run.mockResolvedValue(null);
   expect(await service.revoke({ ...binding, token })).toBeUndefined();
   expect(run).toHaveBeenCalledWith('revoke_token', { ...{ client_id: binding.client_id, resource: RESOURCE }, token_hash: await mcpTokenHash(token) });
+  await service.revoke({ client_id: binding.client_id, token, token_type_hint: 'refresh_token' });
+  expect(run.mock.lastCall[1].resource).toBe(RESOURCE);
 });
 
 it('redacts database errors and requires successful persistence before producing a code', async () => {

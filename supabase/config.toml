@@ -430,3 +430,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/dispatch-mobile-notifications/deno.json"
 entrypoint = "./functions/dispatch-mobile-notifications/index.ts"
+
+[functions.travelbudget-mcp]
+enabled = true
+# Opaque MCP tokens are verified by the handler; Supabase JWTs are not accepted as MCP tokens.
+verify_jwt = false
+entrypoint = "./functions/travelbudget-mcp/index.ts"

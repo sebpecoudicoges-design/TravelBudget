@@ -58,12 +58,17 @@ export function createMcpOAuthService({ store, resource, clients, verifySession,
     }
     return { access_token: next.access, refresh_token: next.refresh, token_type: 'Bearer', expires_in: result.expires_in, scope: SCOPE };
   }
+  function validateAuthorization(input) {
+    fields(input, ['client_id', 'redirect_uri', 'resource', 'response_type', 'scope', 'state', 'code_challenge', 'code_challenge_method', 'approved']);
+    binding(input, true);
+    if (input.response_type !== 'code' || input.scope !== SCOPE || input.code_challenge_method !== 'S256' ||
+        !SECRET.test(input.code_challenge || '') || typeof input.state !== 'string' || !input.state.length || input.state.length > 1024) fail('invalid_request');
+    return { ...input };
+  }
   return {
+    validateAuthorization,
     async authorize(session, input) {
-      fields(input, ['client_id', 'redirect_uri', 'resource', 'response_type', 'scope', 'state', 'code_challenge', 'code_challenge_method', 'approved']);
-      binding(input, true);
-      if (input.response_type !== 'code' || input.scope !== SCOPE || input.code_challenge_method !== 'S256' ||
-          !SECRET.test(input.code_challenge || '') || typeof input.state !== 'string' || !input.state.length || input.state.length > 1024) fail('invalid_request');
+      validateAuthorization(input);
       const userId = await owner(session);
       // Require an explicit consent result bound to this request by the HTTP host's CSRF protection.
       if (input.approved !== true) fail('access_denied');
@@ -83,8 +88,9 @@ export function createMcpOAuthService({ store, resource, clients, verifySession,
       return exchanged('exchange', input, { code_hash: await mcpTokenHash(input.code), challenge: await mcpTokenHash(input.code_verifier), redirect_uri: input.redirect_uri });
     },
     async refresh(input) {
-      fields(input, ['grant_type', 'client_id', 'resource', 'refresh_token']);
+      fields(input, ['grant_type', 'client_id', 'resource', 'refresh_token', 'scope']);
       binding(input);
+      if (input.scope !== undefined && input.scope !== SCOPE) fail('invalid_scope');
       if (input.grant_type !== 'refresh_token' || !/^tbm_r_[A-Za-z0-9_-]{43}$/.test(input.refresh_token || '')) fail('invalid_grant');
       return exchanged('refresh', input, { previous_hash: await mcpTokenHash(input.refresh_token) });
     },
@@ -100,8 +106,8 @@ export function createMcpOAuthService({ store, resource, clients, verifySession,
       await store.run('revoke_owner', { user_id: userId, grant_id: grantId });
     },
     async revoke(input) {
-      fields(input, ['client_id', 'resource', 'token']);
-      binding(input);
+      fields(input, ['client_id', 'resource', 'token', 'token_type_hint']);
+      binding({ ...input, resource: input.resource ?? resource });
       if (typeof input.token !== 'string' || !/^tbm_[ar]_[A-Za-z0-9_-]{43}$/.test(input.token)) return;
       // Idempotent, including unknown tokens; no credential enumeration response.
       await store.run('revoke_token', { client_id: input.client_id, resource, token_hash: await mcpTokenHash(input.token) });

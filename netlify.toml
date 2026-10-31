@@ -6,6 +6,49 @@
   NODE_VERSION = "24"
   NETLIFY_SKIP_INSTALL = "true"
 
+[[redirects]]
+  from = "/mcp"
+  to = "https://obznbrzarhvmlbprcfie.supabase.co/functions/v1/travelbudget-mcp/mcp"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/mcp-auth/*"
+  to = "https://obznbrzarhvmlbprcfie.supabase.co/functions/v1/travelbudget-mcp/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/.well-known/oauth-authorization-server/mcp-auth"
+  to = "https://obznbrzarhvmlbprcfie.supabase.co/functions/v1/travelbudget-mcp/.well-known/oauth-authorization-server"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/.well-known/oauth-protected-resource/mcp"
+  to = "https://obznbrzarhvmlbprcfie.supabase.co/functions/v1/travelbudget-mcp/.well-known/oauth-protected-resource"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/connect-chatgpt.html"
+  [headers.values]
+    Cache-Control = "no-store"
+    Referrer-Policy = "no-referrer"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://obznbrzarhvmlbprcfie.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+
+[[redirects]]
+  from = "/.well-known/oauth-authorization-server"
+  to = "https://obznbrzarhvmlbprcfie.supabase.co/functions/v1/travelbudget-mcp/.well-known/oauth-authorization-server"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/.well-known/oauth-protected-resource"
+  to = "https://obznbrzarhvmlbprcfie.supabase.co/functions/v1/travelbudget-mcp/.well-known/oauth-protected-resource"
+  status = 200
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]

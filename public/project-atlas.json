@@ -1,17 +1,17 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
   "version": "10.5.387",
-  "commit": "ce82c8ec45faeeded67c7a150360ceb8cfbe43c3",
-  "generatedAt": "2026-10-31T23:05:02.549Z",
+  "commit": "307f3b6e21596519e5726163a375500d618d4631",
+  "generatedAt": "2026-10-31T23:31:00.453Z",
   "counts": {
     "screens": 18,
     "criticalFeatures": 11,
-    "tests": 172,
-    "migrations": 164,
+    "tests": 174,
+    "migrations": 165,
     "featureModules": 63,
     "coreModules": 27,
     "dataModules": 9,
-    "edgeFunctions": 13
+    "edgeFunctions": 14
   },
   "domains": [
     "accounting",

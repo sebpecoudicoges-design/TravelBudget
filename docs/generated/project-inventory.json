@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "ce82c8ec45faeeded67c7a150360ceb8cfbe43c3",
-  "snapshotFingerprint": "6cd00ac24cfc575cc80205c9548ab761025f4f4f7e52a225ef13c1f54ca0a219",
-  "generatedAt": "2026-10-31T23:05:02.549Z",
+  "commit": "307f3b6e21596519e5726163a375500d618d4631",
+  "snapshotFingerprint": "b6a23ca7b36be8ad082f3e08cb5d75e1bc7d14769a241302f3b9b420f493eb95",
+  "generatedAt": "2026-10-31T23:31:00.453Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.387"
@@ -329,6 +329,7 @@
     "tests/e2e/critical-flows.spec.js",
     "tests/e2e/kpi-account-scope.spec.js",
     "tests/e2e/local-vendors.spec.js",
+    "tests/e2e/mcp-consent.spec.js",
     "tests/e2e/trip-analysis.spec.js",
     "tests/e2e/wallet-journal.spec.js",
     "tests/e2e/wallet-layout.spec.js",
@@ -348,6 +349,7 @@
     "tests/features/assets/assetBudgetData.test.js",
     "tests/features/assets/assetView.test.js",
     "tests/features/assistant/assistantAi.test.js",
+    "tests/features/assistant/mcpHttp.test.js",
     "tests/features/assistant/mcpOAuth.test.js",
     "tests/features/dashboard/dashboardView.test.js",
     "tests/features/dashboard/dashboardWalletRules.test.js",
@@ -507,6 +509,7 @@
     "tests/e2e/critical-flows.spec.js",
     "tests/e2e/kpi-account-scope.spec.js",
     "tests/e2e/local-vendors.spec.js",
+    "tests/e2e/mcp-consent.spec.js",
     "tests/e2e/trip-analysis.spec.js",
     "tests/e2e/wallet-journal.spec.js",
     "tests/e2e/wallet-layout.spec.js"
@@ -675,7 +678,8 @@
     "supabase/migrations/20260925012905_assistant_ai_quota.sql",
     "supabase/migrations/20261017015741_trip_settlement_atomic.sql",
     "supabase/migrations/20261030082844_wallet_transaction_reconciliation.sql",
-    "supabase/migrations/20261031230109_mcp_oauth_grants.sql"
+    "supabase/migrations/20261031230109_mcp_oauth_grants.sql",
+    "supabase/migrations/20261031232255_mcp_scoped_reads.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",
@@ -690,6 +694,7 @@
     "process-account-deletions",
     "request-account-deletion",
     "send-mobile-notification",
+    "travelbudget-mcp",
     "whatsapp-inbox"
   ],
   "android": {

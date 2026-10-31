@@ -11,6 +11,10 @@ Demande du 31 octobre 2026, après lecture de la pièce jointe « Connecter Trav
 
 ## État effectivement livré
 
+**Mise à jour du 1 novembre 2026 : serveur OAuth/MCP déployé en pilote administrateur.** Consentement et révocation disponibles sur [Connecter ChatGPT](https://stunning-dieffenbachia-2b2ed0.netlify.app/connect-chatgpt.html). Connexion effective depuis un compte ChatGPT réel encore à vérifier ; aucune autorisation personnelle n'a été créée pendant les tests. Les deux premiers lots ci-dessous décrivent les étapes préparatoires, désormais raccordées.
+
+Pour le pilote : URL MCP `https://stunning-dieffenbachia-2b2ed0.netlify.app/mcp`, authentification OAuth, client public `travelbudget-chatgpt`, sans secret, scope `finance:read`. Le serveur annonce RFC 9207 et renvoie `iss` ; callback enregistré exact `https://chatgpt.com/connector_platform_oauth_redirect`. Vérifier que l'interface ChatGPT affiche ce callback avant l'essai ; aucune redirection générique ni joker n'est acceptée. Se connecter à TravelBudget dans le même navigateur pour retrouver sa session sur la page de consentement. Le pilote est limité à l'identifiant du compte administrateur existant, configuré côté serveur ; ce n'est pas un accès aux données des autres utilisateurs.
+
 Un catalogue interne de quatre outils et leur adaptateur de lecture, avec tests, sont présents dans le dépôt :
 
 | Outil préparé | Résultat | Limite explicite |
@@ -22,7 +26,22 @@ Un catalogue interne de quatre outils et leur adaptateur de lecture, avec tests,
 
 Sources : [adaptateur](../src/data/mcpFinanceReadRepository.js), [catalogue et validation](../src/features/assistant/mcpReadTools.js), [tests](../tests/data/mcpFinanceRead.test.js).
 
-**Ce socle n'est pas encore un serveur MCP connecté.** Aucun transport HTTP, endpoint OAuth public, écran de consentement ou client ChatGPT n'est activé. Les modules ne sont pas importés par le démarrage de l'application ; ils sont exercés par les tests et préparent le futur serveur. L'assistant intégré existant conserve son fonctionnement : ce n'est pas un doublon à supprimer. Aucune nouvelle dépendance. Le second lot ajoute le registre privé décrit ci-dessous. Aucun nouvel APK nécessaire.
+Les modules sont maintenant utilisés par la fonction Edge `travelbudget-mcp`, sans alourdir le démarrage de l'application. L'assistant intégré reste distinct. La page web de consentement utilise le client Supabase déjà distribué et ses sessions existantes ; aucun nouveau formulaire de mot de passe. Aucun nouvel APK nécessaire pour cette connexion web.
+
+## Lot serveur, consentement et lectures bornées
+
+- Migration **20261031232255_mcp_scoped_reads appliquée**. Rôle `tb_mcp_reader` NOLOGIN, NOINHERIT, NOBYPASSRLS, uniquement SELECT sur les colonnes nécessaires. Politiques restrictives de propriété sur les six tables ; trois colonnes de participation Trip sont accessibles uniquement pour l'évaluation des politiques existantes, sans exposer la table participants comme outil ou résultat.
+- La lecture passe par un wrapper SECURITY INVOKER réservé au serveur, puis une fonction privée SECURITY DEFINER possédée par ce rôle de lecture, pas par postgres/service_role. Cette frontière réduit volontairement les privilèges du serveur. Aucun droit d'écriture métier accordé. Le jeton opaque est revérifié en base à chaque page et détermine le propriétaire ; aucune identité fournie par le client tiers.
+- Adaptateur `mcp-read-client.js` limité aux filtres autorisés, raccordé aux règles métier existantes. Aucun client service_role général injecté dans le repository financier. Les calculs de solde et les limites des budgets restent ceux du tableau ci-dessus.
+- SDK officiel `@modelcontextprotocol/server@2.4.0`, compatible HTTP moderne et clients stateless antérieurs. Zod 4.6.7 fixé par archive officielle et intégrité npm : les métadonnées abrégées npm renvoyaient une version plus ancienne que le registre complet. Lockfiles npm/Deno conservés ; l'ancien SDK v1 et ses dépendances inutilisées ont été retirés. Audit npm : 12 alertes préexistantes, 8 modérées et 4 élevées, aucune critique et aucune nouvelle alerte liée au serveur MCP.
+- Métadonnées de ressource et serveur OAuth, codes PKCE, échange/renouvellement/révocation, challenge 401. Routes Netlify vers la fonction Edge ; URLs d'émetteur/ressource fixes, contrôles des hôtes et origines, callback exact. Les POST de consentement/révocation propriétaire exigent JSON et Origin TravelBudget, avec Bearer de session vérifié côté serveur ; aucun cookie ambiant utilisé pour autoriser.
+- Consentement explicite, refus possible sans connexion, compte affiché, détection d'un changement de compte, liste des accès et révocation. Aucun HTML construit à partir des données utilisateur. Clair/sombre et 1440/390 px testés.
+- Corps entrants limités à 16 Kio et cinq secondes ; quotas persistants 120 requêtes/minute par IP reçue de la passerelle, 30 appels MCP/minute par utilisateur et 10 consentements/minute par utilisateur. L'IP est stockée sous empreinte, pas en clair. Les quotas ne remplacent pas une protection DDoS de la plateforme. Purge des familles expirées et vieux codes inutilisés lors des réservations ; empreintes de refresh conservées jusqu'à expiration de la famille pour détecter le rejeu.
+- Réponses sans cache. Aucun log de jeton, de libellé ou de montant ajouté. Variable `MCP_ENABLED=false` pour couper le serveur ; `MCP_ALLOWED_USERS` contrôle le pilote. Vérification JWT de la passerelle désactivée pour cette seule fonction car elle authentifie elle-même les jetons opaques ; les autres fonctions sont inchangées.
+
+Validation : tests HTTP avec vrai SDK (consentement, échange, lecture, révocation, refus), SQL distant avec deux propriétaires synthétiques et ROLLBACK avant/après migration, six parcours navigateur. Zéro compte synthétique ou autorisation personnelle conservé. Métadonnées publiques 200 et challenge sans jeton 401 vérifiés sur la fonction déployée. Les tests financiers SQL utilisent seulement leurs fixtures ; aucun montant personnel lu ou modifié. L'essai complet dans ChatGPT réel et la comparaison des résultats avec le compte utilisateur restent à faire.
+
+Advisors après ce lot : aucune nouvelle alerte WARN liée au MCP ; les notices INFO du registre fermé restent attendues. Les avertissements antérieurs de la base restent un chantier séparé.
 
 ## Lot authentification — 1 novembre 2026
 
@@ -40,7 +59,7 @@ Validation : 24 tests JavaScript du cycle et des adaptateurs ; assertions Postgr
 
 Advisors Supabase : deux notices INFO « RLS enabled, no policy » pour le registre sont attendues, les accès utilisateur étant volontairement fermés. Les 36 avertissements existants sur les RPC SECURITY DEFINER et la protection contre les mots de passe compromis restent dans l'audit général ; le nouveau RPC est SECURITY INVOKER et inaccessible aux utilisateurs.
 
-Avant exposition : ajouter le transport OAuth/MCP, la page de consentement avec protection CSRF et liaison à la demande, les métadonnées OAuth, les limites de requêtes et quotas, la purge des autorisations expirées, le raccordement aux lectures financières sous une identité bornée et les essais du flux complet. Aucun client ni callback réel n'est préenregistré. Le service OAuth natif Supabase n'est pas activé par ce lot ; son état distant n'a pas été vérifié.
+Ces éléments du lot d'authentification ont ensuite été raccordés dans le lot serveur décrit plus haut. Le service OAuth natif Supabase n'est pas utilisé ni activé par ces changements ; son état distant n'a pas été vérifié.
 
 ## Audit préalable constaté
 
@@ -64,9 +83,9 @@ Quinze tests synthétiques : catalogue lecture seule, refus des écritures et de
 
 ## Étapes suivantes et critères de sortie
 
-1. **Raccordement des autorisations** : cycle de jetons opaques et registre privé réalisés. Brancher le consentement protégé et les lectures financières sans donner au client tiers de session Supabase ni de clé serveur. Préserver l'isolation utilisateur avec tests réels ; ne pas passer un client service_role au repository de lectures prévu pour RLS.
-2. **Serveur MCP** : hébergement Supabase Edge envisagé, transport Streamable HTTP via SDK maintenu/verrouillé ; vérification de l'empreinte du jeton à chaque appel (ressource, expiration, révocation, client autorisé et permissions), métadonnées de ressource protégée, quotas, bornes de requête, purge et journal minimal d'accès. Aucune confiance dans user_metadata pour accorder un accès admin.
-3. **Validation d'isolation réelle** : deux utilisateurs, propriétaire/non-propriétaire, jeton expiré/révoqué, client OAuth non autorisé, tentatives de lecture santé, écriture directe REST et appel RPC interdits. Tester aussi absence de jeton, panne API et collecte paginée.
+1. **Raccordement des autorisations** : réalisé, avec rôle de lecture borné et consentement web.
+2. **Serveur MCP** : déployé pour le pilote ; publication web et parcours ChatGPT à relire après chaque livraison.
+3. **Validation d'isolation** : SQL réel sur deux propriétaires, expirations/révocation et refus de tables hors périmètre vérifiés ; HTTP/SDK et navigateur testés. Compléter par le client ChatGPT réel et une campagne concurrente multi-instance avant ouverture générale.
 4. **Pilote administrateur** : connexion réelle du compte Pro, relecture des soldes et transactions contre l'application ; consentement et révocation vérifiés. Pas de promesse de disponibilité avant ce test.
 5. **Ouverture individuelle** : chaque utilisateur autorise son propre compte TravelBudget ; aucun partage de connexion administrateur. Valider les groupes partagés séparément avant de les inclure.
 6. **Budgets calculés et suite** : reprendre les règles de dates budgétaires, devises, quotes-parts et patrimoine pour une synthèse comparable à l'application. Les écritures éventuelles nécessiteront un lot distinct explicitement demandé.
