@@ -18,7 +18,7 @@
     "links:check": "node scripts/check-public-links.mjs",
     "perf:budget": "node scripts/check-module-budgets.mjs",
     "lint:syntax": "node scripts/check-js-syntax.mjs",
-    "quality": "npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm test && npm run docs:check && npm run build && npm run perf:budget",
+    "quality": "npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm run lint:core && npm test && npm run docs:check && npm run build && npm run perf:budget",
     "lint:inline": "node scripts/check-inline-syntax.mjs",
     "lint:edge": "node scripts/check-edge-types.mjs",
     "lint:db": "node scripts/lint_db_strings.cjs",
@@ -30,7 +30,8 @@
     "android:bundle-release": "powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1 -RequireSigned",
     "audit:dependencies": "npm audit --audit-level=critical",
     "vendors:prepare": "node scripts/prepare-vendors.mjs",
-    "perf:startup": "node scripts/measure-startup.mjs"
+    "perf:startup": "node scripts/measure-startup.mjs",
+    "lint:core": "node scripts/check-core-semantics.mjs"
   },
   "devDependencies": {
     "@capacitor/android": "8.5.3",

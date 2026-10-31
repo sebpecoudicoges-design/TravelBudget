@@ -233,7 +233,7 @@ export function bindSportSetRows(sets = [], itemByIndex = new Map()) {
       const itemId = itemByIndex instanceof Map
         ? itemByIndex.get(Number(set.itemIndex))
         : itemByIndex?.[Number(set.itemIndex)];
-      const { itemIndex, ...row } = set;
+      const { itemIndex: _itemIndex, ...row } = set;
       return { ...row, item_id: itemId };
     })
     .filter((row) => row.item_id);

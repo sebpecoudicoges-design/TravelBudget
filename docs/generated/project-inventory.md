@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `f9d39141c1697f309600e1fe7e84591df1ec71a3`
-> Empreinte du snapshot : `6ab29482bb264b4bd8f9cecebb4085265c006a2eea008fd29e8217be1c905e22`
-> Généré le : `2026-10-30T22:38:35.817Z`
+> Commit analysé : `8e95359402f667e93b8e158fc036c6ac3baca73a`
+> Empreinte du snapshot : `2a178bb5d653e98d11d490ce23e7d0dff5b9c97939dd26ef2b0da48b2c967b02`
+> Généré le : `2026-10-31T11:17:29.660Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 8 |
 | Modules features | 62 |
-| Fichiers de tests | 169 |
+| Fichiers de tests | 170 |
 | Migrations Supabase | 163 |
 | Fonctions Edge | 13 |
 | Projet Android présent | Oui |
@@ -40,7 +40,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `links:check` | `node scripts/check-public-links.mjs` |
 | `perf:budget` | `node scripts/check-module-budgets.mjs` |
 | `lint:syntax` | `node scripts/check-js-syntax.mjs` |
-| `quality` | `npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm test && npm run docs:check && npm run build && npm run perf:budget` |
+| `quality` | `npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm run lint:core && npm test && npm run docs:check && npm run build && npm run perf:budget` |
 | `lint:inline` | `node scripts/check-inline-syntax.mjs` |
 | `lint:edge` | `node scripts/check-edge-types.mjs` |
 | `lint:db` | `node scripts/lint_db_strings.cjs` |
@@ -53,6 +53,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `audit:dependencies` | `npm audit --audit-level=critical` |
 | `vendors:prepare` | `node scripts/prepare-vendors.mjs` |
 | `perf:startup` | `node scripts/measure-startup.mjs` |
+| `lint:core` | `node scripts/check-core-semantics.mjs` |
 
 ## Écrans déclarés dans index.html
 
@@ -480,6 +481,7 @@ Modules :
 - `tests/scripts/atlasFingerprint.test.js`
 - `tests/scripts/buildHistory.test.js`
 - `tests/scripts/connectedStartupFixture.test.js`
+- `tests/scripts/coreSemanticLint.test.js`
 - `tests/scripts/edgeTypes.test.js`
 - `tests/scripts/entryManifest.test.js`
 - `tests/scripts/inlineSyntax.test.js`

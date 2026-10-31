@@ -65,3 +65,18 @@ La commande Netlify exécutait seulement `npm ci && npm run build` : un build r�
 Le chemin de publication build seul a été retiré. Aucun autre code mort directement lié n'a été identifié. L'Atlas n'est pas régénéré dans le build distant : il doit être commité à jour. Les parcours navigateur et les mesures de démarrage restent exécutés par GitHub séparément ; cette modification n'instaure pas une dépendance Netlify envers leur résultat ni une protection de branche. Référence : [configuration des builds Netlify](https://docs.netlify.com/build/configure-builds/overview/).
 
 Lot d'outillage : application et APK 10.5.386 conservés ; page Projet et Atlas web actualisés, sans reconstruction Android ni modification de données.
+
+
+## Analyse sémantique des règles métier — 31 octobre 2026
+
+`npm run lint:core` utilise le Deno 2.9.6 déjà verrouillé, sans nouvelle dépendance, sur les 27 modules `src/core/**/*.js`. La commande est obligatoire dans `quality`, donc dans GitHub et la publication Netlify. Les dix-neuf règles explicites ciblent notamment références inconnues, variables locales inutilisées, code inaccessible, clés/branches/cas dupliqués, affectations invalides, finally dangereux et comparaisons NaN/typeof invalides. Ce contrôle complète la syntaxe et les tests ; il ne prouve pas les résultats financiers.
+
+La configuration est dans `config/deno-core-lint.json`, déjà couvert par l'empreinte Atlas. Les règles no-window et no-node-globals complètent les globals reconnus par Deno. Aucun formatage ni correctif automatique n'est appliqué. Les exceptions de ligne doivent nommer une règle connue et rester utiles ; une exclusion de fichier demeure techniquement possible et doit être revue. Aucun fichier core n'en contient actuellement.
+
+Deux calculs sans consommateur ont été retirés de `notificationRules.js` (workCount, fmtPct), après recherche de leurs usages. Les paramètres pctText, restMinutes et restMet restent acceptés sous leurs noms publics ; leurs bindings locaux prennent un préfixe underscore pour expliciter leur non-utilisation. Les valeurs par défaut et règles de calories de travail sont conservées. La déstructuration itemIndex dans Sport retire volontairement ce champ du payload serveur ; seul son binding local est renommé, et le test existant de sauvegarde des séries vérifie cette exclusion. Messages de notification et signatures publiques conservés.
+
+Quatre tests du contrôle injectent plusieurs défauts synthétiques, vérifient les diagnostics sans exécuter les sources ni charger leurs imports, contrôlent les exceptions de ligne et couvrent tous les modules métier. Le contrôle des variables inutilisées empêche le retour des deux calculs retirés. Les tests Notifications/Sport/Travail restent exécutés.
+
+Périmètre progressif : vues, repositories, bridge, scripts legacy et HTML ne sont pas encore couverts par ces règles sémantiques. Les Edge TypeScript restent contrôlées séparément par Deno check. Référence : [Deno lint](https://docs.deno.com/runtime/reference/cli/lint/).
+
+Lot de qualité sans évolution fonctionnelle annoncée : sources nettoyées, page Projet et Atlas web actualisés ; APK 10.5.387 conservé, aucune nouvelle compilation Android ni écriture de données. Son code embarqué conserve les deux calculs inutilisés.

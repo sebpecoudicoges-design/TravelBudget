@@ -1,0 +1,14 @@
+{
+  "lint": {
+    "rules": {
+      "tags": [],
+      "include": [
+        "no-undef", "no-unused-vars", "no-unreachable", "no-dupe-args",
+        "no-dupe-keys", "no-dupe-else-if", "no-duplicate-case", "no-func-assign",
+        "no-import-assign", "no-const-assign", "no-unsafe-finally",
+        "no-unsafe-negation", "use-isnan", "valid-typeof", "no-window",
+        "no-node-globals", "ban-unused-ignore", "ban-untagged-ignore", "ban-unknown-rule-code"
+      ]
+    }
+  }
+}

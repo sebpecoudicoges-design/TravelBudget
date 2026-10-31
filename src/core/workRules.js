@@ -10,7 +10,7 @@ function num(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-export function kcalFromWorkMet({ met = 4.8, kg = 70, minutes = 0, restMinutes = 0, restMet = 1.3 } = {}) {
+export function kcalFromWorkMet({ met = 4.8, kg = 70, minutes = 0, restMinutes: _restMinutes = 0, restMet: _restMet = 1.3 } = {}) {
   const active = Math.max(0, num(minutes, 0));
   const weight = Math.max(1, num(kg, 70));
   const netMet = Math.max(0, num(met, 4.8) - 1);

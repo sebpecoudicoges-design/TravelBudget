@@ -90,7 +90,6 @@ export function selectActivityNudge({ slot = 'morning', activity = {}, prefs = {
   const p = normalizeNotificationPrefs(prefs);
   const sportCount = Number(activity.sportCount || 0);
   const sportKcal = Number(activity.sportKcal || 0);
-  const workCount = Number(activity.workCount || 0);
   const workKcal = Number(activity.workKcal || 0);
   const workMinutes = Number(activity.workMinutes || 0);
   const evening = String(slot || '').toLowerCase() === 'evening';
@@ -108,11 +107,10 @@ export function selectActivityNudge({ slot = 'morning', activity = {}, prefs = {
   return null;
 }
 
-export function composeDailyBudgetNotification({ slot = 'morning', remainingToday = 0, daily = 0, spentToday = 0, delta = 0, pct = 0, currency = 'EUR', activity = {}, prefs = {}, money, pctText } = {}) {
+export function composeDailyBudgetNotification({ slot = 'morning', remainingToday = 0, daily = 0, spentToday = 0, delta = 0, pct = 0, currency = 'EUR', activity = {}, prefs = {}, money, pctText: _pctText } = {}) {
   const p = normalizeNotificationPrefs(prefs);
   const cur = String(currency || 'EUR').toUpperCase();
   const fmtMoney = money || ((value, c) => `${Math.round((Number(value) || 0) * 100) / 100} ${c || cur}`.trim());
-  const fmtPct = pctText || `${Number(pct || 0) > 0 ? '+' : ''}${Math.round(Number(pct || 0))}%`;
   const evening = String(slot || '').toLowerCase() === 'evening';
   const variant = selectBudgetNotificationVariant({ remainingToday, delta, pct, currency: cur, emojis: p.emojis });
   const titleFr = evening ? withEmoji('Bilan du soir', '🌙', p.emojis) : variant.titleFr;
