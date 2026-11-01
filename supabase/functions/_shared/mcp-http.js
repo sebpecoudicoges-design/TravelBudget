@@ -34,7 +34,7 @@ async function body(request) {
   try { return JSON.parse(text); } catch { throw new HttpError(400,'invalid_json'); }
 }
 
-export function createMcpHttpHandler({ oauth, identity, serverClient, protocol, issuer, resource, siteOrigin, publicConfig, enabled = false }) {
+export function createMcpHttpHandler({ oauth, identity, serverClient, protocol, sharing, issuer, resource, siteOrigin, publicConfig, enabled = false }) {
   const headers = { 'Content-Type':'application/json', 'Cache-Control':'no-store', 'Pragma':'no-cache',
     'Referrer-Policy':'no-referrer', 'X-Content-Type-Options':'nosniff',
     'Access-Control-Allow-Origin':siteOrigin, 'Vary':'Origin' };
@@ -69,6 +69,11 @@ export function createMcpHttpHandler({ oauth, identity, serverClient, protocol, 
         response_types_supported:['code'], grant_types_supported:['authorization_code','refresh_token'], scopes_supported:['finance:read'],
         token_endpoint_auth_methods_supported:['none'], code_challenge_methods_supported:['S256'], authorization_response_iss_parameter_supported:true });
       if (request.method === 'GET' && path === '/config') return json({ ...publicConfig, issuer, resource });
+      if(path==='/sharing' && ['GET','POST'].includes(request.method) && sharing){
+        const input=request.method==='POST'?await body(request):undefined;
+        const bounded=new Request(request.url,{method:request.method,headers:request.headers,body:input===undefined?undefined:JSON.stringify(input)});
+        const result=await sharing(bounded);return json(result.data,result.status);
+      }
       if (request.method === 'GET' && (path === '/authorize' || path === '/request')) {
         const input = parameters(url.searchParams);
         if (Object.hasOwn(input,'approved')) throw new HttpError(400,'invalid_request');

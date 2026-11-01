@@ -1,4 +1,4 @@
-# Connexion ChatGPT / MCP — feuille de route et premier socle
+# Connexion ChatGPT / MCP — fonctionnement et suivi
 
 Demande du 31 octobre 2026, après lecture de la pièce jointe « Connecter TravelBudget à ChatGPT ».
 
@@ -10,6 +10,26 @@ Demande du 31 octobre 2026, après lecture de la pièce jointe « Connecter Trav
 - Cette priorité s'ajoute au suivi d'audit ; elle ne clôt ni architecture/qualité ni l'audit général de la base.
 
 ## État effectivement livré
+
+### Extension du 1 novembre 2026
+
+La connexion initiale depuis ChatGPT a été confirmée par l'utilisateur. Le catalogue passe de quatre à neuf outils, toujours en lecture seule. Les nouveaux outils financiers nécessitent l'activation explicite dans [Choisir les données supplémentaires](https://stunning-dieffenbachia-2b2ed0.netlify.app/connect-chatgpt.html) ; les accès existants ne sont pas élargis silencieusement. Après activation, actualiser les outils du plugin dans ChatGPT et ouvrir une nouvelle conversation.
+
+| Outil ajouté | Résultat et limites |
+|---|---|
+| get_budget_analysis | Dépenses allouées par catégorie, budget restant, détail journalier et projection des wallets. Période obligatoire, fenêtre maximale trois ans. Quotes-parts Trip, achats immobilisés exclus et charges de patrimoine réutilisent les règles métier. Projection hors impayés et règlements Trip futurs ; dépenses prépayées déduites du budget futur sans reporter un dépassement sur un autre jour. |
+| get_trip_details | Dépenses, répartitions et historique des remboursements d'un groupe possédé. Soldes calculés par devise avec computeTripAnalysis ; règlements annulés exclus du calcul. Pas de consolidation FX implicite. Noms des participants du groupe visibles, pas leurs e-mails ni leurs identifiants de compte. |
+| get_accounting_report | Produits, charges hors amortissements, résultat, biens nets et dotations, via buildAccountingReport. Réglages comptables locaux utilisables après synchronisation explicite depuis le navigateur ; date de synchronisation retournée. Sans eux, classification automatique signalée. Positions de bilan Trip non consolidées : totaux concernés restent indisponibles. |
+| list_shared_documents | Métadonnées des seuls documents sélectionnés, sans chemin Storage ni URL publique. |
+| read_shared_document | Contenu d'un document sélectionné : texte, PDF, PNG, JPEG ou WebP, 2 Mio maximum. Ressource MCP ou image ; aucun lien de téléchargement durable. La capacité du client à exploiter une ressource PDF doit être vérifiée lors de l'essai réel. |
+
+Les taux FX datés viennent du même adaptateur comptable ; les taux fixes des segments sont prioritaires pour le budget. Pour les dates futures, un taux disponible à la date de référence est une hypothèse explicite. Aucun total budgétaire partiel n'est donné si un taux manque. La projection part des soldes actuels (y compris wallets archivés), pas d'un solde historique reconstitué. Le paramètre as_of détermine la date de référence du calcul, UTC par défaut ; fournir la date locale pour aligner le jour utilisateur.
+
+Les préférences de partage sont personnelles, appliquées aux accès actifs et futurs, révocables depuis la page de connexion. La sélection d'un document est liée à sa date de mise à jour et son chemin ; après modification, il faut le sélectionner à nouveau. Un retrait est revérifié après le téléchargement, avant envoi du contenu. Aucun document présélectionné. Les 500 documents les plus récents sont proposés, 100 sélections maximum ; « Ne partager aucun document » retire aussi les sélections hors de cette liste. Les données déjà transmises restent dans l'historique ChatGPT.
+
+Les trois migrations mcp_extended_reads, mcp_trip_policy_read_access et mcp_trip_policy_bound_helpers conservent un lecteur SELECT uniquement. Les enfants Trip sont limités par le groupe possédé, les propriétaires d'actifs par leur actif, et les documents par leur sélection/version. Les helpers Trip restent SECURITY INVOKER : leurs références SQL sont liées à la création pour fonctionner sans ouvrir le schéma Auth au lecteur. Les droits de l'application authentifiée sont testés en parallèle. Les RPC de configuration ne sont exécutables que par le serveur après vérification de session ; les jetons MCP ne peuvent modifier les préférences.
+
+Les sections suivantes conservent l'historique des étapes initiales ; leurs anciennes restrictions décrivent ces lots, pas le catalogue étendu ci-dessus.
 
 **Mise à jour du 1 novembre 2026 : serveur OAuth/MCP déployé en pilote administrateur.** Consentement et révocation disponibles sur [Connecter ChatGPT](https://stunning-dieffenbachia-2b2ed0.netlify.app/connect-chatgpt.html). Connexion effective depuis un compte ChatGPT réel encore à vérifier ; aucune autorisation personnelle n'a été créée pendant les tests. Les deux premiers lots ci-dessous décrivent les étapes préparatoires, désormais raccordées.
 

@@ -23,3 +23,9 @@ button:focus-visible,a:focus-visible { outline:3px solid var(--tb-coral); outlin
 #login button { margin:12px 0 12px 12px; }
 [hidden] { display:none !important; }
 @media(max-width:480px) { .tb-connect { padding:12px; } .tb-connect-card { padding:18px; } header { gap:8px; } .tb-connect-actions button { flex:1 1 100%; } }
+/* Sharing controls reuse the consent palette and remain inside the card at 390px. */
+.tb-connect-choice { display:flex; align-items:flex-start; gap:12px; margin:14px 0; overflow-wrap:anywhere; }
+.tb-connect-choice input { flex:0 0 auto; width:20px; height:20px; margin-top:3px; accent-color:var(--tb-coral); }
+.tb-connect-documents { max-height:360px; overflow:auto; margin:16px 0; padding:0 8px; border:1px solid var(--tb-line); border-radius:12px; }
+.tb-connect-documents small { display:block; }
+#save-sharing, #clear-shared-documents { margin:6px 0; }

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `52eeec19c719e90c0b924c48ebb659f1b5c9d7d0`
-> Empreinte du snapshot : `319a9e0a99cdaaf4f2e0d3a653a6eb4ccc7a7dcb75f31b5b5e5777e8cc7abd84`
-> Généré le : `2026-11-01T04:45:21.882Z`
+> Commit analysé : `8778b07f69b4c5c4bb057b14cb92edb1890213c5`
+> Empreinte du snapshot : `d8fc2f54720c39d0fe2110e60a32fb8bf071d1fcda41c54965d252d002a8cd9b`
+> Généré le : `2026-11-01T09:32:40.567Z`
 
 # Inventaire du projet TravelBudget
 
@@ -15,10 +15,10 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
-| Modules data | 9 |
-| Modules features | 63 |
-| Fichiers de tests | 175 |
-| Migrations Supabase | 165 |
+| Modules data | 11 |
+| Modules features | 64 |
+| Fichiers de tests | 176 |
+| Migrations Supabase | 168 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
 
@@ -203,7 +203,9 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 ## Modules src/data
 
 - `src/data/entityStore.js`
+- `src/data/mcpExtendedReadRepository.js`
 - `src/data/mcpFinanceReadRepository.js`
+- `src/data/mcpReadCatalog.js`
 - `src/data/mutationQueueStore.js`
 - `src/data/nutritionRepository.js`
 - `src/data/sportRepository.js`
@@ -255,6 +257,7 @@ Modules :
 - `src/features/assets/assetBudgetData.js`
 - `src/features/assets/assetView.js`
 - `src/features/assistant/assistantAiClient.js`
+- `src/features/assistant/mcpExtendedReports.js`
 - `src/features/assistant/mcpReadTools.js`
 - `src/features/dashboard/dashboardDailyBudgetState.js`
 - `src/features/dashboard/dashboardView.js`
@@ -449,6 +452,7 @@ Modules :
 - `tests/features/assets/assetBudgetData.test.js`
 - `tests/features/assets/assetView.test.js`
 - `tests/features/assistant/assistantAi.test.js`
+- `tests/features/assistant/mcpExtendedReports.test.js`
 - `tests/features/assistant/mcpHttp.test.js`
 - `tests/features/assistant/mcpOAuth.test.js`
 - `tests/features/dashboard/dashboardView.test.js`
@@ -734,6 +738,9 @@ Modules :
 - `supabase/migrations/20261030082844_wallet_transaction_reconciliation.sql`
 - `supabase/migrations/20261031230109_mcp_oauth_grants.sql`
 - `supabase/migrations/20261031232255_mcp_scoped_reads.sql`
+- `supabase/migrations/20261101050138_mcp_extended_reads.sql`
+- `supabase/migrations/20261101092507_mcp_trip_policy_read_access.sql`
+- `supabase/migrations/20261101092559_mcp_trip_policy_bound_helpers.sql`
 
 ## Android et budgets de modules
 

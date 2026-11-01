@@ -3,12 +3,12 @@ export function createMcpProtocol({ Server, createMcpHandler }, tools, makeDispa
   return async (request, identity, token) => {
     const dispatch = await makeDispatcher(identity, token);
     const handler = createMcpHandler(() => {
-    const server = new Server({ name: 'TravelBudget Finance', version: '1.0.0' }, { capabilities: { tools: {} } });
+    const server = new Server({ name: 'TravelBudget Finance', version: '1.1.0' }, { capabilities: { tools: {} } });
     server.setRequestHandler('tools/list', async () => ({ tools }));
     server.setRequestHandler('tools/call', async ({ params }) => {
       try {
         const result = await dispatch(params.name, params.arguments || {});
-        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+        return { content: result.mcpContent || [{ type: 'text', text: JSON.stringify(result) }] };
       } catch {
         return { isError: true, content: [{ type: 'text', text: 'Lecture refusée ou incomplète. Aucun total partiel ne doit être interprété.' }] };
       }

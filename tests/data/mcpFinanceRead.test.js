@@ -24,8 +24,8 @@ function fixture(data = {}, options = {}) {
   return { calls, dispatch: createMcpReadToolDispatcher({ client, userId: A }) };
 }
 
-it('exposes only four named read tools and rejects writes and identity overrides before a query', async () => {
-  expect(MCP_READ_TOOLS).toHaveLength(4);
+it('exposes only named read tools and rejects writes and identity overrides before a query', async () => {
+  expect(MCP_READ_TOOLS).toHaveLength(9);
   expect(MCP_READ_TOOLS.every(tool => tool.annotations.readOnlyHint && !tool.annotations.destructiveHint)).toBe(true);
   const { dispatch, calls } = fixture();
   await expect(dispatch('create_transaction', {})).rejects.toThrow('Unknown read tool');

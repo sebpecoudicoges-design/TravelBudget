@@ -8,7 +8,7 @@ export function createMcpScopedReadClient(serverClient, { userId, tokenHash, res
       select() { return this; },
       eq(key, value) {
         if (key === 'user_id') { if (value !== userId) throw new Error('Owner mismatch'); ownerChecked = true; }
-        else if (['id','period_id','wallet_id'].includes(key)) filters[key] = value;
+        else if (['id','period_id','wallet_id','trip_id'].includes(key)) filters[key] = value;
         else throw new Error('Unsupported read filter');
         return this;
       },

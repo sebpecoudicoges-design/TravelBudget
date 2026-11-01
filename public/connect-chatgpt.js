@@ -5,6 +5,7 @@
   document.body.classList.toggle('theme-dark', matchMedia('(prefers-color-scheme: dark)').matches);
   byId('theme-toggle').addEventListener('click',()=>document.body.classList.toggle('theme-dark'));
   let sb, request, displayedUser, busy = false;
+  let sharingUser=null, selectedDocuments=new Set(), savingSharing=false;
   // Cross-origin calls bypass old installed app service workers as well.
   const api = 'https://obznbrzarhvmlbprcfie.supabase.co/functions/v1/travelbudget-mcp';
   navigator.serviceWorker?.getRegistration().then(registration=>registration?.update()).catch(()=>{});
@@ -15,6 +16,7 @@
       const current = await session();
       if (!current) throw new Error('Connecte-toi à TravelBudget, puis actualise cette page.');
       if (path === '/authorize' && current.user.id !== displayedUser) throw new Error('Le compte a changé. Actualise la page avant de confirmer.');
+      if(path==='/sharing' && method==='POST' && current.user.id!==sharingUser)throw new Error('Le compte a changé. Actualise la page avant de partager.');
       headers.Authorization = 'Bearer '+current.access_token;
     }
     const response = await fetch(api+path,{method,headers,credentials:'omit',cache:'no-store',body:data?JSON.stringify(data):undefined});
@@ -44,6 +46,56 @@
       row.append(text,button); container.append(row);
     }
   }
+  async function loadSharing(){
+    byId('sharing-panel').hidden=true;sharingUser=null;selectedDocuments=new Set();
+    const current=await session();if(!current)return;
+    const prefs=await call('/sharing',{authenticated:true});
+    if((await session())?.user.id!==current.user.id)return;
+    sharingUser=current.user.id;selectedDocuments=new Set(prefs.document_ids||[]);
+    byId('finance-sharing').checked=prefs.finance_enabled===true;
+    byId('accounting-sharing').checked=false;
+    byId('settings-sync-state').textContent=prefs.settings_synced_at?'Dernière synchronisation comptable : '+new Date(prefs.settings_synced_at).toLocaleString():'Aucun réglage comptable local partagé : les rapports utilisent la classification automatique.';
+    const list=byId('sharing-documents');list.replaceChildren();
+    for(const doc of prefs.documents||[]){
+      const label=document.createElement('label');label.className='tb-connect-choice';
+      const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.value=doc.id;checkbox.checked=selectedDocuments.has(doc.id);
+      checkbox.addEventListener('change',()=>checkbox.checked?selectedDocuments.add(doc.id):selectedDocuments.delete(doc.id));
+      const text=document.createElement('span');text.textContent=doc.name||doc.original_filename||'Document';
+      const detail=document.createElement('small');detail.textContent=(doc.mime_type||'Format inconnu')+' · '+Math.ceil(Number(doc.size_bytes||0)/1024)+' Kio';text.append(detail);
+      label.append(checkbox,text);list.append(label);
+    }
+    if(!prefs.documents?.length)list.textContent='Aucun document disponible.';
+    byId('sharing-status').textContent=prefs.documents_truncated?'Les 500 documents les plus récents sont affichés. Les sélections antérieures restent conservées.':'';
+    byId('sharing-panel').hidden=false;
+  }
+  byId('save-sharing').addEventListener('click',async()=>{
+    if(savingSharing)return;savingSharing=true;byId('save-sharing').disabled=true;
+    const controls=[...byId('sharing-panel').querySelectorAll('input')];controls.forEach(input=>input.disabled=true);
+    try{
+      const current=await session();if(!current||current.user.id!==sharingUser)throw new Error('Le compte a changé. Actualise la page avant de partager.');
+      if(selectedDocuments.size>100)throw new Error('Choisis au maximum 100 documents.');
+      const data={finance_enabled:byId('finance-sharing').checked,document_ids:[...selectedDocuments]};
+      if(byId('accounting-sharing').checked){
+        const prefix='tb-accounting-v1:'+encodeURIComponent(current.user.id)+':';data.accounting_settings={};
+        for(let i=0;i<localStorage.length;i++){
+          const key=localStorage.key(i);if(!key.startsWith(prefix))continue;
+          const travelId=decodeURIComponent(key.slice(prefix.length));
+          if(!/^[0-9a-f-]{36}$/i.test(travelId))continue;
+          const value=JSON.parse(localStorage.getItem(key));
+          if(value&&typeof value==='object'&&!Array.isArray(value))data.accounting_settings[travelId]=value;
+        }
+      }
+      if(new TextEncoder().encode(JSON.stringify(data)).length>15000)throw new Error('Réglages trop volumineux pour cette synchronisation. Décoche les réglages comptables pour enregistrer les autres choix.');
+      await call('/sharing',{method:'POST',data,authenticated:true});
+      await loadSharing();byId('sharing-status').textContent='Choix enregistrés. Actualise les outils du plugin dans ChatGPT pour utiliser les nouvelles lectures.';
+    }catch(error){byId('sharing-status').textContent=error.message;}
+    finally{savingSharing=false;byId('save-sharing').disabled=false;controls.forEach(input=>input.disabled=false);}
+  });
+  byId('clear-shared-documents').addEventListener('click',()=>{
+    if(savingSharing)return;selectedDocuments.clear();
+    byId('sharing-documents').querySelectorAll('input').forEach(input=>input.checked=false);
+    byId('sharing-status').textContent='Aucun document sélectionné. Enregistre pour appliquer ce retrait.';
+  });
   async function decide(approved) {
     if (busy || !request) return;
     busy = true; byId('approve').disabled = true; byId('deny').disabled = true;
@@ -57,7 +109,7 @@
   }
   byId('approve').addEventListener('click',()=>decide(true));
   byId('deny').addEventListener('click',()=>decide(false));
-  byId('refresh-session').addEventListener('click',()=>refresh().catch(error=>status(error.message)));
+  byId('refresh-session').addEventListener('click',()=>refresh().then(loadSharing).catch(error=>status(error.message)));
   try {
     const config = await call('/config');
     if (config.supabaseUrl !== 'https://obznbrzarhvmlbprcfie.supabase.co') throw new Error('Configuration de connexion invalide.');
@@ -69,5 +121,6 @@
       status('Vérifie le compte et les données partagées avant de choisir.');
     } else status('Démarre la connexion depuis ChatGPT pour autoriser un nouvel accès.');
     await refresh();
+    await loadSharing().catch(()=>{byId('sharing-panel').hidden=true;status('Les options de partage n’ont pas pu être chargées. Actualise cette page pour réessayer.');});
   } catch (error) { status(error.message); byId('approve').disabled = true; }
 })();
