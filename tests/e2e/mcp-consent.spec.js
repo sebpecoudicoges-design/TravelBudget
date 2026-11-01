@@ -58,7 +58,7 @@ for(const width of [1440,390])for(const theme of ['light','dark'])test(`MCP shar
   await expect(page.locator('#sharing-documents input')).not.toBeChecked();
   await page.locator('#finance-sharing').check();await page.locator('#sharing-documents input').check();
   await page.locator('#save-sharing').click();await expect(page.locator('#sharing-status')).toContainText('Choix enregistrés');
-  expect(calls.find(c=>c.path.endsWith('/sharing')&&c.body).body).toEqual({finance_enabled:true,document_ids:['doc-a']});
+  expect(calls.find(c=>c.path.endsWith('/sharing')&&c.body).body).toEqual({finance_enabled:true,sport_enabled:false,nutrition_enabled:false,all_documents:false,document_ids:['doc-a']});
   await page.reload();await expect(page.locator('#sharing-documents input')).toBeChecked();
   await page.locator('#sharing-panel').scrollIntoViewIfNeeded();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -85,4 +85,13 @@ test('MCP consent preserves the choice after failure and rejects a switched acco
   await page.evaluate(()=>window.__testSession.user={id:'owner-b',email:'other@example.com'});
   await page.locator('#approve').click();await expect(page.locator('#status')).toContainText('Le compte a changé');
   expect(calls.filter(c=>c.path.endsWith('/authorize'))).toHaveLength(1);
+});
+
+test('explicit all-documents and health consent persists and can be withdrawn',async({page})=>{
+ const calls=await setup(page);await page.goto('/connect-chatgpt.html');await expect(page.locator('#sharing-panel')).toBeVisible();
+ for(const id of ['sport-sharing','nutrition-sharing','all-documents-sharing']){await expect(page.locator('#'+id)).not.toBeChecked();await page.locator('#'+id).check();}
+ await expect(page.locator('#sharing-documents input')).toBeDisabled();await page.locator('#save-sharing').click();await expect(page.locator('#sharing-status')).toContainText('Choix enregistrés');
+ expect(calls.filter(c=>c.path.endsWith('/sharing')&&c.body).at(-1).body).toMatchObject({all_documents:true,sport_enabled:true,nutrition_enabled:true,document_ids:[]});
+ await page.reload();await expect(page.locator('#all-documents-sharing')).toBeChecked();await page.locator('#clear-shared-documents').click();await page.locator('#sport-sharing').uncheck();await page.locator('#nutrition-sharing').uncheck();await page.locator('#save-sharing').click();await expect(page.locator('#sharing-status')).toContainText('Choix enregistrés');
+ expect(calls.filter(c=>c.path.endsWith('/sharing')&&c.body).at(-1).body).toMatchObject({all_documents:false,sport_enabled:false,nutrition_enabled:false,document_ids:[]});
 });

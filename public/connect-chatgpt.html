@@ -20,7 +20,7 @@
       <div class="tb-connect-scope">
         <h2>Données que ChatGPT pourra lire</h2>
         <ul><li>Wallets et soldes, dans leur devise.</li><li>Transactions personnelles et leurs libellés.</li><li>Budgets configurés par période.</li><li>Voyages et groupes Trip dont tu es propriétaire.</li></ul>
-        <p>Aucune modification de transaction ni de solde. Les modules Sport et Nutrition restent exclus. Les analyses détaillées et les documents nécessitent une activation distincte ci-dessous.</p>
+        <p>Aucune modification de transaction ni de solde. Les analyses détaillées, Sport, Nutrition et les documents nécessitent une activation distincte ci-dessous.</p>
         <p>Les réponses contiennent des données financières personnelles qui seront transmises à ChatGPT. Tu peux retirer cet accès à tout moment ci-dessous.</p>
       </div>
       <div id="consent" hidden><p>En cliquant sur « Autoriser la lecture », tu autorises cet accès pour 30 jours maximum, renouvelable par une nouvelle autorisation.</p><div class="tb-connect-actions"><button id="approve" class="tb-connect-primary" type="button" disabled>Autoriser la lecture</button><button id="deny" type="button">Refuser</button></div></div>
@@ -33,8 +33,11 @@
       <label class="tb-connect-choice"><input id="finance-sharing" type="checkbox"><span>Partager les analyses budgétaires et projections, les dépenses et remboursements des groupes Trip dont je suis propriétaire, la comptabilité et le patrimoine.</span></label>
       <label class="tb-connect-choice"><input id="accounting-sharing" type="checkbox"><span>Synchroniser aussi mes réglages comptables enregistrés sur cet appareil. À refaire après une modification de ces réglages.</span></label>
       <p id="settings-sync-state"></p>
-      <h3>Documents choisis explicitement</h3>
-      <p>Seuls les documents cochés seront accessibles, contenu compris. Maximum 100 sélections. Lecture des fichiers texte, PDF, PNG, JPEG et WebP jusqu'à 2 Mio. Un document modifié doit être sélectionné à nouveau. Retirer une sélection bloque les prochaines lectures, sans effacer ce qui a déjà été transmis à ChatGPT.</p>
+      <label class="tb-connect-choice"><input id="sport-sharing" type="checkbox"><span>Partager Sport : séances, séries, programmes et performances, y compris poids corporel, fatigue, douleur et notes enregistrées.</span></label>
+      <label class="tb-connect-choice"><input id="nutrition-sharing" type="checkbox"><span>Partager Nutrition : repas, nutriments, eau, sommeil, recettes et préparations enregistrés.</span></label>
+      <h3>Documents autorisés</h3>
+      <label class="tb-connect-choice"><input id="all-documents-sharing" type="checkbox"><span>Autoriser tous mes documents, sans limite de nombre, y compris les futurs ajouts et les documents modifiés. Leur contenu pourra être transmis à ChatGPT.</span></label>
+      <p>Sans cette autorisation globale, seuls les documents cochés sont accessibles (jusqu’à 100 sélections individuelles). Lecture des fichiers texte, PDF, PNG, JPEG et WebP jusqu'à 2 Mio. En sélection individuelle, un document modifié doit être sélectionné à nouveau. Retirer une sélection bloque les prochaines lectures, sans effacer ce qui a déjà été transmis à ChatGPT.</p>
       <div id="sharing-documents" class="tb-connect-documents"></div>
       <button id="clear-shared-documents" type="button">Ne partager aucun document</button>
       <button id="save-sharing" class="tb-connect-primary" type="button">Enregistrer mes choix de partage</button>

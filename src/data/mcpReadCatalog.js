@@ -1,5 +1,7 @@
+import { MCP_HEALTH_COLUMNS } from './mcpHealthCatalog.js';
 // Closed column list shared by the repositories. Never accept a client column list.
 export const MCP_COLUMNS = {
+  ...MCP_HEALTH_COLUMNS,
   wallets: 'id,user_id,name,currency,balance,balance_snapshot_at,period_id,travel_id,archived',
   transactions: 'id,user_id,wallet_id,type,amount,currency,category,subcategory,label,date_start,date_end,budget_date_start,budget_date_end,paid_at,created_at,updated_at,pay_now,is_internal,affects_budget,out_of_budget,period_id,travel_id,trip_expense_id,trip_share_link_id,recurring_instance_status',
   periods: 'id,user_id,travel_id,start_date,end_date,base_currency,daily_budget_base,eur_base_rate',
@@ -16,6 +18,13 @@ export const MCP_COLUMNS = {
   trip_settlement_events: 'id,user_id,trip_id,currency,amount,from_member_id,to_member_id,created_at,cancelled_at',
   documents: 'id,user_id,name,original_filename,mime_type,size_bytes,updated_at',
 };
+
+export async function readMcpPage({client,userId},table,{offset=0,limit=100}={}) {
+  if(!Object.hasOwn(MCP_COLUMNS,table))throw new Error('Read table denied');
+  const {data,error}=await client.from(table).select(MCP_COLUMNS[table]).eq('user_id',userId).order('id',{ascending:true}).range(offset,offset+limit);
+  if(error||!Array.isArray(data)||data.some(row=>row.user_id!==userId))throw new Error('Read refused or incomplete');
+  return {rows:data.slice(0,limit).map(row=>Object.fromEntries(MCP_COLUMNS[table].split(',').filter(key=>key!=='user_id').map(key=>[key,row[key]??null]))),next_offset:data.length>limit?offset+limit:null};
+}
 
 export function createMcpRows({ client, userId }) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId || '') || typeof client?.from !== 'function') throw new Error('Verified user context required');

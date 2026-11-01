@@ -6,10 +6,19 @@ Demande du 31 octobre 2026, après lecture de la pièce jointe « Connecter Trav
 
 - Première version **lecture seule** : wallets, transactions, budgets et voyages.
 - L'utilisateur utilise ChatGPT Pro. Cible : chaque utilisateur connecte son propre compte TravelBudget depuis son propre ChatGPT. Une restriction initiale au compte administrateur est acceptable ; elle ne doit jamais donner accès aux données des autres comptes.
-- Nutrition, Sport et toutes les écritures restent hors de ce premier périmètre.
+- Sport et Nutrition sont accessibles sur consentements distincts depuis le 2 novembre. Toutes les écritures restent exclues.
 - Cette priorité s'ajoute au suivi d'audit ; elle ne clôt ni architecture/qualité ni l'audit général de la base.
 
 ## État effectivement livré
+
+### Documents complets, Sport et Nutrition — 2 novembre 2026
+
+Le choix « Autoriser tous mes documents » supprime la limite de nombre pour le partage global et inclut explicitement les futurs ajouts et modifications. Le mode individuel conserve 100 sélections liées à leur version. Le catalogue est paginé (100 par lecture, next_offset) et ne s’arrête plus après les premiers documents. Formats et plafond de 2 Mio par fichier inchangés.
+
+Deux consentements séparés, désactivés par défaut : Sport (séances, exercices réalisés, séries, programmes, exercices programmés et métriques) et Nutrition (repas et nutriments, eau, sommeil, recettes, ingrédients, préparations et consommations). Outils get_sport_data et get_nutrition_data : jeux de données fermés, pagination, données synchronisées du propriétaire seulement ; aucune somme artificielle entre repas et consommations de recettes. Les catalogues communautaires et les données uniquement locales ne sont pas exposés.
+
+Les retraits sont vérifiés à chaque lecture SQL ; les enfants de programmes Sport héritent de leur propriétaire. Migration mcp_documents_health_sharing. Tests synthétiques multi-comptes avec 105 documents par compte, contrôle SELECT uniquement, refus sans consentement et retrait indépendant. Aucun choix personnel activé pendant la livraison.
+
 
 ### Correctif du 2 novembre 2026
 

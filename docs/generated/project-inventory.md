@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `a76d4ec1726732313a2b285b8bad38b13a2d1036`
-> Empreinte du snapshot : `c4bced5f7073db1a78961e6d733a0b13aad6d35566d673624abbce4639e8a505`
-> Généré le : `2026-11-01T18:53:00.773Z`
+> Commit analysé : `13d0fd44777d011010aa9de6c70a64f80e91edbf`
+> Empreinte du snapshot : `d79dd19b2551e244e3aed0882fd7c29f7fcd32d55c882f78bc95ff41c84b5ecb`
+> Généré le : `2026-11-01T19:02:54.900Z`
 
 # Inventaire du projet TravelBudget
 
@@ -15,10 +15,10 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 27 |
-| Modules data | 11 |
+| Modules data | 12 |
 | Modules features | 64 |
 | Fichiers de tests | 176 |
-| Migrations Supabase | 169 |
+| Migrations Supabase | 170 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
 
@@ -205,6 +205,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `src/data/entityStore.js`
 - `src/data/mcpExtendedReadRepository.js`
 - `src/data/mcpFinanceReadRepository.js`
+- `src/data/mcpHealthCatalog.js`
 - `src/data/mcpReadCatalog.js`
 - `src/data/mutationQueueStore.js`
 - `src/data/nutritionRepository.js`
@@ -742,6 +743,7 @@ Modules :
 - `supabase/migrations/20261101092507_mcp_trip_policy_read_access.sql`
 - `supabase/migrations/20261101092559_mcp_trip_policy_bound_helpers.sql`
 - `supabase/migrations/20261101185237_mcp_recurring_status_read.sql`
+- `supabase/migrations/20261101190037_mcp_documents_health_sharing.sql`
 
 ## Android et budgets de modules
 

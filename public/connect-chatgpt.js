@@ -53,6 +53,9 @@
     if((await session())?.user.id!==current.user.id)return;
     sharingUser=current.user.id;selectedDocuments=new Set(prefs.document_ids||[]);
     byId('finance-sharing').checked=prefs.finance_enabled===true;
+    byId('sport-sharing').checked=prefs.sport_enabled===true;
+    byId('nutrition-sharing').checked=prefs.nutrition_enabled===true;
+    byId('all-documents-sharing').checked=prefs.all_documents===true;
     byId('accounting-sharing').checked=false;
     byId('settings-sync-state').textContent=prefs.settings_synced_at?'Dernière synchronisation comptable : '+new Date(prefs.settings_synced_at).toLocaleString():'Aucun réglage comptable local partagé : les rapports utilisent la classification automatique.';
     const list=byId('sharing-documents');list.replaceChildren();
@@ -66,15 +69,17 @@
     }
     if(!prefs.documents?.length)list.textContent='Aucun document disponible.';
     byId('sharing-status').textContent=prefs.documents_truncated?'Les 500 documents les plus récents sont affichés. Les sélections antérieures restent conservées.':'';
-    byId('sharing-panel').hidden=false;
+    byId('sharing-panel').hidden=false;syncDocumentMode();
   }
+  function syncDocumentMode(){byId('sharing-documents').querySelectorAll('input').forEach(input=>input.disabled=savingSharing||byId('all-documents-sharing').checked);}
+  byId('all-documents-sharing').addEventListener('change',syncDocumentMode);
   byId('save-sharing').addEventListener('click',async()=>{
     if(savingSharing)return;savingSharing=true;byId('save-sharing').disabled=true;
     const controls=[...byId('sharing-panel').querySelectorAll('input')];controls.forEach(input=>input.disabled=true);
     try{
       const current=await session();if(!current||current.user.id!==sharingUser)throw new Error('Le compte a changé. Actualise la page avant de partager.');
-      if(selectedDocuments.size>100)throw new Error('Choisis au maximum 100 documents.');
-      const data={finance_enabled:byId('finance-sharing').checked,document_ids:[...selectedDocuments]};
+      if(!byId('all-documents-sharing').checked&&selectedDocuments.size>100)throw new Error('Choisis au maximum 100 documents.');
+      const data={finance_enabled:byId('finance-sharing').checked,sport_enabled:byId('sport-sharing').checked,nutrition_enabled:byId('nutrition-sharing').checked,all_documents:byId('all-documents-sharing').checked,document_ids:byId('all-documents-sharing').checked?[]:[...selectedDocuments]};
       if(byId('accounting-sharing').checked){
         const prefix='tb-accounting-v1:'+encodeURIComponent(current.user.id)+':';data.accounting_settings={};
         for(let i=0;i<localStorage.length;i++){
@@ -89,10 +94,10 @@
       await call('/sharing',{method:'POST',data,authenticated:true});
       await loadSharing();byId('sharing-status').textContent='Choix enregistrés. Actualise les outils du plugin dans ChatGPT pour utiliser les nouvelles lectures.';
     }catch(error){byId('sharing-status').textContent=error.message;}
-    finally{savingSharing=false;byId('save-sharing').disabled=false;controls.forEach(input=>input.disabled=false);}
+    finally{savingSharing=false;byId('save-sharing').disabled=false;controls.forEach(input=>input.disabled=false);syncDocumentMode();}
   });
   byId('clear-shared-documents').addEventListener('click',()=>{
-    if(savingSharing)return;selectedDocuments.clear();
+    if(savingSharing)return;selectedDocuments.clear();byId('all-documents-sharing').checked=false;syncDocumentMode();
     byId('sharing-documents').querySelectorAll('input').forEach(input=>input.checked=false);
     byId('sharing-status').textContent='Aucun document sélectionné. Enregistre pour appliquer ce retrait.';
   });

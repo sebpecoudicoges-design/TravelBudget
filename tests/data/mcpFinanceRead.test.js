@@ -27,11 +27,11 @@ function fixture(data = {}, options = {}) {
       },
     };
   } };
-  return { calls, dispatch: createMcpReadToolDispatcher({ client, userId: A }) };
+  return { calls, dispatch: createMcpReadToolDispatcher({ client, userId: A,extensionContext:async()=>options.preferences||{} }) };
 }
 
 it('exposes only named read tools and rejects writes and identity overrides before a query', async () => {
-  expect(MCP_READ_TOOLS).toHaveLength(9);
+  expect(MCP_READ_TOOLS).toHaveLength(11);
   expect(MCP_READ_TOOLS.every(tool => tool.annotations.readOnlyHint && !tool.annotations.destructiveHint)).toBe(true);
   const { dispatch, calls } = fixture();
   await expect(dispatch('create_transaction', {})).rejects.toThrow('Unknown read tool');
@@ -114,4 +114,20 @@ it('returns only owned travels and groups without participant identities or clos
   expect(result.travels).toHaveLength(1);
   expect(result.owned_expense_groups).toHaveLength(1);
   expect(result.owned_expense_groups[0]).not.toHaveProperty('close_snapshot');
+});
+
+it('paginates all authorized documents without truncating at one hundred',async()=>{
+ const {dispatch}=fixture({documents:Array.from({length:205},(_,i)=>({id:String(i).padStart(3,'0'),user_id:A,name:'Document '+i,storage_path:'private'}))});
+ let offset=0,docs=[];do{const page=await dispatch('list_shared_documents',{offset});docs.push(...page.documents);offset=page.next_offset;}while(offset!==null);
+ expect(docs).toHaveLength(205);expect(JSON.stringify(docs)).not.toContain('storage_path');
+});
+it('requires separate health consent, closed datasets and owner-projected pagination',async()=>{
+ const rows=Array.from({length:102},(_,i)=>({id:String(i),user_id:A,notes:'Recorded',secret:'hidden'}));
+ const denied=fixture({sport_sessions:rows},{preferences:{nutrition_enabled:true,finance_enabled:true}});
+ await expect(denied.dispatch('get_sport_data',{dataset:'sessions'})).rejects.toThrow('Enable sport');expect(denied.calls).toHaveLength(0);
+ const allowed=fixture({sport_sessions:rows},{preferences:{sport_enabled:true}});
+ const page=await allowed.dispatch('get_sport_data',{dataset:'sessions'});expect(page.rows).toHaveLength(100);expect(page.next_offset).toBe(100);expect(JSON.stringify(page)).not.toContain('secret');
+ await expect(allowed.dispatch('get_sport_data',{dataset:'oauth_grants'})).rejects.toThrow('Invalid');
+ const leaking=fixture({sport_sessions:[{id:'foreign',user_id:B}]},{preferences:{sport_enabled:true},leak:true});
+ await expect(leaking.dispatch('get_sport_data',{dataset:'sessions'})).rejects.toThrow('Read refused');
 });
