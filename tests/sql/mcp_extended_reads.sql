@@ -15,6 +15,13 @@ insert into public.transactions(user_id,wallet_id,period_id,type,amount,currency
 insert into mcp_private.oauth_grants(user_id,client_id,resource,redirect_uri,challenge,code_hash,code_used,access_hash,access_expires_at)
  values ('a0020000-0000-4000-8000-000000000001','test','https://budget.example/mcp','https://chat.example/callback',repeat('a',43),repeat('b',43),true,repeat('c',43),clock_timestamp()+interval '10 minutes');
 -- All fixtures are rolled back; no real financial or storage object is read.
+update public.transactions set recurring_instance_status='skipped' where user_id='a0020000-0000-4000-8000-000000000001';
+set local role service_role;
+do $$ declare r jsonb; begin
+ r:=public.mcp_read_finance_v1(repeat('c',43),'https://budget.example/mcp','transactions','{}',0,500);
+ if jsonb_array_length(r)<>1 or (r->0->>'recurring_instance_status') is distinct from 'skipped' then raise exception 'Recurring status lost or owner isolation broken';end if;
+end $$;
+reset role;
 insert into public.assets(id,user_id,name,asset_type,purchase_value,currency,purchase_date,depreciation_months) values
  ('a0020000-0000-4000-8000-000000000010','a0020000-0000-4000-8000-000000000001','Synthetic asset','equipment',1200,'EUR','2026-01-01',12),
  ('a0020000-0000-4000-8000-000000000011','a0020000-0000-4000-8000-000000000002','Other asset','equipment',9999,'EUR','2026-01-01',12);

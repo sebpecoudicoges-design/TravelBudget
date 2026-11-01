@@ -11,6 +11,10 @@ Demande du 31 octobre 2026, après lecture de la pièce jointe « Connecter Trav
 
 ## État effectivement livré
 
+### Correctif du 2 novembre 2026
+
+Le catalogue de lecture conserve désormais `recurring_instance_status`. La comptabilité peut ainsi exclure les occurrences ignorées, comme dans l’application, sans gonfler les charges ou les revenus. Migration `mcp_recurring_status_read`, test de projection du champ, test de reconnaissance comptable et test SQL multi-propriétaires avec rollback. Aucun changement des transactions personnelles.
+
 ### Extension du 1 novembre 2026
 
 La connexion initiale depuis ChatGPT a été confirmée par l'utilisateur. Le catalogue passe de quatre à neuf outils, toujours en lecture seule. Les nouveaux outils financiers nécessitent l'activation explicite dans [Choisir les données supplémentaires](https://stunning-dieffenbachia-2b2ed0.netlify.app/connect-chatgpt.html) ; les accès existants ne sont pas élargis silencieusement. Après activation, actualiser les outils du plugin dans ChatGPT et ouvrir une nouvelle conversation.

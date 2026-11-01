@@ -4,6 +4,12 @@ import { MCP_READ_TOOLS, createMcpReadToolDispatcher } from '../../src/features/
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
 const W = '33333333-3333-4333-8333-333333333333';
+it('preserves recurring status in the closed transaction projection',async()=>{
+ const {dispatch,calls}=fixture({transactions:[{id:'skipped',user_id:A,recurring_instance_status:'skipped'}]});
+ const result=await dispatch('get_transactions');
+ expect(JSON.stringify(result)).toContain('"recurring_instance_status":"skipped"');
+ expect(calls[0].columns.split(',')).toContain('recurring_instance_status');
+});
 function fixture(data = {}, options = {}) {
   const calls = [];
   const client = { from(table) {

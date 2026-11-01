@@ -1,7 +1,7 @@
 // Closed column list shared by the repositories. Never accept a client column list.
 export const MCP_COLUMNS = {
   wallets: 'id,user_id,name,currency,balance,balance_snapshot_at,period_id,travel_id,archived',
-  transactions: 'id,user_id,wallet_id,type,amount,currency,category,subcategory,label,date_start,date_end,budget_date_start,budget_date_end,paid_at,created_at,updated_at,pay_now,is_internal,affects_budget,out_of_budget,period_id,travel_id,trip_expense_id,trip_share_link_id',
+  transactions: 'id,user_id,wallet_id,type,amount,currency,category,subcategory,label,date_start,date_end,budget_date_start,budget_date_end,paid_at,created_at,updated_at,pay_now,is_internal,affects_budget,out_of_budget,period_id,travel_id,trip_expense_id,trip_share_link_id,recurring_instance_status',
   periods: 'id,user_id,travel_id,start_date,end_date,base_currency,daily_budget_base,eur_base_rate',
   budget_segments: 'id,user_id,period_id,start_date,end_date,base_currency,daily_budget_base,transport_night_budget,fx_mode,eur_base_rate_fixed,fx_rate_eur_to_base,sort_order',
   travels: 'id,user_id,name,base_currency,start_date,end_date',

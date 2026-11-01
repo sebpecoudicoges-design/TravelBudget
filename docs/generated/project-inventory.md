@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `8778b07f69b4c5c4bb057b14cb92edb1890213c5`
-> Empreinte du snapshot : `d8fc2f54720c39d0fe2110e60a32fb8bf071d1fcda41c54965d252d002a8cd9b`
-> Généré le : `2026-11-01T09:32:40.567Z`
+> Commit analysé : `a76d4ec1726732313a2b285b8bad38b13a2d1036`
+> Empreinte du snapshot : `c4bced5f7073db1a78961e6d733a0b13aad6d35566d673624abbce4639e8a505`
+> Généré le : `2026-11-01T18:53:00.773Z`
 
 # Inventaire du projet TravelBudget
 
@@ -18,7 +18,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules data | 11 |
 | Modules features | 64 |
 | Fichiers de tests | 176 |
-| Migrations Supabase | 168 |
+| Migrations Supabase | 169 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
 
@@ -741,6 +741,7 @@ Modules :
 - `supabase/migrations/20261101050138_mcp_extended_reads.sql`
 - `supabase/migrations/20261101092507_mcp_trip_policy_read_access.sql`
 - `supabase/migrations/20261101092559_mcp_trip_policy_bound_helpers.sql`
+- `supabase/migrations/20261101185237_mcp_recurring_status_read.sql`
 
 ## Android et budgets de modules
 

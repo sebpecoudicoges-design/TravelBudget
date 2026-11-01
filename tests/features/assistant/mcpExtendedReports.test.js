@@ -7,6 +7,11 @@ const U='11111111-1111-4111-8111-111111111111',P='22222222-2222-4222-8222-222222
 function data(){return {periods:[{id:P,travel_id:T,start_date:'2026-11-01',end_date:'2026-11-03',daily_budget_base:50,base_currency:'AUD'}],travels:[{id:T}],segments:[],transactions:[],assets:[],owners:[],links:[],categories:[],wallets:[{id:'wallet',currency:'AUD',balance:1000,travel_id:T}]};}
 function tx(extra={}){return {id:'tx',type:'expense',amount:100,currency:'AUD',date_start:'2026-11-01',date_end:'2026-11-01',budget_date_start:'2026-11-02',budget_date_end:'2026-11-03',pay_now:true,wallet_id:'wallet',travel_id:T,category:'Logement',...extra};}
 const args={period_id:P,as_of:'2026-11-01'};
+it('excludes skipped recurring expenses and income from accounting recognition',async()=>{
+ const input=data();input.transactions=[tx({amount:25}),tx({id:'skipped-expense',amount:800,recurring_instance_status:'skipped'}),tx({id:'skipped-income',type:'income',amount:2000,recurring_instance_status:'skipped'})];
+ const report=await accountingReport(input,{travel_id:T,date_from:'2026-11-01',date_to:'2026-11-30',as_of:'2026-11-30',currency:'AUD'},{},null,noFx);
+ expect(report).toMatchObject({income:0,charges_excluding_depreciation:25,result:-25});
+});
 it('does not subtract prepaid future daily budget twice or carry an excess to another day',async()=>{
  const input=data();input.transactions=[tx()];
  let report=await budgetReport(input,args,noFx);
