@@ -38,7 +38,7 @@ function request(path,body,extra={}) {
   const headers={'content-type':'application/json',accept:'application/json, text/event-stream',...extra};
   return new Request(ORIGIN+path,{method:body===undefined?'GET':'POST',headers,body:body===undefined?undefined:JSON.stringify(body)});
 }
-async function authInput() {return {client_id:'pilot',resource:RESOURCE,redirect_uri:CALLBACK,response_type:'code',scope:'finance:read',state:'state-123',code_challenge:await mcpTokenHash(VERIFIER),code_challenge_method:'S256'};}
+async function authInput() {return {client_id:'pilot',resource:RESOURCE,redirect_uri:CALLBACK,response_type:'code',scope:'finance:read',state:'state-123',code_challenge:await mcpTokenHash(VERIFIER),code_challenge_method:'S256',ui_locales:'fr-FR'};}
 async function token(handler) {
   const result=await handler(request('/mcp-auth/authorize',{...await authInput(),approved:true},{origin:ORIGIN,authorization:'Bearer app-session'}));
   const redirect=new URL((await result.json()).redirect_uri);
@@ -61,6 +61,19 @@ it('serves matching OAuth discovery and an authentication challenge',async()=>{
   expect(unauthorized.status).toBe(401);
   expect(unauthorized.headers.get('www-authenticate')).toContain('/.well-known/oauth-protected-resource/mcp');
   expect(unauthorized.headers.get('cache-control')).toBe('no-store');
+});
+
+it('accepts the ChatGPT language hint through redirect and consent inspection',async()=>{
+  const {handler,run}=fixture();
+  const query=new URLSearchParams(await authInput());
+  const response=await handler(request('/mcp-auth/authorize?'+query));
+  expect(response.status).toBe(302);
+  const target=new URL(response.headers.get('location'));
+  expect(new URLSearchParams(target.hash.slice(1)).get('ui_locales')).toBe('fr-FR');
+  const inspected=await handler(request('/mcp-auth/request?'+query));
+  expect(inspected.status).toBe(200);
+  expect((await inspected.json()).request.ui_locales).toBe('fr-FR');
+  expect(run).not.toHaveBeenCalled();
 });
 
 it('completes consent, PKCE exchange, SDK tool listing and a scoped wallet read, then revokes',async()=>{

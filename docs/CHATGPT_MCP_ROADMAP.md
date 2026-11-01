@@ -101,3 +101,5 @@ La pièce jointe est une proposition, pas une référence de disponibilité gara
 Aucun appel à l'API OpenAI n'est effectué par ce socle et aucune clé OpenAI n'est requise pour ses tests. Coûts d'hébergement/quotas et compatibilité finale restent à confirmer lors de l'activation.
 
 Vérification HTTP complémentaire du 1 novembre : un jeton au format opaque MCP est rejeté avec HTTP 401 sur GET /rest/v1/wallets?select=id&limit=0 et POST /rest/v1/rpc/mcp_oauth_state_v1 (opération authenticate). Aucune ligne financière lue. Ce contrôle vérifie le refus par la passerelle Supabase, pas encore le futur serveur MCP.
+
+Correctif du premier essai réel (1 novembre 2026) : ChatGPT transmet le paramètre OAuth facultatif ui_locales. Le refus HTTP 400 observé dans les logs venait de la liste fermée qui l'omettait. La préférence linguistique est désormais acceptée, bornée et sans effet sur les droits ; les paramètres inconnus, mauvais scopes et callbacks restent refusés. Couverture du GET de redirection, de l'inspection et du cycle consentement/échange avec ui_locales.

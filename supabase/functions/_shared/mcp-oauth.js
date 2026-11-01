@@ -59,7 +59,9 @@ export function createMcpOAuthService({ store, resource, clients, verifySession,
     return { access_token: next.access, refresh_token: next.refresh, token_type: 'Bearer', expires_in: result.expires_in, scope: SCOPE };
   }
   function validateAuthorization(input) {
-    fields(input, ['client_id', 'redirect_uri', 'resource', 'response_type', 'scope', 'state', 'code_challenge', 'code_challenge_method', 'approved']);
+    fields(input, ['client_id', 'redirect_uri', 'resource', 'response_type', 'scope', 'state', 'code_challenge', 'code_challenge_method', 'approved', 'ui_locales']);
+    // Optional language preference sent by ChatGPT; never used for authorization.
+    if (input.ui_locales !== undefined && (typeof input.ui_locales !== 'string' || input.ui_locales.length > 256 || /[\u0000-\u001f\u007f]/.test(input.ui_locales))) fail('invalid_request');
     binding(input, true);
     if (input.response_type !== 'code' || input.scope !== SCOPE || input.code_challenge_method !== 'S256' ||
         !SECRET.test(input.code_challenge || '') || typeof input.state !== 'string' || !input.state.length || input.state.length > 1024) fail('invalid_request');

@@ -46,6 +46,7 @@ it.each([
   { resource: 'https://other.example/mcp' }, { client_id: 'unknown' }, { code_challenge_method: 'plain' },
   { code_challenge: 'bad' }, { response_type: 'token' }, { scope: 'finance:write' }, { state: '' },
   { approved: false }, { approved: 'true' }, { user_id: USER },
+  { ui_locales: {} }, { ui_locales: 'a'.repeat(257) }, { ui_locales: 'fr\nFR' },
 ])('refuses unauthorized consent input before persistence: %j', async extra => {
   const { service, run } = setup();
   await expect(service.authorize('verified-session', await authorization(extra))).rejects.toThrow();
