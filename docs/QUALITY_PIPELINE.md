@@ -80,3 +80,11 @@ Quatre tests du contrôle injectent plusieurs défauts synthétiques, vérifient
 Périmètre progressif : vues, repositories, bridge, scripts legacy et HTML ne sont pas encore couverts par ces règles sémantiques. Les Edge TypeScript restent contrôlées séparément par Deno check. Référence : [Deno lint](https://docs.deno.com/runtime/reference/cli/lint/).
 
 Lot de qualité sans évolution fonctionnelle annoncée : sources nettoyées, page Projet et Atlas web actualisés ; APK 10.5.387 conservé, aucune nouvelle compilation Android ni écriture de données. Son code embarqué conserve les deux calculs inutilisés.
+
+## Analyse sémantique des accès aux données — 2 novembre 2026
+
+La commande obligatoire `lint:data` étend le contrôle à tous les modules JavaScript de `src/data`, sous-dossiers compris, notamment aux repositories MCP, Sport et Nutrition. Elle partage le moteur de validation de `lint:core` ; le lancement Deno dupliqué est évité. Références inconnues, calculs inutilisés, code inaccessible, clés dupliquées et finally dangereux bloquent désormais aussi la publication pour ces modules.
+
+La configuration reprend les règles core, sauf no-window : l’adaptateur Nutrition utilise légitimement window.localStorage et le wrapper de stockage existant. Ce chemin n’est ni supprimé ni réécrit pour satisfaire le linter. Un test interdit toute autre divergence silencieuse des règles. Aucun code mort directement lié n’a été détecté dans les repositories.
+
+Quatre nouveaux tests couvrent les défauts injectés dans un sous-dossier, les imports non résolus sans exécution, le refus de sources absentes/vides et la couverture du répertoire avec intégration obligatoire dans quality. Le contrôle ne certifie ni le schéma SQL, ni la sécurité RLS, ni les résultats métier. L’interface applicative et l’APK restent inchangés ; page Projet et Atlas web actualisés.

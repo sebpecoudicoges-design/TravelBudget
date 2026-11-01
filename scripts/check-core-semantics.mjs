@@ -4,12 +4,16 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const deno = fileURLToPath(new URL('../node_modules/deno/bin.cjs', import.meta.url));
-const config = fileURLToPath(new URL('../config/deno-core-lint.json', import.meta.url));
+const coreConfig = fileURLToPath(new URL('../config/deno-core-lint.json', import.meta.url));
 
 export function checkCoreSemantics(root = process.cwd()) {
-  const base = path.join(root, 'src/core');
+  return checkSemanticSources(root, 'src/core', coreConfig);
+}
+
+export function checkSemanticSources(root, directory, config) {
+  const base = path.join(root, directory);
   const files = fs.readdirSync(base, { recursive: true }).filter(file => file.endsWith('.js')).map(file => path.join(base, file)).sort();
-  if (!files.length) throw new Error('No core JavaScript sources found');
+  if (!files.length) throw new Error(`No JavaScript sources found in ${directory}`);
   const result = spawnSync(process.execPath, [deno, 'lint', '--config', config, '--json', ...files], {
     cwd: root, encoding: 'utf8', timeout: 60000, maxBuffer: 4 * 1024 * 1024,
   });
