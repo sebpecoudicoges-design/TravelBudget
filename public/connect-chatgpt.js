@@ -5,7 +5,9 @@
   document.body.classList.toggle('theme-dark', matchMedia('(prefers-color-scheme: dark)').matches);
   byId('theme-toggle').addEventListener('click',()=>document.body.classList.toggle('theme-dark'));
   let sb, request, displayedUser, busy = false;
-  const api = '/mcp-auth';
+  // Cross-origin calls bypass old installed app service workers as well.
+  const api = 'https://obznbrzarhvmlbprcfie.supabase.co/functions/v1/travelbudget-mcp';
+  navigator.serviceWorker?.getRegistration().then(registration=>registration?.update()).catch(()=>{});
   async function session() { const { data, error } = await sb.auth.getSession(); if (error) throw new Error('Session indisponible.'); return data.session; }
   async function call(path, { method = 'GET', data, authenticated = false } = {}) {
     const headers = { 'Content-Type':'application/json' };

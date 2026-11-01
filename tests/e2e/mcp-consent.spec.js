@@ -4,7 +4,7 @@ const request = {client_id:'travelbudget-chatgpt',resource:'https://budget.examp
 async function setup(page,{signedIn=true,fail=false}={}) {
   const calls=[]; let grants=[{id:'grant-a',created_at:'2026-11-01T00:00:00Z',expires_at:'2026-12-01T00:00:00Z'}];
   await page.route('**/vendor/supabase-2.110.6.js',route=>route.fulfill({contentType:'application/javascript',body:`window.__testSession=${signedIn?JSON.stringify({access_token:'synthetic-session',user:{id:'owner-a',email:'test@example.com'}}):'null'}; window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:window.__testSession}})}})};`}));
-  await page.route('**/mcp-auth/**',async route=>{
+  await page.route('**/functions/v1/travelbudget-mcp/**',async route=>{
     const req=route.request(),path=new URL(req.url()).pathname;
     calls.push({path,body:req.method()==='POST'?req.postDataJSON():null,authorization:req.headers().authorization});
     if(fail && path.endsWith('/authorize'))return route.fulfill({status:503,json:{error:'unavailable'}});

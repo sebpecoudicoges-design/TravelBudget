@@ -1,6 +1,6 @@
 const TB_SW_VERSION = "travelbudget-pwa-10.5.387";
-const TB_STATIC_CACHE = `${TB_SW_VERSION}-static`;
-const TB_RUNTIME_CACHE = `${TB_SW_VERSION}-runtime`;
+const TB_STATIC_CACHE = `${TB_SW_VERSION}-mcp-safe-static`;
+const TB_RUNTIME_CACHE = `${TB_SW_VERSION}-mcp-safe-runtime`;
 
 const APP_SHELL = [
   "/",
@@ -23,17 +23,27 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(keys
-        .filter((key) => key.startsWith("travelbudget-pwa-") && !key.startsWith(TB_SW_VERSION))
+        .filter((key) => key.startsWith("travelbudget-pwa-") && ![TB_STATIC_CACHE, TB_RUNTIME_CACHE].includes(key))
         .map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
 
+function isPrivateRequest(request) {
+  const path = new URL(request.url).pathname;
+  return request.headers.has('Authorization') || request.cache === 'no-store' ||
+    /^\/(?:mcp(?:\/|$)|mcp-auth(?:\/|$)|\.well-known\/oauth-|connect-chatgpt\.)/.test(path);
+}
+
 function shouldCache(request) {
   if (request.method !== "GET") return false;
+  if (isPrivateRequest(request)) return false;
   const url = new URL(request.url);
-  if (url.origin === self.location.origin) return true;
-  return false;
+  return url.origin === self.location.origin;
+}
+
+function cacheableResponse(response) {
+  return response && response.ok && !/no-store|private/i.test(response.headers.get('Cache-Control') || '');
 }
 
 async function cacheFirst(request) {
@@ -41,7 +51,7 @@ async function cacheFirst(request) {
   if (cached) return cached;
   try {
     const response = await fetch(request);
-    if (shouldCache(request) && response && response.ok) {
+    if (shouldCache(request) && cacheableResponse(response)) {
       const cache = await caches.open(TB_RUNTIME_CACHE);
       cache.put(request, response.clone()).catch(() => {});
     }
@@ -56,8 +66,10 @@ async function cacheFirst(request) {
 async function networkFirstNavigation(request) {
   try {
     const response = await fetch(request);
-    const cache = await caches.open(TB_RUNTIME_CACHE);
-    cache.put("/index.html", response.clone()).catch(() => {});
+    if (['/', '/index.html'].includes(new URL(request.url).pathname) && cacheableResponse(response)) {
+      const cache = await caches.open(TB_RUNTIME_CACHE);
+      cache.put("/index.html", response.clone()).catch(() => {});
+    }
     return response;
   } catch (_) {
     return (await caches.match("/index.html")) || (await caches.match("/offline.html"));
@@ -67,7 +79,7 @@ async function networkFirstNavigation(request) {
 async function networkFirst(request) {
   try {
     const response = await fetch(request, { cache: "no-store" });
-    if (shouldCache(request) && response && response.ok) {
+    if (shouldCache(request) && cacheableResponse(response)) {
       const cache = await caches.open(TB_RUNTIME_CACHE);
       cache.put(request, response.clone()).catch(() => {});
     }
@@ -81,6 +93,7 @@ async function networkFirst(request) {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+  if (isPrivateRequest(request)) return;
   if (request.mode === "navigate") {
     event.respondWith(networkFirstNavigation(request));
     return;
@@ -108,7 +121,7 @@ self.addEventListener("message", (event) => {
     await Promise.all(urls.map(async (url) => {
       try {
         const response = await fetch(url, { cache: "no-store" });
-        if (response && response.ok) await cache.put(url, response.clone());
+        if (cacheableResponse(response)) await cache.put(url, response.clone());
       } catch (_) {}
     }));
   })());

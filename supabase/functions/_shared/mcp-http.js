@@ -36,7 +36,8 @@ async function body(request) {
 
 export function createMcpHttpHandler({ oauth, identity, serverClient, protocol, issuer, resource, siteOrigin, publicConfig, enabled = false }) {
   const headers = { 'Content-Type':'application/json', 'Cache-Control':'no-store', 'Pragma':'no-cache',
-    'Referrer-Policy':'no-referrer', 'X-Content-Type-Options':'nosniff' };
+    'Referrer-Policy':'no-referrer', 'X-Content-Type-Options':'nosniff',
+    'Access-Control-Allow-Origin':siteOrigin, 'Vary':'Origin' };
   const json = (value, status = 200, extra = {}) => new Response(JSON.stringify(value), { status, headers: { ...headers, ...extra } });
   async function rpc(name, args) {
     const { data, error } = await serverClient.rpc(name,args);

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `307f3b6e21596519e5726163a375500d618d4631`
-> Empreinte du snapshot : `b6a23ca7b36be8ad082f3e08cb5d75e1bc7d14769a241302f3b9b420f493eb95`
-> Généré le : `2026-10-31T23:31:00.453Z`
+> Commit analysé : `b46307c53f4e96b22bf0cf36032d022f2d35d9ae`
+> Empreinte du snapshot : `7e15192251129ede805679ddfcb94bf61d802cc39dd8994e45c79411bd560e95`
+> Généré le : `2026-11-01T04:23:03.910Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 9 |
 | Modules features | 63 |
-| Fichiers de tests | 174 |
+| Fichiers de tests | 175 |
 | Migrations Supabase | 165 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -517,6 +517,7 @@ Modules :
 - `tests/ui/kpiViewContract.test.js`
 - `tests/ui/legacyBusinessRulesContract.test.js`
 - `tests/ui/legacyDomainLoader.test.js`
+- `tests/ui/mcpServiceWorker.test.js`
 - `tests/ui/moduleSizeBudgetsContract.test.js`
 - `tests/ui/nutritionDomainContract.test.js`
 - `tests/ui/projectPageVisualContract.test.js`
