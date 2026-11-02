@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "7a1b172f51e3abcdd6dd5d0c37a45ff426e984a2",
-  "snapshotFingerprint": "8d52c35e86ad705b2fdd8a2e14afbf223e3a1d81c2cfbcae877684440c82adde",
-  "generatedAt": "2026-11-02T17:48:41.201Z",
+  "commit": "350902aca0003a1c40f97f3e0d0191da8aa097d0",
+  "snapshotFingerprint": "830b0b695bd2db48b1ad58d1729c57866748328d111f34c00254d7bd0d5aa9bf",
+  "generatedAt": "2026-11-02T17:59:19.008Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.387"
@@ -22,7 +22,7 @@
     "links:check": "node scripts/check-public-links.mjs",
     "perf:budget": "node scripts/check-module-budgets.mjs",
     "lint:syntax": "node scripts/check-js-syntax.mjs",
-    "quality": "npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm run lint:core && npm run lint:data && npm test && npm run docs:check && npm run build && npm run perf:budget",
+    "quality": "npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm run lint:core && npm run lint:data && npm run lint:features && npm test && npm run docs:check && npm run build && npm run perf:budget",
     "lint:inline": "node scripts/check-inline-syntax.mjs",
     "lint:edge": "node scripts/check-edge-types.mjs",
     "lint:db": "node scripts/lint_db_strings.cjs",
@@ -36,7 +36,8 @@
     "vendors:prepare": "node scripts/prepare-vendors.mjs",
     "perf:startup": "node scripts/measure-startup.mjs",
     "lint:core": "node scripts/check-core-semantics.mjs",
-    "lint:data": "node scripts/check-data-semantics.mjs"
+    "lint:data": "node scripts/check-data-semantics.mjs",
+    "lint:features": "node scripts/check-feature-semantics.mjs"
   },
   "screens": [
     "accounting",
@@ -398,6 +399,7 @@
     "tests/scripts/dataSemanticLint.test.js",
     "tests/scripts/edgeTypes.test.js",
     "tests/scripts/entryManifest.test.js",
+    "tests/scripts/featureSemanticLint.test.js",
     "tests/scripts/inlineSyntax.test.js",
     "tests/ui/accountingViewContract.test.js",
     "tests/ui/analysisDrilldownViewContract.test.js",

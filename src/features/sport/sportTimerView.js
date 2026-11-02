@@ -58,7 +58,7 @@ export function stepLoadText(step, timer, api, currentStep) {
   return `${Math.round(kg * 10) / 10} kg${label}`;
 }
 
-export function stepTargetText(step, timer, api) {
+export function stepTargetText(step, _timer, api) {
   const h = helpers(api);
   if (!step?.item) return '';
   if (step.kind !== 'work') return step.duration ? h.fmtSec(step.duration) : '';

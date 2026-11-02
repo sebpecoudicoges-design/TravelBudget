@@ -216,7 +216,7 @@ export function renderWalletCard({
   isBase = false,
   today = '',
   budgetToday = 0,
-  daily = 1,
+  daily: _daily = 1,
   baseCurrency = 'EUR',
   balance = '',
   recentHtml = '',

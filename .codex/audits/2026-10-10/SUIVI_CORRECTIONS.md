@@ -104,3 +104,7 @@ Le 17 octobre, priorité explicite à l'incident Trip et au bouton Archiver : si
   Limites explicites : réglages comptables à resynchroniser après modification, bilan Trip non consolidé, FX futur à la date de référence, ressources PDF à valider dans le client ChatGPT. Aucun appel payant à un modèle ajouté, aucune clé API demandée ; activation des crédits Pro encore effectuée par l'utilisateur. Page Projet/Atlas web actualisés ; APK 10.5.387 inchangé.
 
 - 2 novembre 2026 — architecture/qualité F10 : contrôle sémantique obligatoire des repositories src/data, avec moteur partagé avec core, cas de panne synthétiques et compatibilité navigateur du stockage Nutrition préservée. Voir docs/QUALITY_PIPELINE.md. Aucun changement fonctionnel, de données ou d’APK ; la phase architecture/qualité et les validations réelles restent ouvertes.
+
+- 3 novembre 2026 — architecture/qualité F10 : analyse sémantique obligatoire des 64 modules `src/features`, moteur partagé, retrait d’un calcul local sans consommateur et préservation des paramètres publics. Voir docs/QUALITY_PIPELINE.md. APK 10.5.387 conservé ; phase base de données distincte.
+
+Validation locale du lot : 1 123 tests dans 165 fichiers, chaîne quality complète et 130 scénarios Chromium réussis, dont wallets et journal bancaire en clair/sombre à 1440/390 px. Preuves : `.codex/releases/10.5.387/feature-quality.log` et `feature-e2e.log`. Aucun résultat de CI distante ou de déploiement déduit de ces contrôles locaux.

@@ -33,7 +33,7 @@ export function renderPreviousPeriodComparison({ host, current, periodPreset = '
     const metrics = comparisonMetrics(current, previous);
     host.innerHTML = renderPeriodComparison({ current, previous, range, metrics, formatCurrency, isEn });
     return { range, previous, metrics };
-  } catch (error) {
+  } catch {
     host.innerHTML = `<div class="analysis-stat" style="margin:14px 0;color:var(--muted);">${esc(isEn ? 'No comparable previous period in this trip.' : 'Aucune période précédente comparable dans ce voyage.')}</div>`;
     return null;
   }

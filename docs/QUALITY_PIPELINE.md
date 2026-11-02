@@ -88,3 +88,14 @@ La commande obligatoire `lint:data` étend le contrôle à tous les modules Java
 La configuration reprend les règles core, sauf no-window : l’adaptateur Nutrition utilise légitimement window.localStorage et le wrapper de stockage existant. Ce chemin n’est ni supprimé ni réécrit pour satisfaire le linter. Un test interdit toute autre divergence silencieuse des règles. Aucun code mort directement lié n’a été détecté dans les repositories.
 
 Quatre nouveaux tests couvrent les défauts injectés dans un sous-dossier, les imports non résolus sans exécution, le refus de sources absentes/vides et la couverture du répertoire avec intégration obligatoire dans quality. Le contrôle ne certifie ni le schéma SQL, ni la sécurité RLS, ni les résultats métier. L’interface applicative et l’APK restent inchangés ; page Projet et Atlas web actualisés.
+
+
+## Analyse sémantique des modules fonctionnels — 3 novembre 2026
+
+La commande `lint:features` couvre les 64 fichiers JavaScript de `src/features`, sous-dossiers compris, avec le moteur partagé et les mêmes règles que `lint:data`. Elle est obligatoire dans `quality`, donc dans GitHub et la publication Netlify. Les tests injectent des références inconnues, du code mort et un finally dangereux, vérifient les dossiers absents/vides et les imports sans exécution.
+
+Le calcul local de traduction inutilisé de `renderSettingsPeriodCard` a été retiré après vérification des usages. Les paramètres publics `t`, `daily` et la position de `timer` sont conservés, avec des bindings locaux explicitement inutilisés. Le catch Analyse ne capture plus une erreur jamais consommée. Les références au DOM dans le journal bancaire et la campagne de tests utilisent `globalThis.document` au moment de chaque appel, sans capturer le document à l’import. Aucun identifiant, gestionnaire ou contenu rendu n’est supprimé. Le linter empêche le retour des bindings morts.
+
+Ce contrôle ne valide ni les résultats financiers ni les autorisations SQL. Les scripts legacy, le bridge et les autres répertoires restent hors de ce périmètre sémantique. Aucun nouvel APK : le binaire 10.5.387 conserve les anciennes écritures équivalentes ; les nettoyages concernent les sources web de ce lot.
+
+Validation locale du lot : 1 123 tests dans 165 fichiers, chaîne quality complète et 130 scénarios Chromium réussis, dont wallets et journal bancaire en clair/sombre à 1440/390 px. Preuves : `.codex/releases/10.5.387/feature-quality.log` et `feature-e2e.log`. Aucun résultat de CI distante ou de déploiement déduit de ces contrôles locaux.

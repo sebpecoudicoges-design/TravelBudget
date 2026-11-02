@@ -361,10 +361,9 @@ export function renderSettingsPeriodCard({
   countryOptionsHtml = '',
   helpHtml = '',
   lang = 'fr',
-  t = fallbackT,
+  t: _t = fallbackT,
   esc = defaultEsc,
 } = {}) {
-  const tr = typeof t === 'function' ? t : fallbackT;
   const isEn = String(lang || '').toLowerCase() === 'en';
   const pt = (fr, en) => (isEn ? en : fr);
   const cur = String(currency || segment?.baseCurrency || '').toUpperCase();

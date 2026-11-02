@@ -1,8 +1,8 @@
 import { computeWalletBalanceRows } from '../../core/walletBalanceRules.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
-const text = (fr, en) => document.documentElement.lang?.startsWith('en') ? en : fr;
-const money = (value, currency) => new Intl.NumberFormat(document.documentElement.lang || 'fr', { style: 'currency', currency }).format(value);
+const text = (fr, en) => globalThis.document.documentElement.lang?.startsWith('en') ? en : fr;
+const money = (value, currency) => new Intl.NumberFormat(globalThis.document.documentElement.lang || 'fr', { style: 'currency', currency }).format(value);
 
 export async function journalPages(query) {
   const rows = [];
@@ -25,14 +25,14 @@ export function journalRows(transactions, marks) {
 }
 
 export async function openWalletJournal(walletId, { client, userId, onClose } = {}) {
-  document.getElementById('tb-wallet-journal')?.close();
-  document.getElementById('tb-wallet-journal')?.remove();
-  const dialog = document.createElement('dialog');
+  globalThis.document.getElementById('tb-wallet-journal')?.close();
+  globalThis.document.getElementById('tb-wallet-journal')?.remove();
+  const dialog = globalThis.document.createElement('dialog');
   dialog.id = 'tb-wallet-journal';
   dialog.className = 'tb-wallet-journal';
   dialog.setAttribute('aria-labelledby', 'tb-journal-title');
-  document.body.append(dialog);
-  const previousFocus = document.activeElement;
+  globalThis.document.body.append(dialog);
+  const previousFocus = globalThis.document.activeElement;
   dialog.addEventListener('close', () => { dialog.remove(); previousFocus?.focus?.(); onClose?.(); }, { once: true });
   dialog.showModal();
   let validScope = true;
@@ -137,7 +137,7 @@ export async function openWalletJournal(walletId, { client, userId, onClose } = 
     } catch (error) {
       if (stillCurrent()) {
         message(error.message || String(error));
-        const retry = document.createElement('button');
+        const retry = globalThis.document.createElement('button');
         retry.className = 'btn';
         retry.textContent = text('Réessayer', 'Retry');
         retry.onclick = load;

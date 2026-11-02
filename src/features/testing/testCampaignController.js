@@ -209,7 +209,7 @@ function bind(root) {
 }
 
 export async function renderTestCampaignApp(reason = 'navigation') {
-  const root = document.getElementById('testing-root');
+  const root = globalThis.document.getElementById('testing-root');
   if (!root) return;
   bind(root);
   root.innerHTML = '<div class="tb-ui-state tb-ui-state--loading" role="status"><strong>Chargement de la campagne...</strong></div>';
