@@ -3,8 +3,12 @@ export function createMcpProtocol({ Server, createMcpHandler }, tools, makeDispa
   return async (request, identity, token) => {
     const dispatch = await makeDispatcher(identity, token);
     const handler = createMcpHandler(() => {
-    const server = new Server({ name: 'TravelBudget Finance', version: '1.1.0' }, { capabilities: { tools: {} } });
-    server.setRequestHandler('tools/list', async () => ({ tools }));
+    const server = new Server({ name: 'TravelBudget', version: '1.2.0' }, { capabilities: { tools: {} } });
+    server.setRequestHandler('tools/list', async () => {
+      // Catalog metadata only: never log tokens, arguments or personal results.
+      console.info(JSON.stringify({event:'mcp_tools_list',version:'1.2.0',count:tools.length,names:tools.map(tool=>tool.name)}));
+      return { tools };
+    });
     server.setRequestHandler('tools/call', async ({ params }) => {
       try {
         const result = await dispatch(params.name, params.arguments || {});
