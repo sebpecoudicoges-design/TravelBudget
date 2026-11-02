@@ -14,15 +14,15 @@ function feedbackKind(kind) {
 }
 
 function ensureFeedbackHost() {
-  if (typeof document === 'undefined' || !document.body) return null;
-  let host = document.getElementById('tb-feedback-host');
+  if (typeof document === 'undefined' || !globalThis.document.body) return null;
+  let host = globalThis.document.getElementById('tb-feedback-host');
   if (host) return host;
-  host = document.createElement('section');
+  host = globalThis.document.createElement('section');
   host.id = 'tb-feedback-host';
   host.className = 'tb-feedback-host';
   host.setAttribute('aria-label', 'Notifications');
   host.setAttribute('aria-live', 'polite');
-  document.body.appendChild(host);
+  globalThis.document.body.appendChild(host);
   return host;
 }
 
@@ -36,21 +36,21 @@ export function showFeedback(message, options = {}) {
   const previous = Array.from(host.children).find((node) => node.dataset?.feedbackMessage === text);
   if (previous) previous.remove();
 
-  const item = document.createElement('article');
+  const item = globalThis.document.createElement('article');
   item.className = `tb-feedback tb-feedback--${kind}`;
   item.dataset.feedbackMessage = text;
   item.setAttribute('role', kind === 'error' || kind === 'warning' ? 'alert' : 'status');
 
-  const icon = document.createElement('span');
+  const icon = globalThis.document.createElement('span');
   icon.className = 'tb-feedback__icon';
   icon.setAttribute('aria-hidden', 'true');
   icon.textContent = ICONS[kind];
 
-  const copy = document.createElement('span');
+  const copy = globalThis.document.createElement('span');
   copy.className = 'tb-feedback__copy';
   copy.textContent = text;
 
-  const close = document.createElement('button');
+  const close = globalThis.document.createElement('button');
   close.className = 'tb-feedback__close';
   close.type = 'button';
   close.setAttribute('aria-label', 'Fermer la notification');

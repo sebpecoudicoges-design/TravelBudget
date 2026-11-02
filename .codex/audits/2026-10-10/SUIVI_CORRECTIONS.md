@@ -108,3 +108,7 @@ Le 17 octobre, priorité explicite à l'incident Trip et au bouton Archiver : si
 - 3 novembre 2026 — architecture/qualité F10 : analyse sémantique obligatoire des 64 modules `src/features`, moteur partagé, retrait d’un calcul local sans consommateur et préservation des paramètres publics. Voir docs/QUALITY_PIPELINE.md. APK 10.5.387 conservé ; phase base de données distincte.
 
 Validation locale du lot : 1 123 tests dans 165 fichiers, chaîne quality complète et 130 scénarios Chromium réussis, dont wallets et journal bancaire en clair/sombre à 1440/390 px. Preuves : `.codex/releases/10.5.387/feature-quality.log` et `feature-e2e.log`. Aucun résultat de CI distante ou de déploiement déduit de ces contrôles locaux.
+
+- 3 novembre 2026 — architecture/qualité F10 : contrôle sémantique étendu à tout src (110 modules), dont démarrage, bridge, PWA et UI partagée. Commandes ciblées conservées ; passages partiels consolidés dans quality. Aucun défaut fonctionnel nouveau établi. Voir docs/QUALITY_PIPELINE.md. Scripts legacy et serveur JavaScript encore hors du contrôle sémantique.
+
+Validation locale : quality réussie, 1 127 tests / 166 fichiers, 130 scénarios Chromium réussis (clair/sombre et 1440/390 inclus), quatre parcours de démarrage anonymes/connectés synthétiques sans erreur. Budgets conservés : JS initial 276,9 / 277 KiB, JS total 859,7 / 860 KiB. Preuves : `.codex/releases/10.5.387/source-quality.log`, `source-e2e.log`, `source-startup.log`. Validation sur appareil réel et publication distante distinctes.

@@ -99,3 +99,14 @@ Le calcul local de traduction inutilisé de `renderSettingsPeriodCard` a été r
 Ce contrôle ne valide ni les résultats financiers ni les autorisations SQL. Les scripts legacy, le bridge et les autres répertoires restent hors de ce périmètre sémantique. Aucun nouvel APK : le binaire 10.5.387 conserve les anciennes écritures équivalentes ; les nettoyages concernent les sources web de ce lot.
 
 Validation locale du lot : 1 123 tests dans 165 fichiers, chaîne quality complète et 130 scénarios Chromium réussis, dont wallets et journal bancaire en clair/sombre à 1440/390 px. Preuves : `.codex/releases/10.5.387/feature-quality.log` et `feature-e2e.log`. Aucun résultat de CI distante ou de déploiement déduit de ces contrôles locaux.
+
+
+## Couverture de tout le JavaScript moderne — 3 novembre 2026
+
+`lint:src` vérifie les 110 fichiers JavaScript de `src`, y compris `main.js`, le bridge, les chargeurs, la PWA et les composants partagés. Dans `quality`, il remplace les deux passages partiels `lint:data` et `lint:features` ; ces commandes restent disponibles pour les diagnostics ciblés. `lint:core` reste obligatoire en complément, car il interdit aussi les globals navigateur dans les règles pures. Un nouveau sous-répertoire de src est inclus automatiquement. Les tests injectent des défauts dans main.js, un chargeur imbriqué et un composant UI ; ils vérifient aussi les répertoires absents/vides et l’absence d’exécution des sources.
+
+Les accès DOM concernés utilisent `globalThis.document` au moment de chaque utilisation. Ils ne capturent pas le document à l’import ; les contrôles existants de disponibilité sont conservés. L’identifiant `__TB_VERSION__` est remplacé par Vite : une exception no-undef limitée à sa ligne de lecture est documentée, avec le fallback de version conservé. Les exceptions inutilisées ou inconnues restent interdites. Aucun code mort directement lié identifié dans ce lot, aucun gestionnaire ou rendu retiré.
+
+Ce lot ferme la lacune de couverture sémantique de src, pas celle des scripts legacy, des scripts de livraison ou du JavaScript serveur. Il ne certifie pas les règles financières, la persistance ou les droits SQL. Pas de nouvelle dépendance ni de nouvel APK ; le binaire 10.5.387 conserve ses écritures DOM équivalentes.
+
+Validation locale : quality réussie, 1 127 tests / 166 fichiers, 130 scénarios Chromium réussis (clair/sombre et 1440/390 inclus), quatre parcours de démarrage anonymes/connectés synthétiques sans erreur. Budgets conservés : JS initial 276,9 / 277 KiB, JS total 859,7 / 860 KiB. Preuves : `.codex/releases/10.5.387/source-quality.log`, `source-e2e.log`, `source-startup.log`. Validation sur appareil réel et publication distante distinctes.

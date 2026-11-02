@@ -28,7 +28,7 @@ it('covers all feature modules and stays mandatory in quality',()=>{
  const result=checkFeatureSemantics();expect(result.ok,result.output).toBe(true);
  expect(result.files.map(f=>path.relative('src/features',f)).sort()).toEqual(fs.readdirSync('src/features',{recursive:true}).filter(f=>f.endsWith('.js')).sort());
  const scripts=JSON.parse(fs.readFileSync('package.json','utf8')).scripts;
- expect(scripts.quality.split(' && ')).toContain('npm run lint:features');
+ expect(scripts.quality.split(' && ')).toContain('npm run lint:src');
  expect(scripts['lint:features']).toBe('node scripts/check-feature-semantics.mjs');
  const core=JSON.parse(fs.readFileSync('config/deno-core-lint.json','utf8')).lint.rules.include;
  const data=JSON.parse(fs.readFileSync('config/deno-data-lint.json','utf8')).lint.rules.include;

@@ -28,7 +28,7 @@ it('covers all repositories and stays mandatory in quality',()=>{
  const result=checkDataSemantics();expect(result.ok,result.output).toBe(true);
  expect(result.files.map(f=>path.relative('src/data',f)).sort()).toEqual(fs.readdirSync('src/data',{recursive:true}).filter(f=>f.endsWith('.js')).sort());
  const scripts=JSON.parse(fs.readFileSync('package.json','utf8')).scripts;
- expect(scripts.quality.split(' && ')).toContain('npm run lint:data');
+ expect(scripts.quality.split(' && ')).toContain('npm run lint:src');
  expect(scripts['lint:data']).toBe('node scripts/check-data-semantics.mjs');
  const core=JSON.parse(fs.readFileSync('config/deno-core-lint.json','utf8')).lint.rules.include;
  const data=JSON.parse(fs.readFileSync('config/deno-data-lint.json','utf8')).lint.rules.include;

@@ -53,15 +53,15 @@ export function registerPwa() {
   const ensurePendingQueueUi = () => {
     try {
       const count = typeof window.tbOfflineQueueCount === "function" ? Number(window.tbOfflineQueueCount() || 0) : 0;
-      let chip = document.getElementById("tb-offline-queue-chip");
+      let chip = globalThis.document.getElementById("tb-offline-queue-chip");
       if (!count) {
         if (chip) chip.style.display = "none";
-        const panel = document.getElementById("tb-offline-queue-panel");
+        const panel = globalThis.document.getElementById("tb-offline-queue-panel");
         if (panel) panel.style.display = "none";
         return;
       }
       if (!chip) {
-        chip = document.createElement("button");
+        chip = globalThis.document.createElement("button");
         chip.id = "tb-offline-queue-chip";
         chip.type = "button";
         chip.style.cssText = [
@@ -85,11 +85,11 @@ export function registerPwa() {
           const panel = ensurePendingPanel();
           if (panel) panel.style.display = panel.style.display === "block" ? "none" : "block";
         });
-        document.body.appendChild(chip);
+        globalThis.document.body.appendChild(chip);
       }
       chip.innerHTML = `<span style="width:8px;height:8px;border-radius:999px;background:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12);"></span>${queueText(`${count} en attente`, `${count} pending`)}`;
       chip.style.display = "inline-flex";
-      const panel = document.getElementById("tb-offline-queue-panel");
+      const panel = globalThis.document.getElementById("tb-offline-queue-panel");
       if (panel && panel.style.display === "block") renderPendingPanel(panel);
     } catch (_) {}
   };
@@ -139,9 +139,9 @@ export function registerPwa() {
 
   const ensurePendingPanel = () => {
     try {
-      let panel = document.getElementById("tb-offline-queue-panel");
+      let panel = globalThis.document.getElementById("tb-offline-queue-panel");
       if (!panel) {
-        panel = document.createElement("div");
+        panel = globalThis.document.createElement("div");
         panel.id = "tb-offline-queue-panel";
         panel.style.cssText = [
           "position:fixed",
@@ -161,7 +161,7 @@ export function registerPwa() {
           "font:800 13px system-ui,-apple-system,Segoe UI,Roboto,Arial",
           "backdrop-filter:blur(18px)"
         ].join(";");
-        document.body.appendChild(panel);
+        globalThis.document.body.appendChild(panel);
       }
       renderPendingPanel(panel);
       return panel;
@@ -173,12 +173,12 @@ export function registerPwa() {
   const updateOnlineState = () => {
     try {
       const networkOffline = !!(navigator && navigator.onLine === false);
-      const restoredOffline = !!document.documentElement.classList.contains("tb-offline-restored");
+      const restoredOffline = !!globalThis.document.documentElement.classList.contains("tb-offline-restored");
       const appOffline = networkOffline || restoredOffline;
-      document.documentElement.classList.toggle("tb-offline", !!appOffline);
-      let badge = document.getElementById("tb-offline-badge");
+      globalThis.document.documentElement.classList.toggle("tb-offline", !!appOffline);
+      let badge = globalThis.document.getElementById("tb-offline-badge");
       if (!badge) {
-        badge = document.createElement("div");
+        badge = globalThis.document.createElement("div");
         badge.id = "tb-offline-badge";
         badge.setAttribute("role", "status");
         badge.style.cssText = [
@@ -195,7 +195,7 @@ export function registerPwa() {
           "font:800 13px system-ui,-apple-system,Segoe UI,Roboto,Arial",
           "display:none"
         ].join(";");
-        document.body.appendChild(badge);
+        globalThis.document.body.appendChild(badge);
       }
       const lang = String(window.__tbLang || localStorage.getItem("tb_lang_v1") || navigator.language || "fr").toLowerCase();
       const queueCount = typeof window.tbOfflineQueueCount === "function" ? Number(window.tbOfflineQueueCount() || 0) : 0;
@@ -227,11 +227,11 @@ export function registerPwa() {
 
   const ensureMobileNav = () => {
     try {
-      if (document.getElementById("tb-mobile-nav-toggle")) return;
-      const header = document.querySelector("header");
-      const tabs = document.querySelector(".tabs, .app-tabs");
+      if (globalThis.document.getElementById("tb-mobile-nav-toggle")) return;
+      const header = globalThis.document.querySelector("header");
+      const tabs = globalThis.document.querySelector(".tabs, .app-tabs");
       if (!header || !tabs) return;
-      const btn = document.createElement("button");
+      const btn = globalThis.document.createElement("button");
       btn.id = "tb-mobile-nav-toggle";
       btn.className = "btn";
       btn.type = "button";
@@ -239,24 +239,24 @@ export function registerPwa() {
       btn.setAttribute("aria-expanded", "false");
       btn.innerHTML = '<span></span><span></span><span></span>';
       btn.addEventListener("click", () => {
-        const open = !document.body.classList.contains("tb-mobile-nav-open");
-        document.body.classList.toggle("tb-mobile-nav-open", open);
+        const open = !globalThis.document.body.classList.contains("tb-mobile-nav-open");
+        globalThis.document.body.classList.toggle("tb-mobile-nav-open", open);
         btn.setAttribute("aria-expanded", open ? "true" : "false");
       });
       tabs.addEventListener("click", (ev) => {
         if (ev.target && ev.target.closest && ev.target.closest(".tab")) {
-          document.body.classList.remove("tb-mobile-nav-open");
+          globalThis.document.body.classList.remove("tb-mobile-nav-open");
           btn.setAttribute("aria-expanded", "false");
         }
       });
-      document.addEventListener("click", (ev) => {
+      globalThis.document.addEventListener("click", (ev) => {
         const target = ev.target;
-        if (!document.body.classList.contains("tb-mobile-nav-open")) return;
+        if (!globalThis.document.body.classList.contains("tb-mobile-nav-open")) return;
         if (target && target.closest && (target.closest("#tb-mobile-nav-toggle") || target.closest(".tabs, .app-tabs"))) return;
-        document.body.classList.remove("tb-mobile-nav-open");
+        globalThis.document.body.classList.remove("tb-mobile-nav-open");
         btn.setAttribute("aria-expanded", "false");
       });
-      document.body.appendChild(btn);
+      globalThis.document.body.appendChild(btn);
     } catch (_) {}
   };
 
@@ -277,21 +277,21 @@ export function registerPwa() {
 
   const setText = (selector, fr, en) => {
     try {
-      const el = document.querySelector(selector);
+      const el = globalThis.document.querySelector(selector);
       if (el) el.textContent = getLang() === "en" ? en : fr;
     } catch (_) {}
   };
 
   const setLabelFor = (id, fr, en) => {
     try {
-      const el = document.getElementById(id);
+      const el = globalThis.document.getElementById(id);
       const field = el?.closest?.(".field");
       const label = field?.querySelector?.("label");
       if (!label) return;
       const help = label.querySelector(".tb-help");
       label.textContent = getLang() === "en" ? en : fr;
       if (help) {
-        label.appendChild(document.createTextNode(" "));
+        label.appendChild(globalThis.document.createTextNode(" "));
         label.appendChild(help);
       }
     } catch (_) {}
@@ -299,9 +299,9 @@ export function registerPwa() {
 
   const applyMobileCopy = () => {
     try {
-      if (!document.body.classList.contains("tb-capacitor-app")) return;
+      if (!globalThis.document.body.classList.contains("tb-capacitor-app")) return;
       const lang = getLang();
-      document.body.dataset.tbMobileLang = lang;
+      globalThis.document.body.dataset.tbMobileLang = lang;
 
       setText(".top-actions > button:nth-of-type(1)", "Theme", "Theme");
       setText(".top-actions > button:nth-of-type(2)", "Taux", "Rates");
@@ -327,13 +327,13 @@ export function registerPwa() {
     try {
       const isCapacitor = !!window.Capacitor
         || String(window.location?.protocol || "").startsWith("capacitor")
-        || !!document.querySelector('html[data-capacitor], body[data-capacitor]');
-      document.body.classList.toggle("tb-capacitor-app", !!isCapacitor);
-      if (!document.body.dataset.tbView) {
-        const activeTab = document.querySelector(".app-tabs .tab.active, .tabs .tab.active");
+        || !!globalThis.document.querySelector('html[data-capacitor], body[data-capacitor]');
+      globalThis.document.body.classList.toggle("tb-capacitor-app", !!isCapacitor);
+      if (!globalThis.document.body.dataset.tbView) {
+        const activeTab = globalThis.document.querySelector(".app-tabs .tab.active, .tabs .tab.active");
         const id = String(activeTab?.id || "").replace(/^tab-/, "");
-        document.body.dataset.tbView = id || "dashboard";
-        document.body.classList.toggle("tb-view-dashboard", (id || "dashboard") === "dashboard");
+        globalThis.document.body.dataset.tbView = id || "dashboard";
+        globalThis.document.body.classList.toggle("tb-view-dashboard", (id || "dashboard") === "dashboard");
       }
       applyMobileCopy();
     } catch (_) {}
@@ -343,8 +343,8 @@ export function registerPwa() {
   window.addEventListener("offline", updateOnlineState);
   window.addEventListener("tb:offline_state_changed", updateOnlineState);
   window.addEventListener("tb:offline_queue_changed", updateOnlineState);
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
+  if (globalThis.document.readyState === "loading") {
+    globalThis.document.addEventListener("DOMContentLoaded", () => {
       markRuntimeMode();
       updateOnlineState();
       ensureMobileNav();
@@ -357,7 +357,7 @@ export function registerPwa() {
     applyMobileCopy();
   }
 
-  document.addEventListener("click", () => setTimeout(applyMobileCopy, 30), true);
+  globalThis.document.addEventListener("click", () => setTimeout(applyMobileCopy, 30), true);
   window.addEventListener("tb:language_changed", applyMobileCopy);
   window.addEventListener("languagechange", applyMobileCopy);
   setInterval(applyMobileCopy, 1200);

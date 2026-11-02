@@ -46,6 +46,8 @@ window.tbOpenWalletJournal = async (walletId, options) => {
 };
 
 window.TB_VERSION = typeof __TB_VERSION__ !== 'undefined'
+  // Vite replaces this build-time identifier; keep the runtime fallback.
+  // deno-lint-ignore no-undef
   ? __TB_VERSION__
   : (window.TB_VERSION || '0.0.0');
 
@@ -210,12 +212,12 @@ const analysisModuleLoader = createRetryableLoader(async () => (await deferredMo
 let kpiViewPromise = null;
 
 function ensureKpiStylesheet() {
-  if (document.getElementById('tb-kpi-view-css')) return true;
-  const link = document.createElement('link');
+  if (globalThis.document.getElementById('tb-kpi-view-css')) return true;
+  const link = globalThis.document.createElement('link');
   link.id = 'tb-kpi-view-css';
   link.rel = 'stylesheet';
   link.href = './legacy/css/kpi_view.css';
-  document.head.appendChild(link);
+  globalThis.document.head.appendChild(link);
   return true;
 }
 
@@ -291,7 +293,7 @@ function waitForBridgeReady() {
 
 const scriptLoader = createRetryableLoader((src) => {
   return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
+    const s = globalThis.document.createElement('script');
     s.src = src;
     s.async = false; // enforce execution order
     s.onload = () => resolve(src);
@@ -299,7 +301,7 @@ const scriptLoader = createRetryableLoader((src) => {
       s.remove();
       reject(new Error(`Failed to load legacy script: ${src}`));
     };
-    document.head.appendChild(s);
+    globalThis.document.head.appendChild(s);
   });
 });
 
@@ -451,8 +453,8 @@ async function boot() {
 
 boot().catch((err) => {
   console.error('[TB V9] Fatal boot error', err);
-  const el = document.createElement('div');
+  const el = globalThis.document.createElement('div');
   el.style.cssText = 'position:fixed;inset:0;background:#111;color:#fff;padding:16px;font-family:system-ui;z-index:99999;overflow:auto;';
   el.textContent = `TravelBudget boot failed\n${String(err?.stack || err)}`;
-  document.body.appendChild(el);
+  globalThis.document.body.appendChild(el);
 });

@@ -3,11 +3,11 @@ const modalRegistry = new Map();
 export function createModal(options = {}) {
   if (typeof document === 'undefined') throw new Error('Modal requires a document.');
   if (options.id && modalRegistry.has(options.id)) modalRegistry.get(options.id).destroy();
-  const existing = options.id ? document.getElementById(options.id) : null;
+  const existing = options.id ? globalThis.document.getElementById(options.id) : null;
   if (existing) existing.remove();
-  const previouslyFocused = document.activeElement;
+  const previouslyFocused = globalThis.document.activeElement;
 
-  const root = document.createElement('div');
+  const root = globalThis.document.createElement('div');
   if (options.id) root.id = options.id;
   root.className = `tb-ui-modal-backdrop ${options.rootClass || ''}`.trim();
   root.innerHTML = `
@@ -41,13 +41,13 @@ export function createModal(options = {}) {
     if (!focusable.length) { event.preventDefault(); root.querySelector('.tb-ui-modal')?.focus(); return; }
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    if (event.shiftKey && globalThis.document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && globalThis.document.activeElement === last) { event.preventDefault(); first.focus(); }
   };
   const destroy = () => {
     if (closed) return;
     closed = true;
-    document.removeEventListener('keydown', onKeyDown);
+    globalThis.document.removeEventListener('keydown', onKeyDown);
     root.remove();
     if (options.id && modalRegistry.get(options.id)?.root === root) modalRegistry.delete(options.id);
   };
@@ -61,8 +61,8 @@ export function createModal(options = {}) {
   };
   root.querySelector('.tb-ui-modal__close')?.addEventListener('click', close);
   root.addEventListener('click', (event) => { if (event.target === root && options.closeOnBackdrop !== false) close(); });
-  document.addEventListener('keydown', onKeyDown);
-  document.body.appendChild(root);
+  globalThis.document.addEventListener('keydown', onKeyDown);
+  globalThis.document.body.appendChild(root);
   const initialFocus = options.initialFocus ? root.querySelector(options.initialFocus) : root.querySelector(focusableSelector);
   (initialFocus || root.querySelector('.tb-ui-modal'))?.focus();
   const handle = { root, body, footer, close, destroy };
