@@ -149,3 +149,19 @@ Les règles no-func-assign et no-dupe-keys sont désormais obligatoires sur les 
 Sources web et page Projet actualisées ; aucun nouvel APK ni déploiement Supabase. La suppression du code mort et la traduction devront être intégrées à la prochaine reconstruction Android, ainsi que la correction précédente du coordinateur d’actualisation.
 
 Validation finale locale : quality complète réussie, 1 142 tests / 170 fichiers, 134 scénarios Chromium réussis, dont quatre nouveaux parcours de première configuration. Comparaison avant/après : corps de l’assistant actif identique hors helper sans appel. Boot legacy mesuré à 856 KiB, sous le plafond inchangé. Preuves : `.codex/releases/10.5.387/legacy-setup-quality.log`, `legacy-setup-targeted.log` et `legacy-setup-e2e.log`. Publication web et reconstruction Android distinctes.
+
+
+## Révisions de la file hors ligne — 3 novembre 2026
+
+F2 reproduit : un payload 10 remplacé par 20 pendant l’envoi était supprimé au succès de l’ancien envoi. Sept scénarios échouaient avant correction (succès, erreur temporaire/permanente, singletons Sport/Nutrition, retrait d’une action et changement de compte). La file locale v4 ajoute une révision par modification et un identifiant par tentative. La suppression, le report d’erreur et les callbacks de nettoyage vérifient la tentative et le compte visés ; une nouvelle révision reste pending, même à horodatage identique. Les entrées v3 sont normalisées sans effacer leur payload.
+
+Le flush ne rejoue plus une entrée disparue depuis sa sélection et s’arrête avant l’action suivante si le compte change. Le nettoyage optimiste Trip est déplacé du replay vers le callback conditionnel : un ancien succès ne retire plus l’affichage local d’une modification récente. Le fallback qui rejouait l’ancien snapshot malgré une entrée supprimée est retiré ; les tests de concurrence en empêchent le retour. Aucune nouvelle révision n’est envoyée implicitement deux fois dans le même passage : elle reste disponible pour le passage suivant. Le compteur synced compte les tentatives réussies, pas la disparition de toute révision plus récente.
+
+Onze nouveaux tests couvrent aussi la reprise après rechargement du store, les changements pendant un callback, les tentatives périmées, les anciennes entrées et le véritable adaptateur Trip. Trois parcours Chromium vérifient avec localStorage que 20 survit à l’envoi de 10, au rechargement de la page, puis est envoyé une fois lors du passage suivant. Données exclusivement synthétiques, aucun RPC réel.
+
+Limites : localStorage reste non transactionnel entre onglets et le bail de verrou n’est pas renouvelé. Ce lot ne garantit pas exactly-once côté serveur : l’idempotence des RPC, les écritures propres aux domaines Sport/Nutrition et leurs sauvegardes partielles restent des sujets distincts. Une ancienne version déjà ouverte ne dispose pas de ces gardes. Au changement de compte, l’entrée en cours de l’ancien compte est conservée pour la récupération de tentative périmée.
+
+Le build ajoute environ 0,7 KiB au JS initial pour les gardes de révision/tentative/compte : plafond initial 277 → 278 KiB et total 860 → 861 KiB, plafonds différés/CSS/gzip inchangés. Hausse ciblée et justifiée par la prévention de perte d’une modification. Page Projet et Atlas actualisés. Aucun schéma SQL ni service distant modifié ; APK 10.5.387 inchangé, reconstruction Android nécessaire pour embarquer ce correctif et les lots web précédents.
+
+
+Validation finale locale : quality complète réussie, 1 153 tests / 171 fichiers et 137 scénarios Chromium réussis, dont trois nouveaux parcours de persistance après rechargement. JS initial 277,6 / 278 KiB et total 860,4 / 861 KiB. Preuves : `.codex/releases/10.5.387/queue-quality.log`, `queue-targeted-e2e.log` et `queue-e2e.log`. Publication web non vérifiée ; reconstruction et validation Android restantes.

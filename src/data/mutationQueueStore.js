@@ -1,4 +1,4 @@
-const QUEUE_VERSION = 3;
+const QUEUE_VERSION = 4;
 const RETRY_DELAYS_MS = [0, 5_000, 30_000, 120_000, 600_000];
 
 function asTimestamp(value, fallback = 0) {
@@ -45,6 +45,7 @@ export function createMutationQueueStore(options = {}) {
       kind: String(item.kind || 'unknown'),
       status: staleSync ? 'pending' : String(item.status || 'pending'),
       attempts: Math.max(0, Number(item.attempts) || 0),
+      revision: Number.isSafeInteger(item.revision) && item.revision > 0 ? item.revision : 1,
       createdAt: item.createdAt || updatedAt,
       updatedAt,
       payload: item.payload && typeof item.payload === 'object' ? item.payload : {},
@@ -80,6 +81,9 @@ export function createMutationQueueStore(options = {}) {
       existing.payload = { ...existing.payload, ...payload };
       existing.meta = { ...existing.meta, ...meta, dedupeKey };
       existing.status = 'pending';
+      existing.revision += 1;
+      existing.attemptToken = null;
+      existing.attempts = 0;
       existing.error = null;
       existing.nextAttemptAt = null;
       existing.updatedAt = nowISO();
@@ -92,6 +96,7 @@ export function createMutationQueueStore(options = {}) {
       kind: normalizedKind,
       status: 'pending',
       attempts: 0,
+      revision: 1,
       createdAt: nowISO(),
       updatedAt: nowISO(),
       nextAttemptAt: null,
@@ -103,10 +108,10 @@ export function createMutationQueueStore(options = {}) {
     return { item, deduplicated: false };
   }
 
-  function updateItem(id, updater, detail = {}) {
+  function updateItem(id, updater, detail = {}, accepts = () => true) {
     const items = read();
     const item = items.find((candidate) => String(candidate.id) === String(id));
-    if (!item) return null;
+    if (!item || !accepts(item)) return null;
     updater(item);
     item.updatedAt = nowISO();
     write(items, { ...detail, id: item.id });
@@ -114,25 +119,37 @@ export function createMutationQueueStore(options = {}) {
   }
 
   function beginAttempt(id) {
-    return updateItem(id, (item) => {
+    const item = updateItem(id, (item) => {
       item.status = 'syncing';
       item.attempts += 1;
       item.error = null;
       item.nextAttemptAt = null;
-    }, { type: 'attempt' });
+      item.attemptToken = `${owner}:${now()}:${Math.random().toString(16).slice(2)}`;
+    }, { type: 'attempt' }, item => item.status !== 'done' && item.status !== 'syncing');
+    return item ? { ...item, queueScope: queueKey() } : null;
   }
 
-  function markFailure(id, error) {
+  function matchesAttempt(item, attempt) {
+    return attempt.queueScope === queueKey() && item.revision === attempt.revision
+      && item.attemptToken === attempt.attemptToken;
+  }
+
+  function isCurrentAttempt(attempt) {
+    return read().some(item => item.id === attempt.id && matchesAttempt(item, attempt));
+  }
+
+  function markFailure(id, error, attempt) {
     return updateItem(id, (item) => {
       item.status = 'pending';
       item.error = String(error?.message || error || 'Erreur de synchronisation');
       item.nextAttemptAt = new Date(now() + retryDelayForAttempt(item.attempts)).toISOString();
-    }, { type: 'failed' });
+    }, { type: 'failed' }, item => !attempt || matchesAttempt(item, attempt));
   }
 
-  function remove(id) {
+  function remove(id, attempt) {
     const items = read();
-    const next = items.filter((item) => String(item.id) !== String(id));
+    const next = items.filter((item) => String(item.id) !== String(id) || (attempt && !matchesAttempt(item, attempt)));
+    if (next.length === items.length) return false;
     write(next, { type: 'removed', id: String(id) });
     return next.length !== items.length;
   }
@@ -165,6 +182,8 @@ export function createMutationQueueStore(options = {}) {
     write,
     enqueue,
     beginAttempt,
+    isCurrentAttempt,
+    scope: queueKey,
     markFailure,
     remove,
     runnable,
@@ -177,28 +196,32 @@ export function createMutationQueueStore(options = {}) {
 export async function flushMutationQueue({ store, run, force = false, isPermanentFailure, onSuccess, onPermanentFailure } = {}) {
   if (!store || typeof run !== 'function') throw new TypeError('Queue store and runner are required.');
   const items = store.runnable(force);
+  const scope = store.scope();
   let synced = 0;
   let failed = 0;
   let discarded = 0;
+  let attempted = 0;
 
   for (const item of items) {
-    const current = store.beginAttempt(item.id) || item;
+    if (store.scope() !== scope) break;
+    const current = store.beginAttempt(item.id);
+    if (!current) continue;
+    attempted += 1;
     try {
       await run(current);
-      await onSuccess?.(current);
-      store.remove(item.id);
+      if (store.isCurrentAttempt(current)) await onSuccess?.(current);
+      store.remove(item.id, current);
       synced += 1;
     } catch (error) {
       if (isPermanentFailure?.(current, error)) {
-        await onPermanentFailure?.(current, error);
-        store.remove(item.id);
-        discarded += 1;
+        if (store.isCurrentAttempt(current)) await onPermanentFailure?.(current, error);
+        if (store.remove(item.id, current)) discarded += 1;
         continue;
       }
-      store.markFailure(item.id, error);
+      store.markFailure(item.id, error, current);
       failed += 1;
     }
   }
 
-  return { ok: failed === 0, synced, failed, discarded, attempted: items.length };
+  return { ok: failed === 0, synced, failed, discarded, attempted };
 }

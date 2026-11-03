@@ -328,9 +328,6 @@
       await window.tbTripReplayOfflineExpenseMutation(Object.assign({}, item.payload || {}, {
         mode: item.kind === "trip.expense.update" ? "update" : "create",
       }));
-      try {
-        if (typeof window.tbTripCleanupOfflineOptimistic === "function") window.tbTripCleanupOfflineOptimistic(item.id);
-      } catch (_) {}
       return true;
     }
     throw new Error(`Type de queue inconnu: ${item.kind}`);
@@ -369,6 +366,9 @@
         onSuccess: (item) => {
           syncedKinds.push(String(item?.kind || ""));
           if (String(item?.kind || "").startsWith("transaction.")) cleanupOptimisticRows(item.id);
+          if (String(item?.kind || "").startsWith("trip.expense")) {
+            try { window.tbTripCleanupOfflineOptimistic?.(item.id); } catch (_) {}
+          }
         },
         onPermanentFailure: (item) => {
           cleanupItemSideEffects(item);
