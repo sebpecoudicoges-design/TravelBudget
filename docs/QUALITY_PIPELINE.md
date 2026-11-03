@@ -110,3 +110,16 @@ Les accès DOM concernés utilisent `globalThis.document` au moment de chaque ut
 Ce lot ferme la lacune de couverture sémantique de src, pas celle des scripts legacy, des scripts de livraison ou du JavaScript serveur. Il ne certifie pas les règles financières, la persistance ou les droits SQL. Pas de nouvelle dépendance ni de nouvel APK ; le binaire 10.5.387 conserve ses écritures DOM équivalentes.
 
 Validation locale : quality réussie, 1 127 tests / 166 fichiers, 130 scénarios Chromium réussis (clair/sombre et 1440/390 inclus), quatre parcours de démarrage anonymes/connectés synthétiques sans erreur. Budgets conservés : JS initial 276,9 / 277 KiB, JS total 859,7 / 860 KiB. Preuves : `.codex/releases/10.5.387/source-quality.log`, `source-e2e.log`, `source-startup.log`. Validation sur appareil réel et publication distante distinctes.
+
+
+## Contrôle sémantique serveur — 3 novembre 2026
+
+`lint:server` devient obligatoire dans `quality`, en complément de `lint:edge` (types TypeScript). Le moteur partagé accepte maintenant une liste explicite d’extensions ; ses appels existants gardent le filtre .js. Les deux arbres supabase/functions et netlify/functions sont obligatoires et contrôlés récursivement : 24 fichiers actuels, JavaScript et TypeScript, modules partagés inclus. Un répertoire absent ou vide échoue. Les imports ne sont ni exécutés ni résolus par ce contrôle.
+
+La configuration core interdit notamment les références inconnues, variables inutilisées, finally dangereux et globals navigateur/Node implicites. Quatre tests injectent des erreurs dans les deux arbres, couvrent JS/TS, les dossiers vides/absents et l’intégration dans quality. Le contrôle TypeScript reste distinct et obligatoire ; un lint réussi ne prouve pas la correction des types, des résultats ou des autorisations.
+
+Dans dispatch-mobile-notifications, totalBudget n’avait aucun consommateur ; periodDays servait uniquement à ce calcul. Les deux calculs locaux ont été retirés après recherche des usages. dayCountInclusive reste utilisé pour les dépenses et les jours écoulés. Les paramètres req/context de la fonction ECB sont conservés dans leur ordre, avec des noms locaux préfixés par underscore. Aucun code mort supplémentaire identifié dans le périmètre. Le contrôle no-unused-vars empêche le retour de ces calculs.
+
+Aucun appel de notification, aucune donnée de production modifiée, aucune migration ni nouvel APK. La suppression des calculs concerne les sources : aucun déploiement Supabase effectué dans ce lot. La fonction ECB suit le déploiement web Netlify, dont la disponibilité doit être vérifiée séparément. Les scripts legacy restent hors du lint sémantique. Référence d’organisation serveur : [documentation Supabase](https://supabase.com/docs/guides/functions/development-tips).
+
+Validation locale : quality réussie, 1 131 tests / 167 fichiers, types Edge et lint des 24 sources serveur validés, documentation/build/budgets réussis. Page Projet 1440/390 clair/sombre validée après relance (premier essai arrêté au timeout de démarrage du serveur local). Preuves : `.codex/releases/10.5.387/server-quality.log` et `server-project-e2e-retry.log`. Campagne navigateur complète non relancée dans ce lot sans changement d’interface applicative.

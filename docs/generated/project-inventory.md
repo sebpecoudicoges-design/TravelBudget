@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `731b4dbdfe0deb0c71047d3aaad21b892bc3bd62`
-> Empreinte du snapshot : `708805737e085a2a879c9957d1fbd9fe057b3d686059aa4a458c5fdfb8a14c9b`
-> Généré le : `2026-11-02T18:10:34.734Z`
+> Commit analysé : `b3a91b1a92192b8abbe097c84b0b2e6539d2068c`
+> Empreinte du snapshot : `8bedeecbf62a15b4afe585076322d7eb3a08b69ba332d23260e1c5d8bd3ab058`
+> Généré le : `2026-11-03T01:50:10.838Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 179 |
+| Fichiers de tests | 180 |
 | Migrations Supabase | 170 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -40,7 +40,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `links:check` | `node scripts/check-public-links.mjs` |
 | `perf:budget` | `node scripts/check-module-budgets.mjs` |
 | `lint:syntax` | `node scripts/check-js-syntax.mjs` |
-| `quality` | `npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm run lint:core && npm run lint:src && npm test && npm run docs:check && npm run build && npm run perf:budget` |
+| `quality` | `npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm run lint:server && npm run lint:core && npm run lint:src && npm test && npm run docs:check && npm run build && npm run perf:budget` |
 | `lint:inline` | `node scripts/check-inline-syntax.mjs` |
 | `lint:edge` | `node scripts/check-edge-types.mjs` |
 | `lint:db` | `node scripts/lint_db_strings.cjs` |
@@ -57,6 +57,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `lint:data` | `node scripts/check-data-semantics.mjs` |
 | `lint:features` | `node scripts/check-feature-semantics.mjs` |
 | `lint:src` | `node scripts/check-source-semantics.mjs` |
+| `lint:server` | `node scripts/check-server-semantics.mjs` |
 
 ## Écrans déclarés dans index.html
 
@@ -502,6 +503,7 @@ Modules :
 - `tests/scripts/entryManifest.test.js`
 - `tests/scripts/featureSemanticLint.test.js`
 - `tests/scripts/inlineSyntax.test.js`
+- `tests/scripts/serverSemanticLint.test.js`
 - `tests/scripts/sourceSemanticLint.test.js`
 - `tests/ui/accountingViewContract.test.js`
 - `tests/ui/analysisDrilldownViewContract.test.js`

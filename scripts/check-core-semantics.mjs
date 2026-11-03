@@ -10,9 +10,9 @@ export function checkCoreSemantics(root = process.cwd()) {
   return checkSemanticSources(root, 'src/core', coreConfig);
 }
 
-export function checkSemanticSources(root, directory, config) {
+export function checkSemanticSources(root, directory, config, extensions = ['.js']) {
   const base = path.join(root, directory);
-  const files = fs.readdirSync(base, { recursive: true }).filter(file => file.endsWith('.js')).map(file => path.join(base, file)).sort();
+  const files = fs.readdirSync(base, { recursive: true }).filter(file => extensions.includes(path.extname(file))).map(file => path.join(base, file)).sort();
   if (!files.length) throw new Error(`No JavaScript sources found in ${directory}`);
   const result = spawnSync(process.execPath, [deno, 'lint', '--config', config, '--json', ...files], {
     cwd: root, encoding: 'utf8', timeout: 60000, maxBuffer: 4 * 1024 * 1024,

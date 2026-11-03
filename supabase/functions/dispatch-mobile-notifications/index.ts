@@ -335,7 +335,6 @@ async function financeTemplateValues(admin: SupabaseClient, userId: string, date
   const start = String(period?.start_date || date).slice(0, 10);
   const end = String(period?.end_date || date).slice(0, 10);
   const elapsedDays = Math.max(1, dayCountInclusive(start, date));
-  const periodDays = Math.max(1, dayCountInclusive(start, end));
   const { data: txRows } = await admin
     .from("transactions")
     .select("amount,currency,type,affects_budget,out_of_budget,budget_date_start,budget_date_end,date,pay_now,paid,travel_id,period_id,fx_rate_snapshot,fx_base_currency_snapshot,fx_tx_currency_snapshot")
@@ -363,7 +362,6 @@ async function financeTemplateValues(admin: SupabaseClient, userId: string, date
   const spentToToday = budgetRows.reduce((sum, tx) => sum + amountInWindow(tx as Record<string, unknown>, date), 0);
   const outToToday = outRows.reduce((sum, tx) => sum + amountInWindow(tx as Record<string, unknown>, date), 0);
   const targetToToday = budget.daily * elapsedDays;
-  const totalBudget = budget.daily * periodDays;
   const pendingRows = budgetRows.filter((tx) => !isPaid(tx as Record<string, unknown>));
   const pendingSum = (mode: "future" | "overdue", until?: string) => pendingRows.reduce((sum, tx) => {
     const due = String(tx.date || tx.budget_date_start || date).slice(0, 10);

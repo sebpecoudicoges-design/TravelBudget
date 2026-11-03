@@ -1,4 +1,4 @@
-export default async (req, context) => {
+export default async (_req, _context) => {
   try {
     const url = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
     const r = await fetch(url, { headers: { "User-Agent": "TravelModular/1.0" } });
