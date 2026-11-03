@@ -3,6 +3,35 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { createMutationQueueStore, flushMutationQueue } from '../../src/data/mutationQueueStore.js';
 
+it('releases the acquired account lock after changing account',()=>{
+  const values=new Map();let account='a';
+  const storage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
+  const store=createMutationQueueStore({storage,queueKey:()=>account,owner:'tab'});
+  expect(store.acquireLock()).toBe(true);
+  account='b';values.set('b_lock',JSON.stringify({owner:'other',expiresAt:Date.now()+45000}));
+  store.releaseLock();expect(values.has('a_lock')).toBe(false);expect(JSON.parse(values.get('b_lock')).owner).toBe('other');
+});
+
+it.each(['online','offline','account-change'])('guards concurrent adapter starts during %s network preflight',async outcome=>{
+  const values=new Map();let finish;
+  const storage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
+  const replay=vi.fn(async()=>{});
+  const window={Data:{createMutationQueueStore,flushMutationQueue},sbUser:{id:'a'},addEventListener(){},dispatchEvent(){},toastOk(){},tbTripReplayOfflineExpenseMutation:replay,
+    tbShouldUseOfflineMode:vi.fn(()=>new Promise(resolve=>{finish=resolve;}))};
+  vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js','utf8'),{window,localStorage:storage,navigator:{language:'fr'},setTimeout(){},console});
+  window.tbOfflineQueueEnqueue('trip.expense.update',{amount:10},{entityId:'one'});
+  const first=window.tbOfflineQueueSync('manual');
+  expect(await window.tbOfflineQueueSync('manual')).toMatchObject({skipped:'already-syncing'});
+  expect(window.tbShouldUseOfflineMode).toHaveBeenCalledTimes(1);
+  if(outcome==='account-change') {window.sbUser={id:'b'};window.tbOfflineQueueEnqueue('trip.expense.update',{amount:20},{entityId:'two'});}
+  finish(outcome==='offline');await first;
+  expect(replay).toHaveBeenCalledTimes(outcome==='online'?1:0);
+  expect(values.has('travelbudget_offline_queue_v2_lock_a')).toBe(false);
+  window.tbShouldUseOfflineMode=async()=>false;
+  await window.tbOfflineQueueSync('manual');
+  expect(window.tbOfflineQueueCount()).toBe(0);
+});
+
 function fixture(options={}) {
   const values=new Map(); let id=0;
   const storage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};

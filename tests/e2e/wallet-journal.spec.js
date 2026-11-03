@@ -120,7 +120,11 @@ for (const width of [1440, 390]) for (const dark of [false, true]) {
     expect(await page.locator('#tb-wallet-journal').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
     await page.screenshot({ path: `test-results/journal-bulk-${width}-${dark}.png` });
     // Closing during a batch stops before the next request; the acknowledged row persists.
-    await page.evaluate(() => { window.bulkCalls = []; window.pauseBulk = true; });
+    await page.evaluate(() => {
+      window.bulkCalls = []; window.pauseBulk = true;
+      // Keep the closed dialog attached: cancellation must not wait for DOM removal.
+      document.querySelector('#tb-wallet-journal').addEventListener('close', event => event.stopImmediatePropagation(), { capture: true, once: true });
+    });
     await page.locator('[data-journal-bulk="unmark"]').click();
     await page.locator('[data-journal-close]').click();
     await page.evaluate(() => { window.pauseBulk = false; window.resumeBulk(); });

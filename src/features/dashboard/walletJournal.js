@@ -43,7 +43,7 @@ export async function openWalletJournal(walletId, { client, userId, onClose } = 
   let wallet, transactions = [], marks = [], busy = false;
   let filters = { from: '', to: '', status: 'all', q: '' };
   let statement = '';
-  const stillCurrent = () => dialog.isConnected && validScope;
+  const stillCurrent = () => dialog.open && dialog.isConnected && validScope;
   function message(value) { const node = dialog.querySelector('[data-journal-message]'); if (node) node.textContent = value; }
   function render() {
     const all = journalRows(transactions, marks);

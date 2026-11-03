@@ -341,6 +341,8 @@
     }
     if (syncing) return { ok: false, skipped: "already-syncing" };
     if (!acquireLock(reason)) return { ok: false, skipped: "locked" };
+    syncing = true;
+    const syncScope = queueStore.scope();
     let synced = 0;
     let failed = 0;
     try {
@@ -352,11 +354,11 @@
         return { ok: false, skipped: "offline-check" };
       }
 
+      if (queueStore.scope() !== syncScope) return { ok: false, skipped: "account-change" };
       const force = ["manual", "diagnostic"].includes(String(reason || ""));
       const todo = queueStore.runnable(force);
       if (!todo.length) return { ok: true, synced: 0 };
 
-      syncing = true;
       const syncedKinds = [];
       const result = await window.Data.flushMutationQueue({
         store: queueStore,

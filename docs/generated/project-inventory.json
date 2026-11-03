@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "e7ffa4c026de692a87dc1e86e12a4992e73ad661",
-  "snapshotFingerprint": "ffa81af462e2636aacd457328873ff44f70758387a09d51249a4ab225842bb4e",
-  "generatedAt": "2026-11-03T07:30:00.243Z",
+  "commit": "ea6f4a03c160af2829b4c1d2d069241792f7a5dd",
+  "snapshotFingerprint": "d2ccba4fa4a4782a34c1697ea208429d41891c8c78205c863b3d5c67cd4f708b",
+  "generatedAt": "2026-11-03T07:47:10.193Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.387"
+    "version": "10.5.388"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -740,6 +740,7 @@
     "docs/ACCOUNTING_MODULE_BRIEF.md",
     "docs/ACCOUNT_DATA_LIFECYCLE.md",
     "docs/ADMIN_TEST_RETURNS.md",
+    "docs/ANDROID_10_5_388.md",
     "docs/ANDROID_SECURITY_10_5_373.md",
     "docs/ARCHITECTURE_DECISIONS.md",
     "docs/ASSISTANT_AI_OPERATIONS.md",

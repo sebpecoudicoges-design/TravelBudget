@@ -31,6 +31,7 @@ export function createMutationQueueStore(options = {}) {
   const owner = String(options.owner || `queue_${Math.random().toString(16).slice(2)}`);
   const lockTtlMs = Number(options.lockTtlMs) || 45_000;
   const staleSyncMs = Number(options.staleSyncMs) || 60_000;
+  let acquiredLockKey = null;
 
   function emit(items, detail = {}) {
     options.onChange?.(items.map((item) => ({ ...item })), detail);
@@ -161,20 +162,25 @@ export function createMutationQueueStore(options = {}) {
     ));
   }
 
-  function readLock() {
-    try { return JSON.parse(storage?.getItem(lockKey()) || 'null'); } catch (_) { return null; }
+  function readLock(key = lockKey()) {
+    try { return JSON.parse(storage?.getItem(key) || 'null'); } catch (_) { return null; }
   }
 
   function acquireLock(reason = 'sync') {
-    const current = readLock();
+    const key = lockKey();
+    const current = readLock(key);
     if (current?.owner && current.owner !== owner && Number(current.expiresAt || 0) > now()) return false;
-    storage?.setItem(lockKey(), JSON.stringify({ owner, reason, createdAt: now(), expiresAt: now() + lockTtlMs }));
-    return readLock()?.owner === owner;
+    storage?.setItem(key, JSON.stringify({ owner, reason, createdAt: now(), expiresAt: now() + lockTtlMs }));
+    if (readLock(key)?.owner !== owner) return false;
+    acquiredLockKey = key;
+    return true;
   }
 
   function releaseLock() {
-    const current = readLock();
-    if (!current || current.owner === owner) storage?.removeItem(lockKey());
+    if (!acquiredLockKey) return;
+    const current = readLock(acquiredLockKey);
+    if (current?.owner === owner) storage?.removeItem(acquiredLockKey);
+    acquiredLockKey = null;
   }
 
   return {

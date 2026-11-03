@@ -129,3 +129,7 @@ Validation finale locale : quality complète réussie, 1 142 tests / 170 fichier
 
 
 Validation finale locale : quality complète réussie, 1 153 tests / 171 fichiers et 137 scénarios Chromium réussis, dont trois nouveaux parcours de persistance après rechargement. JS initial 277,6 / 278 KiB et total 860,4 / 861 KiB. Preuves : `.codex/releases/10.5.387/queue-quality.log`, `queue-targeted-e2e.log` et `queue-e2e.log`. Publication web non vérifiée ; reconstruction et validation Android restantes.
+
+- 3 novembre 2026 — F2, complément : double démarrage pendant la vérification réseau bloqué ; arrêt au changement de compte avant lecture de la file ; libération du verrou du compte initial. Quatre régressions reproduites, vingt tests ciblés réussis. Ancienne affectation tardive de syncing supprimée après vérification des appels. Version Android 10.5.388 reconstruite et publiée, détails dans docs/ANDROID_10_5_388.md. Concurrence transactionnelle entre onglets et renouvellement du bail restent ouverts.
+
+Validation et distribution : voir docs/ANDROID_10_5_388.md. APK vérifié (signature, identité et sources), téléchargé depuis Storage avec SHA-256 identique. Journal bancaire : fermeture du dialogue désormais bloquante pour le pointage groupé, huit scénarios ciblés réussis après correction. Validation téléphone restante.
