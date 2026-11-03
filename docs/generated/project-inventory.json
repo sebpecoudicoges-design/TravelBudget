@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "3ebce15c39050008c5cf7120e12231277752905c",
-  "snapshotFingerprint": "45750b8ed7118dc97093fd756c4f30e2d2e6b3d0a488d77bf75b1ca87cbdc363",
-  "generatedAt": "2026-11-03T02:04:26.036Z",
+  "commit": "4025536dad1efe545d91bccf15b0b0eeb2a1c0dd",
+  "snapshotFingerprint": "b628c82c70e940b045d2b98daab870f69766bf53aadbae7b5c324f3c94ecee7b",
+  "generatedAt": "2026-11-03T02:15:46.983Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.387"
@@ -337,6 +337,7 @@
     "tests/e2e/assistant-ai.spec.js",
     "tests/e2e/cashflow-controls.spec.js",
     "tests/e2e/critical-flows.spec.js",
+    "tests/e2e/first-setup.spec.js",
     "tests/e2e/kpi-account-scope.spec.js",
     "tests/e2e/local-vendors.spec.js",
     "tests/e2e/mcp-consent.spec.js",
@@ -433,6 +434,7 @@
     "tests/ui/kpiViewContract.test.js",
     "tests/ui/legacyBusinessRulesContract.test.js",
     "tests/ui/legacyDomainLoader.test.js",
+    "tests/ui/legacySetupContract.test.js",
     "tests/ui/mcpServiceWorker.test.js",
     "tests/ui/moduleSizeBudgetsContract.test.js",
     "tests/ui/nutritionDomainContract.test.js",
@@ -487,6 +489,7 @@
     "tests/ui/kpiRangePickerContract.test.js",
     "tests/ui/kpiViewContract.test.js",
     "tests/ui/legacyBusinessRulesContract.test.js",
+    "tests/ui/legacySetupContract.test.js",
     "tests/ui/moduleSizeBudgetsContract.test.js",
     "tests/ui/nutritionDomainContract.test.js",
     "tests/ui/projectPageVisualContract.test.js",
@@ -524,6 +527,7 @@
     "tests/e2e/assistant-ai.spec.js",
     "tests/e2e/cashflow-controls.spec.js",
     "tests/e2e/critical-flows.spec.js",
+    "tests/e2e/first-setup.spec.js",
     "tests/e2e/kpi-account-scope.spec.js",
     "tests/e2e/local-vendors.spec.js",
     "tests/e2e/mcp-consent.spec.js",

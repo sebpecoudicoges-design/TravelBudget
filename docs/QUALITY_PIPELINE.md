@@ -136,3 +136,16 @@ Cinq scénarios exécutent le vrai coordinateur dans une VM avec chargement simu
 Sources web et documentation actualisées. Aucun changement SQL ou serveur. Aucun nouvel APK dans ce lot : le binaire 10.5.387 conserve l’ancien coordinateur ; la correction Android devra être embarquée lors d’une reconstruction ultérieure.
 
 Validation finale locale : 1 139 tests / 169 fichiers et 130 scénarios Chromium réussis, dont clair/sombre et 1440/390 px. Quality complète, documentation, build et budgets validés. Deux tests du coordinateur échouaient avant correction ; cinq passent après. Preuves : `.codex/releases/10.5.387/legacy-flow-quality.log` et `legacy-flow-e2e.log`. Publication web et distribution Android restent des états distincts.
+
+
+## Assistant initial et traduction des catégories — 3 novembre 2026
+
+L’ancienne déclaration de showFirstTimeWizardModal était remplacée dans le même script, avant tout appel : sa première implémentation est retirée. La fonction actuelle garde le nom public showFirstTimeWizardModal, son contenu, ses identifiants, gestionnaires et payload. Aucun appel externe au nom interne showFirstTimeWizardModalFintech identifié. Le helper upperCurrencyInput, sans appel, est aussi retiré. Un contrat interdit le retour de cette implémentation écrasée et du helper mort.
+
+Dans la référence budgétaire, la seconde clé Activites dupliquée devient Activités : le libellé accentué, effectivement fourni par posts, est désormais traduit en anglais. La variante sans accent et les libellés inconnus restent pris en charge. Le défaut anglais et la réaffectation sont reproduits par deux tests en échec avant correction.
+
+Les règles no-func-assign et no-dupe-keys sont désormais obligatoires sur les 57 scripts historiques (quinze règles ciblées). Les références globales et bindings inutilisés restent hors de ce périmètre. Quatre nouveaux scénarios navigateur exercent le véritable script avec un taux synthétique : dates invalides, saisie, FX, désactivation du cash, payload bancaire, annulation et réouverture en anglais, clair/sombre 1440/390. Aucun compte ni wallet créé en base.
+
+Sources web et page Projet actualisées ; aucun nouvel APK ni déploiement Supabase. La suppression du code mort et la traduction devront être intégrées à la prochaine reconstruction Android, ainsi que la correction précédente du coordinateur d’actualisation.
+
+Validation finale locale : quality complète réussie, 1 142 tests / 170 fichiers, 134 scénarios Chromium réussis, dont quatre nouveaux parcours de première configuration. Comparaison avant/après : corps de l’assistant actif identique hors helper sans appel. Boot legacy mesuré à 856 KiB, sous le plafond inchangé. Preuves : `.codex/releases/10.5.387/legacy-setup-quality.log`, `legacy-setup-targeted.log` et `legacy-setup-e2e.log`. Publication web et reconstruction Android distinctes.

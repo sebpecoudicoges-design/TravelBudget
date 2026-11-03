@@ -15,7 +15,9 @@
         "valid-typeof",
         "ban-unused-ignore",
         "ban-untagged-ignore",
-        "ban-unknown-rule-code"
+        "ban-unknown-rule-code",
+        "no-func-assign",
+        "no-dupe-keys"
       ]
     }
   }

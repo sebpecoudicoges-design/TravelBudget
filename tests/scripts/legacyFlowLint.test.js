@@ -12,9 +12,9 @@ function fixture(code) {
   fs.writeFileSync(path.join(dir,'flow.js'),code); return root;
 }
 it('rejects a finally return and unreachable code in nested legacy scripts',()=>{
-  const result=checkLegacyFlowSemantics(fixture('function refresh(){try{return run();}finally{return queued();}} function dead(){return; run();}'));
+  const result=checkLegacyFlowSemantics(fixture('function refresh(){try{return run();}finally{return queued();}} function dead(){return; run();} function assigned(){} assigned=()=>{}; const labels={a:1,a:2};'));
   expect(result.ok).toBe(false);
-  expect(JSON.parse(result.output).diagnostics.map(d=>d.code)).toEqual(expect.arrayContaining(['no-unsafe-finally','no-unreachable']));
+  expect(JSON.parse(result.output).diagnostics.map(d=>d.code)).toEqual(expect.arrayContaining(['no-unsafe-finally','no-unreachable','no-func-assign','no-dupe-keys']));
 });
 it('accepts shared classic-script globals without running the script',()=>{
   const result=checkLegacyFlowSemantics(fixture('function render(){ return renderAll(state); } throw new Error("never run");'));

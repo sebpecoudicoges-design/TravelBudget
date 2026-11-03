@@ -1151,7 +1151,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         Repas: rt('Repas', 'Food'),
         Transport: rt('Transport', 'Transport'),
         Activites: rt('Activites', 'Activities'),
-        'Activites': rt('Activites', 'Activities')
+        'Activités': rt('Activités', 'Activities')
       })[label] || label;
       wrap.innerHTML = window.TBSettingsView?.renderSettingsPeriodReference?.({
         sourceLabel,

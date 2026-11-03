@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `3ebce15c39050008c5cf7120e12231277752905c`
-> Empreinte du snapshot : `45750b8ed7118dc97093fd756c4f30e2d2e6b3d0a488d77bf75b1ca87cbdc363`
-> Généré le : `2026-11-03T02:04:26.036Z`
+> Commit analysé : `4025536dad1efe545d91bccf15b0b0eeb2a1c0dd`
+> Empreinte du snapshot : `b628c82c70e940b045d2b98daab870f69766bf53aadbae7b5c324f3c94ecee7b`
+> Généré le : `2026-11-03T02:15:46.983Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 182 |
+| Fichiers de tests | 184 |
 | Migrations Supabase | 170 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -334,6 +334,7 @@ Modules :
 - `tests/ui/kpiRangePickerContract.test.js`
 - `tests/ui/kpiViewContract.test.js`
 - `tests/ui/legacyBusinessRulesContract.test.js`
+- `tests/ui/legacySetupContract.test.js`
 - `tests/ui/moduleSizeBudgetsContract.test.js`
 - `tests/ui/nutritionDomainContract.test.js`
 - `tests/ui/projectPageVisualContract.test.js`
@@ -372,6 +373,7 @@ Modules :
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/cashflow-controls.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/first-setup.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
@@ -437,6 +439,7 @@ Modules :
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/cashflow-controls.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/first-setup.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
@@ -533,6 +536,7 @@ Modules :
 - `tests/ui/kpiViewContract.test.js`
 - `tests/ui/legacyBusinessRulesContract.test.js`
 - `tests/ui/legacyDomainLoader.test.js`
+- `tests/ui/legacySetupContract.test.js`
 - `tests/ui/mcpServiceWorker.test.js`
 - `tests/ui/moduleSizeBudgetsContract.test.js`
 - `tests/ui/nutritionDomainContract.test.js`
