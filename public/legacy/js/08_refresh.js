@@ -358,19 +358,32 @@ async function refreshFromServer(opts = {}) {
   _tbApplyBusyState();
 
   _refreshPromise = (async () => {
+    let failed = false;
+    let failure;
+    let rerun = false;
     try {
       await _runRefreshFromServer(opts);
+    } catch (error) {
+      failed = true;
+      failure = error;
     } finally {
       _refreshInFlight = false;
       _tbApplyBusyState();
-      const rerun = _refreshPending;
+      rerun = _refreshPending;
       _refreshPending = false;
       _refreshPromise = null;
-      if (rerun) {
-        _tbRefreshLog("refreshFromServer:rerun");
-        return refreshFromServer(opts);
+    }
+    // Complete the queued pass without replacing the first attempt's failure.
+    if (rerun) {
+      _tbRefreshLog("refreshFromServer:rerun");
+      try {
+        await refreshFromServer(opts);
+      } catch (error) {
+        if (failed) throw new AggregateError([failure, error], "Refresh attempts failed");
+        throw error;
       }
     }
+    if (failed) throw failure;
   })();
 
   return _refreshPromise;

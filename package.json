@@ -18,7 +18,7 @@
     "links:check": "node scripts/check-public-links.mjs",
     "perf:budget": "node scripts/check-module-budgets.mjs",
     "lint:syntax": "node scripts/check-js-syntax.mjs",
-    "quality": "npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm run lint:server && npm run lint:core && npm run lint:src && npm test && npm run docs:check && npm run build && npm run perf:budget",
+    "quality": "npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm run lint:server && npm run lint:core && npm run lint:src && npm run lint:legacy-flow && npm test && npm run docs:check && npm run build && npm run perf:budget",
     "lint:inline": "node scripts/check-inline-syntax.mjs",
     "lint:edge": "node scripts/check-edge-types.mjs",
     "lint:db": "node scripts/lint_db_strings.cjs",
@@ -35,7 +35,8 @@
     "lint:data": "node scripts/check-data-semantics.mjs",
     "lint:features": "node scripts/check-feature-semantics.mjs",
     "lint:src": "node scripts/check-source-semantics.mjs",
-    "lint:server": "node scripts/check-server-semantics.mjs"
+    "lint:server": "node scripts/check-server-semantics.mjs",
+    "lint:legacy-flow": "node scripts/check-legacy-flow-semantics.mjs"
   },
   "devDependencies": {
     "@capacitor/android": "8.5.3",

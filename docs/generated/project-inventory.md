@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `b3a91b1a92192b8abbe097c84b0b2e6539d2068c`
-> Empreinte du snapshot : `8bedeecbf62a15b4afe585076322d7eb3a08b69ba332d23260e1c5d8bd3ab058`
-> Généré le : `2026-11-03T01:50:10.838Z`
+> Commit analysé : `3ebce15c39050008c5cf7120e12231277752905c`
+> Empreinte du snapshot : `45750b8ed7118dc97093fd756c4f30e2d2e6b3d0a488d77bf75b1ca87cbdc363`
+> Généré le : `2026-11-03T02:04:26.036Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 180 |
+| Fichiers de tests | 182 |
 | Migrations Supabase | 170 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -40,7 +40,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `links:check` | `node scripts/check-public-links.mjs` |
 | `perf:budget` | `node scripts/check-module-budgets.mjs` |
 | `lint:syntax` | `node scripts/check-js-syntax.mjs` |
-| `quality` | `npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm run lint:server && npm run lint:core && npm run lint:src && npm test && npm run docs:check && npm run build && npm run perf:budget` |
+| `quality` | `npm run lint:syntax && npm run lint:inline && npm run lint:edge && npm run lint:server && npm run lint:core && npm run lint:src && npm run lint:legacy-flow && npm test && npm run docs:check && npm run build && npm run perf:budget` |
 | `lint:inline` | `node scripts/check-inline-syntax.mjs` |
 | `lint:edge` | `node scripts/check-edge-types.mjs` |
 | `lint:db` | `node scripts/lint_db_strings.cjs` |
@@ -58,6 +58,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `lint:features` | `node scripts/check-feature-semantics.mjs` |
 | `lint:src` | `node scripts/check-source-semantics.mjs` |
 | `lint:server` | `node scripts/check-server-semantics.mjs` |
+| `lint:legacy-flow` | `node scripts/check-legacy-flow-semantics.mjs` |
 
 ## Écrans déclarés dans index.html
 
@@ -401,6 +402,7 @@ Modules :
 - `tests/core/nutritionRules.test.js`
 - `tests/core/prepaidProjection.test.js`
 - `tests/core/recurringRules.test.js`
+- `tests/core/refreshQueue.test.js`
 - `tests/core/retryableLoader.test.js`
 - `tests/core/sportLibraryRules.test.js`
 - `tests/core/sportRules.test.js`
@@ -503,6 +505,7 @@ Modules :
 - `tests/scripts/entryManifest.test.js`
 - `tests/scripts/featureSemanticLint.test.js`
 - `tests/scripts/inlineSyntax.test.js`
+- `tests/scripts/legacyFlowLint.test.js`
 - `tests/scripts/serverSemanticLint.test.js`
 - `tests/scripts/sourceSemanticLint.test.js`
 - `tests/ui/accountingViewContract.test.js`
