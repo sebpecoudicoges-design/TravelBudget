@@ -31,6 +31,8 @@ Ce point complète le rapport du 10 octobre sans remplacer ses preuves historiqu
 
 ## Prochaine séquence
 
+Demande fonctionnelle différée : [connexion Google Agenda](BACKLOG.md#google-agenda). Elle est enregistrée pour plus tard et ne remplace pas les priorités de correction ci-dessous.
+
 Le correctif F5 a passé les contrôles locaux et les six tests navigateur ciblés (détails dans `docs/QUALITY_PIPELINE.md`). Traiter maintenant F4 pour que toute sauvegarde annoncée corresponde à une copie durable ou à un échec récupérable. Ensuite ouvrir un lot SQL borné et mesuré (F11, avec les invariants F3/F6/F7), en conservant les contrôles d’isolation. Éviter de prolonger indéfiniment le nettoyage stylistique au détriment des risques de perte de données.
 
 Les alertes npm de la livraison du 3 novembre restent un chantier séparé : 0 critique, 4 élevées, 8 modérées à cette date. Aucun pourcentage global de clôture n’est attribué : plusieurs constats ont des critères de validation encore ouverts.

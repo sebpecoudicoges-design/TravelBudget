@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `d27e343536f6df39a3867f8994631b648ca51311`
-> Empreinte du snapshot : `3e1038c47860c0511c61ed7fd5888ae0f43e80dfcecb29039cc3dceb72c5ec77`
-> Généré le : `2026-11-04T05:51:24.800Z`
+> Commit analysé : `c48e446e68951b1e0d96da01bfe52bf7968e13ca`
+> Empreinte du snapshot : `de5116e68e5dfb16c5fa452ad0e26e9a20ca3632a07fd4a6141a6ed709027319`
+> Généré le : `2026-11-04T05:54:12.782Z`
 
 # Inventaire du projet TravelBudget
 
@@ -784,6 +784,7 @@ Modules :
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`
 - `docs/AUDIT_STATUS_2026_11_04.md`
+- `docs/BACKLOG.md`
 - `docs/BRIDGE_RECOVERY_10_5_385.md`
 - `docs/CASHFLOW_CPU_10_5_381.md`
 - `docs/CASHFLOW_QUEUE_10_5_382.md`
