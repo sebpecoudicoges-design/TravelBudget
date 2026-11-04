@@ -509,7 +509,7 @@
   function saveLocalMeals(rows) {
     const repo = repository();
     if (typeof repo.saveLocalNutritionRows === "function") return repo.saveLocalNutritionRows({ storage: localStorage, key: localMealKey(), rows });
-    try { localStorage.setItem(localMealKey(), JSON.stringify((rows || []).slice(0, 200))); } catch (_) {}
+    try { localStorage.setItem(localMealKey(), JSON.stringify(rows || [])); } catch (_) {}
     return false;
   }
   function localNutritionRowKey(row, index) {

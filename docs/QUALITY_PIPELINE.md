@@ -165,3 +165,7 @@ Le build ajoute environ 0,7 KiB au JS initial pour les gardes de révision/tenta
 
 
 Validation finale locale : quality complète réussie, 1 153 tests / 171 fichiers et 137 scénarios Chromium réussis, dont trois nouveaux parcours de persistance après rechargement. JS initial 277,6 / 278 KiB et total 860,4 / 861 KiB. Preuves : `.codex/releases/10.5.387/queue-quality.log`, `queue-targeted-e2e.log` et `queue-e2e.log`. Publication web non vérifiée ; reconstruction et validation Android restantes.
+
+4 novembre 2026 — F5 : suppression de la troncature à 200 repas en attente dans le repository et le secours legacy. Le paramètre limit sans usage appelant est retiré ; limite du cache aliments conservée. Deux échecs reproduits avant correction ; trois tests couvrent 201/5 000 entrées, édition, suppression et secours legacy. Deux scénarios Chromium vérifient le rechargement réel localStorage ; quatre scénarios de page Projet/Android réussissent en clair/sombre 1440/390.
+
+Validation : contrôles syntaxiques/types/sémantiques réussis ; 1 159 tests réussis sur 1 160, puis test d’outillage en timeout validé par relance isolée (deux tests réussis). Docs, build et budgets validés sans hausse de plafond. Preuves : .codex/releases/10.5.388/nutrition-quality-retry.log, nutrition-syntax-retry.log, nutrition-build.log et nutrition-e2e.log. La première campagne interrompue reste archivée, sans être comptée comme réussie. Quota saturé et faux succès de persistance restent ouverts sous F4. APK 10.5.388 inchangé ; ce lot doit être embarqué dans une prochaine reconstruction.

@@ -52,8 +52,9 @@ export function loadLocalNutritionRows({ storage, key }) {
   return Array.isArray(rows) ? rows : [];
 }
 
-export function saveLocalNutritionRows({ storage, key, rows, limit = 200 }) {
-  return writeJson(storage, key, (rows || []).slice(0, limit));
+export function saveLocalNutritionRows({ storage, key, rows }) {
+  // These are pending writes, not disposable food-cache entries.
+  return writeJson(storage, key, rows || []);
 }
 
 export function localNutritionRowKey(row, index = 0) {

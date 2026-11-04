@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `ea6f4a03c160af2829b4c1d2d069241792f7a5dd`
-> Empreinte du snapshot : `d2ccba4fa4a4782a34c1697ea208429d41891c8c78205c863b3d5c67cd4f708b`
-> Généré le : `2026-11-03T07:47:10.193Z`
+> Commit analysé : `d27e343536f6df39a3867f8994631b648ca51311`
+> Empreinte du snapshot : `3e1038c47860c0511c61ed7fd5888ae0f43e80dfcecb29039cc3dceb72c5ec77`
+> Généré le : `2026-11-04T05:51:24.800Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 186 |
+| Fichiers de tests | 187 |
 | Migrations Supabase | 170 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -377,6 +377,7 @@ Modules :
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
+- `tests/e2e/nutrition-pending-persistence.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
@@ -445,6 +446,7 @@ Modules :
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
+- `tests/e2e/nutrition-pending-persistence.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
@@ -781,6 +783,7 @@ Modules :
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`
+- `docs/AUDIT_STATUS_2026_11_04.md`
 - `docs/BRIDGE_RECOVERY_10_5_385.md`
 - `docs/CASHFLOW_CPU_10_5_381.md`
 - `docs/CASHFLOW_QUEUE_10_5_382.md`

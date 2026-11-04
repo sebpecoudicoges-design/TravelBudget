@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import vm from 'node:vm';
 import {
   createNutritionRepository,
   isDuplicateNutritionError,
@@ -43,6 +45,28 @@ function clientWith(handler) {
 }
 
 describe('nutrition repository', () => {
+  it('preserves pending meals through the legacy fallback when the repository is unavailable', () => {
+    const source = fs.readFileSync('public/legacy/js/48_nutrition_ui.js', 'utf8');
+    const fallback = source.slice(source.indexOf('  function saveLocalMeals(rows)'), source.indexOf('  function localNutritionRowKey('));
+    const storage = memoryStorage();
+    const rows = Array.from({ length: 5000 }, (_, index) => ({ syncId: `pending-${index}` }));
+    vm.runInNewContext(`${fallback}\nsaveLocalMeals(rows);`, { repository: () => ({}), localMealKey: () => 'pending', localStorage: storage, rows });
+    expect(JSON.parse(storage.getItem('pending'))).toEqual(rows);
+  });
+  it.each([201, 5000])('preserves all %i pending meals through reload, edit and discard', count => {
+    const storage = memoryStorage();
+    const rows = Array.from({ length: count }, (_, index) => ({ syncId: `pending-${index}`, meal: { label: `Meal ${index}` } }));
+    saveLocalNutritionRowsOnce({ storage, key: 'pending', rows });
+    const repository = createNutritionRepository(null);
+    expect(repository.loadLocalNutritionRows({ storage, key: 'pending' })).toEqual(rows);
+    saveLocalNutritionRowOnce({ storage, key: 'pending', row: { ...rows[count - 1], syncError: 'retry' } });
+    const reloaded = repository.loadLocalNutritionRows({ storage, key: 'pending' });
+    expect(reloaded).toHaveLength(count);
+    expect(reloaded[0]).toMatchObject({ syncId: `pending-${count - 1}`, syncError: 'retry' });
+    repository.discardLocalNutritionRow({ storage, key: 'pending', rowKey: 'pending-0' });
+    expect(repository.loadLocalNutritionRows({ storage, key: 'pending' })).toHaveLength(count - 1);
+    expect(repository.loadLocalNutritionRows({ storage, key: 'pending' }).some(row => row.syncId === 'pending-0')).toBe(false);
+  });
   it('stores cached foods and local rows with limits and stable keys', () => {
     const storage = memoryStorage();
     const repository = createNutritionRepository(null);

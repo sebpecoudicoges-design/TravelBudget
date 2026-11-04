@@ -2,6 +2,8 @@
 
 Le rapport `AUDIT_PROJET.md` reste le constat de référence daté ; les corrections sont suivies ici sans réécrire les preuves initiales.
 
+État consolidé au 4 novembre : voir `docs/AUDIT_STATUS_2026_11_04.md`, avec les quinze constats, limites de validation et prochaine séquence.
+
 1. **Capacitor Android — corrigé et APK distribué** : Android 8.5.3, CLI 8.5.3 et Core 8.5.0 verrouillés ; APK 10.5.373 reconstruit et publié, signature et empreinte distante vérifiées. 935 tests et 4 E2E ciblés réussis. Push `532710e` et page Projet/Atlas publics vérifiés le 11 octobre 2026. Validation sur téléphone restante (aucun appareil connecté). Preuves : `docs/ANDROID_SECURITY_10_5_373.md`.
 2. **Architecture et qualité — en cours** : premier lot sur la couverture syntaxique, la chaîne de validation GitHub, les arrêts sur erreur des commandes Android et la reproductibilité de l'Atlas. Voir `docs/QUALITY_PIPELINE.md`. Dépendances, mesure du démarrage et extraction progressive restantes.
 3. **Base de données — à venir** : autorisations des RPC, politiques et index, traitement différé et vérifications en base.
@@ -133,3 +135,7 @@ Validation finale locale : quality complète réussie, 1 153 tests / 171 fichier
 - 3 novembre 2026 — F2, complément : double démarrage pendant la vérification réseau bloqué ; arrêt au changement de compte avant lecture de la file ; libération du verrou du compte initial. Quatre régressions reproduites, vingt tests ciblés réussis. Ancienne affectation tardive de syncing supprimée après vérification des appels. Version Android 10.5.388 reconstruite et publiée, détails dans docs/ANDROID_10_5_388.md. Concurrence transactionnelle entre onglets et renouvellement du bail restent ouverts.
 
 Validation et distribution : voir docs/ANDROID_10_5_388.md. APK vérifié (signature, identité et sources), téléchargé depuis Storage avec SHA-256 identique. Journal bancaire : fermeture du dialogue désormais bloquante pour le pointage groupé, huit scénarios ciblés réussis après correction. Validation téléphone restante.
+
+4 novembre 2026 — F5 : suppression de la troncature à 200 repas en attente dans le repository et le secours legacy. Le paramètre limit sans usage appelant est retiré ; limite du cache aliments conservée. Deux échecs reproduits avant correction ; trois tests couvrent 201/5 000 entrées, édition, suppression et secours legacy. Deux scénarios Chromium vérifient le rechargement réel localStorage ; quatre scénarios de page Projet/Android réussissent en clair/sombre 1440/390.
+
+Validation : contrôles syntaxiques/types/sémantiques réussis ; 1 159 tests réussis sur 1 160, puis test d’outillage en timeout validé par relance isolée (deux tests réussis). Docs, build et budgets validés sans hausse de plafond. Preuves : .codex/releases/10.5.388/nutrition-quality-retry.log, nutrition-syntax-retry.log, nutrition-build.log et nutrition-e2e.log. La première campagne interrompue reste archivée, sans être comptée comme réussie. Quota saturé et faux succès de persistance restent ouverts sous F4. APK 10.5.388 inchangé ; ce lot doit être embarqué dans une prochaine reconstruction.
