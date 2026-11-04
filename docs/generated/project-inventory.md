@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `c48e446e68951b1e0d96da01bfe52bf7968e13ca`
-> Empreinte du snapshot : `de5116e68e5dfb16c5fa452ad0e26e9a20ca3632a07fd4a6141a6ed709027319`
-> Généré le : `2026-11-04T05:54:12.782Z`
+> Commit analysé : `c4f096c09355ff939648c9add201a6393be5a6cd`
+> Empreinte du snapshot : `98d03f9e89b6004128b79f883786e7dda5403390dc531840aff5218fa7c6f023`
+> Généré le : `2026-11-04T06:06:47.951Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 187 |
+| Fichiers de tests | 189 |
 | Migrations Supabase | 170 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -378,6 +378,7 @@ Modules :
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
 - `tests/e2e/nutrition-pending-persistence.spec.js`
+- `tests/e2e/nutrition-storage-recovery.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
@@ -426,6 +427,7 @@ Modules :
 - `tests/data/mcpFinanceRead.test.js`
 - `tests/data/mutationQueueConcurrency.test.js`
 - `tests/data/mutationQueueStore.test.js`
+- `tests/data/nutritionPersistenceFailure.test.js`
 - `tests/data/nutritionRepository.test.js`
 - `tests/data/recurringBudgetPeriodMigration.test.js`
 - `tests/data/recurringRuleReconciliationMigration.test.js`
@@ -447,6 +449,7 @@ Modules :
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
 - `tests/e2e/nutrition-pending-persistence.spec.js`
+- `tests/e2e/nutrition-storage-recovery.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-journal.spec.js`

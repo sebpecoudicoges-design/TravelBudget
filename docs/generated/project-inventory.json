@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "c48e446e68951b1e0d96da01bfe52bf7968e13ca",
-  "snapshotFingerprint": "de5116e68e5dfb16c5fa452ad0e26e9a20ca3632a07fd4a6141a6ed709027319",
-  "generatedAt": "2026-11-04T05:54:12.782Z",
+  "commit": "c4f096c09355ff939648c9add201a6393be5a6cd",
+  "snapshotFingerprint": "98d03f9e89b6004128b79f883786e7dda5403390dc531840aff5218fa7c6f023",
+  "generatedAt": "2026-11-04T06:06:47.951Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.388"
@@ -322,6 +322,7 @@
     "tests/data/mcpFinanceRead.test.js",
     "tests/data/mutationQueueConcurrency.test.js",
     "tests/data/mutationQueueStore.test.js",
+    "tests/data/nutritionPersistenceFailure.test.js",
     "tests/data/nutritionRepository.test.js",
     "tests/data/recurringBudgetPeriodMigration.test.js",
     "tests/data/recurringRuleReconciliationMigration.test.js",
@@ -343,6 +344,7 @@
     "tests/e2e/local-vendors.spec.js",
     "tests/e2e/mcp-consent.spec.js",
     "tests/e2e/nutrition-pending-persistence.spec.js",
+    "tests/e2e/nutrition-storage-recovery.spec.js",
     "tests/e2e/offline-queue-revision.spec.js",
     "tests/e2e/trip-analysis.spec.js",
     "tests/e2e/wallet-journal.spec.js",
@@ -535,6 +537,7 @@
     "tests/e2e/local-vendors.spec.js",
     "tests/e2e/mcp-consent.spec.js",
     "tests/e2e/nutrition-pending-persistence.spec.js",
+    "tests/e2e/nutrition-storage-recovery.spec.js",
     "tests/e2e/offline-queue-revision.spec.js",
     "tests/e2e/trip-analysis.spec.js",
     "tests/e2e/wallet-journal.spec.js",

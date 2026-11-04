@@ -201,7 +201,7 @@
     },
     {
       "name": "nutrition-domain",
-      "maxKiB": 235,
+      "maxKiB": 238,
       "paths": [
         "public/legacy/js/48_nutrition_ui.js",
         "src/core/nutritionRules.js",

@@ -28,9 +28,10 @@ function writeJson(storage, key, value) {
   try {
     const raw = JSON.stringify(value);
     if (typeof window !== 'undefined' && typeof window.tbSafeLocalStorageSet === 'function' && storage === window.localStorage) {
-      window.tbSafeLocalStorageSet(key, raw);
+      return window.tbSafeLocalStorageSet(key, raw)?.ok === true;
     } else {
-      storage?.setItem?.(key, raw);
+      if (typeof storage?.setItem !== 'function') return false;
+      storage.setItem(key, raw);
     }
     return true;
   } catch (_) {
@@ -165,7 +166,12 @@ export function saveLocalNutritionRowsOnce({ storage, key, rows }) {
   const current = loadLocalNutritionRows({ storage, key })
     .filter((existing, index) => !incomingKeys.has(localNutritionRowKey(existing, index)));
   const next = [...incoming, ...current];
-  saveLocalNutritionRows({ storage, key, rows: next });
+  if (!saveLocalNutritionRows({ storage, key, rows: next })) {
+    const error = new Error('Nutrition could not be saved on this device.');
+    error.code = 'NUTRITION_STORAGE_FAILED';
+    error.pendingRows = next;
+    throw error;
+  }
   return next;
 }
 

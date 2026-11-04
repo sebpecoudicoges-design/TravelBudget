@@ -16,7 +16,7 @@ Ce point complète le rapport du 10 octobre sans remplacer ses preuves historiqu
 | F1 — Capacitor vulnérable | Runtime remplacé, APK distribué. Essais appareil réels restants. |
 | F2 — Perte d’une modification pendant synchronisation | Révisions et tentatives protégées ; doubles démarrages et changement de compte traités. Stockage transactionnel entre onglets et renouvellement du verrou restants. |
 | F3 — Réintégration dans le budget | Clôture non démontrée. Vérifier la transition SQL et les distinctions dépense/avance/quote-part avant correction. |
-| F4 — Fausse sauvegarde Nutrition | Ouvert : le résultat du stockage sécurisé peut encore être ignoré. Propagation de l’échec et récupération/export nécessaires. |
+| F4 — Fausse sauvegarde Nutrition | Partiel : résultat du stockage sécurisé respecté et ajouts de repas bloqués sur échec, avec export/reprise en mémoire isolés par compte. Modifications, suppressions et sommeil encore à sécuriser. |
 | F5 — Troncature à 200 repas | Correctif web : suppression de la limite des écritures en attente, y compris le secours legacy. Tests de 201 et 5 000 entrées avec rechargement. L’APK 10.5.388 publié ne contient pas ce nouveau lot ; quota plein couvert séparément par F4. |
 | F6 — Sport partiellement synchronisé | Ouvert : rendre la sauvegarde complète atomique ou reprendre tous les enfants avant acquittement. |
 | F7 — Collections et suppression Trip | Remboursements ciblés corrigés. Pagination des collections et suppression complète transactionnelle encore à traiter. |
@@ -33,6 +33,6 @@ Ce point complète le rapport du 10 octobre sans remplacer ses preuves historiqu
 
 Demande fonctionnelle différée : [connexion Google Agenda](BACKLOG.md#google-agenda). Elle est enregistrée pour plus tard et ne remplace pas les priorités de correction ci-dessous.
 
-Le correctif F5 a passé les contrôles locaux et les six tests navigateur ciblés (détails dans `docs/QUALITY_PIPELINE.md`). Traiter maintenant F4 pour que toute sauvegarde annoncée corresponde à une copie durable ou à un échec récupérable. Ensuite ouvrir un lot SQL borné et mesuré (F11, avec les invariants F3/F6/F7), en conservant les contrôles d’isolation. Éviter de prolonger indéfiniment le nettoyage stylistique au détriment des risques de perte de données.
+Le correctif F5 a passé les contrôles locaux et les six tests navigateur ciblés (détails dans `docs/QUALITY_PIPELINE.md`). Poursuivre F4 sur les modifications, suppressions et le sommeil après la protection des ajouts de repas. Ensuite ouvrir un lot SQL borné et mesuré (F11, avec les invariants F3/F6/F7), en conservant les contrôles d’isolation. Éviter de prolonger indéfiniment le nettoyage stylistique au détriment des risques de perte de données.
 
 Les alertes npm de la livraison du 3 novembre restent un chantier séparé : 0 critique, 4 élevées, 8 modérées à cette date. Aucun pourcentage global de clôture n’est attribué : plusieurs constats ont des critères de validation encore ouverts.

@@ -1623,3 +1623,7 @@ body.theme-dark .tb-subscription-status--info{color:#7dd3fc}body.theme-dark .tb-
 .tb-assist-msg{overflow-wrap:anywhere}
 body.theme-dark .tb-assist-ai-controls{background:var(--panel);color:var(--text);border-color:var(--border)}
 body.theme-dark .tb-assist-ai-controls small,body.theme-dark #tb-assist-status{color:var(--muted)}
+
+.tb-nutrition-recovery { display: flex; flex-wrap: wrap; gap: 12px; }
+.tb-nutrition-recovery p { flex-basis: 100%; margin: 0; }
+body.theme-dark .tb-nutrition-recovery { --tb-surface: var(--panel); --tb-ink: var(--text); --tb-line: var(--border); }
