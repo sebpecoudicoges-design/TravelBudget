@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `3692011c0c8c65c9edac470eb950f7b7e0d353e7`
-> Empreinte du snapshot : `e9c796d1e741f75c7c73963ffe0e29d1ce3b4d1cbb1b0c76364b37cf0b4e28ad`
-> Généré le : `2026-11-05T06:37:44.570Z`
+> Commit analysé : `2888effcb2b87035bd133ef7d03609811a6343f1`
+> Empreinte du snapshot : `ad0cb8c440dc8009fa00713831b93430b7f59b0dbbf13c71ce6f22dd2896f5bf`
+> Généré le : `2026-11-05T08:34:37.680Z`
 
 # Inventaire du projet TravelBudget
 
@@ -18,7 +18,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules data | 12 |
 | Modules features | 64 |
 | Fichiers de tests | 190 |
-| Migrations Supabase | 171 |
+| Migrations Supabase | 172 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
 
@@ -770,6 +770,7 @@ Modules :
 - `supabase/migrations/20261101185237_mcp_recurring_status_read.sql`
 - `supabase/migrations/20261101190037_mcp_documents_health_sharing.sql`
 - `supabase/migrations/20261105063200_remove_duplicate_transaction_wallet_index.sql`
+- `supabase/migrations/20261105083223_restore_ordinary_transaction_budget_impact.sql`
 
 ## Android et budgets de modules
 

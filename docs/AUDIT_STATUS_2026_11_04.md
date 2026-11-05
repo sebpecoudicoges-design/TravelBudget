@@ -15,7 +15,7 @@ Ce point complète le rapport du 10 octobre sans remplacer ses preuves historiqu
 |---|---|
 | F1 — Capacitor vulnérable | Runtime remplacé, APK distribué. Essais appareil réels restants. |
 | F2 — Perte d’une modification pendant synchronisation | Révisions et tentatives protégées ; doubles démarrages et changement de compte traités. Stockage transactionnel entre onglets et renouvellement du verrou restants. |
-| F3 — Réintégration dans le budget | Défaut confirmé dans la fonction déployée le 5 novembre. Tester les distinctions dépense/avance/quote-part avant correction. |
+| F3 — Réintégration dans le budget | Partiel : correction serveur appliquée le 5 novembre pour dépenses/entrées ordinaires, aller-retour SQL testé. Avances, quotes-parts et autres écritures source exclues de la réactivation automatique ; parcours Trip et trois vues sur compte réel restent à valider. |
 | F4 — Fausse sauvegarde Nutrition | Partiel : résultat du stockage sécurisé respecté et ajouts de repas bloqués sur échec, avec export/reprise en mémoire isolés par compte. Complément du 5 novembre : modifications, suppressions, sommeil et acquittements locaux vérifiés ; champs conservés et optimisme annulé sur échec. Validation quota réel/appareil et concurrence pendant la synchronisation restantes. |
 | F5 — Troncature à 200 repas | Correctif web : suppression de la limite des écritures en attente, y compris le secours legacy. Tests de 201 et 5 000 entrées avec rechargement. L’APK 10.5.388 publié ne contient pas ce nouveau lot ; quota plein couvert séparément par F4. |
 | F6 — Sport partiellement synchronisé | Ouvert : rendre la sauvegarde complète atomique ou reprendre tous les enfants avant acquittement. |

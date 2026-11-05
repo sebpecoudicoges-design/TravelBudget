@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "3692011c0c8c65c9edac470eb950f7b7e0d353e7",
-  "snapshotFingerprint": "e9c796d1e741f75c7c73963ffe0e29d1ce3b4d1cbb1b0c76364b37cf0b4e28ad",
-  "generatedAt": "2026-11-05T06:37:44.570Z",
+  "commit": "2888effcb2b87035bd133ef7d03609811a6343f1",
+  "snapshotFingerprint": "ad0cb8c440dc8009fa00713831b93430b7f59b0dbbf13c71ce6f22dd2896f5bf",
+  "generatedAt": "2026-11-05T08:34:37.680Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.388"
@@ -716,7 +716,8 @@
     "supabase/migrations/20261101092559_mcp_trip_policy_bound_helpers.sql",
     "supabase/migrations/20261101185237_mcp_recurring_status_read.sql",
     "supabase/migrations/20261101190037_mcp_documents_health_sharing.sql",
-    "supabase/migrations/20261105063200_remove_duplicate_transaction_wallet_index.sql"
+    "supabase/migrations/20261105063200_remove_duplicate_transaction_wallet_index.sql",
+    "supabase/migrations/20261105083223_restore_ordinary_transaction_budget_impact.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",
