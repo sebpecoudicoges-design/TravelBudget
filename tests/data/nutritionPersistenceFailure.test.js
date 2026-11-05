@@ -1,7 +1,40 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { saveLocalNutritionRows, saveLocalNutritionRowsOnce } from '../../src/data/nutritionRepository.js';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import { saveLocalNutritionRows, saveLocalNutritionRowsOnce, discardLocalNutritionRow, discardAllLocalNutritionRows, mergeSleepRows } from '../../src/data/nutritionRepository.js';
 
 afterEach(() => vi.unstubAllGlobals());
+it('keeps sync incomplete when the local acknowledgement cannot be persisted', async () => {
+  const source = fs.readFileSync('public/legacy/js/48_nutrition_ui.js', 'utf8');
+  const guard = source.slice(source.indexOf('  function requireNutritionWrite('), source.indexOf('  function localNutritionRowKey('));
+  const sync = source.slice(source.indexOf('  async function syncLocalNutritionRows('), source.indexOf('  function loadFoodKeys('));
+  const discard = vi.fn();
+  const CACHE = {};
+  const context = vm.createContext({ CACHE, window: {}, navigator: { onLine: true }, localStorage: {}, console,
+    txt: fr => fr, n: Number, client: () => ({}), uid: () => 'u', localMealKey: () => 'k',
+    loadLocalMeals: () => [{ syncId: 'stable', meal: {} }], nutritionSyncId: row => row.syncId,
+    localDateISO: () => '2026-11-04', activeTravelId: () => 'trip', table: value => value,
+    repository: () => ({ saveLocalNutritionRows: () => false, syncLocalRow: async () => {} }),
+    publishNutrition() {}, discardNutritionQueue: discard });
+  vm.runInContext(guard + sync, context);
+  await expect(vm.runInContext('syncLocalNutritionRows("manual")', context)).rejects.toMatchObject({ code: 'NUTRITION_STORAGE_FAILED' });
+  expect(discard).not.toHaveBeenCalled();
+  expect(CACHE).toMatchObject({ syncPhase: 'error', syncingLocal: false });
+});
+it.each(['one', 'all', 'sleep'])('refuses to acknowledge failed %s changes and preserves the stored value', action => {
+  const original = action === 'sleep' ? { '2026-11-03': { hours: 7 } } : [{ syncId: 'old' }];
+  let raw = JSON.stringify(original);
+  let blocked = true;
+  const storage = { getItem: () => raw, setItem: (_key, value) => { if (blocked) throw new Error('denied'); raw = value; } };
+  const update = () => action === 'one' ? discardLocalNutritionRow({ storage, key: 'k', rowKey: 'old' })
+    : action === 'all' ? discardAllLocalNutritionRows({ storage, key: 'k' })
+    : mergeSleepRows({ storage, key: 'k', rows: { '2026-11-03': { hours: 8 } } });
+  expect(update).toThrow();
+  expect(JSON.parse(raw)).toEqual(original);
+  blocked = false; update();
+  if (action === 'sleep') expect(JSON.parse(raw)['2026-11-03'].hours).toBe(8);
+  else expect(JSON.parse(raw)).toEqual([]);
+});
 it.each(['quota', 'denied', 'missing', 'safe-result'])('does not confirm a %s storage failure and retains the attempted payload', mode => {
   const existing = [{ syncId: 'old' }];
   const storage = { getItem: () => JSON.stringify(existing), setItem: vi.fn(() => {

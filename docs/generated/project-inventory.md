@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `c4f096c09355ff939648c9add201a6393be5a6cd`
-> Empreinte du snapshot : `98d03f9e89b6004128b79f883786e7dda5403390dc531840aff5218fa7c6f023`
-> Généré le : `2026-11-04T06:06:47.951Z`
+> Commit analysé : `d0ea26c2a581feb7ca47a229120feccf0044c37b`
+> Empreinte du snapshot : `a9410a46a5602d7cc9233021cb41057255d15d9c0cf30f1b7b5c16cc804a5e3b`
+> Généré le : `2026-11-05T06:23:52.454Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 189 |
+| Fichiers de tests | 190 |
 | Migrations Supabase | 170 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -377,6 +377,7 @@ Modules :
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
+- `tests/e2e/nutrition-edit-storage.spec.js`
 - `tests/e2e/nutrition-pending-persistence.spec.js`
 - `tests/e2e/nutrition-storage-recovery.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`
@@ -448,6 +449,7 @@ Modules :
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
+- `tests/e2e/nutrition-edit-storage.spec.js`
 - `tests/e2e/nutrition-pending-persistence.spec.js`
 - `tests/e2e/nutrition-storage-recovery.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`

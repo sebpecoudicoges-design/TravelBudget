@@ -506,11 +506,27 @@
     if (typeof repo.loadLocalNutritionRows === "function") return repo.loadLocalNutritionRows({ storage: localStorage, key: localMealKey() });
     try { const rows = JSON.parse(localStorage.getItem(localMealKey()) || "[]"); return Array.isArray(rows) ? rows : []; } catch (_) { return []; }
   }
+  function requireNutritionWrite(ok) {
+    if (ok) return true;
+    const error = new Error(txt("Enregistrement impossible sur cet appareil. La modification n’est pas confirmée : conserve la saisie et réessaie.", "Could not save on this device. The change is not confirmed: keep your input and retry."));
+    error.code = "NUTRITION_STORAGE_FAILED";
+    throw error;
+  }
+  function showNutritionWriteError(root, error) {
+    CACHE.error = error?.message || String(error);
+    root?.querySelector("[data-nutrition-write-error]")?.remove();
+    const message = document.createElement("p");
+    message.setAttribute("data-nutrition-write-error", "");
+    message.setAttribute("role", "alert");
+    message.textContent = CACHE.error;
+    root?.prepend(message);
+  }
   function saveLocalMeals(rows) {
     const repo = repository();
-    if (typeof repo.saveLocalNutritionRows === "function") return repo.saveLocalNutritionRows({ storage: localStorage, key: localMealKey(), rows });
-    try { localStorage.setItem(localMealKey(), JSON.stringify(rows || [])); return true; } catch (_) {}
-    return false;
+    if (typeof repo.saveLocalNutritionRows === "function") return requireNutritionWrite(repo.saveLocalNutritionRows({ storage: localStorage, key: localMealKey(), rows }));
+    let saved = false;
+    try { localStorage.setItem(localMealKey(), JSON.stringify(rows || [])); saved = true; } catch (_) {}
+    return requireNutritionWrite(saved);
   }
   function localNutritionRowKey(row, index) {
     const repo = repository();
@@ -805,11 +821,7 @@
       const incomingKeys = new Set(incoming.map((row, index) => localNutritionRowKey(row, index)));
       const current = loadLocalMeals().filter((row, index) => !incomingKeys.has(localNutritionRowKey(row, index)));
       const next = [...incoming, ...current];
-      if (!saveLocalMeals(next)) {
-        const error = new Error("Nutrition could not be saved on this device.");
-        error.code = "NUTRITION_STORAGE_FAILED";
-        throw error;
-      }
+      saveLocalMeals(next);
       return next;
     } catch (error) {
       if (error?.code === "NUTRITION_STORAGE_FAILED") {
@@ -947,6 +959,11 @@
       CACHE.syncPhase = remaining.length ? "pending" : "done";
       if (!remaining.length) discardNutritionQueue();
       return synced;
+    } catch (error) {
+      CACHE.error = error?.message || String(error);
+      CACHE.syncPhase = "error";
+      CACHE.syncStatus = CACHE.error;
+      throw error;
     } finally {
       CACHE.syncingLocal = false;
     }
@@ -1033,9 +1050,10 @@
   }
   function saveSleepRows(rows) {
     const repo = repository();
-    if (typeof repo.saveSleepRows === "function") return repo.saveSleepRows({ storage: localStorage, key: sleepKey(), rows });
-    try { localStorage.setItem(sleepKey(), JSON.stringify(rows || {})); } catch (_) {}
-    return false;
+    if (typeof repo.saveSleepRows === "function") return requireNutritionWrite(repo.saveSleepRows({ storage: localStorage, key: sleepKey(), rows }));
+    let saved = false;
+    try { localStorage.setItem(sleepKey(), JSON.stringify(rows || {})); saved = true; } catch (_) {}
+    return requireNutritionWrite(saved);
   }
   function mergeSleepRows(rows) {
     const repo = repository();
@@ -2030,21 +2048,28 @@
     const syncPending = root.querySelector("#nutrition-sync-pending");
     if (syncPending) syncPending.onclick = async () => {
       syncPending.disabled = true;
-      await syncLocalNutritionRows("manual", { forceOnline: true });
-      await loadNutrition({ force: true });
-      renderNutrition("sync-pending");
+      try {
+        await syncLocalNutritionRows("manual", { forceOnline: true });
+        await loadNutrition({ force: true });
+        renderNutrition("sync-pending");
+      } catch (error) { showNutritionWriteError(root, error); }
+      finally { syncPending.disabled = false; }
     };
     const clearPending = root.querySelector("#nutrition-clear-pending");
     if (clearPending) clearPending.onclick = async () => {
-      discardAllLocalNutritionRows();
-      await loadNutrition({ force: true });
-      renderNutrition("clear-pending");
+      try {
+        discardAllLocalNutritionRows();
+        await loadNutrition({ force: true });
+        renderNutrition("clear-pending");
+      } catch (error) { showNutritionWriteError(root, error); }
     };
     root.querySelectorAll("[data-nutrition-discard-local]").forEach(btn => {
       btn.onclick = async () => {
-        discardLocalNutritionRow(btn.getAttribute("data-nutrition-discard-local"));
-        await loadNutrition({ force: true });
-        renderNutrition("discard-local");
+        try {
+          discardLocalNutritionRow(btn.getAttribute("data-nutrition-discard-local"));
+          await loadNutrition({ force: true });
+          renderNutrition("discard-local");
+        } catch (error) { showNutritionWriteError(root, error); }
       };
     });
     const goalMode = root.querySelector("#nutrition-goal-mode");
@@ -2346,7 +2371,7 @@
     const localRow = makeLocalNutritionRow({ food, grams, nut, waterMl, mealType, syncId });
     let queuedLocalAddition = false;
     try {
-      if (c && uid() && CACHE.editingItemId) {
+      if (c && uid() && CACHE.editingItemId && !String(CACHE.editingItemId).startsWith("local_item_")) {
         const existing = CACHE.items.find(item => String(item.id || "") === String(CACHE.editingItemId));
         const meal = itemMeal(existing);
         if (meal?.id) {
@@ -2375,6 +2400,7 @@
         const edited = rows.map(row => {
           if (String(row.item?.id || "") !== String(CACHE.editingItemId)) return row;
           return {
+            ...row,
             meal: { ...(row.meal || {}), meal_date: selectedDateISO(), meal_type: mealType, label: food.name, water_ml: waterMl },
             item: { ...(row.item || {}), food_key: food.key, label: food.name, grams, kcal: nut.kcal, protein_g: nut.protein, carbs_g: nut.carbs, fat_g: nut.fat, fiber_g: nut.fiber },
           };
@@ -2387,6 +2413,7 @@
         publishNutrition("save-local");
         queuedLocalAddition = true;
       }
+      CACHE.error = "";
       if (!queuedLocalAddition) {
         try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
       }
@@ -2406,7 +2433,8 @@
           mergePendingNutritionRowsIntoCache();
         } catch (storageError) { CACHE.error = storageError?.message || String(storageError); }
       }
-      renderNutrition("save-error");
+      if (e?.code === "NUTRITION_STORAGE_FAILED") showNutritionWriteError(root, e);
+      else renderNutrition("save-error");
     } finally {
       CACHE.savingMeal = false;
       try { if (saveBtn) saveBtn.disabled = false; } catch (_) {}
@@ -2537,7 +2565,10 @@
     } else {
       delete rows[nightDay];
     }
-    saveSleepRows(rows);
+    try { saveSleepRows(rows); }
+    catch (error) { showNutritionWriteError(root, error); return; }
+    CACHE.error = "";
+    root?.querySelector("[data-nutrition-write-error]")?.remove();
     const c = client();
     if (c && uid()) {
       try {
@@ -2585,6 +2616,7 @@
     } catch (e) {
       if (removedItem) CACHE.items.unshift(removedItem);
       CACHE.error = e?.message || String(e);
+      publishNutrition("delete-error");
       renderNutrition("delete-error");
     }
   }

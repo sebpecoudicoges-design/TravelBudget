@@ -44,6 +44,14 @@ export function loadCachedFoods({ storage, key }) {
   return Array.isArray(rows) ? rows : [];
 }
 
+function requireLocalWrite(ok, pendingRows) {
+  if (ok) return;
+  const error = new Error('Nutrition could not be saved on this device.');
+  error.code = 'NUTRITION_STORAGE_FAILED';
+  if (pendingRows) error.pendingRows = pendingRows;
+  throw error;
+}
+
 export function saveCachedFoods({ storage, key, rows, limit = 500 }) {
   return writeJson(storage, key, (rows || []).slice(0, limit));
 }
@@ -67,13 +75,13 @@ export function discardLocalNutritionRow({ storage, key, rowKey }) {
   const wanted = String(rowKey || '');
   const rows = loadLocalNutritionRows({ storage, key });
   const next = rows.filter((row, index) => localNutritionRowKey(row, index) !== wanted);
-  saveLocalNutritionRows({ storage, key, rows: next });
+  requireLocalWrite(saveLocalNutritionRows({ storage, key, rows: next }));
   return { removed: rows.length - next.length, remaining: next };
 }
 
 export function discardAllLocalNutritionRows({ storage, key }) {
   const rows = loadLocalNutritionRows({ storage, key });
-  saveLocalNutritionRows({ storage, key, rows: [] });
+  requireLocalWrite(saveLocalNutritionRows({ storage, key, rows: [] }));
   return rows.length;
 }
 
@@ -166,12 +174,7 @@ export function saveLocalNutritionRowsOnce({ storage, key, rows }) {
   const current = loadLocalNutritionRows({ storage, key })
     .filter((existing, index) => !incomingKeys.has(localNutritionRowKey(existing, index)));
   const next = [...incoming, ...current];
-  if (!saveLocalNutritionRows({ storage, key, rows: next })) {
-    const error = new Error('Nutrition could not be saved on this device.');
-    error.code = 'NUTRITION_STORAGE_FAILED';
-    error.pendingRows = next;
-    throw error;
-  }
+  requireLocalWrite(saveLocalNutritionRows({ storage, key, rows: next }), next);
   return next;
 }
 
@@ -194,7 +197,7 @@ export function mergeSleepRows({ storage, key, rows, now = () => new Date() }) {
       updatedAt: row.updatedAt || row.updated_at || now().toISOString(),
     };
   });
-  saveSleepRows({ storage, key, rows: current });
+  requireLocalWrite(saveSleepRows({ storage, key, rows: current }));
   return current;
 }
 

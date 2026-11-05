@@ -47,7 +47,7 @@ function clientWith(handler) {
 describe('nutrition repository', () => {
   it('preserves pending meals through the legacy fallback when the repository is unavailable', () => {
     const source = fs.readFileSync('public/legacy/js/48_nutrition_ui.js', 'utf8');
-    const fallback = source.slice(source.indexOf('  function saveLocalMeals(rows)'), source.indexOf('  function localNutritionRowKey('));
+    const fallback = source.slice(source.indexOf('  function requireNutritionWrite(ok)'), source.indexOf('  function localNutritionRowKey('));
     const storage = memoryStorage();
     const rows = Array.from({ length: 5000 }, (_, index) => ({ syncId: `pending-${index}` }));
     vm.runInNewContext(`${fallback}\nsaveLocalMeals(rows);`, { repository: () => ({}), localMealKey: () => 'pending', localStorage: storage, rows });
