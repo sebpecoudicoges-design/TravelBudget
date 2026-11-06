@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `2888effcb2b87035bd133ef7d03609811a6343f1`
-> Empreinte du snapshot : `ad0cb8c440dc8009fa00713831b93430b7f59b0dbbf13c71ce6f22dd2896f5bf`
-> Généré le : `2026-11-05T08:34:37.680Z`
+> Commit analysé : `92bb0c3e1d1d5b4b42bff25fe2eba76297e9d7ab`
+> Empreinte du snapshot : `0d4575ccc83907c2adbe3013afebfaf61e46e0c30d1e52e46b17720b5c981f6c`
+> Généré le : `2026-11-06T05:08:14.006Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 190 |
+| Fichiers de tests | 191 |
 | Migrations Supabase | 172 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -416,6 +416,7 @@ Modules :
 - `tests/core/transactionGuards.test.js`
 - `tests/core/transactionRpcPayload.test.js`
 - `tests/core/transactionRules.test.js`
+- `tests/core/tripEditCleanup.test.js`
 - `tests/core/tripEditNetwork.test.js`
 - `tests/core/tripRules.test.js`
 - `tests/core/tripSettlementRetry.test.js`

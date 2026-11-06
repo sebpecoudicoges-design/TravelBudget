@@ -2818,34 +2818,35 @@ async function _persistSettlementWithWallet(wallet) {
     }
   }
   async function _cleanupExpenseBudgetLinksBeforeEdit(expenseId) {
-    if (!expenseId) return;
-    const ex = (tripState.expenses || []).find(x => x.id === expenseId) || null;
-    const mainTxId = ex?.transactionId || null;
-    const txIdsToDelete = [];
-
-    try {
-      const { data: links, error } = await sb
-        .from(TB_CONST.TABLES.trip_expense_budget_links)
-        .select("id,transaction_id")
-        .eq("expense_id", expenseId);
-      if (error) throw error;
-      for (const row of (links || [])) {
-        const txId = row?.transaction_id || null;
-        if (txId && txId !== mainTxId) txIdsToDelete.push(txId);
-      }
-    } catch (_) {}
-
-    try {
-      await sb.from(TB_CONST.TABLES.trip_expense_budget_links).delete().eq("expense_id", expenseId);
-    } catch (_) {}
-
-    for (const txId of txIdsToDelete) {
-      try {
-        const { error } = await sb.rpc(TB_CONST.RPCS.delete_transaction || "delete_transaction", { p_tx_id: txId });
-        if (error) throw error;
-      } catch (e) {
-        console.warn("[Trip] cleanup budget link tx failed", txId, e);
-      }
+    const tables = _tripRepositoryTables();
+    const tripId = tripState.activeTripId;
+    const deleteTransactionRpc = TB_CONST.RPCS.delete_transaction || 'delete_transaction';
+    function unwrap(result) {
+      if (result.error) throw result.error;
+      return result.data;
+    }
+    if (!tripId || !expenseId) throw new Error('Édition Trip invalide.');
+    if (typeof sb.rpc !== 'function') throw new Error('Supabase RPC indisponible');
+    // Read the current payment from the server, not an older UI snapshot.
+    const expense = unwrap(await sb.from(tables.expenses).select('id,transaction_id')
+      .eq('trip_id', tripId).eq('id', expenseId).single());
+    if (!expense?.id) throw new Error('Dépense Trip introuvable.');
+    const links = unwrap(await sb.from(tables.budgetLinks).select('id,transaction_id')
+      .eq('trip_id', tripId).eq('expense_id', expenseId));
+    const transactionIds = [...new Set(links.map(row => row.transaction_id)
+      .filter(id => id && id !== expense.transaction_id))];
+    // Delete transactions first: their FK cascades their links. On failure the
+    // remaining transactions stay discoverable for a later retry.
+    for (const id of transactionIds) {
+      unwrap(await sb.rpc(deleteTransactionRpc, { p_tx_id: id }));
+    }
+    const paymentLinks = links.filter(row => row.transaction_id && row.transaction_id === expense.transaction_id);
+    if (paymentLinks.length) {
+      // Cascades handled the shares. Detach only observed links still pointing at the payment.
+      const removed = unwrap(await sb.from(tables.budgetLinks).delete()
+        .eq('trip_id', tripId).eq('expense_id', expenseId).eq('transaction_id', expense.transaction_id)
+        .in('id', paymentLinks.map(row => row.id)).select('id'));
+      if (removed?.length !== paymentLinks.length) throw new Error('Le lien du paiement a changé ou sa suppression a été refusée. Recharge le Trip avant de réessayer.');
     }
   }
 
