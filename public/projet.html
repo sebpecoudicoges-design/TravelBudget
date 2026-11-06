@@ -1625,7 +1625,7 @@
 <div class="release-row"><strong>01/11/2026</strong><span data-i18n="release.mcpPilot">Connexion ChatGPT : analyses budgétaires, Trip détaillé, comptabilité et patrimoine disponibles sur activation. Documents choisis explicitement, lecture seule. Depuis le 02/11 : tous les documents sur autorisation explicite, Sport et Nutrition avec consentements séparés.</span><a href="/connect-chatgpt.html" data-i18n="release.mcpManage">Gérer mes accès</a></div>
 <div class="release-row"><strong>01/11/2026</strong><span data-i18n="release.mcpAuth">Connexion ChatGPT : cycle serveur des autorisations et registre privé testés. Consentement web et connexion effective encore à réaliser ; aucun accès activé.</span></div>
 <div class="release-row"><strong>01/11/2026</strong><span data-i18n="release.mcpFoundation">Connexion ChatGPT : préparation des outils finance en lecture seule et de leur isolation. Authentification et connexion effective encore à réaliser.</span></div>
-<div class="release-row"><strong>06/11/2026</strong><span data-i18n="release.tripEditRecovery">Si une ancienne quote-part ne peut pas être retirée, Trip interrompt l’édition et conserve le paiement du wallet.</span></div>
+<div class="release-row"><strong>06/11/2026</strong><span data-i18n="release.tripEditRecovery">Trip enregistre la modification de la dépense, du paiement et de la quote-part ensemble. En cas d’échec, les écritures précédentes sont conservées.</span></div>
 <div class="release-row"><strong>05/11/2026</strong><span data-i18n="release.sqlAudit">Base de données : index redondant retiré et retour dans le budget corrigé pour les dépenses et entrées ordinaires. Aucun recalcul historique.</span></div>
 <div class="release-row"><strong>03/11/2026</strong><span data-i18n="release.nutritionPending">Nutrition web : sauvegardes locales vérifiées pour les repas et le sommeil ; saisie conservée et suppression annulée en cas d’échec. Intégration au prochain APK.</span></div>
 <div class="release-row"><strong>03/11/2026</strong><span data-i18n="release.queueRevisions">Hors ligne : une modification faite pendant la synchronisation reste en attente au lieu d’être effacée par l’ancien envoi. Correction intégrée à l’APK 10.5.388.</span></div>
@@ -2167,7 +2167,7 @@
           "release.mcpManage": "Gérer mes accès",
           "release.mcpAuth": "Connexion ChatGPT : cycle serveur des autorisations et registre privé testés. Consentement web et connexion effective encore à réaliser ; aucun accès activé.",
           "release.mcpFoundation": "Connexion ChatGPT : préparation des outils finance en lecture seule et de leur isolation. Authentification et connexion effective encore à réaliser.",
-          "release.tripEditRecovery": "Si une ancienne quote-part ne peut pas être retirée, Trip interrompt l’édition et conserve le paiement du wallet.",
+          "release.tripEditRecovery": "Trip enregistre la modification de la dépense, du paiement et de la quote-part ensemble. En cas d’échec, les écritures précédentes sont conservées.",
           "release.sqlAudit": "Base de données : index redondant retiré et retour dans le budget corrigé pour les dépenses et entrées ordinaires. Aucun recalcul historique.",
           "release.nutritionPending": "Nutrition web : sauvegardes locales vérifiées pour les repas et le sommeil ; saisie conservée et suppression annulée en cas d’échec. Intégration au prochain APK.",
           "release.queueRevisions": "Hors ligne : une modification faite pendant la synchronisation reste en attente au lieu d’être effacée par l’ancien envoi. Correction intégrée à l’APK 10.5.388.",
@@ -2392,7 +2392,7 @@
           "release.mcpManage": "Manage my connections",
           "release.mcpAuth": "ChatGPT connection: server authorization lifecycle and private registry tested. Web consent and live connection remain to be implemented; no access enabled.",
           "release.mcpFoundation": "ChatGPT connection: read-only finance tools and isolation groundwork prepared. Authentication and live connection are still to be implemented.",
-          "release.tripEditRecovery": "If a previous personal share cannot be removed, Trip stops the edit and preserves the wallet payment.",
+          "release.tripEditRecovery": "Trip saves the expense, wallet payment and personal share together. A failed edit preserves the previous entries.",
           "release.sqlAudit": "Database: redundant index removed and budget re-entry fixed for ordinary expenses and income. No historical recalculation.",
           "release.nutritionPending": "Nutrition web: local meal and sleep saves are checked; input is retained and failed deletions are reverted. To be included in the next APK.",
           "release.queueRevisions": "Offline: edits made during synchronization stay queued instead of being removed by the earlier send. Fix included in APK 10.5.388.",

@@ -2817,207 +2817,6 @@ async function _persistSettlementWithWallet(wallet) {
       try { if (typeof window.tbBusyEnd === "function") window.tbBusyEnd(); } catch (_) {}
     }
   }
-  async function _cleanupExpenseBudgetLinksBeforeEdit(expenseId) {
-    const tables = _tripRepositoryTables();
-    const tripId = tripState.activeTripId;
-    const deleteTransactionRpc = TB_CONST.RPCS.delete_transaction || 'delete_transaction';
-    function unwrap(result) {
-      if (result.error) throw result.error;
-      return result.data;
-    }
-    if (!tripId || !expenseId) throw new Error('Édition Trip invalide.');
-    if (typeof sb.rpc !== 'function') throw new Error('Supabase RPC indisponible');
-    // Read the current payment from the server, not an older UI snapshot.
-    const expense = unwrap(await sb.from(tables.expenses).select('id,transaction_id')
-      .eq('trip_id', tripId).eq('id', expenseId).single());
-    if (!expense?.id) throw new Error('Dépense Trip introuvable.');
-    const links = unwrap(await sb.from(tables.budgetLinks).select('id,transaction_id')
-      .eq('trip_id', tripId).eq('expense_id', expenseId));
-    const transactionIds = [...new Set(links.map(row => row.transaction_id)
-      .filter(id => id && id !== expense.transaction_id))];
-    // Delete transactions first: their FK cascades their links. On failure the
-    // remaining transactions stay discoverable for a later retry.
-    for (const id of transactionIds) {
-      unwrap(await sb.rpc(deleteTransactionRpc, { p_tx_id: id }));
-    }
-    const paymentLinks = links.filter(row => row.transaction_id && row.transaction_id === expense.transaction_id);
-    if (paymentLinks.length) {
-      // Cascades handled the shares. Detach only observed links still pointing at the payment.
-      const removed = unwrap(await sb.from(tables.budgetLinks).delete()
-        .eq('trip_id', tripId).eq('expense_id', expenseId).eq('transaction_id', expense.transaction_id)
-        .in('id', paymentLinks.map(row => row.id)).select('id'));
-      if (removed?.length !== paymentLinks.length) throw new Error('Le lien du paiement a changé ou sa suppression a été refusée. Recharge le Trip avant de réessayer.');
-    }
-  }
-
-  async function _integrateExpenseBudgetSideEffects({ expenseId, kind, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
-    const uid = await _ensureSession();
-    const members = tripState.members || [];
-    const memberIds = members.map(m => m.id);
-    const amt = Number(amount);
-    const cur = _normalizeCurrency(currency);
-    const entryKind = _normalizeTripEntryKind(kind);
-    const cat = (category || "Autre");
-    const out = !!outOfBudget;
-    const subcat = String(subcategory || "").trim() || null;
-    const budgetStart = budgetDateStart || date;
-    const budgetEnd = budgetDateEnd || budgetStart || date;
-    const payer = members.find(m => m.id === paidByMemberId) || null;
-    const paidByMe = !!payer?.isMe;
-    const parts = _computeSplitParts(amt, members, split);
-    _validateSplitParts(amt, parts);
-
-    const ex = await _tripRepository().getExpenseById({ table: TB_CONST.TABLES.trip_expenses, expenseId });
-
-    if (paidByMe) {
-      if (!walletId) throw new Error("Choisis une wallet (pour décompter le paiement).");
-      const w = findWallet(walletId);
-      if (!w) throw new Error("Wallet invalide.");
-      if (String(w.currency || "").toUpperCase() !== cur) {
-        throw new Error(`Devise wallet (${w.currency}) différente de la dépense (${cur}). Choisis une wallet dans la même devise.`);
-      }
-
-      const targetPeriodId = _findPeriodIdForDate(date);
-      const me = members.find(m => m.isMe) || null;
-      const budgetFlow = window.Core?.tripRules?.decideTripExpenseBudgetFlow
-        ? window.Core.tripRules.decideTripExpenseBudgetFlow({ amount: amt, members, shares: parts })
-        : {
-          myIdx: me ? memberIds.indexOf(me.id) : -1,
-          myShare: me ? Number(parts[memberIds.indexOf(me.id)] ?? 0) : NaN,
-          hasMyShare: me ? isFinite(Number(parts[memberIds.indexOf(me.id)] ?? 0)) && Number(parts[memberIds.indexOf(me.id)] ?? 0) > 0 : false,
-          isFullShare: me ? isFinite(Number(parts[memberIds.indexOf(me.id)] ?? 0)) && Math.abs(Number(parts[memberIds.indexOf(me.id)] ?? 0) - amt) < 0.005 : false,
-        };
-      const myIdx = budgetFlow.myIdx;
-      const myShare = Number(budgetFlow.myShare);
-      const isFullShare = !!budgetFlow.isFullShare;
-
-      if (isFullShare) {
-        const { error: rpcErr } = await _rpcApplyTransactionV2(sb, {
-          ...(window.Core?.tripRules?.buildTripFullShareTransactionArgs
-            ? window.Core.tripRules.buildTripFullShareTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out, kind: entryKind })
-            : { p_user_id: uid, p_wallet_id: walletId, p_type: _tripBudgetTxType(entryKind), p_label: _tripBudgetLabel(label, entryKind, "full"), p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null }),
-          ..._rpcFxSnapshotArgs(date, cur)
-        });
-        if (rpcErr) throw rpcErr;
-
-        const tx = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: _tripBudgetLabel(label, entryKind, "full"), date, payNow: true, outOfBudget: out, kind: entryKind });
-        await _linkCreatedExpenseTransaction({ tx, expenseId: ex.id, date, targetPeriodId });
-      } else {
-        if (!me) {
-          toastWarn("[Trip] Impossible de déterminer ta part pour le budget (participant 'moi' manquant).");
-        }
-
-        const advanceArgs = window.Core?.tripRules?.buildTripAdvanceTransactionArgs
-          ? window.Core.tripRules.buildTripAdvanceTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, kind: entryKind })
-          : { p_user_id: uid, p_wallet_id: walletId, p_type: _tripBudgetTxType(entryKind), p_label: _tripBudgetLabel(label, entryKind, "advance"), p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: true, p_night_covered: false, p_affects_budget: false, p_trip_expense_id: null, p_trip_share_link_id: null };
-        const advanceLabel = advanceArgs.p_label;
-        const { error: rpcErrA } = await _rpcApplyTransactionV2(sb, {
-          ...advanceArgs,
-          ..._rpcFxSnapshotArgs(date, cur)
-        });
-        if (rpcErrA) throw rpcErrA;
-
-        const txA = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: advanceLabel, date, payNow: true, outOfBudget: true, kind: entryKind });
-        await _linkCreatedExpenseTransaction({ tx: txA, expenseId: ex.id, date, targetPeriodId });
-
-        if (me && myIdx >= 0 && budgetFlow.hasMyShare) {
-          const shareArgs = window.Core?.tripRules?.buildTripPersonalShareTransactionArgs
-            ? window.Core.tripRules.buildTripPersonalShareTransactionArgs({ userId: uid, walletId, label, myShare, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out, kind: entryKind })
-            : { p_user_id: uid, p_wallet_id: walletId, p_type: _tripBudgetTxType(entryKind), p_label: _tripBudgetLabel(label, entryKind, "share"), p_amount: myShare, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: false, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null };
-          const consLabel = shareArgs.p_label;
-          const { error: rpcErrB } = await _rpcApplyTransactionV2(sb, {
-            ...shareArgs,
-            ..._rpcFxSnapshotArgs(date, cur)
-          });
-          if (rpcErrB) throw rpcErrB;
-
-          const txB = await _findTripBudgetTransaction({ walletId, amount: myShare, currency: cur, category: cat, label: consLabel, date, payNow: false, outOfBudget: out, kind: entryKind });
-          await _linkCreatedShareTransaction({ tx: txB, expenseId: ex.id, memberId: me.id, date, targetPeriodId });
-        }
-      }
-    } else {
-      const me = members.find(m => m.isMe) || null;
-      if (me) {
-        const myIdx = memberIds.indexOf(me.id);
-        const myShare = Number(parts[myIdx] ?? 0);
-        if (isFinite(myShare) && myShare > 0) {
-          let wId = walletId || null;
-          let w = wId ? findWallet(wId) : null;
-          if (!w) {
-            w = _activeWallets().find(x => String(x.currency || "").toUpperCase() === cur) || null;
-            wId = w?.id || null;
-          }
-          if (!wId || !w) {
-            toastWarn(`[Trip] Aucune wallet en ${cur} : impossible d'enregistrer ta part au budget.`);
-          } else if (String(w.currency || "").toUpperCase() !== cur) {
-            toastWarn(`[Trip] Devise wallet (${w.currency}) différente de ta part (${cur}). Choisis une wallet ${cur}.`);
-          } else {
-            const targetPeriodId = _findPeriodIdForDate(date);
-            const budgetLabel = _tripBudgetLabel(label, entryKind, "share");
-            const { error: rpcErr2 } = await _rpcApplyTransactionV2(sb, {
-              p_user_id: uid,
-              p_wallet_id: wId,
-              p_type: _tripBudgetTxType(entryKind),
-              p_label: budgetLabel,
-              p_amount: myShare,
-              p_currency: cur,
-              p_date_start: date,
-              p_date_end: date,
-              p_budget_date_start: budgetStart,
-              p_budget_date_end: budgetEnd,
-              p_category: cat,
-              p_subcategory: subcat,
-              p_pay_now: false,
-              p_out_of_budget: out,
-              p_night_covered: false,
-              p_affects_budget: !out,
-              p_trip_expense_id: null,
-              p_trip_share_link_id: null,
-              ..._rpcFxSnapshotArgs(date, cur)
-            });
-            if (rpcErr2) throw rpcErr2;
-
-            const { data: txRows2, error: txErr2 } = await sb
-              .from(TB_CONST.TABLES.transactions)
-              .select("id,travel_id,period_id")
-              .eq("wallet_id", wId)
-              .eq("type", _tripBudgetTxType(entryKind))
-              .eq("amount", myShare)
-              .eq("currency", cur)
-              .eq("category", cat)
-              .eq("label", budgetLabel)
-              .eq("date_start", date)
-              .eq("date_end", date)
-              .eq("pay_now", false)
-              .is("trip_expense_id", null)
-              .order("created_at", { ascending: false })
-              .limit(1);
-            if (txErr2) throw txErr2;
-
-            const tx2 = txRows2?.[0] || null;
-            if (tx2) {
-              await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", tx2.id);
-              const targetTravelId = _findTravelIdForDate(date);
-          if (
-            (targetTravelId && (!tx2.travel_id || tx2.travel_id !== targetTravelId)) ||
-            (targetPeriodId && (!tx2.period_id || tx2.period_id !== targetPeriodId))
-          ) {
-            await sb
-              .from(TB_CONST.TABLES.transactions)
-              .update({
-                travel_id: targetTravelId || tx2.travel_id || null,
-                period_id: targetPeriodId || tx2.period_id || null
-              })
-              .eq("id", tx2.id);
-          }
-              await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: tx2.id });
-            }
-          }
-        }
-      }
-    }
-  }
-
   async function _updateExpense({ expenseId, kind, incomeSource, incomeDueBack, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
     await _ensureSession();
     const tripId = tripState.activeTripId;
@@ -3034,21 +2833,30 @@ async function _persistSettlementWithWallet(wallet) {
     if (!currentEx) throw new Error("Dépense introuvable.");
 
     const input = _normalizeTripExpenseForMutation({ expenseId, kind, incomeSource, incomeDueBack, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget });
-    label = input.label;
     const payer = members.find(m => m.id === input.paidByMemberId) || null;
+    const me = members.find(m => m.isMe) || null;
     const wallet = input.walletId ? findWallet(input.walletId) : null;
-    const cur = _normalizeCurrency(currency);
     const parts = _computeSplitParts(amt, members, split);
     _validateTripExpenseForMutation({ input, members, parts, payer, wallet });
 
-    await _cleanupExpenseBudgetLinksBeforeEdit(expenseId);
-
-    const payloadExp = _buildTripExpenseRpcPayload({ input, members, parts });
-
-    const updatedExpenseId = await _applyTripExpense(tripId, payloadExp);
-    await _persistTripExpenseKind(updatedExpenseId, input);
-
-    await _integrateExpenseBudgetSideEffects({ expenseId: updatedExpenseId, kind: input.kind, date, label, amount: amt, currency: cur, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split });
+    const personal = me ? Number(parts[members.indexOf(me)] || 0) : 0;
+    const needsWallet = payer?.isMe || personal > 0;
+    const budgetWallet = needsWallet
+      ? wallet || _activeWallets().find(w => String(w.currency || '').toUpperCase() === input.currency)
+      : null;
+    if (needsWallet && (!budgetWallet || String(budgetWallet.currency || '').toUpperCase() !== input.currency)) {
+      throw new Error(`Choisis un wallet en ${input.currency} pour enregistrer le paiement ou ta quote-part.`);
+    }
+    const { data: updatedExpenseId, error } = await sb.rpc('trip_edit_expense_atomic_v1', {
+      p_trip_id: tripId,
+      p_payload: _buildTripExpenseRpcPayload({ input, members, parts }),
+      p_member_id: me?.id || null,
+      p_wallet_id: budgetWallet?.id || null,
+      p_out_of_budget: !!input.outOfBudget,
+      p_fx: budgetWallet ? _rpcFxSnapshotArgs(input.date, input.currency) : {},
+    });
+    if (error) throw error;
+    if (updatedExpenseId !== expenseId) throw new Error("Modification Trip non confirmée.");
     if (input.kind !== "income") await _requestPayerApprovalIfNeeded(updatedExpenseId, paidByMemberId);
 
     tripState.editingExpenseId = null;

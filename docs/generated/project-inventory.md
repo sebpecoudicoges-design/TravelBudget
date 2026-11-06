@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `92bb0c3e1d1d5b4b42bff25fe2eba76297e9d7ab`
-> Empreinte du snapshot : `0d4575ccc83907c2adbe3013afebfaf61e46e0c30d1e52e46b17720b5c981f6c`
-> Généré le : `2026-11-06T05:08:14.006Z`
+> Commit analysé : `5999b7e0d45340efd48b1f64177ee75a46158cce`
+> Empreinte du snapshot : `33fdd1039334541f4795de48383aa16e9dcbb474df89090ffdf49a65972d8ae1`
+> Généré le : `2026-11-06T05:22:44.286Z`
 
 # Inventaire du projet TravelBudget
 
@@ -18,7 +18,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules data | 12 |
 | Modules features | 64 |
 | Fichiers de tests | 191 |
-| Migrations Supabase | 172 |
+| Migrations Supabase | 173 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
 
@@ -416,7 +416,7 @@ Modules :
 - `tests/core/transactionGuards.test.js`
 - `tests/core/transactionRpcPayload.test.js`
 - `tests/core/transactionRules.test.js`
-- `tests/core/tripEditCleanup.test.js`
+- `tests/core/tripAtomicEdit.test.js`
 - `tests/core/tripEditNetwork.test.js`
 - `tests/core/tripRules.test.js`
 - `tests/core/tripSettlementRetry.test.js`
@@ -772,6 +772,7 @@ Modules :
 - `supabase/migrations/20261101190037_mcp_documents_health_sharing.sql`
 - `supabase/migrations/20261105063200_remove_duplicate_transaction_wallet_index.sql`
 - `supabase/migrations/20261105083223_restore_ordinary_transaction_budget_impact.sql`
+- `supabase/migrations/20261106052013_atomic_trip_expense_edit.sql`
 
 ## Android et budgets de modules
 
