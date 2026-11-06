@@ -1517,16 +1517,11 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
 
     const expenseById = new Map(expenses.map((ex) => [String(ex.id || ""), ex]));
     const mainTxIds = Array.from(new Set(expenses.map((ex) => String(ex?.transactionId || "")).filter(Boolean)));
-    const mainTxById = new Map();
-
+    const [mainRows, reverseRows] = await _tripRepository().loadLinkAuditTransactions({
+      table: TB_CONST.TABLES.transactions, mainTxIds, expenseIds,
+    });
+    const mainTxById = new Map(mainRows.map(tx => [String(tx.id), tx]));
     if (mainTxIds.length) {
-      const { data, error } = await sb
-        .from(TB_CONST.TABLES.transactions)
-        .select("id,trip_expense_id,label,amount,currency")
-        .in("id", mainTxIds);
-      if (error) throw error;
-      (data || []).forEach((tx) => mainTxById.set(String(tx.id || ""), tx));
-
       for (const ex of expenses) {
         const txId = String(ex?.transactionId || "");
         if (!txId) continue;
@@ -1539,11 +1534,6 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
       }
     }
 
-    const { data: reverseRows, error: reverseErr } = await sb
-      .from(TB_CONST.TABLES.transactions)
-      .select("id,trip_expense_id,label,amount,currency")
-      .in("trip_expense_id", expenseIds);
-    if (reverseErr) throw reverseErr;
     for (const tx of (reverseRows || [])) {
       const expenseId = String(tx.trip_expense_id || "");
       const ex = expenseById.get(expenseId);
@@ -1563,18 +1553,23 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
     return issues;
   }
 
+  let activeLoadRevision = 0;
   async function _loadActiveData() {
+    const revision = ++activeLoadRevision;
     if (await _tripShouldUseOfflineMode("trip:loadActiveData")) {
-      tripStore.hydrateOffline(state);
+      if (revision === activeLoadRevision) tripStore.hydrateOffline(state);
       return;
     }
     const uid = await _ensureSession();
     const tripId = tripState.activeTripId;
-
+    const current = () => revision === activeLoadRevision && tripState.activeTripId === tripId
+      && (sbUser?.id || sbUser?.user?.id || window.sbUser?.id || window.sbUser?.user?.id) === uid;
+    if (!current()) return;
     tripStore.clearActive();
     if (!tripId) return;
 
-    tripState.myRole = await _getMyTripRole(tripId);
+    const myRole = await _getMyTripRole(tripId);
+    if (!current()) return;
 
     // Ensure my member row exists/bound for this trip (identity = auth.uid)
     await _rpcBindMe(tripId);
@@ -1583,18 +1578,16 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
       tripId,
       tables: _tripRepositoryTables(),
     });
-    if (activeData.budgetLoadError) console.warn('[Trip] budget link preload failed', activeData.budgetLoadError);
+    if (!current()) return;
+    tripState.myRole = myRole;
     tripStore.hydrateRemote(activeData, {
       userId: uid,
       email: sbUser?.email || window.sbUser?.email || "",
     });
 
-    try {
-      tripState.linkIssues = await _auditTripTransactionLinks();
-    } catch (e) {
-      console.warn("[Trip] link consistency audit failed", e);
-      tripState.linkIssues = [];
-    }
+    const linkIssues = await _auditTripTransactionLinks();
+    if (!current()) return;
+    tripState.linkIssues = linkIssues;
     _syncTripStateToAppState("trip:active");
   }
 
@@ -2588,8 +2581,7 @@ async function _persistSettlementWithWallet(wallet) {
 
   async function _deleteTrip(tripId) {
     await _ensureSession();
-    const result = await _tripRepository().deleteTrip({ tables: _tripRepositoryTables(), tripId });
-    if (result.unlinkError) console.warn("Trip unlink before delete failed:", result.unlinkError);
+    await _tripRepository().deleteTrip({ tripId });
 
     if (tripState.activeTripId === tripId) tripState.activeTripId = null;
   }

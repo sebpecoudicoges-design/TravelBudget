@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `c1772e94edad3f4452e1b07d6100d184afef2556`
-> Empreinte du snapshot : `02b87361e39979da972293dd562adfdd77ccc0fb803c51eca81f5b0c82cfd648`
-> Généré le : `2026-11-06T21:23:58.288Z`
+> Commit analysé : `7920d46d0046579ee7126dbe7266cdf975231996`
+> Empreinte du snapshot : `4ec6ef06e36aa0b5aedd45686e2c2f8d4a8c0f191ad61b649d9905575a88d187`
+> Généré le : `2026-11-06T21:34:25.900Z`
 
 # Inventaire du projet TravelBudget
 
@@ -18,7 +18,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules data | 12 |
 | Modules features | 64 |
 | Fichiers de tests | 192 |
-| Migrations Supabase | 174 |
+| Migrations Supabase | 175 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
 
@@ -775,6 +775,7 @@ Modules :
 - `supabase/migrations/20261105083223_restore_ordinary_transaction_budget_impact.sql`
 - `supabase/migrations/20261106052013_atomic_trip_expense_edit.sql`
 - `supabase/migrations/20261106212256_save_sport_workout_atomic.sql`
+- `supabase/migrations/20261106213201_delete_trip_atomic.sql`
 
 ## Android et budgets de modules
 

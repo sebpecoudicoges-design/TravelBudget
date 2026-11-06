@@ -1,16 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { createTripRepository } from '../../src/data/tripRepository.js';
 
-function query(result) {
-  const promise = Promise.resolve(result);
-  const chain = {
-    select: () => chain,
-    eq: () => chain,
-    order: () => promise,
-    is: () => promise,
-    then: promise.then.bind(promise),
-  };
-  return chain;
+function pagedClient(tables, { cap = 11, fail } = {}) {
+  const batches = [];
+  return { batches, from(table) {
+    const filters = [];
+    let after = '';
+    let limit;
+    const q = {
+      select: () => q, order: () => q, limit: value => { limit = value; return q; },
+      eq: (k, v) => { filters.push(r => r[k] === v); return q; },
+      is: (k, v) => { filters.push(r => r[k] === v); return q; },
+      gt: (_, v) => { after = v; return q; },
+      in: (k, ids) => { batches.push(ids.length); filters.push(r => ids.includes(r[k])); return q; },
+      then(resolve, reject) {
+        if (fail?.(table, after)) return Promise.resolve({ error: new Error('interrupted') }).then(resolve,reject);
+        const rows = (tables[table] || []).filter(r => r.id > after && filters.every(f => f(r)))
+          .sort((a,b) => a.id.localeCompare(b.id)).slice(0,Math.min(limit,cap));
+        return Promise.resolve({ data: rows }).then(resolve,reject);
+      },
+    };
+    return q;
+  }};
 }
 
 function mutationClient(resultFor = () => ({ data: null, error: null })) {
@@ -45,80 +56,37 @@ function mutationClient(resultFor = () => ({ data: null, error: null })) {
 }
 
 describe('trip repository', () => {
-  it('loads the active Trip aggregate through one data boundary', async () => {
-    const rows = {
-      members: [{ id: 'member-1' }], expenses: [{ id: 'expense-1' }],
-      shares: [{ id: 'share-1' }], settlements: [{ id: 'settlement-1' }],
-    };
-    const client = { from: (table) => query({ data: rows[table], error: null }) };
-    const repository = createTripRepository(client);
-
-    await expect(repository.loadActiveTripData({
-      tripId: 'trip-1',
-      tables: { members: 'members', expenses: 'expenses', shares: 'shares', settlementEvents: 'settlements' },
-    })).resolves.toEqual({
-      members: rows.members,
-      expenses: rows.expenses,
-      shares: rows.shares,
-      settlementEvents: rows.settlements,
-      budgetLinks: [],
-      budgetTransactions: [],
-    });
+  const tables = { members:'members', expenses:'expenses', shares:'shares', settlementEvents:'events', budgetLinks:'links', transactions:'transactions' };
+  const makeRows = (n, fields) => Array.from({ length:n }, (_,i) => ({ id:String(i+1).padStart(5,'0'), trip_id:'trip', ...fields(i) }));
+  it('loads every page of a shared Trip even with a smaller server cap', async () => {
+    const expenses = makeRows(1103, i => ({ date: i%2 ? '2026-01-01' : '2026-02-01' }));
+    const data = { expenses, members: makeRows(23,i => ({ created_at:String(99-i) })),
+      shares: makeRows(2206,i => ({ expense_id:expenses[Math.floor(i/2)].id })),
+      events: makeRows(20,i => ({ cancelled_at:i%2 ? null : 'yesterday' })),
+      links: expenses.map(e => ({ ...e, expense_id:e.id, transaction_id:e.id })),
+      transactions: expenses.map(e => ({ id:e.id, trip_expense_id:e.id })) };
+    const client = pagedClient(data, { cap:37 });
+    const repo = createTripRepository(client);
+    const result = await repo.loadActiveTripData({ tripId:'trip', tables });
+    expect(result.expenses).toHaveLength(1103);
+    expect(result.expenses[0].date).toBe('2026-02-01');
+    expect(result.members).toHaveLength(23);
+    expect(result.members[0].created_at).toBe('77');
+    expect(result.shares).toHaveLength(2206);
+    expect(result.settlementEvents).toHaveLength(10);
+    expect(new Set(result.budgetTransactions.map(r => r.id)).size).toBe(1103);
+    expect(result.budgetLinks).toHaveLength(1103);
+    const ids = expenses.map(e => e.id);
+    const [main,reverse] = await repo.loadLinkAuditTransactions({ table:'transactions',mainTxIds:ids,expenseIds:ids });
+    expect(main).toHaveLength(1103);
+    expect(reverse).toHaveLength(1103);
+    expect(Math.max(...client.batches)).toBeLessThanOrEqual(64);
   });
-
-  it('loads budget links and their transactions into the same aggregate', async () => {
-    const rows = {
-      members: [], expenses: [{ id: 'expense-1' }], shares: [], settlements: [],
-      links: [{ expense_id: 'expense-1', transaction_id: 'tx-1', member_id: 'member-1' }],
-      transactions: [{ id: 'tx-1', affects_budget: true }],
-    };
-    const client = { from: (table) => {
-      const chain = query({ data: rows[table], error: null });
-      chain.in = () => Promise.resolve({ data: rows[table], error: null });
-      return chain;
-    } };
-    const repository = createTripRepository(client);
-
-    const result = await repository.loadActiveTripData({
-      tripId: 'trip-1',
-      tables: {
-        members: 'members', expenses: 'expenses', shares: 'shares', settlementEvents: 'settlements',
-        budgetLinks: 'links', transactions: 'transactions',
-      },
-    });
-    expect(result.budgetLinks).toEqual(rows.links);
-    expect(result.budgetTransactions).toEqual(rows.transactions);
-  });
-
-  it('propagates a Supabase read error', async () => {
-    const client = { from: () => query({ data: null, error: new Error('read failed') }) };
-    const repository = createTripRepository(client);
-    await expect(repository.loadActiveTripData({
-      tripId: 'trip-1',
-      tables: { members: 'a', expenses: 'b', shares: 'c', settlementEvents: 'd' },
-    })).rejects.toThrow('read failed');
-  });
-
-  it('keeps the main Trip aggregate when optional budget links fail', async () => {
-    const client = { from: (table) => {
-      const result = table === 'links'
-        ? { data: null, error: new Error('budget links unavailable') }
-        : { data: table === 'expenses' ? [{ id: 'expense-1' }] : [], error: null };
-      const chain = query(result);
-      chain.in = () => Promise.resolve(result);
-      return chain;
-    } };
-    const repository = createTripRepository(client);
-    const result = await repository.loadActiveTripData({
-      tripId: 'trip-1',
-      tables: {
-        members: 'members', expenses: 'expenses', shares: 'shares', settlementEvents: 'settlements',
-        budgetLinks: 'links', transactions: 'transactions',
-      },
-    });
-    expect(result.expenses).toEqual([{ id: 'expense-1' }]);
-    expect(result.budgetLinks).toEqual([]);
-    expect(result.budgetLoadError).toMatchObject({ message: 'budget links unavailable' });
+  it.each(['shares','links','transactions'])('rejects an incomplete aggregate when page two of %s fails', async table => {
+    const rows = makeRows(5, () => ({}));
+    const links = rows.map(r => ({ ...r, transaction_id:r.id, expense_id:r.id }));
+    const client = pagedClient({ shares:rows, links, transactions:rows }, { cap:2, fail:(t,after) => t===table && !!after });
+    await expect(createTripRepository(client).loadActiveTripData({ tripId:'trip', tables })).rejects.toThrow('interrupted');
   });
 
   it('creates a Trip, its owner access and the default member', async () => {
@@ -167,24 +135,16 @@ describe('trip repository', () => {
     ]));
   });
 
-  it('unlinks transactions before deleting the Trip aggregate', async () => {
-    const client = mutationClient(({ table, operation }) => ({
-      data: table === 'expenses' && operation === 'select'
-        ? [{ id: 'expense-1', transaction_id: 'tx-1' }]
-        : null,
-      error: null,
-    }));
-    const repository = createTripRepository(client);
-    await repository.deleteTrip({
-      tables: { groups: 'groups', members: 'members', expenses: 'expenses', shares: 'shares', transactions: 'transactions' },
-      tripId: 'trip-1',
-    });
-    expect(client.calls).toEqual(expect.arrayContaining([
-      { table: 'transactions', method: 'update', value: { trip_expense_id: null } },
-      { table: 'transactions', method: 'in', column: 'id', value: ['tx-1'] },
-      { table: 'expenses', method: 'update', value: { transaction_id: null } },
-      { table: 'groups', method: 'delete' },
-    ]));
+  it('only confirms a whole Trip deletion after the single server operation succeeds', async () => {
+    let reply = { error: new Error('delete failed') };
+    const client = mutationClient(() => reply);
+    const repo = createTripRepository(client);
+    await expect(repo.deleteTrip({ tripId:'trip' })).rejects.toThrow('delete failed');
+    reply = { data:null };
+    await expect(repo.deleteTrip({ tripId:'trip' })).rejects.toThrow('non confirmée');
+    reply = { data:'trip' };
+    await repo.deleteTrip({ tripId:'trip' });
+    expect(client.calls).toEqual(Array(3).fill({ method:'rpc', name:'trip_delete_group_v1', args:{p_trip_id:'trip'} }));
   });
 
   it('uses atomic settlement RPCs without independent table writes', async () => {

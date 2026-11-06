@@ -15,45 +15,64 @@ function isMissingBudgetLinksError(error) {
   return message.includes('trip_expense_budget_links') || message.includes('relation') || message.includes('does not exist');
 }
 
+// Stop only on an empty page. The server can cap responses below our requested limit.
+async function allPages(makeQuery) {
+  const rows = [];
+  let cursor;
+  for (;;) {
+    let query = makeQuery().order('id', { ascending: true }).limit(500);
+    if (cursor) query = query.gt('id', cursor);
+    const { data: page, error } = await query;
+    if (error) throw error;
+    if (!Array.isArray(page)) throw new Error('Chargement Trip incomplet.');
+    if (!page.length) return rows;
+    const next = page[page.length - 1].id;
+    if (!next || (cursor && next <= cursor)) throw new Error('Chargement Trip incomplet.');
+    rows.push(...page);
+    cursor = next;
+  }
+}
+
+async function readByIds(client, table, columns, key, ids) {
+  const rows = [];
+  for (let offset = 0; offset < ids.length; offset += 64) {
+    const batch = ids.slice(offset, offset + 64);
+    const matches = await allPages(() => client.from(table).select(columns).in(key, batch));
+    for (const row of matches) rows.push(row);
+  }
+  return rows;
+}
+
 export function createTripRepository(getClient) {
   return {
     async loadActiveTripData({ tripId, tables }) {
       if (!tripId) return { members: [], expenses: [], shares: [], settlementEvents: [], budgetLinks: [], budgetTransactions: [] };
       const client = requireClient(getClient);
-      const [members, expenses, shares, settlementEvents] = await Promise.all([
-        client.from(tables.members).select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
-        client.from(tables.expenses).select('*').eq('trip_id', tripId).order('date', { ascending: false }),
-        client.from(tables.shares).select('*').eq('trip_id', tripId),
-        client.from(tables.settlementEvents).select('*').eq('trip_id', tripId).is('cancelled_at', null),
+      const read = (table, columns = '*') => client.from(table).select(columns).eq('trip_id', tripId);
+      const [members, expenses, shares, settlementEvents, budgetLinks] = await Promise.all([
+        allPages(() => read(tables.members)),
+        allPages(() => read(tables.expenses)),
+        allPages(() => read(tables.shares)),
+        allPages(() => read(tables.settlementEvents).is('cancelled_at', null)),
+        tables.budgetLinks && tables.transactions
+          ? allPages(() => read(tables.budgetLinks, 'id,expense_id,transaction_id,member_id'))
+          : [],
       ]);
-      const aggregate = {
-        members: unwrap(members),
-        expenses: unwrap(expenses),
-        shares: unwrap(shares),
-        settlementEvents: unwrap(settlementEvents),
-        budgetLinks: [],
-        budgetTransactions: [],
-      };
-      const expenseIds = aggregate.expenses.map((row) => row.id).filter(Boolean);
-      if (!expenseIds.length || !tables.budgetLinks || !tables.transactions) return aggregate;
+      members.sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+      expenses.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      const ids = [...new Set(budgetLinks.map(row => row.transaction_id).filter(Boolean))];
+      const budgetTransactions = await readByIds(client, tables.transactions,
+        'id,category,is_internal,trip_expense_id,trip_share_link_id,pay_now,affects_budget,out_of_budget', 'id', ids);
+      return { members, expenses, shares, settlementEvents, budgetLinks, budgetTransactions };
+    },
 
-      try {
-        aggregate.budgetLinks = unwrap(await client.from(tables.budgetLinks)
-          .select('expense_id,transaction_id,member_id')
-          .eq('trip_id', tripId)
-          .in('expense_id', expenseIds));
-        const transactionIds = [...new Set(aggregate.budgetLinks.map((row) => row.transaction_id).filter(Boolean))];
-        if (transactionIds.length) {
-          aggregate.budgetTransactions = unwrap(await client.from(tables.transactions)
-            .select('id,category,is_internal,trip_expense_id,trip_share_link_id,pay_now,affects_budget,out_of_budget')
-            .in('id', transactionIds));
-        }
-      } catch (error) {
-        aggregate.budgetLinks = [];
-        aggregate.budgetTransactions = [];
-        aggregate.budgetLoadError = error;
-      }
-      return aggregate;
+    async loadLinkAuditTransactions({ table, mainTxIds, expenseIds }) {
+      const client = requireClient(getClient);
+      const columns = 'id,trip_expense_id,label';
+      return Promise.all([
+        readByIds(client, table, columns, 'id', mainTxIds),
+        readByIds(client, table, columns, 'trip_expense_id', expenseIds),
+      ]);
     },
 
     async createTrip({ tables, userId, name, baseCurrency, email }) {
@@ -85,30 +104,10 @@ export function createTripRepository(getClient) {
       return { trip, defaultMemberError };
     },
 
-    async deleteTrip({ tables, tripId }) {
+    async deleteTrip({ tripId }) {
       const client = requireClient(getClient);
-      let unlinkError = null;
-      try {
-        const expenses = unwrap(await client.from(tables.expenses)
-          .select('id,transaction_id')
-          .eq('trip_id', tripId));
-        const transactionIds = expenses.map((row) => row.transaction_id).filter(Boolean);
-        const expenseIds = expenses.map((row) => row.id).filter(Boolean);
-        if (transactionIds.length) {
-          unwrap(await client.from(tables.transactions).update({ trip_expense_id: null }).in('id', transactionIds));
-        }
-        if (expenseIds.length) {
-          unwrap(await client.from(tables.expenses).update({ transaction_id: null }).in('id', expenseIds));
-        }
-      } catch (error) {
-        unlinkError = error;
-      }
-
-      unwrap(await client.from(tables.shares).delete().eq('trip_id', tripId));
-      unwrap(await client.from(tables.expenses).delete().eq('trip_id', tripId));
-      unwrap(await client.from(tables.members).delete().eq('trip_id', tripId));
-      unwrap(await client.from(tables.groups).delete().eq('id', tripId));
-      return { unlinkError };
+      const id = unwrap(await client.rpc('trip_delete_group_v1', { p_trip_id: tripId }));
+      if (id !== tripId) throw new Error('Suppression du Trip non confirmée.');
     },
 
     async addMember({ table, tripId, userId, name, email }) {
