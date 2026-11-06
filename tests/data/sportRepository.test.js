@@ -47,42 +47,26 @@ describe('sport repository', () => {
     });
   });
 
-  it('creates a complete workout and binds sets to inserted items', async () => {
-    const client = clientWith(({ table, operation }) => {
-      if (table === 'sessions' && operation === 'insert') return { data: { id: 'session-1' }, error: null };
-      if (table === 'items' && operation === 'insert') return { data: [{ id: 'item-1', sort_order: 0 }], error: null };
-      return { data: [], error: null };
-    });
-    const repository = createSportRepository(client);
-    const result = await repository.createWorkout({
-      tables,
-      rows: {
-        session: { user_id: 'user-1' },
-        items: [{ user_id: 'user-1', sort_order: 0 }],
-        sets: [{ user_id: 'user-1', itemIndex: 0, set_index: 1, reps: 12 }],
-      },
-    });
-
-    expect(result.sessionId).toBe('session-1');
-    expect(client.calls).toContainEqual({
-      table: 'sets',
-      method: 'insert',
-      value: [{ user_id: 'user-1', set_index: 1, reps: 12, item_id: 'item-1' }],
-    });
+  it('requires a confirmed atomic write before returning the session id', async () => {
+    const calls = [];
+    let response = { error: new Error('set failed') };
+    const repo = createSportRepository({ from() { throw Error('unexpected direct write'); },
+      rpc: async (name, args) => { calls.push({ name, args }); return response; } });
+    const rows = { session: { user_id: 'u' }, items: [], sets: [] };
+    const request = { syncKey: 'local-key', rows };
+    await expect(repo.createWorkout(request)).rejects.toThrow('set failed');
+    response = { data: null };
+    await expect(repo.createWorkout(request)).rejects.toThrow('non confirmée');
+    response = { data: 'session-1' };
+    await expect(repo.createWorkout(request)).resolves.toEqual({ sessionId: 'session-1' });
+    expect(calls).toEqual(Array(3).fill({ name: 'sport_save_workout_v1', args: { p_key: 'local-key', p_rows: rows } }));
   });
 
-  it('finds duplicates and deletes all workout children', async () => {
-    const client = clientWith(({ table, operation }) => {
-      if (table === 'sessions' && operation === 'select') return { data: [{ id: 'session-1' }], error: null };
-      if (table === 'items' && operation === 'select') return { data: [{ id: 'item-1' }], error: null };
-      return { data: [], error: null };
-    });
+  it('deletes all workout children', async () => {
+    const client = clientWith(({ table, operation }) => ({
+      data: table === 'items' && operation === 'select' ? [{ id: 'item-1' }] : [], error: null
+    }));
     const repository = createSportRepository(client);
-
-    await expect(repository.findExistingWorkout({
-      table: 'sessions', userId: 'user-1', activityType: 'strength',
-      startedAt: '2026-07-06T08:00:00Z', durationSeconds: 1200,
-    })).resolves.toBe('session-1');
     await repository.deleteWorkout({ tables, sessionId: 'session-1' });
     expect(client.calls).toEqual(expect.arrayContaining([
       { table: 'sets', method: 'delete' },

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `ba6f6a9354f208506b3f04711ed886441536181b`
-> Empreinte du snapshot : `74000dcbbe0c0bf48346bd4efbcf7d41ad61df9d092f62857e32d894af86c4fe`
-> Généré le : `2026-11-06T05:32:29.498Z`
+> Commit analysé : `c1772e94edad3f4452e1b07d6100d184afef2556`
+> Empreinte du snapshot : `02b87361e39979da972293dd562adfdd77ccc0fb803c51eca81f5b0c82cfd648`
+> Généré le : `2026-11-06T21:23:58.288Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,8 +17,8 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 27 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 191 |
-| Migrations Supabase | 173 |
+| Fichiers de tests | 192 |
+| Migrations Supabase | 174 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
 
@@ -412,6 +412,7 @@ Modules :
 - `tests/core/retryableLoader.test.js`
 - `tests/core/sportLibraryRules.test.js`
 - `tests/core/sportRules.test.js`
+- `tests/core/sportWorkoutSync.test.js`
 - `tests/core/subscriptionRules.test.js`
 - `tests/core/transactionGuards.test.js`
 - `tests/core/transactionRpcPayload.test.js`
@@ -773,6 +774,7 @@ Modules :
 - `supabase/migrations/20261105063200_remove_duplicate_transaction_wallet_index.sql`
 - `supabase/migrations/20261105083223_restore_ordinary_transaction_budget_impact.sql`
 - `supabase/migrations/20261106052013_atomic_trip_expense_edit.sql`
+- `supabase/migrations/20261106212256_save_sport_workout_atomic.sql`
 
 ## Android et budgets de modules
 

@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "ba6f6a9354f208506b3f04711ed886441536181b",
-  "snapshotFingerprint": "74000dcbbe0c0bf48346bd4efbcf7d41ad61df9d092f62857e32d894af86c4fe",
-  "generatedAt": "2026-11-06T05:32:29.498Z",
+  "commit": "c1772e94edad3f4452e1b07d6100d184afef2556",
+  "snapshotFingerprint": "02b87361e39979da972293dd562adfdd77ccc0fb803c51eca81f5b0c82cfd648",
+  "generatedAt": "2026-11-06T21:23:58.288Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.389"
@@ -306,6 +306,7 @@
     "tests/core/retryableLoader.test.js",
     "tests/core/sportLibraryRules.test.js",
     "tests/core/sportRules.test.js",
+    "tests/core/sportWorkoutSync.test.js",
     "tests/core/subscriptionRules.test.js",
     "tests/core/transactionGuards.test.js",
     "tests/core/transactionRpcPayload.test.js",
@@ -719,7 +720,8 @@
     "supabase/migrations/20261101190037_mcp_documents_health_sharing.sql",
     "supabase/migrations/20261105063200_remove_duplicate_transaction_wallet_index.sql",
     "supabase/migrations/20261105083223_restore_ordinary_transaction_budget_impact.sql",
-    "supabase/migrations/20261106052013_atomic_trip_expense_edit.sql"
+    "supabase/migrations/20261106052013_atomic_trip_expense_edit.sql",
+    "supabase/migrations/20261106212256_save_sport_workout_atomic.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

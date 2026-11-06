@@ -115,7 +115,7 @@ describe('Sport domain contract', () => {
   });
 
   it('delegates repository, store and program planning responsibilities', () => {
-    for (const token of ['loadHistory', 'createWorkout', 'deleteWorkout', 'updateSessionDate', 'findExistingWorkout']) {
+    for (const token of ['loadHistory', 'createWorkout', 'deleteWorkout', 'updateSessionDate']) {
       expect(repository).toContain(token);
       expect(legacy).toContain(`sportRepository().${token}`);
     }

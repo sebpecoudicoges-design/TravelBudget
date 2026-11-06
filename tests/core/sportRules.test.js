@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendCircuitRound, bindSportSetRows, buildSportPersistenceRows, buildWorkoutSequence, completedWorkout, estimateSportSessionKcal, finalizeWorkout, insertExerciseSet, kcalFromMet, SPORT_REST_MET, totalPlanRestSeconds, totalPlanWorkSeconds } from '../../src/core/sportRules.js';
+import { appendCircuitRound, buildSportPersistenceRows, buildWorkoutSequence, completedWorkout, estimateSportSessionKcal, finalizeWorkout, insertExerciseSet, kcalFromMet, SPORT_REST_MET, totalPlanRestSeconds, totalPlanWorkSeconds } from '../../src/core/sportRules.js';
 import { analyzeExerciseLoadProgression, estimatedOneRepMax } from '../../src/core/sportProgressionRules.js';
 import { estimateWorkDayKcal } from '../../src/core/workRules.js';
 import { resolveDailyBaselineKcal } from '../../src/core/bodyEnergyRules.js';
@@ -264,12 +264,9 @@ describe('sport rules core', () => {
       plan: [{ activity_key: 'strength', exercise_name: 'Bench', equipment: 'barbell', mode: 'reps', planned_sets: 1, rest_seconds: 90 }],
       doneSets: [{ itemIndex: 0, set_index: 1, reps: 10, duration_seconds: 30, weight_kg: 50 }],
     }, { userId: 'user-1', travelId: 'travel-1', sessionId: 'session-1' });
-    const savedSets = bindSportSetRows(rows.sets, new Map([[0, 'item-1']]));
 
     expect(deferredRows).toEqual(rows);
     expect(rows.session).toMatchObject({ user_id: 'user-1', activity_type: 'strength', duration_seconds: 600, estimated_kcal: 120 });
     expect(rows.items[0]).toMatchObject({ session_id: 'session-1', exercise_key: 'barbell_bench_press', exercise_name: 'Bench', planned_sets: 1 });
-    expect(savedSets[0]).toMatchObject({ item_id: 'item-1', set_index: 1, reps: 10, weight_kg: 50 });
-    expect(savedSets[0]).not.toHaveProperty('itemIndex');
   });
 });

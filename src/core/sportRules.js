@@ -227,18 +227,6 @@ export function buildSportPersistenceRows(summary = {}, context = {}) {
   return { session, items, sets };
 }
 
-export function bindSportSetRows(sets = [], itemByIndex = new Map()) {
-  return (Array.isArray(sets) ? sets : [])
-    .map((set) => {
-      const itemId = itemByIndex instanceof Map
-        ? itemByIndex.get(Number(set.itemIndex))
-        : itemByIndex?.[Number(set.itemIndex)];
-      const { itemIndex: _itemIndex, ...row } = set;
-      return { ...row, item_id: itemId };
-    })
-    .filter((row) => row.item_id);
-}
-
 export function appendCircuitRound(sequence = [], plan = [], options = {}) {
   const current = Array.isArray(sequence) ? sequence.slice() : [];
   const items = Array.isArray(plan) ? plan : [];

@@ -38,36 +38,12 @@ export function createSportRepository(getClient) {
       return { sessions, items, sets };
     },
 
-    async findExistingWorkout({ table, userId, activityType, startedAt, durationSeconds }) {
-      if (!startedAt || !durationSeconds) return null;
+    async createWorkout({ syncKey, rows }) {
       const client = requireClient(getClient);
-      const rows = unwrap(await client
-        .from(table)
-        .select('id,created_at')
-        .eq('user_id', userId)
-        .eq('activity_type', activityType)
-        .eq('started_at', startedAt)
-        .eq('duration_seconds', durationSeconds)
-        .order('created_at', { ascending: true })
-        .limit(1));
-      return rows[0]?.id || null;
-    },
-
-    async createWorkout({ tables, rows }) {
-      const client = requireClient(getClient);
-      const session = unwrap(await client.from(tables.sessions).insert([rows.session]).select('id').single());
-      const sessionId = session?.id;
-      const itemRows = (rows.items || []).map((item) => ({ ...item, session_id: sessionId }));
-      if (!itemRows.length) return { sessionId, itemIds: [] };
-
-      const items = unwrap(await client.from(tables.items).insert(itemRows).select('id,sort_order'));
-      const itemByIndex = new Map(items.map((item) => [Number(item.sort_order), item.id]));
-      const setRows = (rows.sets || []).map((set) => {
-        const { itemIndex, ...payload } = set;
-        return { ...payload, item_id: itemByIndex.get(Number(itemIndex)) };
-      }).filter((set) => set.item_id);
-      if (setRows.length) unwrap(await client.from(tables.sets).insert(setRows));
-      return { sessionId, itemIds: items.map((item) => item.id).filter(Boolean) };
+      const { data, error } = await client.rpc('sport_save_workout_v1', { p_key: syncKey, p_rows: rows });
+      if (error) throw error;
+      if (typeof data !== 'string' || !data) throw new Error('Séance Sport non confirmée.');
+      return { sessionId: data };
     },
 
     async deleteWorkout({ tables, sessionId, itemIds = [] }) {

@@ -846,19 +846,6 @@
     if (!started || !duration) return "";
     return [activity, started, ended, duration, kcal, plan.length, doneSets.length].join("|");
   }
-  async function findExistingRemoteWorkout(c, userId, row) {
-    if (!c || !userId || !row) return null;
-    const started = row.startedAt || row.started_at;
-    const duration = Math.max(0, Math.round(n(row.durationSeconds || row.duration_seconds, 0)));
-    if (!started || !duration) return null;
-    return sportRepository().findExistingWorkout({
-      table: table("sport_sessions"),
-      userId,
-      activityType: primaryActivityForWorkout(row),
-      startedAt: started,
-      durationSeconds: duration,
-    });
-  }
   function removeLocalWorkout(id) {
     const key = String(id || "");
     sportStore.removeWorkout(key);
@@ -4117,27 +4104,16 @@
         } catch (_) {}
         return;
       }
-      const existingRemoteId = await findExistingRemoteWorkout(c, userId, summary);
-      if (existingRemoteId) {
-        markLocalSynced(localRow.localId, existingRemoteId);
-        CACHE.loaded = false;
-        CACHE.status = txt("Seance deja synchronisee, doublon evite.", "Workout already synced, duplicate avoided.");
-        await loadHistory();
-        return;
-      }
       try {
         const buildRows = window.Core?.sportRules?.buildSportPersistenceRows;
         if (typeof buildRows !== "function") throw new Error("Sport persistence rules indisponibles");
         const initialRows = buildRows(summary, { userId, travelId: activeTravelId() });
         const created = await sportRepository().createWorkout({
-          tables: {
-            sessions: table("sport_sessions"),
-            items: table("sport_session_items"),
-            sets: table("sport_sets"),
-          },
+          syncKey: localRow.localId,
           rows: initialRows,
         });
         const sessionId = created.sessionId;
+        if (uid() !== userId) return;
         let recommendationCount = 0;
         try {
           const recommendations = await syncWorkoutLoadProgression(summary, sessionId, userId);
@@ -4145,6 +4121,7 @@
         } catch (progressionError) {
           console.warn("[sport] load progression failed", progressionError?.message || progressionError);
         }
+        if (uid() !== userId) return;
         markLocalSynced(localRow.localId, sessionId);
         CACHE.loaded = false;
         CACHE.status = recommendationCount
@@ -4173,25 +4150,18 @@
     const plan = Array.isArray(row.plan) ? row.plan : [];
     if (!plan.length) return false;
     const doneSets = Array.isArray(row.doneSets) ? row.doneSets : [];
-    const existingRemoteId = await findExistingRemoteWorkout(c, userId, row);
-    if (existingRemoteId) {
-      markLocalSynced(row.localId || row.id, existingRemoteId);
-      return true;
-    }
     const buildRows = window.Core?.sportRules?.buildSportPersistenceRows;
     if (typeof buildRows !== "function") throw new Error("Sport persistence rules indisponibles");
     const summary = Object.assign({}, row, { plan, doneSets });
     const initialRows = buildRows(summary, { userId, travelId: activeTravelId() });
     const created = await sportRepository().createWorkout({
-      tables: {
-        sessions: table("sport_sessions"),
-        items: table("sport_session_items"),
-        sets: table("sport_sets"),
-      },
+      syncKey: row.localId || row.id,
       rows: initialRows,
     });
     const sessionId = created.sessionId;
+    if (uid() !== userId) return false;
     try { await syncWorkoutLoadProgression(summary, sessionId, userId); } catch (progressionError) { console.warn("[sport] load progression failed", progressionError?.message || progressionError); }
+    if (uid() !== userId) return false;
     markLocalSynced(row.localId || row.id, sessionId);
     return true;
   }
