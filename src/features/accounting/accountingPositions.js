@@ -1,3 +1,4 @@
+import { hasTripPaymentOrigin } from '../../core/tripPaymentOrigin.js';
 import { internalAccounting, settledAt } from './accountingRecognition.js';
 
 // Linked cash flows are counted once. Positions are scoped by the existing local settings key.
@@ -13,7 +14,7 @@ export function positionLedger(settings, transactions, links, today) {
     const local = new Set();
     for (const id of p.transactionIds || []) {
       const tx = transactions.find(t => String(t.id) === String(id));
-      const eligible = tx && !used.has(String(id)) && !local.has(String(id)) && !internalAccounting(tx) && !tx.trip_expense_id && !tx.tripExpenseId && !tx.virtualBudgetOnly && (tx.recurring_instance_status ?? tx.recurringInstanceStatus) !== 'skipped' && settledAt(tx, today) && String(tx.currency).toUpperCase() === p.currency && ['income','expense'].includes(tx.type) && Number.isFinite(Number(tx.amount)) && Number(tx.amount) > 0;
+      const eligible = tx && !used.has(String(id)) && !local.has(String(id)) && !internalAccounting(tx) && !hasTripPaymentOrigin(tx) && !tx.virtualBudgetOnly && (tx.recurring_instance_status ?? tx.recurringInstanceStatus) !== 'skipped' && settledAt(tx, today) && String(tx.currency).toUpperCase() === p.currency && ['income','expense'].includes(tx.type) && Number.isFinite(Number(tx.amount)) && Number(tx.amount) > 0;
       if (!eligible) { valid = false; continue; }
       local.add(String(id));
       history.push({ id: `position-tx:${id}`, sourceId: id, sourceType: 'transaction', label: tx.label || tx.category, date: String(tx.cashDate || tx.dateStart || tx.date_start).slice(0,10), amount: (tx.type === 'expense' ? 1 : -1) * Number(tx.amount), currency: p.currency });
@@ -35,7 +36,7 @@ export function assetRattachements(settings, data, today) {
   for (const link of settings.assetLinks || []) {
     const tx = data.transactions.find(t => String(t.id) === String(link.transaction_id));
     const asset = data.assets.find(a => String(a.id) === String(link.asset_id));
-    if (!tx || !asset || occupied.has(String(tx.id)) || links.some(l => String(l.transaction_id) === String(tx.id) || String(l.asset_id) === String(asset.id) && l.relation_type === 'purchase') || tx.type !== 'expense' || internalAccounting(tx) || tx.trip_expense_id || tx.tripExpenseId || tx.virtualBudgetOnly || !settledAt(tx,today) || tx.currency !== asset.currency || !Number.isFinite(Number(tx.amount)) || !(Number(tx.amount) > 0) || Math.round(Number(tx.amount)*100) !== Math.round(Number(asset.purchase_value)*100) || asset.purchase_date > today) {
+    if (!tx || !asset || occupied.has(String(tx.id)) || links.some(l => String(l.transaction_id) === String(tx.id) || String(l.asset_id) === String(asset.id) && l.relation_type === 'purchase') || tx.type !== 'expense' || internalAccounting(tx) || hasTripPaymentOrigin(tx) || tx.virtualBudgetOnly || !settledAt(tx,today) || tx.currency !== asset.currency || !Number.isFinite(Number(tx.amount)) || !(Number(tx.amount) > 0) || Math.round(Number(tx.amount)*100) !== Math.round(Number(asset.purchase_value)*100) || asset.purchase_date > today) {
       errors.push('Achat rattaché au patrimoine à vérifier : source modifiée, déjà liée ou montant incompatible.'); continue;
     }
     links.push({ ...link, relation_type: 'purchase' });

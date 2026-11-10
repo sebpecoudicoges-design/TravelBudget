@@ -70,7 +70,7 @@ window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTra
     const sbc = window.sb || window.__TB_SB__;
     const user = window.sbUser || window.__tbUser || (await sbc?.auth?.getUser?.())?.data?.user;
     if (!sbc || !user?.id) return false;
-    const sel = "id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,internal_transfer_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,paid_at,out_of_budget,night_covered,affects_budget,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status";
+    const sel = "id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,detached_trip_payment,trip_expense_id,trip_share_link_id,internal_transfer_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,paid_at,out_of_budget,night_covered,affects_budget,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status";
     let from = 0, rows = [];
     while (true) {
       const { data, error } = await sbc.from(TB_CONST.TABLES.transactions).select(sel).eq("user_id", user.id).eq("travel_id", tid).order("created_at", { ascending: true }).range(from, from + 999);
@@ -83,7 +83,7 @@ window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTra
     const mapped = rows.map((x) => ({
       id: x.id, travelId: x.travel_id || null, travel_id: x.travel_id || null, periodId: x.period_id || null, period_id: x.period_id || null, walletId: x.wallet_id, wallet_id: x.wallet_id,
       type: x.type, amount: Number(x.amount), currency: x.currency, category: x.category, subcategory: x.subcategory || null, label: x.label || "",
-      tripExpenseId: x.trip_expense_id || null, trip_expense_id: x.trip_expense_id || null, tripShareLinkId: x.trip_share_link_id || null, trip_share_link_id: x.trip_share_link_id || null,
+      detachedTripPayment: x.detached_trip_payment === true, tripExpenseId: x.trip_expense_id || null, trip_expense_id: x.trip_expense_id || null, tripShareLinkId: x.trip_share_link_id || null, trip_share_link_id: x.trip_share_link_id || null,
       internalTransferId: x.internal_transfer_id || null, internal_transfer_id: x.internal_transfer_id || null, isInternal: !!x.is_internal, is_internal: !!x.is_internal,
       affectsBudget: x.affects_budget !== false, affects_budget: x.affects_budget !== false, dateStart: x.date_start, date_start: x.date_start, dateEnd: x.date_end, date_end: x.date_end,
       budgetDateStart: x.budget_date_start || x.date_start, budget_date_start: x.budget_date_start || x.date_start, budgetDateEnd: x.budget_date_end || x.budget_date_start || x.date_end || x.date_start, budget_date_end: x.budget_date_end || x.budget_date_start || x.date_end || x.date_start,

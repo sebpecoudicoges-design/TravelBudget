@@ -13,6 +13,7 @@ import * as settingsView from './features/settings/settingsView.js';
 import { installGlobalFeedback } from './ui/feedback.js';
 
 const deferredModules = createModuleRegistry({
+  nativeAds: ['/src/app/nativeAds.js', () => import('./app/nativeAds.js')],
   walletJournal: ['/src/features/dashboard/walletJournal.js', () => import('./features/dashboard/walletJournal.js')],
   analysisRuntime: ['/src/features/analysis/analysisRuntime.js', () => import('./features/analysis/analysisRuntime.js')],
   testCampaignController: ['/src/features/testing/testCampaignController.js', () => import('./features/testing/testCampaignController.js')],
@@ -449,6 +450,20 @@ async function boot() {
   }
   performance.mark('tb:legacy-ready');
   window.__tbBootReady = true;
+}
+
+if (window.Capacitor?.getPlatform?.() === 'android') {
+  const screen = globalThis.document.createElement('div');
+  screen.className = 'tb-ad-launch';
+  screen.setAttribute('role', 'status');
+  screen.textContent = 'TravelBudget';
+  if (window.navigator.onLine !== false) globalThis.document.body.appendChild(screen);
+  const close = () => screen.remove();
+  const timer = window.setTimeout(close, 5000);
+  deferredModules.load('nativeAds').then(module => module.installNativeAds(window, {
+    isOpen: () => screen.isConnected,
+    close: () => { window.clearTimeout(timer); close(); },
+  })).catch(close);
 }
 
 boot().catch((err) => {

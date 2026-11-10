@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `7920d46d0046579ee7126dbe7266cdf975231996`
-> Empreinte du snapshot : `4ec6ef06e36aa0b5aedd45686e2c2f8d4a8c0f191ad61b649d9905575a88d187`
-> Généré le : `2026-11-06T21:34:25.900Z`
+> Commit analysé : `459e94eea7899a7b2ba81f6b9161e08baab0a284`
+> Empreinte du snapshot : `e340bce22bf347deb0c631e4dc4598da2b4d2985a86d49ea02e7f8c157730648`
+> Généré le : `2026-11-10T22:55:48.120Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.389` |
+| Version | `10.5.390` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
-| Modules core | 27 |
+| Modules core | 28 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 192 |
-| Migrations Supabase | 175 |
+| Fichiers de tests | 196 |
+| Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
 
@@ -200,6 +200,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `src/core/transactionGuards.js`
 - `src/core/transactionRpcPayload.js`
 - `src/core/transactionRules.js`
+- `src/core/tripPaymentOrigin.js`
 - `src/core/tripRules.js`
 - `src/core/walletBalanceRules.js`
 - `src/core/webhookSecurityRules.js`
@@ -316,6 +317,7 @@ Modules :
 - `tests/ui/analysisDrilldownViewContract.test.js`
 - `tests/ui/analysisFilterViewContract.test.js`
 - `tests/ui/analysisViewContract.test.js`
+- `tests/ui/androidAdsContract.test.js`
 - `tests/ui/androidReleaseBundleContract.test.js`
 - `tests/ui/androidSecurityContract.test.js`
 - `tests/ui/architectureDocsContract.test.js`
@@ -368,6 +370,7 @@ Modules :
 
 - `tests/e2e/accounting.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
+- `tests/e2e/android-ads.spec.js`
 - `tests/e2e/android-release.spec.js`
 - `tests/e2e/asset-budget-loading.spec.js`
 - `tests/e2e/assistant-ai.spec.js`
@@ -387,6 +390,7 @@ Modules :
 
 ### Tous les fichiers de tests
 
+- `tests/core/adsSession.test.js`
 - `tests/core/assetRules.test.js`
 - `tests/core/assistantRules.test.js`
 - `tests/core/budgetAnalysisRules.test.js`
@@ -394,6 +398,7 @@ Modules :
 - `tests/core/cashflowBudgetPreparation.test.js`
 - `tests/core/cashflowRenderQueue.test.js`
 - `tests/core/dailyBudgetRules.test.js`
+- `tests/core/detachedTripPayment.test.js`
 - `tests/core/documentRules.test.js`
 - `tests/core/frankfurterRules.test.js`
 - `tests/core/fxDecisionRules.test.js`
@@ -442,6 +447,7 @@ Modules :
 - `tests/data/tripRepository.test.js`
 - `tests/e2e/accounting.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
+- `tests/e2e/android-ads.spec.js`
 - `tests/e2e/android-release.spec.js`
 - `tests/e2e/asset-budget-loading.spec.js`
 - `tests/e2e/assistant-ai.spec.js`
@@ -527,6 +533,7 @@ Modules :
 - `tests/ui/analysisDrilldownViewContract.test.js`
 - `tests/ui/analysisFilterViewContract.test.js`
 - `tests/ui/analysisViewContract.test.js`
+- `tests/ui/androidAdsContract.test.js`
 - `tests/ui/androidReleaseBundleContract.test.js`
 - `tests/ui/androidSecurityContract.test.js`
 - `tests/ui/architectureDocsContract.test.js`
@@ -776,6 +783,7 @@ Modules :
 - `supabase/migrations/20261106052013_atomic_trip_expense_edit.sql`
 - `supabase/migrations/20261106212256_save_sport_workout_atomic.sql`
 - `supabase/migrations/20261106213201_delete_trip_atomic.sql`
+- `supabase/migrations/20261107035117_retain_detached_trip_payment_origin.sql`
 
 ## Android et budgets de modules
 
@@ -791,8 +799,10 @@ Modules :
 - `docs/ACCOUNTING_MODULE_BRIEF.md`
 - `docs/ACCOUNT_DATA_LIFECYCLE.md`
 - `docs/ADMIN_TEST_RETURNS.md`
+- `docs/ADMOB_ANDROID.md`
 - `docs/ANDROID_10_5_388.md`
 - `docs/ANDROID_10_5_389.md`
+- `docs/ANDROID_10_5_390.md`
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`

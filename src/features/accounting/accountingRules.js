@@ -1,3 +1,4 @@
+import { hasTripPaymentOrigin } from '../../core/tripPaymentOrigin.js';
 import { positionLedger, assetRattachements } from './accountingPositions.js';
 import { debtLedger } from './accountingDebts.js';
 // Personal management statements, not a statutory or closed general ledger.
@@ -73,7 +74,7 @@ export function buildAccountingReport(data, { start, end, currency, travelId, to
     else if (!window) { reason = 'Dates budgétaires invalides'; warnings.add('Des dates budgétaires sont invalides : résultat et bilan à vérifier.'); }
     else if (tx.amount == null || String(tx.amount).trim() === '' || !Number.isFinite(amount)) { reason = 'Montant invalide'; warnings.add('Des montants sources sont invalides.'); }
     else if (tx.virtualBudgetOnly || field(tx, 'recurringInstanceStatus', 'recurring_instance_status') === 'skipped') reason = 'Simulation ou occurrence ignorée';
-    else if (field(tx, 'tripExpenseId', 'trip_expense_id') && (field(tx, 'outOfBudget', 'out_of_budget') === true || field(tx, 'affectsBudget', 'affects_budget') === false)) reason = 'Décaissement Trip brut hors résultat personnel';
+    else if (hasTripPaymentOrigin(tx) && (field(tx, 'outOfBudget', 'out_of_budget') === true || field(tx, 'affectsBudget', 'affects_budget') === false)) reason = 'Décaissement Trip brut hors résultat personnel';
     else if (txLinks.some(l => l.relation_type === 'purchase')) reason = 'Achat immobilisé : charge répartie par amortissement';
     else if (txLinks.some(l => ['sale', 'financing', 'extra_cost'].includes(l.relation_type))) { reason = 'Opération patrimoniale à rapprocher'; warnings.add('Cessions, financements ou coûts annexes à rapprocher : bilan non validé.'); }
     else if (/^ajustement wallet$/i.test(tx.category || '')) reason = 'Ajustement de solde hors résultat';

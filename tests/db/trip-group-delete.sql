@@ -8,6 +8,7 @@ declare
   mid uuid := gen_random_uuid();
   eid uuid := gen_random_uuid();
   tid uuid := gen_random_uuid();
+  share_tx uuid := gen_random_uuid();
   outsider uuid := gen_random_uuid();
   member_uid uuid;
   rejected boolean;
@@ -23,12 +24,18 @@ begin
   insert into public.trip_participants(trip_id,auth_user_id,role) values(gid,member_uid,'member');
   insert into public.trip_members(id,trip_id,user_id,name) values(mid,gid,w.user_id,'audit');
   insert into public.trip_expenses(id,trip_id,user_id,date,label,amount,currency,paid_by_member_id)
-    values(eid,gid,w.user_id,current_date,'audit',10,w.currency,mid);
+    values(eid,gid,w.user_id,current_date,'audit',100,w.currency,mid);
   insert into public.trip_expense_shares(trip_id,expense_id,member_id,user_id,share_amount)
-    values(gid,eid,mid,w.user_id,10);
+    values(gid,eid,mid,w.user_id,40);
   insert into public.transactions(id,user_id,wallet_id,period_id,type,amount,currency,category,date_start,date_end,
-    budget_date_start,budget_date_end,trip_expense_id) values(tid,w.user_id,w.id,w.period_id,'expense',10,w.currency,
-    'Autre',current_date,current_date,current_date,current_date,eid);
+    budget_date_start,budget_date_end,trip_expense_id,out_of_budget,affects_budget) values(tid,w.user_id,w.id,w.period_id,'expense',100,w.currency,
+    'Autre',current_date,current_date,current_date,current_date,eid,true,false);
+  insert into public.transactions(id,user_id,wallet_id,period_id,type,amount,currency,category,date_start,date_end,
+    budget_date_start,budget_date_end,pay_now,is_internal,affects_budget)
+    values(share_tx,w.user_id,w.id,w.period_id,'expense',40,w.currency,'Autre',current_date,current_date,
+      current_date,current_date,false,true,true);
+  insert into public.trip_expense_budget_links(user_id,trip_id,expense_id,member_id,transaction_id)
+    values(w.user_id,gid,eid,mid,share_tx);
   update public.trip_expenses set transaction_id=tid where id=eid;
   foreach outsider in array array[member_uid,gen_random_uuid()] loop
     perform set_config('request.jwt.claim.sub',outsider::text,true);
@@ -51,15 +58,20 @@ begin
       or not exists(select from public.trip_members where id=mid)
       or not exists(select from public.trip_expense_shares where expense_id=eid)
       or not exists(select from public.trip_expenses where id=eid and transaction_id=tid)
-      or not exists(select from public.transactions where id=tid and trip_expense_id=eid) then
+      or not exists(select from public.transactions where id=tid and trip_expense_id=eid and not detached_trip_payment) then
       raise exception 'Incomplete rollback at %',checkpoint;
     end if;
   end loop;
   if public.trip_delete_group_v1(gid)<>gid then raise exception 'Wrong confirmation'; end if;
   if exists(select from public.trip_groups where id=gid) or exists(select from public.trip_members where id=mid)
     or exists(select from public.trip_expenses where id=eid) or exists(select from public.trip_expense_shares where expense_id=eid)
-    or not exists(select from public.transactions where id=tid and wallet_id=w.id and amount=10 and trip_expense_id is null)
+    or not exists(select from public.transactions where id=tid and wallet_id=w.id and amount=100 and trip_expense_id is null and detached_trip_payment and not affects_budget)
+    or not exists(select from public.transactions where id=share_tx and amount=40 and not detached_trip_payment and affects_budget and not pay_now)
     or not exists(select from public.trip_groups where id=other_gid) then raise exception 'Wrong deletion scope'; end if;
+  perform public.update_transaction_v2(tid,w.id,'expense',100,w.currency,'Autre','Restaurant',current_date,current_date,true,false);
+  if not exists(select from public.transactions where id=tid and detached_trip_payment and not affects_budget) then
+    raise exception 'Editing detached cash payment restored budget impact';
+  end if;
 end; $test$;
 rollback;
 select 'Trip deletion tests passed; all writes rolled back' as result;

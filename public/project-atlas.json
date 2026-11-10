@@ -1,15 +1,15 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "version": "10.5.389",
-  "commit": "7920d46d0046579ee7126dbe7266cdf975231996",
-  "generatedAt": "2026-11-06T21:34:25.900Z",
+  "version": "10.5.390",
+  "commit": "459e94eea7899a7b2ba81f6b9161e08baab0a284",
+  "generatedAt": "2026-11-10T22:55:48.120Z",
   "counts": {
     "screens": 18,
     "criticalFeatures": 11,
-    "tests": 192,
-    "migrations": 175,
+    "tests": 196,
+    "migrations": 176,
     "featureModules": 64,
-    "coreModules": 27,
+    "coreModules": 28,
     "dataModules": 12,
     "edgeFunctions": 14
   },

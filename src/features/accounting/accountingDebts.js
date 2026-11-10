@@ -1,3 +1,4 @@
+import { hasTripPaymentOrigin } from '../../core/tripPaymentOrigin.js';
 import { internalAccounting, settledAt, validDay } from './accountingRecognition.js';
 const cents = n => Math.round(Number(n) * 100);
 const currency = tx => String(tx.currency || '').toUpperCase();
@@ -5,7 +6,7 @@ export function debtOriginEligible(tx, debt, today, links = []) {
   return ['expense', 'income'].includes(tx.type) && Number(tx.amount) === Number(debt.openingAmount)
     && currency(tx) === debt.currency && settledAt(tx, today)
     && String(tx.cashDate || tx.dateStart || tx.date_start || '').slice(0,10) <= debt.openingDate
-    && !internalAccounting(tx) && !tx.virtualBudgetOnly && !(tx.tripExpenseId ?? tx.trip_expense_id)
+    && !internalAccounting(tx) && !tx.virtualBudgetOnly && !hasTripPaymentOrigin(tx)
     && (tx.recurringInstanceStatus ?? tx.recurring_instance_status) !== 'skipped'
     && (tx.type === 'expense' || !links.some(l => String(l.transaction_id) === String(tx.id)));
 }
@@ -15,7 +16,7 @@ export function repaymentEligible(tx, debt, today, links = []) {
     && currency(tx) === debt.currency && settledAt(tx, today) && date >= debt.openingDate
     && !internalAccounting(tx) && !tx.virtualBudgetOnly
     && (tx.recurringInstanceStatus ?? tx.recurring_instance_status) !== 'skipped'
-    && !(tx.tripExpenseId ?? tx.trip_expense_id)
+    && !hasTripPaymentOrigin(tx)
     && !links.some(l => String(l.transaction_id) === String(tx.id));
 }
 // A payment remains in treasury. Only its linked principal is removed from expenses.

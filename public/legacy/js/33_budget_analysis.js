@@ -389,7 +389,8 @@
   }
   function _currency(){ const r = _analysisRange(); return _resolveAnalysisCurrency(r.start, r.end); }
 
-  function _isTripLinked(tx){ return !!(tx?.trip_expense_id || tx?.tripExpenseId || tx?.trip_share_link_id || tx?.tripShareLinkId); }
+  function _hasTripPaymentOrigin(tx){ return window.TBCore?.budgetAnalysisRules?.hasTripPaymentOrigin?.(tx) ?? !!(tx?.tripExpenseId || tx?.trip_expense_id || tx?.detachedTripPayment || tx?.detached_trip_payment); }
+  function _isTripLinked(tx){ return !!(_hasTripPaymentOrigin(tx) || tx?.trip_share_link_id || tx?.tripShareLinkId); }
   function _isTripBudgetShare(tx){
     if (!tx) return false;
     if (String(tx?.type || '').toLowerCase() !== 'expense') return false;
@@ -449,7 +450,7 @@
     if (core?.affectsBudgetAnalysisDataset) return !!core.affectsBudgetAnalysisDataset(tx);
     if (!tx || typeof tx !== 'object') return false;
     if (_txType(tx) !== 'expense') return false;
-    if (_txOut(tx)) return !(tx.tripExpenseId || tx.trip_expense_id);
+    if (_txOut(tx)) return !_hasTripPaymentOrigin(tx);
     const flag = tx.affectsBudget ?? tx.affects_budget;
     if (flag === false) return false;
     return true;

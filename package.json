@@ -1,7 +1,7 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.5.389",
+  "version": "10.5.390",
   "type": "module",
   "scripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -52,6 +52,7 @@
     "zod": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz"
   },
   "dependencies": {
+    "@capacitor-community/admob": "8.3.0",
     "@capacitor/app": "^8.0.0",
     "@capacitor/browser": "^8.0.0",
     "@capacitor/local-notifications": "^8.0.0",

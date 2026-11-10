@@ -177,3 +177,7 @@ Android 10.5.389 reconstruit le 6 novembre avec les corrections Trip et Nutritio
 7 novembre 2026 — F7. Lecture du Trip actif par curseur UUID jusqu’à une page vide, y compris sous un plafond serveur inférieur à la taille demandée. Filtre des règlements annulés et ordre d’affichage conservés. Les lectures des transactions du budget et de l’audit des liens limitent chaque liste à 64 identifiants. Une erreur de page interrompt le chargement. Cette pagination ne garantit pas une photographie unique si des données changent entre deux requêtes.
 
 La migration 20261106213201 est appliquée. Le propriétaire peut supprimer le groupe, ses dépenses et ses parts en une transaction. Les transactions wallet sont détachées et conservées. Trois pannes injectées dans une copie temporaire de la fonction ont vérifié la restauration des liens et du voyage. Suppression réussie, conservation d’un autre voyage, refus d’un membre et d’un tiers vérifiés sur données synthétiques annulées. Tests du client sur 1 103 dépenses, 2 206 parts et un plafond simulé de 37 lignes. L’APK 10.5.389 utilise encore le parcours précédent.
+
+## 10 novembre — Provenance historique Trip
+
+Migration 20261107035117 appliquée, origine conservée après suppression du groupe. Calculs Analyse/comptabilité, chargements et catalogue MCP mis à jour. Débit 100 / part 40 et édition ultérieure testés. Recherche des appels effectuée, prédicat partagé extrait dans tripPaymentOrigin.js. Les anciens voyages supprimés ne sont pas reclassés automatiquement.

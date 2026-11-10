@@ -1,3 +1,4 @@
+import { hasTripPaymentOrigin } from '../../core/tripPaymentOrigin.js';
 import { isBudgetOffsetIncome, isTripBudgetIncomeShare } from '../../core/dailyBudgetRules.js';
 
 function num(value) {
@@ -50,14 +51,14 @@ export { isTripBudgetIncomeShare };
 
 export function isTripCashIncome(tx = {}) {
   if (String(tx?.type || '').toLowerCase() !== 'income') return false;
-  const linked = tx?.tripExpenseId || tx?.trip_expense_id || tx?.tripShareLinkId || tx?.trip_share_link_id;
+  const linked = hasTripPaymentOrigin(tx) || tx?.tripShareLinkId || tx?.trip_share_link_id;
   const label = String(tx?.label || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   return Boolean(linked) || /^\[trip\]\s*entree recue\s*-/i.test(label);
 }
 
 export function isTripCashExpense(tx = {}) {
   if (String(tx?.type || '').toLowerCase() !== 'expense') return false;
-  const linked = tx?.tripExpenseId || tx?.trip_expense_id || tx?.tripShareLinkId || tx?.trip_share_link_id;
+  const linked = hasTripPaymentOrigin(tx) || tx?.tripShareLinkId || tx?.trip_share_link_id;
   return Boolean(linked) || /^\[trip\]\s*avance\s*-/i.test(String(tx?.label || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
 }
 
