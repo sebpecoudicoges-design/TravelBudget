@@ -177,3 +177,7 @@ Ajouter un parcours uniquement si la livraison introduit une vérification utili
 Pointage et sélection Transactions : voir [lot 10.5.387](WALLET_JOURNAL_10_5_386.md).
 
 Pointage groupé : voir [lot 10.5.387](WALLET_BULK_RECONCILIATION_10_5_387.md). Vérifier les filtres et une interruption réseau sur téléphone.
+
+## Android 10.5.391 — annonces
+
+Installer en mise à jour, relancer en ligne, vérifier les annonces de test et la ligne Publicité dans Réglages. Tester hors ligne puis retour réseau, chargement lent, formulaire et retrait du consentement. Vérifier que la bannière ne masque pas les commandes. Validation sur téléphone restante.

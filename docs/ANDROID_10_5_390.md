@@ -1,5 +1,7 @@
 # Android 10.5.390 — 11 novembre 2026
 
+Retour appareil ultérieur : aucune annonce ni formulaire de consentement observé par l'utilisateur. Voir la correction et les limites de diagnostic dans [AdMob Android](ADMOB_ANDROID.md).
+
 Compilation debug pour essais internes. Elle inclut les sauvegardes Sport atomiques, les collections et suppressions Trip, la conservation de la provenance du paiement brut et l'intégration AdMob Android.
 
 ## Binaire vérifié

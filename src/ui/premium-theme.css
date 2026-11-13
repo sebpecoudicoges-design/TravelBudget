@@ -1629,4 +1629,5 @@ body.theme-dark .tb-assist-ai-controls small,body.theme-dark #tb-assist-status{c
 body.theme-dark .tb-nutrition-recovery { --tb-surface: var(--panel); --tb-ink: var(--text); --tb-line: var(--border); }
 /* Only mounted during an online Android cold start; never blocks startup beyond 5s. */
 .tb-ad-launch { position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; background: var(--tb-canvas); color: var(--tb-ink); font-size: 24px; font-weight: 800; }
-#tb-ad-privacy[hidden] { display: none !important; }
+#tb-ad-privacy[hidden], #tb-ad-status[hidden] { display: none !important; }
+#tb-ad-status { overflow-wrap: anywhere; }

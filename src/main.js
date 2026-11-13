@@ -458,12 +458,20 @@ if (window.Capacitor?.getPlatform?.() === 'android') {
   screen.setAttribute('role', 'status');
   screen.textContent = 'TravelBudget';
   if (window.navigator.onLine !== false) globalThis.document.body.appendChild(screen);
-  const close = () => screen.remove();
+  let resolveClosed;
+  const closed = new Promise(resolve => { resolveClosed = resolve; });
+  const close = () => { screen.remove(); resolveClosed(); };
   const timer = window.setTimeout(close, 5000);
   deferredModules.load('nativeAds').then(module => module.installNativeAds(window, {
     isOpen: () => screen.isConnected,
+    closed,
     close: () => { window.clearTimeout(timer); close(); },
-  })).catch(close);
+  })).catch(error => {
+    close();
+    const status = globalThis.document.getElementById('tb-ad-status');
+    if (status) { status.hidden = false; status.textContent = `Publicité : ${error?.message || error}`; }
+    console.warn('[TB Ads] Startup failed', error);
+  });
 }
 
 boot().catch((err) => {
