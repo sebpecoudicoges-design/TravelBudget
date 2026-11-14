@@ -18,6 +18,8 @@ La bannière adaptative utilise un espace natif sous la WebView. Toute la fenêt
 
 Avant diffusion commerciale, configurer et publier les messages requis dans AdMob > Confidentialité et messages, vérifier l'état d'approbation de l'application, sa fiche boutique et app-ads.txt, puis actualiser les déclarations de confidentialité de la boutique. La création des blocs ne prouve pas ces validations.
 
+Vérification directe le 14 novembre 2026 : « TravelBudget - Consentement publicitaire » est bien **Publié**, associé à TravelBudget, anglais et une langue supplémentaire. Le compte reste **en cours de validation** ; le profil de paiement est complet ; l'association à une boutique reste demandée. L'utilisateur confirme désormais bannière et ouverture fonctionnelles sur téléphone. Cela ne valide ni les annonces commerciales ni tous les scénarios de consentement.
+
 Validation appareil restante : ouverture en ligne/hors ligne, consentement requis/refus/retrait, absence de remplissage, rotation, clavier, navigation inférieure et dialogues, retour d'authentification, fermeture/réouverture et mise à jour de l'APK précédent. Vérifier que les créations portent le marquage test sur l'APK debug.
 
 ## Reprise 10.5.391 — 13 novembre 2026

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `1fb705de30f783c3d462d7348ffaa31a01df693a`
-> Empreinte du snapshot : `dea0796be825b96b2c03e7bf79975a6133beaa817c1e217f1dd4f50a358f53a0`
-> Généré le : `2026-11-13T01:25:50.193Z`
+> Commit analysé : `73f086f7c0ba791b95f01bc986deb8967ff8fcc5`
+> Empreinte du snapshot : `427bc86bceb76f6034d105747f2ba82cb326684657ee1da1bfda94583cbcde06`
+> Généré le : `2026-11-14T23:14:13.752Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.391` |
+| Version | `10.5.392` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 28 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 196 |
+| Fichiers de tests | 197 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -435,6 +435,7 @@ Modules :
 - `tests/data/mcpFinanceRead.test.js`
 - `tests/data/mutationQueueConcurrency.test.js`
 - `tests/data/mutationQueueStore.test.js`
+- `tests/data/networkReachability.test.js`
 - `tests/data/nutritionPersistenceFailure.test.js`
 - `tests/data/nutritionRepository.test.js`
 - `tests/data/recurringBudgetPeriodMigration.test.js`
@@ -804,6 +805,7 @@ Modules :
 - `docs/ANDROID_10_5_389.md`
 - `docs/ANDROID_10_5_390.md`
 - `docs/ANDROID_10_5_391.md`
+- `docs/ANDROID_10_5_392.md`
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`

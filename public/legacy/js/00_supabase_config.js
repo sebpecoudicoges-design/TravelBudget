@@ -26,8 +26,9 @@ function tbSupabaseFetch(input, init) {
     return res;
   }).catch((err) => {
     try {
-      if (isProjectRequest && typeof window.tbMarkNetworkUnavailable === "function") {
-        window.tbMarkNetworkUnavailable(err?.name || "supabase-fetch-failed");
+      const cancelled = err?.name === "AbortError" || init?.signal?.aborted || input?.signal?.aborted;
+      if (isProjectRequest && !cancelled && typeof window.tbReportNetworkFailure === "function") {
+        window.tbReportNetworkFailure(err?.name || "supabase-fetch-failed");
       }
     } catch (_) {}
     try {

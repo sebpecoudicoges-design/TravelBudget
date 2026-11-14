@@ -181,3 +181,9 @@ Pointage groupé : voir [lot 10.5.387](WALLET_BULK_RECONCILIATION_10_5_387.md). 
 ## Android 10.5.391 — annonces
 
 Installer en mise à jour, relancer en ligne, vérifier les annonces de test et la ligne Publicité dans Réglages. Tester hors ligne puis retour réseau, chargement lent, formulaire et retrait du consentement. Vérifier que la bannière ne masque pas les commandes. Validation sur téléphone restante.
+
+Retour utilisateur du 14 novembre : bannière et ouverture chargées et affichées. Consentement/refus/retrait et autres scénarios restent à tester.
+
+## Android 10.5.392 — réseau faible
+
+Sur réseau lent encore disponible, ouvrir et actualiser : une réponse de six secondes ne doit pas activer le mode hors ligne. Tester ensuite mode avion, puis rétablissement du réseau. Après une erreur d'enregistrement, vérifier l'état distant avant de recommencer ; le contrôle de connectivité ne rejoue aucune écriture. Validation téléphone restante.

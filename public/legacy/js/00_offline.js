@@ -7,6 +7,8 @@
   const MAX_AGE_DAYS = 14;
   let networkUnavailableUntil = 0;
   let reachabilityPromise = null;
+  let reachableUntil = 0;
+  let networkRevision = 0;
 
   function uid() {
     try {
@@ -198,6 +200,7 @@
   }
 
   function markNetworkUnavailable(reason) {
+    reachableUntil = 0;
     networkUnavailableUntil = Date.now() + 8000;
     window.__TB_OFFLINE_NETWORK__ = { reason: String(reason || "network"), until: networkUnavailableUntil };
     try { document.documentElement.classList.add("tb-supabase-offline"); } catch (_) {}
@@ -205,6 +208,8 @@
   }
 
   function clearNetworkUnavailable() {
+    networkRevision += 1;
+    reachableUntil = Date.now() + 30000;
     const wasUnavailable = Boolean(
       window.__TB_OFFLINE_NETWORK__
       || Date.now() < Number(networkUnavailableUntil || 0)
@@ -245,37 +250,52 @@
       }
     } catch (_) {}
     if (!forceProbe && Date.now() < Number(networkUnavailableUntil || 0)) return false;
-    if (forceProbe) networkUnavailableUntil = 0;
+    if (!forceProbe && Date.now() < reachableUntil) return true;
 
     if (reachabilityPromise) return reachabilityPromise;
+    const url = supabaseHealthUrl();
+    if (!url) return true;
     reachabilityPromise = (async () => {
-      const url = supabaseHealthUrl();
-      if (!url) return true;
-
-      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const timeout = controller ? setTimeout(() => controller.abort(), forceProbe ? 4000 : 2500) : null;
+      const revision = networkRevision;
       try {
-        const res = await fetch(url, {
-          method: "GET",
-          cache: "no-store",
-          headers: supabasePublicHeaders(),
-          signal: controller ? controller.signal : undefined,
-        });
-        if (res && res.status < 500) {
-          clearNetworkUnavailable();
-          return true;
+        // One slow or failed request is not proof of a disconnected device.
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+          const timeout = controller ? setTimeout(() => controller.abort(), 10000) : null;
+          try {
+            const res = await fetch(url, {
+              method: "GET", cache: "no-store", headers: supabasePublicHeaders(),
+              signal: controller ? controller.signal : undefined,
+            });
+            if (res && res.status < 500) {
+              clearNetworkUnavailable();
+              return true;
+            }
+          } catch (_) {
+            // Confirm via a second read-only probe, never replay the failed mutation.
+          } finally {
+            if (timeout) clearTimeout(timeout);
+          }
+          if (navigator && navigator.onLine === false) break;
+          // A real request succeeded while this probe was pending.
+          if (networkRevision !== revision) return true;
         }
         markNetworkUnavailable(reason || "supabase-unreachable");
         return false;
-      } catch (e) {
-        markNetworkUnavailable(reason || e?.name || "supabase-unreachable");
-        return false;
       } finally {
-        if (timeout) clearTimeout(timeout);
         reachabilityPromise = null;
       }
     })();
     return reachabilityPromise;
+  }
+
+  function reportNetworkFailure(reason) {
+    if (navigator && navigator.onLine === false) {
+      markNetworkUnavailable(reason);
+      return;
+    }
+    // Keep independent requests available until loss of service is confirmed.
+    void isSupabaseReachable(reason || "request-failed", { force: true });
   }
 
   async function shouldUseOfflineMode(reason) {
@@ -292,7 +312,7 @@
   window.tbRestoreOfflineSnapshot = restoreOfflineSnapshot;
   window.tbClearOfflineSnapshots = clearSnapshotKeys;
   window.tbOfflineMessage = offlineMessage;
-  window.tbMarkNetworkUnavailable = markNetworkUnavailable;
+  window.tbReportNetworkFailure = reportNetworkFailure;
   window.tbClearNetworkUnavailable = clearNetworkUnavailable;
   window.tbIsOfflineMode = isOfflineMode;
   window.tbIsSupabaseReachable = isSupabaseReachable;

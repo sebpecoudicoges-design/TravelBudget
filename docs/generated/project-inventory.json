@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "1fb705de30f783c3d462d7348ffaa31a01df693a",
-  "snapshotFingerprint": "dea0796be825b96b2c03e7bf79975a6133beaa817c1e217f1dd4f50a358f53a0",
-  "generatedAt": "2026-11-13T01:25:50.193Z",
+  "commit": "73f086f7c0ba791b95f01bc986deb8967ff8fcc5",
+  "snapshotFingerprint": "427bc86bceb76f6034d105747f2ba82cb326684657ee1da1bfda94583cbcde06",
+  "generatedAt": "2026-11-14T23:14:13.752Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.391"
+    "version": "10.5.392"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -327,6 +327,7 @@
     "tests/data/mcpFinanceRead.test.js",
     "tests/data/mutationQueueConcurrency.test.js",
     "tests/data/mutationQueueStore.test.js",
+    "tests/data/networkReachability.test.js",
     "tests/data/nutritionPersistenceFailure.test.js",
     "tests/data/nutritionRepository.test.js",
     "tests/data/recurringBudgetPeriodMigration.test.js",
@@ -767,6 +768,7 @@
     "docs/ANDROID_10_5_389.md",
     "docs/ANDROID_10_5_390.md",
     "docs/ANDROID_10_5_391.md",
+    "docs/ANDROID_10_5_392.md",
     "docs/ANDROID_SECURITY_10_5_373.md",
     "docs/ARCHITECTURE_DECISIONS.md",
     "docs/ASSISTANT_AI_OPERATIONS.md",

@@ -280,7 +280,7 @@ async function _runRefreshFromServer(opts) {
   } catch (e) {
     _tbRefreshLog("refreshFromServer:error", e && (e.message || e));
     (window.log?log.error:console.error)("[refreshFromServer]", e);
-    try { if (typeof window.tbMarkNetworkUnavailable === "function" && /failed to fetch|network|name_not_resolved/i.test(String(e?.message || e))) window.tbMarkNetworkUnavailable("refresh-error"); } catch (_) {}
+    try { if (e?.name !== "AbortError" && typeof window.tbReportNetworkFailure === "function" && /failed to fetch|network|name_not_resolved/i.test(String(e?.message || e))) window.tbReportNetworkFailure("refresh-error"); } catch (_) {}
     if (navigator && navigator.onLine === false && typeof window.tbRestoreOfflineSnapshot === "function" && window.tbRestoreOfflineSnapshot("refreshFromServer:error")) {
       try { if (!options.skipRender) { if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("offline-snapshot"); else if (typeof renderAll === "function") renderAll(); } } catch (_) {}
       try { if (typeof toastInfo === "function") toastInfo(window.tbOfflineMessage ? window.tbOfflineMessage() : "Mode hors ligne."); } catch (_) {}

@@ -2,11 +2,29 @@
 
 Objectif : passer de l'APK de test a une publication Google Play propre, sans perdre la tracabilite deja installee dans le projet.
 
-Statut : **en attente de la campagne de stabilisation module par module ouverte en `10.5.316`**. Les acquis AAB et conformite sont conserves ; la soumission reprend apres validation des modules critiques.
+Statut : **préparation du test fermé reprise le 14 novembre 2026 à la demande de l'utilisateur**. Aucun test fermé TravelBudget lancé à ce stade.
+
+## Vérification du compte le 14 novembre 2026
+
+- Compte personnel Pecloud accessible. Deux fiches distinctes existent : BudgetPacker (`com.travelbudget.app`) et TravelBudget (`fr.pecloud.travelbudget`). L'utilisateur choisit explicitement **la nouvelle fiche TravelBudget**.
+- TravelBudget est en brouillon, configuration 9/11 : restent catégorie/coordonnées et fiche boutique. Les déclarations sont marquées terminées, mais leur contenu doit être relu avec les traitements actuels avant soumission.
+- Zéro testeur inscrit ; l'utilisateur doit encore les recruter. La console exige au moins 12 inscrits pendant 14 jours continus.
+- Play App Signing est déjà indiqué actif. L'utilisateur ne dispose pas de clé d'envoi ; vérifier le certificat enregistré avant de créer ou remplacer une clé.
+- L'application Firebase `TravelBudget Play` / `fr.pecloud.travelbudget` a été enregistrée dans le projet existant `travelbudget-9f39c`, et le JSON téléchargé puis relu localement. Le code Android utilise encore `com.travelbudget.app`. Préparer le nouveau package et le retour OAuth avant de soumettre un AAB. La nouvelle installation ne reprend pas automatiquement les données uniquement locales de l'ancienne application.
+- L'utilisateur choisit la France pour le test fermé et autorise `seb.pecoud.icoges@gmail.com` comme adresse publique de support.
+- AdMob : consentement européen publié, paiement complet, validation du compte en cours et association boutique restante.
+
+### Parcours proposé aux testeurs
+
+Recruter idéalement 15 à 20 personnes Android pour garder au moins 12 inscriptions continues. Recueillir leur compte Google utilisé dans le Play Store, les ajouter au groupe autorisé puis partager le lien d'adhésion fourni par la piste fermée. L'ajout d'une adresse ne vaut pas adhésion. Le test commence après publication de la version et inscription effective des testeurs.
+
+Scénario : installer via Play, se connecter, créer un voyage de démonstration et un wallet, ajouter/modifier une dépense, vérifier budget et analyse, tester une dépense partagée et son remboursement, consulter Sport/Nutrition/Documents avec des données fictives, puis tester réseau faible et retour du mode avion. Ne pas cliquer les annonces pour les tester. Relever version, appareil, étapes, résultat attendu/observé et date dans le suivi des retours. Ne pas inclure de données personnelles dans les captures partagées.
+
+Conserver les retours réels et corrections durant la campagne ; la fin des 14 jours permet de demander l'accès production, elle ne garantit pas son approbation. Aucun message de recrutement envoyé par l'assistant.
 
 ## Etat actuel
 
-- Version locale : `10.5.387`, avec Capacitor Android `8.5.3`. Correctifs Trip/wallets et distribution courante : [suivi 10.5.387](WALLET_JOURNAL_10_5_386.md).
+- Version locale : `10.5.392`, avec Capacitor Android `8.5.3`. Correctif réseau lent : [suivi 10.5.392](ANDROID_10_5_392.md).
 - Package Android : `com.travelbudget.app`.
 - Version Android derivee de `package.json`.
 - Historique sécurité : APK de test `travelbudget-10.5.373-20261010-092634-debug.apk` publié via Supabase Storage ; SHA-256 `68BC3312976FAB4565B18A1D35700C6487BC7B4B331D949DA63B114690F0C6AA`. Signature et relecture distante vérifiées ; validation téléphone restante. Voir [le lot sécurité Android](ANDROID_SECURITY_10_5_373.md).
@@ -34,10 +52,9 @@ Cette regle remplace le chantier 6 comme garde permanente.
 
 ## Bloquants avant soumission Play Store
 
-- Creer ou confirmer le compte Google Play Developer.
-- Creer l'application dans Play Console.
-- Configurer Play App Signing.
-- Generer une keystore release locale et renseigner les variables :
+- Compte et fiche TravelBudget confirmés ; finaliser les deux tâches restantes.
+- Vérifier le certificat d'envoi existant et retrouver la clé ou suivre la procédure de réinitialisation si nécessaire.
+- Configurer une keystore release locale appropriée et renseigner les variables :
   - `TB_ANDROID_KEYSTORE_PATH`
   - `TB_ANDROID_KEYSTORE_PASSWORD`
   - `TB_ANDROID_KEY_ALIAS`
