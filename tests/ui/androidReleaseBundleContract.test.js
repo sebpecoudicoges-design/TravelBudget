@@ -5,6 +5,18 @@ import path from 'node:path';
 const root = process.cwd();
 
 describe('Android release bundle contract', () => {
+  it('separates the Play identity from existing debug installs and scopes OAuth to each variant', () => {
+    const gradle = fs.readFileSync(path.join(root, 'android/app/build.gradle'), 'utf8');
+    const manifest = fs.readFileSync(path.join(root, 'android/app/src/main/AndroidManifest.xml'), 'utf8');
+    const config = JSON.parse(fs.readFileSync(path.join(root, 'capacitor.config.json'), 'utf8'));
+    expect(config.appId).toBe('fr.pecloud.travelbudget');
+    expect(gradle).toContain('applicationId "fr.pecloud.travelbudget"');
+    expect(gradle).toContain('onVariants(selector().withBuildType("debug"))');
+    expect(gradle).toContain('variant.applicationId.set("com.travelbudget.app")');
+    expect(manifest).toContain('android:scheme="${applicationId}"');
+    expect(manifest).not.toContain('android:scheme="com.travelbudget.app"');
+  });
+
   it('keeps Play Store AAB generation scripted without committing signing secrets', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     const gradle = fs.readFileSync(path.join(root, 'android/app/build.gradle'), 'utf8');

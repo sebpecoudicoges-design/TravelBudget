@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `73f086f7c0ba791b95f01bc986deb8967ff8fcc5`
-> Empreinte du snapshot : `427bc86bceb76f6034d105747f2ba82cb326684657ee1da1bfda94583cbcde06`
-> Généré le : `2026-11-14T23:14:13.752Z`
+> Commit analysé : `312105b317c8fc65661f52b392916699f7a93cc0`
+> Empreinte du snapshot : `0ccd8c8f7e2c16414373a8976c2e0cdfd7fb7523688819639b5665eba09b3b08`
+> Généré le : `2026-11-19T20:46:00.248Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.392` |
+| Version | `10.5.393` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 28 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 197 |
+| Fichiers de tests | 198 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -433,6 +433,7 @@ Modules :
 - `tests/data/assetTransactionLinksMigration.test.js`
 - `tests/data/entityStore.test.js`
 - `tests/data/mcpFinanceRead.test.js`
+- `tests/data/mobileOAuthPackages.test.js`
 - `tests/data/mutationQueueConcurrency.test.js`
 - `tests/data/mutationQueueStore.test.js`
 - `tests/data/networkReachability.test.js`
@@ -844,6 +845,7 @@ Modules :
 - `docs/VISUAL_SYSTEM.md`
 - `docs/WALLET_BULK_RECONCILIATION_10_5_387.md`
 - `docs/WALLET_JOURNAL_10_5_386.md`
+- `docs/WEB_10_5_393.md`
 - `docs/assistant-ai-evaluation.md`
 - `docs/deployment_settings_checklist.md`
 

@@ -19,7 +19,7 @@ android {
     namespace = "com.travelbudget.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.travelbudget.app"
+        applicationId "fr.pecloud.travelbudget"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode
@@ -49,6 +49,13 @@ android {
             }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        // Preserve direct-update compatibility with the existing test APK.
+        variant.applicationId.set("com.travelbudget.app")
     }
 }
 

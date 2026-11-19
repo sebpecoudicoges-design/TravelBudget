@@ -13,6 +13,27 @@ import {
 } from '../../src/core/dailyBudgetRules.js';
 
 describe('daily budget rules core', () => {
+  it.each(['[Trip] Avance Hostel', '[Trip] Avance - Hostel'])('allocates a personal share independently of the expense name: %s', label => {
+    const share = {
+      id: 'personal-share', type: 'expense', label, amount: 5.85, currency: 'EUR',
+      date_start: '2026-11-18', date_end: '2026-11-18',
+      budget_date_start: '2026-11-20', budget_date_end: '2026-11-21',
+      pay_now: false, affects_budget: true, out_of_budget: false, is_internal: true,
+      trip_expense_id: null, trip_share_link_id: null,
+    };
+    expect(isTripBudgetShare(share)).toBe(true);
+    const rows = buildDailyBudgetAllocations(share);
+    expect(rows.map(row => row.dateStr)).toEqual(['2026-11-20', '2026-11-21']);
+    for (const row of rows) expect(row.amountBase).toBeCloseTo(2.925);
+    expect(transactionAffectsCash(share)).toBe(false);
+    const payment = { ...share, label: '[Trip] Avance - Avance Hostel', amount: 11.7,
+      pay_now: true, affects_budget: false, out_of_budget: true, is_internal: false };
+    expect(buildDailyBudgetAllocations(payment)).toEqual([]);
+    expect(transactionAffectsCash(payment)).toBe(true);
+    expect(buildDailyBudgetAllocations({ ...share, affects_budget: false })).toEqual([]);
+    expect(buildDailyBudgetAllocations({ ...share, out_of_budget: true })).toEqual([]);
+  });
+
   it('keeps Trip shares in budget but excludes their payment advance', () => {
     const advance = {
       type: 'expense',

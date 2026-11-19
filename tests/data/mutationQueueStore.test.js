@@ -11,6 +11,101 @@ function memoryStorage() {
 }
 
 describe('mutation queue store', () => {
+  it.each(['success', 'permanent'])('does not clean visible state when %s acknowledgement cannot be persisted', async outcome => {
+    const storage = memoryStorage();
+    const queue = createMutationQueueStore({ storage, queueKey: 'q' });
+    queue.enqueue('existing');
+    let cleaned = false;
+    const setItem = storage.setItem;
+    await expect(flushMutationQueue({ store: queue,
+      run: async () => {
+        storage.setItem = () => { throw new Error('Quota exceeded'); };
+        if (outcome === 'permanent') throw new Error('Permanent failure');
+      },
+      isPermanentFailure: (_, error) => error.message === 'Permanent failure',
+      onSuccess: () => { cleaned = true; }, onPermanentFailure: () => { cleaned = true; },
+    })).rejects.toThrow('Quota exceeded');
+    expect(cleaned).toBe(false);
+    storage.setItem = setItem;
+    expect(queue.read()).toHaveLength(1);
+  });
+
+  it.each(['{broken', 'null', '{}', '{"items":[{"id":"kept"},null]}'])('preserves unreadable persisted data: %s', raw => {
+    const storage = memoryStorage();
+    storage.setItem('q', raw);
+    const queue = createMutationQueueStore({ storage, queueKey: 'q' });
+    for (const change of [() => queue.enqueue('new'), () => queue.remove('kept'), () => queue.write([])]) {
+      expect(change).toThrow();
+      expect(storage.getItem('q')).toBe(raw);
+    }
+  });
+
+  it('does not convert a transient read failure into an empty replacement queue', () => {
+    const storage = memoryStorage();
+    const queue = createMutationQueueStore({ storage, queueKey: 'q' });
+    queue.enqueue('existing');
+    const getItem = storage.getItem;
+    storage.getItem = () => { throw new Error('Read unavailable'); };
+    expect(() => queue.enqueue('new')).toThrow('Read unavailable');
+    storage.getItem = getItem;
+    expect(queue.read().map(item => item.kind)).toEqual(['existing']);
+  });
+
+  it('keeps a slow attempt protected while its owner renews the lease', () => {
+    const storage = memoryStorage();
+    let time = 1_000;
+    const first = createMutationQueueStore({ storage, queueKey: 'q', owner: 'a', now: () => time });
+    const second = createMutationQueueStore({ storage, queueKey: 'q', owner: 'b', now: () => time });
+    const { item } = first.enqueue('slow');
+    expect(first.acquireLock()).toBe(true);
+    first.beginAttempt(item.id);
+    for (let i = 0; i < 9; i += 1) {
+      time += 10_000;
+      expect(first.renewLock()).toBe(true);
+      expect(second.acquireLock()).toBe(false);
+    }
+    expect(second.runnable()).toEqual([]);
+    first.releaseLock();
+    expect(second.acquireLock()).toBe(true);
+    expect(second.runnable().map(row => row.id)).toEqual([item.id]);
+  });
+
+  it('does not revive an expired lease or delete a replacement owner lock', () => {
+    const storage = memoryStorage();
+    let time = 1_000;
+    const first = createMutationQueueStore({ storage, queueKey: 'q', owner: 'a', now: () => time });
+    const second = createMutationQueueStore({ storage, queueKey: 'q', owner: 'b', now: () => time });
+    first.acquireLock();
+    time += 45_001;
+    expect(first.renewLock()).toBe(false);
+    expect(second.acquireLock()).toBe(true);
+    expect(first.renewLock()).toBe(false);
+    first.releaseLock();
+    expect(second.renewLock()).toBe(true);
+  });
+
+  it('cannot renew a previous account lease after changing scope', () => {
+    const storage = memoryStorage();
+    let scope = 'a';
+    const queue = createMutationQueueStore({ storage, queueKey: () => scope });
+    queue.acquireLock();
+    scope = 'b';
+    expect(queue.renewLock()).toBe(false);
+    queue.releaseLock();
+    expect(storage.getItem('a_lock')).toBeNull();
+    expect(storage.getItem('b_lock')).toBeNull();
+  });
+
+  it('stops before the next mutation when ownership is lost during a request', async () => {
+    const queue = createMutationQueueStore({ storage: memoryStorage() });
+    queue.enqueue('first');
+    queue.enqueue('second');
+    let owned = true;
+    const result = await flushMutationQueue({ store: queue, canContinue: () => owned, run: async () => { owned = false; } });
+    expect(result.attempted).toBe(1);
+    expect(queue.read().map(row => row.kind)).toEqual(['second']);
+  });
+
   it('deduplicates an idempotent mutation', () => {
     const queue = createMutationQueueStore({ storage: memoryStorage(), queueKey: 'q', now: () => 1_000, idFactory: () => 'm1' });
     queue.enqueue('transaction.apply_v2', { args: { p_offline_dedupe_key: 'tx-1' } });

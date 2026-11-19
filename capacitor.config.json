@@ -1,5 +1,5 @@
 {
-  "appId": "com.travelbudget.app",
+  "appId": "fr.pecloud.travelbudget",
   "appName": "Travel Budget",
   "webDir": "dist",
   "server": {

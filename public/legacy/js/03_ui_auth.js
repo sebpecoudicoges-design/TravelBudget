@@ -18,7 +18,13 @@ function tbAuthIsNativeApp() {
   }
 }
 
-const TB_MOBILE_AUTH_REDIRECT_URL = "com.travelbudget.app://auth-callback";
+async function tbMobileAuthRedirectUrl() {
+  const info = await tbAuthGetCapacitorPlugin("App")?.getInfo?.();
+  if (!["com.travelbudget.app", "fr.pecloud.travelbudget"].includes(info?.id)) {
+    throw new Error("Identifiant Android indisponible. Relance l'application.");
+  }
+  return `${info.id}://auth-callback`;
+}
 
 function tbAuthWebRedirectUrl() {
   try {
@@ -109,13 +115,20 @@ function tbInitMobileOAuthListener() {
 
   App.addListener("appUrlOpen", async (event) => {
     const url = String(event?.url || "");
-    if (!url.startsWith(TB_MOBILE_AUTH_REDIRECT_URL)) return;
+    try {
+      const expected = new URL(await tbMobileAuthRedirectUrl());
+      const callback = new URL(url);
+      if (callback.protocol !== expected.protocol || callback.host !== expected.host
+          || callback.pathname || callback.username || callback.password) return;
+    } catch (_) {
+      return;
+    }
     try {
       const completed = await tbCompleteMobileOAuth(url);
       if (completed) await tbAfterOAuthSessionReady();
       else showAuth(true, tbAuthText("Retour Google incomplet. Reessaie.", "Incomplete Google callback. Try again."));
     } catch (e) {
-      tbAuthLogError("mobileOAuthCallback", e, { callbackUrlPrefix: url.slice(0, 60) });
+      tbAuthLogError("mobileOAuthCallback", e);
       showAuth(true, tbFriendlyAuthError(e));
     } finally {
       try { await tbAuthGetCapacitorPlugin("Browser")?.close?.(); } catch (_) {}
@@ -430,7 +443,7 @@ async function signInWithProvider(provider) {
       const { data, error } = await sb.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: TB_MOBILE_AUTH_REDIRECT_URL,
+          redirectTo: await tbMobileAuthRedirectUrl(),
           skipBrowserRedirect: true,
           queryParams: { prompt: "select_account" },
         },

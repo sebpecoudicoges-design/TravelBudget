@@ -2,7 +2,18 @@
 
 Objectif : passer de l'APK de test a une publication Google Play propre, sans perdre la tracabilite deja installee dans le projet.
 
-Statut : **préparation du test fermé reprise le 14 novembre 2026 à la demande de l'utilisateur**. Aucun test fermé TravelBudget lancé à ce stade.
+Statut : **préparation du test fermé reprise le 17 novembre 2026 à la demande de l'utilisateur**. Aucun test fermé TravelBudget lancé à ce stade.
+
+Le 20 novembre, l'utilisateur demande de conserver cette préparation et de reprendre la publication après l'audit, l'amélioration visuelle et le chantier des publicités réelles. Voir [l'ordre du backlog](BACKLOG.md#ordre-demandé-le-20-novembre-2026). Les observations de console ci-dessous sont datées, sans nouvelle vérification distante le 20 novembre.
+
+## Reprise du 17 novembre 2026
+
+- Fiche boutique : descriptions française courte et complète enregistrées en brouillon, confirmation relue dans Play Console. Les visuels restent à fournir. Support public : `seb.pecoud.icoges@gmail.com`. Configuration précédemment constatée à 10/11.
+- Identité Android préparée localement : release `fr.pecloud.travelbudget`, debug `com.travelbudget.app` conservé pour les mises à jour des installations existantes. Le namespace Java reste inchangé. Le JSON Firebase local contient les deux clients ; il reste exclu de Git.
+- Retour OAuth choisi avec l'identifiant réellement installé (`App.getInfo`) et validé exactement avant échange de session. Les liens étrangers ou malformés ne ferment pas le navigateur ; les codes de connexion ne sont plus inclus dans le contexte de journalisation.
+- Validation locale : 18 tests ciblés OAuth, transitions de connexion et contrat Android réussis. Gradle `processDebugMainManifest`, `processReleaseMainManifest`, `processDebugGoogleServices` et `processReleaseGoogleServices` réussis. Cette validation des manifestes et des clients Firebase est distincte de la production d'un AAB signé. Atlas régénéré et contrat documentaire validé.
+- Restent avant soumission : autoriser et vérifier le nouveau retour OAuth dans Supabase, finaliser les visuels, préparer la clé d'envoi et l'AAB signé, relire les déclarations, configurer France et la piste fermée. Aucun nouveau bundle envoyé. La clé de signature gérée par Play n'a pas été modifiée.
+- Les 12 testeurs restent à recruter par l'utilisateur. Aucun délai de test n'a commencé.
 
 ## Vérification du compte le 14 novembre 2026
 
@@ -25,7 +36,7 @@ Conserver les retours réels et corrections durant la campagne ; la fin des 14 j
 ## Etat actuel
 
 - Version locale : `10.5.392`, avec Capacitor Android `8.5.3`. Correctif réseau lent : [suivi 10.5.392](ANDROID_10_5_392.md).
-- Package Android : `com.travelbudget.app`.
+- APK distribué : `com.travelbudget.app` ; préparation locale Play : `fr.pecloud.travelbudget`.
 - Version Android derivee de `package.json`.
 - Historique sécurité : APK de test `travelbudget-10.5.373-20261010-092634-debug.apk` publié via Supabase Storage ; SHA-256 `68BC3312976FAB4565B18A1D35700C6487BC7B4B331D949DA63B114690F0C6AA`. Signature et relecture distante vérifiées ; validation téléphone restante. Voir [le lot sécurité Android](ANDROID_SECURITY_10_5_373.md).
 - Workflow AAB disponible :
@@ -52,7 +63,7 @@ Cette regle remplace le chantier 6 comme garde permanente.
 
 ## Bloquants avant soumission Play Store
 
-- Compte et fiche TravelBudget confirmés ; finaliser les deux tâches restantes.
+- Compte et fiche TravelBudget confirmés ; finaliser les éléments visuels de la fiche boutique.
 - Vérifier le certificat d'envoi existant et retrouver la clé ou suivre la procédure de réinitialisation si nécessaire.
 - Configurer une keystore release locale appropriée et renseigner les variables :
   - `TB_ANDROID_KEYSTORE_PATH`

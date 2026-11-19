@@ -32,6 +32,7 @@ Dashboard, notifications quotidiennes et écrans qui affichent le budget utilis�
 
 - Même résultat dans les KPI, les lignes journalières et les notifications.
 - Une dépense Trip ne compte que selon la politique de part personnelle.
+- Le mot « Avance » dans le nom choisi pour une dépense n'exclut pas sa quote-part personnelle. Les indicateurs de paiement et d'affectation budgétaire distinguent l'avance wallet de la part consommée ; une part de 5,85 EUR sur deux jours contribue pour 2,925 EUR par jour avant conversion/arrondi.
 - Une dépense Transport de 33,37 et des quote-parts Trip reçues de 48,50 donnent une consommation nette de -15,13 pour le jour; le restant peut donc dépasser l'objectif quotidien.
 - Le rendu journalier accompagne le montant net d'un marqueur signé : moins lorsque la journée consomme le budget, plus lorsqu'un avoir le recrédite.
 - Les revenus Travail et allocations Patrimoine suivent leur politique budgétaire.

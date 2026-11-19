@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 
 const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const projectPage = fs.readFileSync('public/projet.html', 'utf8');
+const apkVersion = projectPage.match(/travelbudget-(\d+\.\d+\.\d+)-\d{8}-\d{6}-debug\.apk/)[1];
 
 for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
   test(`Android release link stays accessible ${width}px ${theme}`, async ({ page }) => {
@@ -10,16 +12,16 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await page.goto('/projet.html');
     const download = page.locator('[data-latest-apk]');
     await expect(download).toHaveAttribute('href', /\/app-downloads\/apk\/travelbudget-\d+\.\d+\.\d+-\d{8}-\d{6}-debug\.apk$/);
-    await expect(download).toContainText(`APK ${version}`);
+    await expect(download).toContainText(`APK ${apkVersion}`);
     await expect(download).toBeVisible();
     await expect(page.locator('[data-i18n="release.uploadSafety"]')).toContainText('sans suppression');
     await expect(page.locator('[data-i18n="release.edgeTypes"]')).toContainText('aucun déploiement serveur');
     await expect(page.locator('.hero-status-item').first()).toContainText(version);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole('button', { name: 'EN', exact: true }).click();
-    await expect(download).toContainText(`APK ${version}`);
+    await expect(download).toContainText(`APK ${apkVersion}`);
     await expect(page.locator('[data-i18n="release.uploadSafety"]')).toContainText('no longer deletes');
     await expect(page.locator('[data-i18n="release.edgeTypes"]')).toContainText('no server deployment');
-    await expect(page.locator('[data-i18n^="app.cta.body."]')).toContainText(`Install APK ${version}`);
+    await expect(page.locator('[data-i18n^="app.cta.body."]')).toContainText(`Install APK ${apkVersion}`);
   });
 }

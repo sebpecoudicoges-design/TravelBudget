@@ -55,7 +55,7 @@ export function isTripBudgetShare(tx) {
     tx?.trip_share_link_id ||
     tx?.tripExpenseId ||
     tx?.trip_expense_id ||
-    (label.includes('[Trip]') && !label.includes('Avance'))
+    label.startsWith('[Trip]')
   );
 }
 

@@ -40,7 +40,9 @@ export function createMutationQueueStore(options = {}) {
   function normalize(item) {
     if (!item || typeof item !== 'object' || !item.id) return null;
     const updatedAt = item.updatedAt || item.createdAt || nowISO();
-    const staleSync = item.status === 'syncing' && now() - asTimestamp(updatedAt, now()) > staleSyncMs;
+    const activeLock = item.attemptOwner ? readLock() : null;
+    const protectedAttempt = activeLock?.owner === item.attemptOwner && Number(activeLock?.expiresAt || 0) > now();
+    const staleSync = item.status === 'syncing' && !protectedAttempt && now() - asTimestamp(updatedAt, now()) > staleSyncMs;
     return {
       ...item,
       kind: String(item.kind || 'unknown'),
@@ -55,16 +57,17 @@ export function createMutationQueueStore(options = {}) {
   }
 
   function read() {
-    try {
-      const parsed = JSON.parse(storage?.getItem(queueKey()) || 'null');
-      if (!parsed || !Array.isArray(parsed.items)) return [];
-      return parsed.items.map(normalize).filter(Boolean);
-    } catch (_) {
-      return [];
+    const raw = storage.getItem(queueKey());
+    if (raw === null) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed?.items) || parsed.items.some(item => !item || typeof item !== 'object' || !item.id)) {
+      throw new Error('File hors ligne illisible. Donnees conservees, aucune action enregistree.');
     }
+    return parsed.items.map(normalize);
   }
 
   function write(items, detail = {}) {
+    read(); // Refuse to overwrite a queue whose persisted contents cannot be read.
     const clean = (Array.isArray(items) ? items : []).map(normalize).filter(Boolean);
     storage?.setItem(queueKey(), JSON.stringify({ version: QUEUE_VERSION, savedAt: nowISO(), items: clean }));
     emit(clean, detail);
@@ -126,6 +129,7 @@ export function createMutationQueueStore(options = {}) {
       item.error = null;
       item.nextAttemptAt = null;
       item.attemptToken = `${owner}:${now()}:${Math.random().toString(16).slice(2)}`;
+      item.attemptOwner = owner;
     }, { type: 'attempt' }, item => item.status !== 'done' && item.status !== 'syncing');
     return item ? { ...item, queueScope: queueKey() } : null;
   }
@@ -133,10 +137,6 @@ export function createMutationQueueStore(options = {}) {
   function matchesAttempt(item, attempt) {
     return attempt.queueScope === queueKey() && item.revision === attempt.revision
       && item.attemptToken === attempt.attemptToken;
-  }
-
-  function isCurrentAttempt(attempt) {
-    return read().some(item => item.id === attempt.id && matchesAttempt(item, attempt));
   }
 
   function markFailure(id, error, attempt) {
@@ -183,12 +183,19 @@ export function createMutationQueueStore(options = {}) {
     acquiredLockKey = null;
   }
 
+  function renewLock() {
+    if (!acquiredLockKey || acquiredLockKey !== lockKey()) return false;
+    const current = readLock(acquiredLockKey);
+    if (current?.owner !== owner || Number(current.expiresAt || 0) <= now()) return false;
+    storage?.setItem(acquiredLockKey, JSON.stringify({ ...current, expiresAt: now() + lockTtlMs }));
+    return readLock(acquiredLockKey)?.owner === owner;
+  }
+
   return {
     read,
     write,
     enqueue,
     beginAttempt,
-    isCurrentAttempt,
     scope: queueKey,
     markFailure,
     remove,
@@ -196,10 +203,11 @@ export function createMutationQueueStore(options = {}) {
     count: () => read().filter((item) => item.status !== 'done').length,
     acquireLock,
     releaseLock,
+    renewLock,
   };
 }
 
-export async function flushMutationQueue({ store, run, force = false, isPermanentFailure, onSuccess, onPermanentFailure } = {}) {
+export async function flushMutationQueue({ store, run, force = false, canContinue = () => true, isPermanentFailure, onSuccess, onPermanentFailure } = {}) {
   if (!store || typeof run !== 'function') throw new TypeError('Queue store and runner are required.');
   const items = store.runnable(force);
   const scope = store.scope();
@@ -209,19 +217,20 @@ export async function flushMutationQueue({ store, run, force = false, isPermanen
   let attempted = 0;
 
   for (const item of items) {
-    if (store.scope() !== scope) break;
+    if (store.scope() !== scope || !canContinue()) break;
     const current = store.beginAttempt(item.id);
     if (!current) continue;
     attempted += 1;
     try {
       await run(current);
-      if (store.isCurrentAttempt(current)) await onSuccess?.(current);
-      store.remove(item.id, current);
+      if (store.remove(item.id, current)) await onSuccess?.(current);
       synced += 1;
     } catch (error) {
       if (isPermanentFailure?.(current, error)) {
-        if (store.isCurrentAttempt(current)) await onPermanentFailure?.(current, error);
-        if (store.remove(item.id, current)) discarded += 1;
+        if (store.remove(item.id, current)) {
+          discarded += 1;
+          await onPermanentFailure?.(current, error);
+        }
         continue;
       }
       store.markFailure(item.id, error, current);

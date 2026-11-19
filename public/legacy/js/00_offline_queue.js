@@ -51,16 +51,6 @@
     try { return queueStore.read(); } catch (_) { return []; }
   }
 
-  function safeWrite(items) {
-    try {
-      queueStore.write(items);
-      return true;
-    } catch (e) {
-      console.warn("[OfflineQueue] write failed", e?.message || e);
-      return false;
-    }
-  }
-
   function acquireLock(reason) {
     try { return queueStore.acquireLock(reason); } catch (_) { return false; }
   }
@@ -134,8 +124,7 @@
   }
 
   function remove(id) {
-    cleanupOptimisticRows(id);
-    queueStore.remove(id);
+    if (queueStore.remove(id)) cleanupOptimisticRows(id);
   }
 
   function count() {
@@ -221,7 +210,7 @@
 
   function discardFailed(filterKind) {
     const kind = String(filterKind || "").trim();
-    const before = safeRead();
+    const before = queueStore.read();
     const removed = [];
     const next = before.filter((item) => {
       const failed = item && item.error;
@@ -229,47 +218,47 @@
       const match = !kind || String(item.kind || "") === kind || String(item.kind || "").startsWith(kind);
       if ((failed || permanent) && match) {
         removed.push(item);
-        cleanupItemSideEffects(item);
         return false;
       }
       return true;
     });
-    safeWrite(next);
+    if (removed.length) queueStore.write(next);
+    removed.forEach(cleanupItemSideEffects);
     return removed;
   }
 
   function discardKind(filterKind) {
     const kind = String(filterKind || "").trim();
     if (!kind) return [];
-    const before = safeRead();
+    const before = queueStore.read();
     const removed = [];
     const next = before.filter((item) => {
       const match = item && (String(item.kind || "") === kind || String(item.kind || "").startsWith(kind));
       if (match) {
         removed.push(item);
-        cleanupItemSideEffects(item);
         return false;
       }
       return true;
     });
-    if (removed.length) safeWrite(next);
+    if (removed.length) queueStore.write(next);
+    removed.forEach(cleanupItemSideEffects);
     return removed;
   }
 
   function discardTripConflicts(options) {
     const opts = options || {};
-    const before = safeRead();
+    const before = queueStore.read();
     const removed = [];
     const next = before.filter((item) => {
       if (isTripConflictItem(item)) {
         removed.push(item);
-        cleanupItemSideEffects(item);
         return false;
       }
       return true;
     });
     if (removed.length) {
-      safeWrite(next);
+      queueStore.write(next);
+      removed.forEach(cleanupItemSideEffects);
       if (!opts.silent) {
         toastInfo(message(`${removed.length} ancienne(s) action(s) Trip retiree(s).`, `${removed.length} old Trip action(s) removed.`));
       }
@@ -343,6 +332,13 @@
     if (!acquireLock(reason)) return { ok: false, skipped: "locked" };
     syncing = true;
     const syncScope = queueStore.scope();
+    let leaseLost = false;
+    const renewLease = () => {
+      if (leaseLost) return false;
+      try { leaseLost = !queueStore.renewLock(); } catch (_) { leaseLost = true; }
+      return !leaseLost;
+    };
+    const leaseTimer = setInterval(renewLease, 10_000);
     let synced = 0;
     let failed = 0;
     try {
@@ -364,6 +360,7 @@
         store: queueStore,
         run: runItem,
         force,
+        canContinue: renewLease,
         isPermanentFailure: (item, error) => isPermanentFailure(item.kind, error),
         onSuccess: (item) => {
           syncedKinds.push(String(item?.kind || ""));
@@ -397,8 +394,9 @@
           }
         } catch (_) {}
       }
-      return { ok: failed === 0, synced, failed };
+      return { ok: failed === 0 && !leaseLost, synced, failed, ...(leaseLost ? { skipped: "lock-lost" } : {}) };
     } finally {
+      clearInterval(leaseTimer);
       syncing = false;
       releaseLock();
       dispatchChanged({ synced, failed });

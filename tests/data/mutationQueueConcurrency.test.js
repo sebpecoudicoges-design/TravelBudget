@@ -3,6 +3,78 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { createMutationQueueStore, flushMutationQueue } from '../../src/data/mutationQueueStore.js';
 
+it.each(['remove', 'failed', 'kind', 'trip'])('keeps optimistic data until %s deletion is persisted', action => {
+  const values = new Map();
+  let fail = false;
+  const storage = { getItem: key => values.get(key) || null, setItem: (key, value) => {
+    if (fail) throw new Error('Quota exceeded');
+    values.set(key, value);
+  }, removeItem: key => values.delete(key) };
+  const state = { transactions: [] };
+  const toast = vi.fn();
+  const window = { Data: { createMutationQueueStore, flushMutationQueue }, state, sbUser: { id: 'a' },
+    addEventListener() {}, dispatchEvent() {}, toastOk: toast };
+  vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8'), {
+    window, state, localStorage: storage, navigator: { language: 'fr' }, setTimeout() {}, setInterval, clearInterval, console,
+  });
+  const item = window.tbOfflineQueueEnqueue('transaction.update_v2', { args: { p_trip_expense_id: 'trip' } }, {});
+  const queueKey = 'travelbudget_offline_queue_v2_a';
+  const saved = JSON.parse(values.get(queueKey));
+  saved.items[0].error = 'duplicate key value';
+  values.set(queueKey, JSON.stringify(saved));
+  state.transactions.push({ id: item.id, localOnly: true, offlineQueueId: item.id });
+  const remove = () => ({
+    remove: () => window.tbOfflineQueueRemove(item.id),
+    failed: () => window.tbOfflineQueueDiscardFailed(),
+    kind: () => window.tbOfflineQueueDiscardKind('transaction.'),
+    trip: () => window.tbOfflineQueueDiscardTripConflicts(),
+  })[action]();
+  toast.mockClear();
+  fail = true;
+  expect(remove).toThrow('Quota exceeded');
+  expect(state.transactions).toHaveLength(1);
+  expect(window.tbOfflineQueueCount()).toBe(1);
+  expect(toast).not.toHaveBeenCalled();
+  fail = false;
+  remove();
+  expect(state.transactions).toHaveLength(0);
+  expect(window.tbOfflineQueueCount()).toBe(0);
+});
+
+it.each(['success', 'offline', 'lost', 'storage-error'])('cleans the renewal timer after %s and preserves queued work', async outcome => {
+  vi.useFakeTimers();
+  try {
+    const values = new Map();
+    let finish;
+    let rejectStorage = false;
+    const storage = { getItem: key => values.get(key) || null, setItem: (key, value) => {
+      if (rejectStorage && key.includes('_lock_')) throw new Error('Storage unavailable');
+      values.set(key, value);
+    }, removeItem: key => values.delete(key) };
+    const replay = vi.fn(async () => {});
+    const window = { Data: { createMutationQueueStore, flushMutationQueue }, sbUser: { id: 'a' },
+      addEventListener() {}, dispatchEvent() {}, toastOk() {}, tbTripReplayOfflineExpenseMutation: replay,
+      tbShouldUseOfflineMode: () => new Promise(resolve => { finish = resolve; }) };
+    vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8'), {
+      window, localStorage: storage, navigator: { language: 'fr' }, setTimeout() {}, setInterval, clearInterval, console,
+    });
+    window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 10 }, { entityId: 'one' });
+    const pending = window.tbOfflineQueueSync('manual');
+    await vi.advanceTimersByTimeAsync(70_000);
+    const lockKey = 'travelbudget_offline_queue_v2_lock_a';
+    expect(JSON.parse(values.get(lockKey)).expiresAt).toBeGreaterThan(Date.now());
+    if (outcome === 'lost') values.set(lockKey, JSON.stringify({ owner: 'replacement', expiresAt: Date.now() + 45_000 }));
+    if (outcome === 'storage-error') rejectStorage = true;
+    finish(outcome === 'offline');
+    const result = await pending;
+    expect(vi.getTimerCount()).toBe(0);
+    expect(replay).toHaveBeenCalledTimes(outcome === 'success' ? 1 : 0);
+    expect(window.tbOfflineQueueCount()).toBe(outcome === 'success' ? 0 : 1);
+    if (outcome === 'lost' || outcome === 'storage-error') expect(result).toMatchObject({ ok: false, skipped: 'lock-lost' });
+    if (outcome === 'lost') expect(JSON.parse(values.get(lockKey)).owner).toBe('replacement');
+  } finally { vi.useRealTimers(); }
+});
+
 it('releases the acquired account lock after changing account',()=>{
   const values=new Map();let account='a';
   const storage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
@@ -18,7 +90,7 @@ it.each(['online','offline','account-change'])('guards concurrent adapter starts
   const replay=vi.fn(async()=>{});
   const window={Data:{createMutationQueueStore,flushMutationQueue},sbUser:{id:'a'},addEventListener(){},dispatchEvent(){},toastOk(){},tbTripReplayOfflineExpenseMutation:replay,
     tbShouldUseOfflineMode:vi.fn(()=>new Promise(resolve=>{finish=resolve;}))};
-  vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js','utf8'),{window,localStorage:storage,navigator:{language:'fr'},setTimeout(){},console});
+  vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js','utf8'),{window,localStorage:storage,navigator:{language:'fr'},setTimeout(){},setInterval,clearInterval,console});
   window.tbOfflineQueueEnqueue('trip.expense.update',{amount:10},{entityId:'one'});
   const first=window.tbOfflineQueueSync('manual');
   expect(await window.tbOfflineQueueSync('manual')).toMatchObject({skipped:'already-syncing'});
@@ -83,10 +155,10 @@ it('retains an edit made during the success callback',async()=>{
 it('distinguishes two attempts of the same revision after stale recovery',()=>{
   let clock=1000;const {store}=fixture({now:()=>clock});store.enqueue('update',{}, {entityId:'one'});
   const first=store.beginAttempt('m1');clock+=61000;
-  expect(store.isCurrentAttempt(first)).toBe(true);
+  expect(store.read()[0].attemptToken).toBe(first.attemptToken);
   const second=store.beginAttempt('m1');
   expect(second.revision).toBe(first.revision);
-  expect(store.isCurrentAttempt(first)).toBe(false);
+  expect(second.attemptToken).not.toBe(first.attemptToken);
   expect(store.remove('m1',first)).toBe(false);
   expect(store.markFailure('m1',new Error('old'),first)).toBeNull();
   expect(store.remove('m1',second)).toBe(true);
@@ -105,7 +177,7 @@ it('keeps Trip optimistic state until its latest revision is acknowledged by the
   const values=new Map(),cleanup=vi.fn();
   const storage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
   const window={Data:{createMutationQueueStore,flushMutationQueue},sbUser:{id:'synthetic'},addEventListener(){},dispatchEvent(){},toastOk(){},tbTripCleanupOfflineOptimistic:cleanup};
-  vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js','utf8'),{window,localStorage:storage,navigator:{language:'fr'},setTimeout(){},console});
+  vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js','utf8'),{window,localStorage:storage,navigator:{language:'fr'},setTimeout(){},setInterval,clearInterval,console});
   const enqueue=amount=>window.tbOfflineQueueEnqueue('trip.expense.update',{amount},{entityId:'trip-one'});
   const item=enqueue(10);
   window.tbTripReplayOfflineExpenseMutation=async()=>{enqueue(20);};
