@@ -187,3 +187,7 @@ Retour utilisateur du 14 novembre : bannière et ouverture chargées et affiché
 ## Android 10.5.392 — réseau faible
 
 Sur réseau lent encore disponible, ouvrir et actualiser : une réponse de six secondes ne doit pas activer le mode hors ligne. Tester ensuite mode avion, puis rétablissement du réseau. Après une erreur d'enregistrement, vérifier l'état distant avant de recommencer ; le contrôle de connectivité ne rejoue aucune écriture. Validation téléphone restante.
+
+## Android 10.5.394 — quote-part et synchronisation
+
+Installer en mise à jour de 10.5.392, vérifier connexion Google, annonces de test et conservation du compte. Dans le budget journalier, sélectionner les 20 et 21 novembre : la part « Avance Hostel » de 5,85 EUR contribue pour 2,925 EUR par jour avant conversion/arrondi, sans second débit wallet. Sur un compte de démonstration, conserver une action Trip en erreur, fermer puis rouvrir : elle reste visible et peut être reprise ou retirée explicitement. Refaire le parcours réseau faible ci-dessus. Validation appareil restante ; les tests automatisés utilisent des données synthétiques.

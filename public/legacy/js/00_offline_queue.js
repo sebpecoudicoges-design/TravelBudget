@@ -144,7 +144,8 @@
     }
   }
 
-  function isPermanentFailure(kind, error) {
+  // Text hints are only used by explicit cleanup commands, never to discard a replay.
+  function hasLegacyTripConflict(kind, error) {
     const k = String(kind || "");
     const msg = errorText(error);
     if (!msg) return false;
@@ -163,21 +164,7 @@
       msg.includes("deja lie") ||
       msg.includes("liÃ")
     );
-    if (looksLikeOldTripFailure && (k.startsWith("trip.expense") || k.startsWith("transaction."))) return true;
-    if (k.startsWith("trip.expense")) {
-      return (
-        msg.includes("transactions_trip_expense_unique") ||
-        msg.includes("duplicate key value") ||
-        msg.includes("deja liee") ||
-        msg.includes("déjà liée") ||
-        msg.includes("already linked") ||
-        msg.includes("trip_expenses_transaction_fk") ||
-        msg.includes("violates foreign key constraint") ||
-        msg.includes("le lien avec la transaction") ||
-        msg.includes("ajoute au moins un participant")
-      );
-    }
-    return false;
+    return looksLikeOldTripFailure && (k.startsWith("trip.expense") || k.startsWith("transaction."));
   }
 
   function isTripConflictItem(item) {
@@ -186,7 +173,7 @@
     const err = item.error || item.lastError || item.meta?.error;
     const payload = item.payload || {};
     const args = payload.args || payload.coreArgs || {};
-    if (isPermanentFailure(k, err)) return true;
+    if (hasLegacyTripConflict(k, err)) return true;
     if (k.startsWith("trip.expense")) {
       if (Number(item.attempts || 0) > 0 || err) return true;
       if (!Array.isArray(payload.members) || !payload.members.length) return true;
@@ -214,9 +201,9 @@
     const removed = [];
     const next = before.filter((item) => {
       const failed = item && item.error;
-      const permanent = item && isPermanentFailure(item.kind, item.error || item.lastError || item.meta?.error);
+      const conflict = item && hasLegacyTripConflict(item.kind, item.error || item.lastError || item.meta?.error);
       const match = !kind || String(item.kind || "") === kind || String(item.kind || "").startsWith(kind);
-      if ((failed || permanent) && match) {
+      if ((failed || conflict) && match) {
         removed.push(item);
         return false;
       }
@@ -323,6 +310,17 @@
   }
 
   async function sync(reason) {
+    if (syncing) return { ok: false, skipped: "already-syncing" };
+    if (typeof navigator.locks?.request !== "function") return syncWithLease(reason);
+    const scope = queueStore.scope();
+    return navigator.locks.request(`tb:offline-sync:${scope}`, { mode: "exclusive", ifAvailable: true }, (lock) => {
+      if (!lock) return { ok: false, skipped: "locked" };
+      if (queueStore.scope() !== scope) return { ok: false, skipped: "account-change" };
+      return syncWithLease(reason);
+    });
+  }
+
+  async function syncWithLease(reason) {
     const syncReason = String(reason || "");
     const explicit = ["manual", "diagnostic"].includes(syncReason);
     if (!explicit && (window.__TB_BOOTING || window.__TB_AUTH_TRANSITION_ACTIVE__)) {
@@ -361,17 +359,12 @@
         run: runItem,
         force,
         canContinue: renewLease,
-        isPermanentFailure: (item, error) => isPermanentFailure(item.kind, error),
         onSuccess: (item) => {
           syncedKinds.push(String(item?.kind || ""));
           if (String(item?.kind || "").startsWith("transaction.")) cleanupOptimisticRows(item.id);
           if (String(item?.kind || "").startsWith("trip.expense")) {
             try { window.tbTripCleanupOfflineOptimistic?.(item.id); } catch (_) {}
           }
-        },
-        onPermanentFailure: (item) => {
-          cleanupItemSideEffects(item);
-          toastInfo(message("Ancienne action offline Trip ignoree car elle n'est plus rejouable.", "Old Trip offline action skipped because it is no longer replayable."));
         },
       });
       synced = result.synced;
@@ -412,10 +405,6 @@
   window.tbOfflineQueueDiscardKind = discardKind;
   window.tbOfflineQueueDiscardTripConflicts = discardTripConflicts;
   window.tbOfflineQueueCleanupOptimistic = cleanupOptimisticRows;
-
-  setTimeout(() => {
-    try { discardTripConflicts({ silent: true }); } catch (_) {}
-  }, 600);
 
   window.addEventListener("online", () => {
     setTimeout(() => { sync("online").catch((e) => console.warn("[OfflineQueue] sync failed", e?.message || e)); }, 1200);

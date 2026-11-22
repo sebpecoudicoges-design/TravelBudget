@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `312105b317c8fc65661f52b392916699f7a93cc0`
-> Empreinte du snapshot : `0ccd8c8f7e2c16414373a8976c2e0cdfd7fb7523688819639b5665eba09b3b08`
-> Généré le : `2026-11-19T20:46:00.248Z`
+> Commit analysé : `e30133dc475c602051ebd47c3f64e8d1080db15b`
+> Empreinte du snapshot : `baadb0c3a2a030da0216147f253c45d7ea024cc80393cc74ff6cee0751dcbc6f`
+> Généré le : `2026-11-22T19:33:21.106Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.393` |
+| Version | `10.5.394` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 28 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 198 |
+| Fichiers de tests | 199 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -384,6 +384,7 @@ Modules :
 - `tests/e2e/nutrition-pending-persistence.spec.js`
 - `tests/e2e/nutrition-storage-recovery.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`
+- `tests/e2e/offline-queue-tabs.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
@@ -463,6 +464,7 @@ Modules :
 - `tests/e2e/nutrition-pending-persistence.spec.js`
 - `tests/e2e/nutrition-storage-recovery.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`
+- `tests/e2e/offline-queue-tabs.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
@@ -807,6 +809,7 @@ Modules :
 - `docs/ANDROID_10_5_390.md`
 - `docs/ANDROID_10_5_391.md`
 - `docs/ANDROID_10_5_392.md`
+- `docs/ANDROID_10_5_394.md`
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`

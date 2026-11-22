@@ -2,6 +2,10 @@
 
 ## Ordre demandé le 20 novembre 2026
 
+Consigne du 22 novembre : poursuivre les corrections en local ; publication et reconstruction APK différées à une demande ultérieure.
+
+Consigne suivante du 22 novembre : publication et reconstruction APK de nouveau autorisées lorsqu'elles sont nécessaires. Lot 10.5.394 préparé pour livrer les corrections de synchronisation et intégrer les correctifs web dans Android. Les chantiers AdMob commercial et Play Store restent distincts.
+
 1. Terminer et valider le lot Android/OAuth local en cours, conserver l'avancement Play Store.
 2. Reprendre les corrections de l'audit : fiabilité des données, architecture/qualité, puis dette SQL et problèmes fonctionnels restants. Suivi dans [le point d'audit](AUDIT_STATUS_2026_11_04.md).
 3. Améliorer le visuel et l'expérience de l'application : partir des écrans existants, préserver les fonctionnalités et appliquer `VISUAL_SYSTEM.md`, avec vérification clair/sombre à 1440 et 390 px.

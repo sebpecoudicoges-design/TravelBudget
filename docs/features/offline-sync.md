@@ -33,6 +33,9 @@ Comportement transversal lorsque le réseau disparaît, revient ou que l'applica
 - Mutation visible localement sans attendre le réseau.
 - Rejeu unique, ordre conservé et confirmation du résultat distant.
 - Conflit ou erreur non destructive, avec possibilité de reprise.
+- Un message de doublon, de clé étrangère ou de répartition Trip invalide ne prouve pas une réussite distante : le rejeu conserve l'action en erreur avec son contenu et son délai de reprise. Seule une confirmation de réussite ou une suppression explicitement demandée permet de la retirer.
+- Le démarrage ne purge pas les erreurs Trip. Le nettoyage reste une commande explicite.
+- Si Web Locks est disponible, une synchronisation prend un verrou exclusif par compte pour toute la durée du rejeu. Un autre onglet abandonne immédiatement cette tentative ; le bail local reste utilisé pour compatibilité avec les anciens clients. Un refus du gestionnaire de verrous ne déclenche pas de rejeu de secours sans verrou.
 - Wallet, budget, Trip, Sport, Nutrition, Travail et Patrimoine resynchronisés.
 - Chargement du bridge et du domaine lazy avant le rejeu sur Android.
 
@@ -42,3 +45,4 @@ Comportement transversal lorsque le réseau disparaît, revient ou que l'applica
 - Identifiant enfant absent lors d'une suppression distante.
 - Snapshot partiel pris pour une source complète.
 - Domaine lazy non chargé au moment de la réconciliation.
+- Le verrou de synchronisation ne rend pas transactionnelles les écritures concurrentes dans localStorage : saisies/suppressions entre onglets restent à migrer vers une persistance transactionnelle. Sans Web Locks, seul le bail local protège le rejeu ; un ancien onglet n'acquiert pas le nouveau verrou navigateur.
