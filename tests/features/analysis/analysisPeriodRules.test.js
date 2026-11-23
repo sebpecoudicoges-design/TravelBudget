@@ -1,7 +1,24 @@
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { calendarPresetRange, clampRange, comparisonMetrics, previousComparableRange } from '../../../src/features/analysis/analysisPeriodRules.js';
 
 describe('analysis period rules', () => {
+  it.each(['Pacific/Auckland', 'Pacific/Kiritimati', 'America/Los_Angeles'])('preserves calendar dates in %s', timezone => {
+    const result = execFileSync(process.execPath, ['--input-type=module', '-e', `
+      import { calendarPresetRange, previousComparableRange } from './src/features/analysis/analysisPeriodRules.js';
+      console.log(JSON.stringify([
+        calendarPresetRange('month', '2026-09-19'),
+        calendarPresetRange('week', '2026-09-28'),
+        previousComparableRange({ start: '2026-11-01', elapsedDays: 31 }, 'month')
+      ]));
+    `], { env: { ...process.env, TZ: timezone }, encoding: 'utf8' });
+    expect(JSON.parse(result)).toEqual([
+      { start: '2026-09-01', end: '2026-09-30' },
+      { start: '2026-09-28', end: '2026-10-04' },
+      { start: '2026-10-01', end: '2026-10-31' },
+    ]);
+  });
+
   it('builds calendar month and ISO-like Monday week presets', () => {
     expect(calendarPresetRange('month', '2026-09-19')).toEqual({ start: '2026-09-01', end: '2026-09-30' });
     expect(calendarPresetRange('previous-month', '2026-09-19')).toEqual({ start: '2026-08-01', end: '2026-08-31' });

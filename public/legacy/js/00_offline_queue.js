@@ -209,7 +209,7 @@
       }
       return true;
     });
-    if (removed.length) queueStore.write(next);
+    if (removed.length) queueStore.write(next, {}, before);
     removed.forEach(cleanupItemSideEffects);
     return removed;
   }
@@ -227,7 +227,7 @@
       }
       return true;
     });
-    if (removed.length) queueStore.write(next);
+    if (removed.length) queueStore.write(next, {}, before);
     removed.forEach(cleanupItemSideEffects);
     return removed;
   }
@@ -244,7 +244,7 @@
       return true;
     });
     if (removed.length) {
-      queueStore.write(next);
+      queueStore.write(next, {}, before);
       removed.forEach(cleanupItemSideEffects);
       if (!opts.silent) {
         toastInfo(message(`${removed.length} ancienne(s) action(s) Trip retiree(s).`, `${removed.length} old Trip action(s) removed.`));

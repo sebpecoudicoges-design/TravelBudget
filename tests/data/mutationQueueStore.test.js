@@ -11,6 +11,42 @@ function memoryStorage() {
 }
 
 describe('mutation queue store', () => {
+  it.each(['enqueue', 'attempt', 'remove'])('refuses a stale %s when another writer changes the queue', operation => {
+    const storage = memoryStorage();
+    const first = createMutationQueueStore({ storage, queueKey: 'q' });
+    const second = createMutationQueueStore({ storage, queueKey: 'q' });
+    const { item } = first.enqueue('existing');
+    const getItem = storage.getItem;
+    let reads = 0;
+    storage.getItem = key => {
+      if (key === 'q' && ++reads === 2) {
+        storage.getItem = getItem;
+        second.enqueue('other-tab');
+      }
+      return getItem(key);
+    };
+    const change = { enqueue: () => first.enqueue('new'), attempt: () => first.beginAttempt(item.id), remove: () => first.remove(item.id) }[operation];
+    expect(change).toThrow('modifiee depuis sa lecture');
+    expect(second.read().map(row => row.kind)).toEqual(['existing', 'other-tab']);
+    expect(second.read()[0].status).toBe('pending');
+  });
+
+  it('refuses a filtered stale snapshot and a snapshot from a previous account', () => {
+    const storage = memoryStorage();
+    let scope = 'a';
+    const queue = createMutationQueueStore({ storage, queueKey: () => scope });
+    queue.enqueue('keep');
+    const before = queue.read();
+    queue.enqueue('new');
+    expect(() => queue.write([], {}, before)).toThrow('modifiee depuis sa lecture');
+    const current = queue.read();
+    scope = 'b';
+    expect(() => queue.write(current)).toThrow('modifiee depuis sa lecture');
+    expect(storage.getItem('b')).toBeNull();
+    scope = 'a';
+    expect(queue.read().map(row => row.kind)).toEqual(['keep', 'new']);
+  });
+
   it.each(['success', 'permanent'])('does not clean visible state when %s acknowledgement cannot be persisted', async outcome => {
     const storage = memoryStorage();
     const queue = createMutationQueueStore({ storage, queueKey: 'q' });

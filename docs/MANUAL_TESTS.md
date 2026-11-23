@@ -191,3 +191,9 @@ Sur réseau lent encore disponible, ouvrir et actualiser : une réponse de six s
 ## Android 10.5.394 — quote-part et synchronisation
 
 Installer en mise à jour de 10.5.392, vérifier connexion Google, annonces de test et conservation du compte. Dans le budget journalier, sélectionner les 20 et 21 novembre : la part « Avance Hostel » de 5,85 EUR contribue pour 2,925 EUR par jour avant conversion/arrondi, sans second débit wallet. Sur un compte de démonstration, conserver une action Trip en erreur, fermer puis rouvrir : elle reste visible et peut être reprise ou retirée explicitement. Refaire le parcours réseau faible ci-dessus. Validation appareil restante ; les tests automatisés utilisent des données synthétiques.
+
+## Android 10.5.395 — à valider au prochain branchement
+
+Mise à jour sans effacement depuis 10.5.394 ; vérifier le démarrage authentifié et la bannière de test. Lire l'état du service worker (actif) et l'absence de l'erreur Cache.addAll. Vérifier un redémarrage hors ligne avec les domaines déjà consultés. Dans Analyse, vérifier septembre 2026 du 1er au 30 sous Pacific/Auckland et les comparaisons mensuelles. Ne pas créer de fausses transactions sur le compte réel pour tester la concurrence ; utiliser les tests synthétiques dédiés.
+
+Le téléphone a été débranché avant la compilation finale : l'installation 10.5.395 n'a pas été effectuée lors de cette session.

@@ -1,4 +1,4 @@
-const TB_SW_VERSION = "travelbudget-pwa-10.5.394";
+const TB_SW_VERSION = "travelbudget-pwa-10.5.395";
 const TB_STATIC_CACHE = `${TB_SW_VERSION}-mcp-safe-static`;
 const TB_RUNTIME_CACHE = `${TB_SW_VERSION}-mcp-safe-runtime`;
 
@@ -7,7 +7,6 @@ const APP_SHELL = [
   "/index.html",
   "/offline.html",
   "/manifest.webmanifest",
-  "/favicon.ico",
   "/pwa-icon.svg"
 ];
 

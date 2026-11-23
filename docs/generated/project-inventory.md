@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `e30133dc475c602051ebd47c3f64e8d1080db15b`
-> Empreinte du snapshot : `baadb0c3a2a030da0216147f253c45d7ea024cc80393cc74ff6cee0751dcbc6f`
-> Généré le : `2026-11-22T19:33:21.106Z`
+> Commit analysé : `3a36c32226d5dfa270377d3624c8f4857c3eb9bc`
+> Empreinte du snapshot : `585a732f280e98cdb96883ed461b20a6376c9997d586e7c3365cfc635af76f9f`
+> Généré le : `2026-11-23T01:41:32.068Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.394` |
+| Version | `10.5.395` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 28 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 199 |
+| Fichiers de tests | 200 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -442,6 +442,7 @@ Modules :
 - `tests/data/nutritionRepository.test.js`
 - `tests/data/recurringBudgetPeriodMigration.test.js`
 - `tests/data/recurringRuleReconciliationMigration.test.js`
+- `tests/data/serviceWorkerInstall.test.js`
 - `tests/data/sportRepository.test.js`
 - `tests/data/storageQuota.test.js`
 - `tests/data/subscriptionsMigration.test.js`
@@ -810,6 +811,7 @@ Modules :
 - `docs/ANDROID_10_5_391.md`
 - `docs/ANDROID_10_5_392.md`
 - `docs/ANDROID_10_5_394.md`
+- `docs/ANDROID_10_5_395.md`
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`

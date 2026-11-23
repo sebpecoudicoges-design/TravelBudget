@@ -41,3 +41,11 @@ Demande utilisateur du 4 novembre 2026. Statut : **à faire plus tard**, après 
 À préciser au démarrage : vues souhaitées dans l’espace Agenda, lecture seule ou modification des événements, comportement des fuseaux horaires en voyage et du mode hors ligne. Aucune création ou modification d’événement demandée à ce stade.
 
 Critères à prévoir : un agenda masqué n’alimente ni les rendez-vous du jour ni l’espace Agenda ; les choix sont conservés ; les états sans rendez-vous, déconnecté et erreur de chargement sont explicites. Préserver les KPI existants et respecter le système visuel du dépôt.
+
+## Précache Android — observation appareil du 23 novembre 2026
+
+Sur Galaxy A54 après mise à jour 10.5.392 vers 10.5.394, le démarrage et la bannière sont visibles, mais le service worker remonte Cache.addAll: Request failed. Identifier la ressource en échec et vérifier le démarrage hors ligne sans supprimer les données ni les caches utilisateur à l'aveugle. Ce constat ne prouve pas une panne complète du mode hors ligne.
+
+## Visuels boutiques et vidéos — à faire plus tard
+
+Demande du 23 novembre 2026 : préparer les visuels de présentation pour les boutiques et créer des vidéos de l'application, après la correction des bugs observés sur appareil. À cadrer au démarrage : boutiques ciblées, captures, formats et langues, démonstration et durée. Utiliser des données de démonstration pour les supports publics. Aucun visuel ni vidéo produit à ce stade.

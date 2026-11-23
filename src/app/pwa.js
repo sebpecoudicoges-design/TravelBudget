@@ -7,7 +7,6 @@ export function registerPwa() {
       "/index.html",
       "/offline.html",
       "/manifest.webmanifest",
-      "/favicon.ico",
       "/pwa-icon.svg",
     ];
 

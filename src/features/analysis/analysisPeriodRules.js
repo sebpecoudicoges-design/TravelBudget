@@ -1,4 +1,4 @@
-const iso = (date) => date.toISOString().slice(0, 10);
+const iso = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const atNoon = (value) => new Date(`${value}T12:00:00`);
 
 export function calendarPresetRange(preset, today = iso(new Date())) {

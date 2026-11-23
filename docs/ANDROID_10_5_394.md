@@ -13,3 +13,5 @@ Distribution vérifiée le 23 novembre 2026 : [téléchargement public de l'APK]
 Publication web demandée via Git/Netlify ; état distant à vérifier après push. Validation sur téléphone distincte et restante.
 
 Validation locale : chaîne `quality` réussie, 1 240 tests / 179 fichiers, neuf parcours Chromium (Projet clair/sombre 1440/390, révisions persistées, deux onglets), contrôles sémantiques et budgets respectés. Audit npm au seuil critique réussi : zéro critique, quatre élevées et huit modérées restent dans la dette de dépendances. Aucun appareil ADB connecté lors du contrôle.
+
+Validation Galaxy A54 le 23 novembre 2026 (Pacific/Auckland) : mise à jour ADB depuis 10.5.392 avec install -r réussie, version 10.5.394 / 10050394 relue, démarrage à froid Status ok (1 209 ms côté activité). Après déverrouillage utilisateur : tableau de bord authentifié et bannière AdMob de test visibles. Aucun effacement des données. Log TB BUILD 10.5.394 confirmé. Une erreur Cache.addAll / Request failed est présente dans le service worker ; le précache hors ligne reste à investiguer. Ces contrôles ne valident pas tous les parcours financiers, OAuth ou réseau faible.

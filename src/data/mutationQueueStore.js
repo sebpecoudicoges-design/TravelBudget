@@ -32,6 +32,7 @@ export function createMutationQueueStore(options = {}) {
   const lockTtlMs = Number(options.lockTtlMs) || 45_000;
   const staleSyncMs = Number(options.staleSyncMs) || 60_000;
   let acquiredLockKey = null;
+  const snapshots = new WeakMap();
 
   function emit(items, detail = {}) {
     options.onChange?.(items.map((item) => ({ ...item })), detail);
@@ -57,19 +58,28 @@ export function createMutationQueueStore(options = {}) {
   }
 
   function read() {
-    const raw = storage.getItem(queueKey());
-    if (raw === null) return [];
-    const parsed = JSON.parse(raw);
+    const scope = queueKey();
+    const raw = storage.getItem(scope);
+    const parsed = raw === null ? { items: [] } : JSON.parse(raw);
     if (!Array.isArray(parsed?.items) || parsed.items.some(item => !item || typeof item !== 'object' || !item.id)) {
       throw new Error('File hors ligne illisible. Donnees conservees, aucune action enregistree.');
     }
-    return parsed.items.map(normalize);
+    const items = parsed.items.map(normalize);
+    snapshots.set(items, { scope, raw });
+    return items;
   }
 
-  function write(items, detail = {}) {
-    read(); // Refuse to overwrite a queue whose persisted contents cannot be read.
+  function write(items, detail = {}, baseline = items) {
+    const expected = snapshots.get(baseline);
+    const current = snapshots.get(read()); // Also refuse unreadable persisted contents.
     const clean = (Array.isArray(items) ? items : []).map(normalize).filter(Boolean);
-    storage?.setItem(queueKey(), JSON.stringify({ version: QUEUE_VERSION, savedAt: nowISO(), items: clean }));
+    if (expected && (expected.scope !== current.scope || expected.raw !== current.raw)) {
+      throw new Error('File hors ligne modifiee depuis sa lecture. Rechargez puis reessayez.');
+    }
+    // This detects stale snapshots, not an atomic cross-tab compare-and-swap.
+    const raw = JSON.stringify({ version: QUEUE_VERSION, savedAt: nowISO(), items: clean });
+    storage.setItem(current.scope, raw);
+    snapshots.set(clean, { scope: current.scope, raw });
     emit(clean, detail);
     return clean;
   }
@@ -151,7 +161,7 @@ export function createMutationQueueStore(options = {}) {
     const items = read();
     const next = items.filter((item) => String(item.id) !== String(id) || (attempt && !matchesAttempt(item, attempt)));
     if (next.length === items.length) return false;
-    write(next, { type: 'removed', id: String(id) });
+    write(next, { type: 'removed', id: String(id) }, items);
     return next.length !== items.length;
   }
 

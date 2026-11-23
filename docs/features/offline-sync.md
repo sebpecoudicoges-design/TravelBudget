@@ -46,3 +46,4 @@ Comportement transversal lorsque le réseau disparaît, revient ou que l'applica
 - Snapshot partiel pris pour une source complète.
 - Domaine lazy non chargé au moment de la réconciliation.
 - Le verrou de synchronisation ne rend pas transactionnelles les écritures concurrentes dans localStorage : saisies/suppressions entre onglets restent à migrer vers une persistance transactionnelle. Sans Web Locks, seul le bail local protège le rejeu ; un ancien onglet n'acquiert pas le nouveau verrou navigateur.
+- Les écritures fondées sur une lecture conservée vérifient son compte et son contenu brut avant sauvegarde. Une différence provoque un refus sans nettoyage optimiste. Cette détection ne supprime pas la fenêtre entre contrôle et écriture : ce n'est pas un compare-and-swap atomique.
