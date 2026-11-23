@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "3a36c32226d5dfa270377d3624c8f4857c3eb9bc",
-  "snapshotFingerprint": "585a732f280e98cdb96883ed461b20a6376c9997d586e7c3365cfc635af76f9f",
-  "generatedAt": "2026-11-23T01:41:32.068Z",
+  "commit": "ef58ab2f9d351fced725c53782452071cc4ec4f2",
+  "snapshotFingerprint": "a11b415fa47c5d41303e86d6566576a778b8be0bf0ec17c90a310d74e4f58f8f",
+  "generatedAt": "2026-11-23T06:47:19.704Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.395"
+    "version": "10.5.396"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -331,6 +331,7 @@
     "tests/data/networkReachability.test.js",
     "tests/data/nutritionPersistenceFailure.test.js",
     "tests/data/nutritionRepository.test.js",
+    "tests/data/nutritionSyncConcurrency.test.js",
     "tests/data/recurringBudgetPeriodMigration.test.js",
     "tests/data/recurringRuleReconciliationMigration.test.js",
     "tests/data/serviceWorkerInstall.test.js",
@@ -814,6 +815,7 @@
     "docs/WALLET_BULK_RECONCILIATION_10_5_387.md",
     "docs/WALLET_JOURNAL_10_5_386.md",
     "docs/WEB_10_5_393.md",
+    "docs/WEB_10_5_396.md",
     "docs/assistant-ai-evaluation.md",
     "docs/deployment_settings_checklist.md"
   ],

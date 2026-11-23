@@ -501,9 +501,10 @@
     try { localStorage.setItem(foodCacheKey(), JSON.stringify((rows || []).slice(0, 500))); } catch (_) {}
     return false;
   }
-  function loadLocalMeals() {
+  function loadLocalMeals(strict = false) {
     const repo = repository();
-    if (typeof repo.loadLocalNutritionRows === "function") return repo.loadLocalNutritionRows({ storage: localStorage, key: localMealKey() });
+    if (typeof repo.loadLocalNutritionRows === "function") return repo.loadLocalNutritionRows({ storage: localStorage, key: localMealKey(), strict });
+    if (strict) throw new Error("Nutrition repository indisponible");
     try { const rows = JSON.parse(localStorage.getItem(localMealKey()) || "[]"); return Array.isArray(rows) ? rows : []; } catch (_) { return []; }
   }
   function requireNutritionWrite(ok) {
@@ -590,11 +591,6 @@
     const repo = repository();
     if (typeof repo.isOfflineSkipError === "function") return repo.isOfflineSkipError(err);
     return /offline mode|supabase request skipped|failed to fetch|network/i.test(String(err?.message || err || ""));
-  }
-  function isDuplicateNutritionError(err) {
-    const repo = repository();
-    if (typeof repo.isDuplicateNutritionError === "function") return repo.isDuplicateNutritionError(err);
-    return String(err?.code || "") === "23505" || /duplicate key|unique constraint|nutrition_meal_items_exact_dedupe/i.test(String(err?.message || err || ""));
   }
   function enqueueNutritionSync() {
     try {
@@ -837,121 +833,55 @@
     const c = client();
     const userId = uid();
     if (!c || !userId || CACHE.syncingLocal) return 0;
-    const allRows = loadLocalMeals();
+    const scope = localMealKey();
+    const sameScope = () => uid() === userId && localMealKey() === scope;
+    const allRows = loadLocalMeals(true);
     if (!allRows.length) return 0;
     const rows = allRows.slice(0, 25);
     const forceOnlineAttempt = options.forceOnline === true || reason === "manual";
     const offline = forceOnlineAttempt && navigator?.onLine !== false ? false : (typeof window.tbShouldUseOfflineMode === "function")
       ? await window.tbShouldUseOfflineMode(`nutrition:sync:${reason || "manual"}`)
       : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (!sameScope() || CACHE.syncingLocal) return 0;
     if (offline) {
       CACHE.syncStatus = txt("Hors ligne, attente conservee.", "Offline, pending entries kept.");
       CACHE.syncPhase = "offline";
       return 0;
     }
-    CACHE.syncingLocal = true;
+    const syncToken = {};
+    CACHE.syncingLocal = syncToken;
     CACHE.syncPhase = "syncing";
     CACHE.syncStatus = txt("Synchronisation en cours...", "Syncing...");
     publishNutrition("sync-start");
-    const remaining = allRows.slice(rows.length);
+    const outcomes = new Map();
     let synced = 0;
     try {
       for (const row of rows) {
+        if (!sameScope()) return synced;
+        const snapshot = JSON.stringify(row);
+        if (!loadLocalMeals(true).some(current => JSON.stringify(current) === snapshot)) continue;
         try {
           const meal = row.meal || {};
-          const syncId = nutritionSyncId(row);
           const mealDate = localDateISO(meal.meal_date) || selectedDateISO();
-          const repo = repository();
-          if (typeof repo.syncLocalRow === "function") {
-            await repo.syncLocalRow({
-              tables: { meals: table("nutrition_meals"), items: table("nutrition_meal_items") },
-              row,
-              userId,
-              travelId: activeTravelId(),
-              fallbackDate: mealDate,
-            });
-          } else {
-            const mealNotes = notesWithNutritionSyncId(meal.notes, syncId);
-            let mealId = "";
-            let existingMealLabel = "";
-            if (syncId) {
-              const existingMeal = await c.from(table("nutrition_meals"))
-                .select("id,label")
-                .eq("user_id", userId)
-                .eq("sync_id", syncId)
-                .maybeSingle();
-              if (existingMeal.error) throw existingMeal.error;
-              mealId = existingMeal.data?.id || "";
-              existingMealLabel = existingMeal.data?.label || "";
-            }
-            if (!mealId) {
-              const insertedMeal = syncId
-                ? await c.from(table("nutrition_meals")).upsert({
-                  user_id: userId,
-                  travel_id: meal.travel_id || activeTravelId(),
-                  meal_date: mealDate,
-                  meal_type: meal.meal_type || "meal",
-                  label: meal.label || txt("Repas", "Meal"),
-                  notes: mealNotes,
-                  sync_id: syncId,
-                  water_ml: n(meal.water_ml, 0),
-                }, { onConflict: "user_id,sync_id" }).select("id").single()
-                : await c.from(table("nutrition_meals")).insert({
-                user_id: userId,
-                travel_id: meal.travel_id || activeTravelId(),
-                meal_date: mealDate,
-                meal_type: meal.meal_type || "meal",
-                label: meal.label || txt("Repas", "Meal"),
-                notes: mealNotes,
-                water_ml: n(meal.water_ml, 0),
-              }).select("id").single();
-              if (insertedMeal.error) throw insertedMeal.error;
-              mealId = insertedMeal.data.id;
-            }
-            if (row.item) {
-              const item = row.item;
-              const itemLabel = item.label || meal.label || "Aliment";
-              if (existingMealLabel && itemLabel && existingMealLabel !== itemLabel) {
-                synced += 1;
-                continue;
-              }
-              const existingItems = await c.from(table("nutrition_meal_items"))
-                .select("id")
-                .eq("user_id", userId)
-                .eq("meal_id", mealId)
-                .eq("label", itemLabel)
-                .eq("grams", n(item.grams, 0))
-                .eq("kcal", n(item.kcal, 0))
-                .limit(1);
-              if (existingItems.error) throw existingItems.error;
-              if (!(existingItems.data || []).length) {
-                const insertedItem = await c.from(table("nutrition_meal_items")).insert({
-                  user_id: userId,
-                  meal_id: mealId,
-                  food_key: item.food_key || null,
-                  label: itemLabel,
-                  grams: n(item.grams, 0),
-                  kcal: n(item.kcal, 0),
-                  protein_g: n(item.protein_g, 0),
-                  carbs_g: n(item.carbs_g, 0),
-                  fat_g: n(item.fat_g, 0),
-                  fiber_g: n(item.fiber_g, 0),
-                });
-                if (insertedItem.error && !isDuplicateNutritionError(insertedItem.error)) throw insertedItem.error;
-              }
-            }
-          }
+          const result = await repository().syncLocalRow({
+            tables: { meals: table("nutrition_meals"), items: table("nutrition_meal_items") },
+            row, userId, travelId: activeTravelId(), fallbackDate: mealDate,
+          });
+          if (result?.skippedItem) throw new Error(txt("Repas distant different : modification locale conservee.", "Remote meal differs: local change retained."));
+          outcomes.set(snapshot, []);
           synced += 1;
         } catch (e) {
           const msg = e?.message || String(e);
-          remaining.push(Object.assign({}, row, {
+          outcomes.set(snapshot, [Object.assign({}, row, {
             syncError: msg,
             syncAttempts: Math.max(0, n(row.syncAttempts, 0)) + 1,
             syncUpdatedAt: new Date().toISOString(),
-          }));
+          })]);
           if (!isOfflineSkipError(e)) console.warn("[nutrition] local sync failed", msg);
         }
       }
+      if (!sameScope()) return synced;
+      const remaining = loadLocalMeals(true).flatMap(row => outcomes.get(JSON.stringify(row)) || [row]);
       saveLocalMeals(remaining);
       CACHE.syncStatus = remaining.length
         ? txt(`${synced} synchronise(s), ${remaining.length} encore en attente.`, `${synced} synced, ${remaining.length} still pending.`)
@@ -960,12 +890,13 @@
       if (!remaining.length) discardNutritionQueue();
       return synced;
     } catch (error) {
+      if (!sameScope()) throw error;
       CACHE.error = error?.message || String(error);
       CACHE.syncPhase = "error";
       CACHE.syncStatus = CACHE.error;
       throw error;
     } finally {
-      CACHE.syncingLocal = false;
+      if (CACHE.syncingLocal === syncToken) CACHE.syncingLocal = false;
     }
   }
   function loadFoodKeys(kind) {
@@ -2641,7 +2572,7 @@
   try { window.addEventListener("tb:offline_state_changed", (ev) => { if (ev?.detail?.offline === false && loadLocalMeals().length) requestNutritionSync("online"); }); } catch (_) {}
   window.tbNutritionSyncLocal = async function tbNutritionSyncLocal(reason) {
     const synced = await syncLocalNutritionRows(reason || "offline-queue");
-    if (loadLocalMeals().length) throw new Error("Nutrition sync incomplete: pending local rows remain");
+    if (loadLocalMeals(true).length) throw new Error("Nutrition sync incomplete: pending local rows remain");
     return synced;
   };
   window.tbNutritionRefreshAfterSync = async function tbNutritionRefreshAfterSync() {

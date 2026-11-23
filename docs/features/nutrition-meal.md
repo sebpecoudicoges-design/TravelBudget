@@ -42,3 +42,11 @@ Nutrition > ajout rapide ou détaillé, favoris, portions, hydratation, sommeil 
 - Repas distant et copie locale partageant le même `sync_id`.
 - Catalogue Supabase différent du fallback offline.
 - Ingrédient ajouté deux fois lors d'une reconnexion.
+
+## Acquittement des écritures locales
+
+La synchronisation relit la réserve avant chaque envoi et avant son acquittement. Seule une entrée identique au contenu envoyé peut être retirée après succès ou recevoir son erreur. Les ajouts/modifications concurrents restent en attente ; une suppression locale n'est pas recréée par un échec tardif. Un changement de compte arrête le lot sans écrire dans la nouvelle réserve. Une lecture illisible bloque le rejeu et l'acquittement. Le repository est l'unique chemin d'écriture réseau ; un repas distant divergent conserve la demande locale pour résolution.
+
+Limites : une requête déjà envoyée peut aboutir malgré une suppression locale ; les écritures localStorage ne sont pas transactionnelles entre onglets. La résolution métier des conflits et les suppressions distantes restent distinctes.
+
+Les ajouts fusionnés, sauvegardes directes et suppressions refusent également une réserve illisible. La nouvelle saisie est transmise au mécanisme de récupération en cas de lecture refusée ; aucun remplacement par une liste vide. La lecture tolérante reste réservée aux usages d'affichage.

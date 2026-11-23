@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `3a36c32226d5dfa270377d3624c8f4857c3eb9bc`
-> Empreinte du snapshot : `585a732f280e98cdb96883ed461b20a6376c9997d586e7c3365cfc635af76f9f`
-> Généré le : `2026-11-23T01:41:32.068Z`
+> Commit analysé : `ef58ab2f9d351fced725c53782452071cc4ec4f2`
+> Empreinte du snapshot : `a11b415fa47c5d41303e86d6566576a778b8be0bf0ec17c90a310d74e4f58f8f`
+> Généré le : `2026-11-23T06:47:19.704Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.395` |
+| Version | `10.5.396` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 28 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 200 |
+| Fichiers de tests | 201 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -440,6 +440,7 @@ Modules :
 - `tests/data/networkReachability.test.js`
 - `tests/data/nutritionPersistenceFailure.test.js`
 - `tests/data/nutritionRepository.test.js`
+- `tests/data/nutritionSyncConcurrency.test.js`
 - `tests/data/recurringBudgetPeriodMigration.test.js`
 - `tests/data/recurringRuleReconciliationMigration.test.js`
 - `tests/data/serviceWorkerInstall.test.js`
@@ -851,6 +852,7 @@ Modules :
 - `docs/WALLET_BULK_RECONCILIATION_10_5_387.md`
 - `docs/WALLET_JOURNAL_10_5_386.md`
 - `docs/WEB_10_5_393.md`
+- `docs/WEB_10_5_396.md`
 - `docs/assistant-ai-evaluation.md`
 - `docs/deployment_settings_checklist.md`
 

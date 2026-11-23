@@ -4,6 +4,20 @@ import vm from 'node:vm';
 import { saveLocalNutritionRows, saveLocalNutritionRowsOnce, discardLocalNutritionRow, discardAllLocalNutritionRows, mergeSleepRows } from '../../src/data/nutritionRepository.js';
 
 afterEach(() => vi.unstubAllGlobals());
+it.each(['{broken', 'null', '{}', '[null]', 'read-error'])('never replaces an unreadable pending reserve: %s', raw => {
+  const storage = { getItem: () => { if (raw === 'read-error') throw new Error('denied'); return raw; }, setItem: vi.fn() };
+  expect(saveLocalNutritionRows({ storage, key: 'pending', rows: [] })).toBe(false);
+  expect(() => discardLocalNutritionRow({ storage, key: 'pending', rowKey: 'old' })).toThrow();
+  expect(() => discardAllLocalNutritionRows({ storage, key: 'pending' })).toThrow();
+  try {
+    saveLocalNutritionRowsOnce({ storage, key: 'pending', rows: [{ syncId: 'new' }] });
+    expect.fail('Unreadable reserve must block the write');
+  } catch (error) {
+    expect(error.code).toBe('NUTRITION_STORAGE_FAILED');
+    expect(error.pendingRows).toEqual([{ syncId: 'new' }]);
+  }
+  expect(storage.setItem).not.toHaveBeenCalled();
+});
 it('keeps sync incomplete when the local acknowledgement cannot be persisted', async () => {
   const source = fs.readFileSync('public/legacy/js/48_nutrition_ui.js', 'utf8');
   const guard = source.slice(source.indexOf('  function requireNutritionWrite('), source.indexOf('  function localNutritionRowKey('));
@@ -53,7 +67,7 @@ it.each(['quota', 'denied', 'missing', 'safe-result'])('does not confirm a %s st
   expect(JSON.parse(storage.getItem())).toEqual(existing);
 });
 it('accepts a recovered write from the safe-storage adapter', () => {
-  const storage = {};
+  const storage = { getItem: () => null };
   vi.stubGlobal('window', { localStorage: storage, tbSafeLocalStorageSet: () => ({ ok: true, recovered: true }) });
   expect(saveLocalNutritionRows({ storage, key: 'pending', rows: [] })).toBe(true);
 });

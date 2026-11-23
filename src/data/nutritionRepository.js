@@ -56,13 +56,22 @@ export function saveCachedFoods({ storage, key, rows, limit = 500 }) {
   return writeJson(storage, key, (rows || []).slice(0, limit));
 }
 
-export function loadLocalNutritionRows({ storage, key }) {
+export function loadLocalNutritionRows({ storage, key, strict = false }) {
+  if (strict) {
+    const raw = storage.getItem(key);
+    const rows = raw === null ? [] : JSON.parse(raw);
+    if (!Array.isArray(rows) || rows.some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
+      throw new Error('Nutrition pending data is unreadable; saved data retained.');
+    }
+    return rows;
+  }
   const rows = readJson(storage, key, []);
   return Array.isArray(rows) ? rows : [];
 }
 
 export function saveLocalNutritionRows({ storage, key, rows }) {
   // These are pending writes, not disposable food-cache entries.
+  try { loadLocalNutritionRows({ storage, key, strict: true }); } catch (_) { return false; }
   return writeJson(storage, key, rows || []);
 }
 
@@ -73,14 +82,14 @@ export function localNutritionRowKey(row, index = 0) {
 
 export function discardLocalNutritionRow({ storage, key, rowKey }) {
   const wanted = String(rowKey || '');
-  const rows = loadLocalNutritionRows({ storage, key });
+  const rows = loadLocalNutritionRows({ storage, key, strict: true });
   const next = rows.filter((row, index) => localNutritionRowKey(row, index) !== wanted);
   requireLocalWrite(saveLocalNutritionRows({ storage, key, rows: next }));
   return { removed: rows.length - next.length, remaining: next };
 }
 
 export function discardAllLocalNutritionRows({ storage, key }) {
-  const rows = loadLocalNutritionRows({ storage, key });
+  const rows = loadLocalNutritionRows({ storage, key, strict: true });
   requireLocalWrite(saveLocalNutritionRows({ storage, key, rows: [] }));
   return rows.length;
 }
@@ -169,9 +178,12 @@ export function saveLocalNutritionRowOnce({ storage, key, row }) {
 
 export function saveLocalNutritionRowsOnce({ storage, key, rows }) {
   const incoming = (Array.isArray(rows) ? rows : []).filter(Boolean);
-  if (!incoming.length) return loadLocalNutritionRows({ storage, key });
+  let stored;
+  try { stored = loadLocalNutritionRows({ storage, key, strict: true }); }
+  catch (_) { requireLocalWrite(false, incoming); }
+  if (!incoming.length) return stored;
   const incomingKeys = new Set(incoming.map((row, index) => localNutritionRowKey(row, index)));
-  const current = loadLocalNutritionRows({ storage, key })
+  const current = stored
     .filter((existing, index) => !incomingKeys.has(localNutritionRowKey(existing, index)));
   const next = [...incoming, ...current];
   requireLocalWrite(saveLocalNutritionRows({ storage, key, rows: next }), next);
