@@ -308,3 +308,57 @@ const gatewayRejection = await closingClient.functions.invoke('write-personal-do
 });
 assert.equal(gatewayRejection.error?.context?.status, 409);
 console.log('PASS Functions SDK, actual Edge gateway and Storage preserve the existing 50 MiB upload limit and closure protection');
+
+// Ordinary file transfer overlapping a normal closure. Delay only the
+// transport; the write and its acknowledgement still use the real services.
+const inFlightAccount = await createUser('ordinary-in-flight');
+const inFlightId = await scheduleFixtureDeletion(inFlightAccount.id);
+const sessionForUpload = await checked(inFlightAccount.client.auth.getSession());
+assert.ok(sessionForUpload.session?.access_token);
+const reachedStorage = Promise.withResolvers<void>();
+const allowStorage = Promise.withResolvers<void>();
+const delayedStorage = createClient(url, key, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  global: { fetch: async (input, init) => {
+    const request = new Request(input, init);
+    if (request.method === 'POST' && new URL(request.url).pathname.startsWith('/storage/v1/object/personal-documents/')) {
+      reachedStorage.resolve();
+      await allowStorage.promise;
+    }
+    return await fetch(request);
+  } },
+});
+const inFlightDocId = crypto.randomUUID();
+const uploadPromise = writePersonalDocument(new Request('http://127.0.0.1/write-personal-document', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${sessionForUpload.session.access_token}`,
+    'x-document-id': inFlightDocId,
+    'x-document-filename': 'ordinary-in-flight.txt',
+    'Content-Type': 'text/plain',
+  },
+  body: 'ordinary pending upload fixture',
+}), () => delayedStorage);
+await Promise.race([
+  reachedStorage.promise,
+  uploadPromise.then(response => { throw new Error(`Upload never reached Storage: ${response.status}`); }),
+]);
+const overlapClock = new Date();
+try {
+  const blockedWorker = await processAccountDeletions(admin, purgeAccount, () => overlapClock, accountFileDeletionReadiness);
+  assert.deepEqual(blockedWorker.results, [
+    { id: inFlightId, status: 'processing', waitingFor: 'service_writes_pending' },
+  ]);
+  assert.equal((await requestState(inFlightId))?.attempt_count, 0);
+} finally {
+  allowStorage.resolve();
+}
+assert.equal((await uploadPromise).status, 201);
+await checked(admin.rpc('f13_fixture_record_drain', { p_request_id: inFlightId, p_marker: marker }));
+const afterOverlap = await processAccountDeletions(
+  admin, purgeAccount, () => new Date(overlapClock.getTime() + 31 * 60_000), accountFileDeletionReadiness,
+);
+assert.equal(afterOverlap.results[0]?.status, 'completed');
+assert.deepEqual(await checked(admin.storage.from('personal-documents').list(`${inFlightAccount.id}/${inFlightDocId}`)), []);
+assert.equal((await admin.auth.admin.getUserById(inFlightAccount.id)).error?.status, 404);
+console.log('PASS normal document upload accepted earlier finishes before the verified worker deletes it');
