@@ -71,7 +71,7 @@ enabled = false
 enabled = false
 [studio]
 enabled = false
-[inbucket]
+[local_smtp]
 enabled = false
 [storage]
 enabled = true
