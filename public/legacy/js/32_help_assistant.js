@@ -295,6 +295,10 @@
     function routeIntent(q) {
       const qq = norm(q);
       const has = (...words) => words.some(w => qq.includes(norm(w)));
+      if (/\b(comptabilite|accounting|compte de resultat|income statement|bilan comptable|balance sheet|plan comptable|chart of accounts)\b/.test(qq)) {
+        const accounting = window.tbGetFaqEntries?.().find(item => item.id === "personal_accounting");
+        if (accounting) return accounting.a[lang()] || accounting.a.fr;
+      }
       if (has("wallet", "portefeuille") && has("ajout", "ajouter", "creer", "nouveau", "nouvelle", "create", "add")) return t("assistant.intent.wallet_create");
       if (has("renomm", "rename", "nom") && has("voyage", "periode", "trip", "period")) return t("assistant.intent.voyage_rename");
       if (has("categ", "cateo", "cat", "category", "subcategory", "sous categorie", "sous-categorie") && has("creer", "ajout", "ajouter", "nouveau", "nouvelle", "create", "add")) return t("assistant.intent.category_create");

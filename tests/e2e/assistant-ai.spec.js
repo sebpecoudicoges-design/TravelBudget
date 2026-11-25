@@ -46,3 +46,30 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await page.screenshot({ path: `test-results/assistant-${width}-${theme}.png` });
   });
 }
+
+for (const [language, question, navigation, distinction, limit] of [
+  ['fr', 'Où voir mon compte de résultat et ses amortissements ?', 'Finances → Comptabilité', 'ne correspond pas au solde', 'sur cet appareil'],
+  ['en', 'Where is the accounting balance sheet for my assets?', 'Finances → Accounting', 'is not your wallet balance', 'on this device'],
+]) {
+  test(`offline accounting help is relevant and searchable (${language})`, async ({ page }) => {
+    await page.route('**/assistant-test', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><meta charset="utf-8"><body></body>' }));
+    await page.goto('/assistant-test');
+    await page.evaluate(lang => {
+      window.state = {};
+      window.tbGetLang = () => lang;
+      window.tbT = key => key;
+      window.tbRequestAssistantHelp = async () => { window.onlineHelpCalled = true; throw new Error('Unexpected external request'); };
+      Object.defineProperty(navigator, 'onLine', { value: false });
+    }, language);
+    await page.addScriptTag({ url: '/legacy/js/31_help_faq.js' });
+    await page.addScriptTag({ url: '/legacy/js/32_help_assistant.js' });
+    await page.locator('#tb-assist-btn').click();
+    await page.locator('#tb-assist-ai').check();
+    await page.locator('#tb-assist-input').fill(question);
+    await page.locator('#tb-assist-send').click();
+    const reply = page.locator('#tb-assist-thread .bot').last();
+    for (const text of [navigation, distinction, limit]) await expect(reply).toContainText(text);
+    expect(await page.evaluate(() => window.onlineHelpCalled)).toBeUndefined();
+    expect(await page.evaluate(q => window.tbSearchFaq(q, 8).map(item => item.id), language === 'fr' ? 'comptabilité' : 'accounting')).toContain('personal_accounting');
+  });
+}

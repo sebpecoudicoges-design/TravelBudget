@@ -8,4 +8,6 @@
 
 - **F14, comptabilité manuelle** : un réglage local illisible n’est plus remplacé par un nouveau classement automatique, ni interprété comme des soldes absents. Si un autre onglet a déjà enregistré ou retiré les réglages depuis leur lecture, l’enregistrement refuse de les écraser, garde le formulaire affiché et invite à actualiser. Vérifié sur deux onglets avec des montants fictifs. Cette comparaison ne rend pas deux écritures strictement simultanées atomiques. La restauration et la synchronisation entre appareils restent ouvertes ; le partage au connecteur n’est pas une sauvegarde.
 
+- **F15, aide locale** : la FAQ français/anglais décrit les vues de Comptabilité, les distingue de la trésorerie et précise que les réglages manuels restent sur l’appareil. L’assistant hors ligne utilise la même fiche pour une question explicitement comptable avant la règle générique Patrimoine, même quand la question parle d’un actif ou d’amortissements. Deux parcours Chromium ont reproduit la mauvaise orientation puis vérifié la réponse et la recherche sans appel externe. Aucun changement des droits d’accès ni de l’aide IA côté serveur.
+
 Aucune modification de F13, de la production ou du Play Store.
