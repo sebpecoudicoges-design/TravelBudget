@@ -253,7 +253,7 @@
     return removed;
   }
 
-  async function runItem(item) {
+  async function runItem(item, mayReplay) {
     if (!item || item.status === "done") return true;
     if (item.kind === "transaction.apply_v2") {
       const rpcName = item.payload?.rpcName || window.TB_CONST?.RPCS?.apply_transaction_v2 || "apply_transaction_v2";
@@ -286,15 +286,22 @@
       if (typeof window.tbSportSyncLocalWorkouts !== "function" && typeof window.tbLoadLegacyDomain === "function") {
         await window.tbLoadLegacyDomain("sport");
       }
-      if (typeof window.tbSportSyncLocalWorkouts === "function") {
-        await window.tbSportSyncLocalWorkouts();
+      if (!mayReplay()) throw new Error("Synchronisation interrompue : compte ou verrou modifie.");
+      if (typeof window.tbSportSyncLocalWorkouts !== "function") {
+        throw new Error("Sport indisponible pour synchroniser les donnees hors ligne.");
       }
+      await window.tbSportSyncLocalWorkouts();
       return true;
     }
     if (item.kind === "nutrition.sync_local") {
-      if (typeof window.tbNutritionSyncLocal === "function") {
-        await window.tbNutritionSyncLocal("offline-queue");
+      if (typeof window.tbNutritionSyncLocal !== "function" && typeof window.tbLoadLegacyDomain === "function") {
+        await window.tbLoadLegacyDomain("nutrition");
       }
+      if (!mayReplay()) throw new Error("Synchronisation interrompue : compte ou verrou modifie.");
+      if (typeof window.tbNutritionSyncLocal !== "function") {
+        throw new Error("Nutrition indisponible pour synchroniser les donnees hors ligne.");
+      }
+      await window.tbNutritionSyncLocal("offline-queue");
       return true;
     }
     if (item.kind === "trip.expense.create" || item.kind === "trip.expense.update") {
@@ -356,7 +363,7 @@
       const syncedKinds = [];
       const result = await window.Data.flushMutationQueue({
         store: queueStore,
-        run: runItem,
+        run: item => runItem(item, () => queueStore.scope() === syncScope && renewLease()),
         force,
         canContinue: renewLease,
         onSuccess: (item) => {
@@ -369,6 +376,9 @@
       });
       synced = result.synced;
       failed = result.failed;
+      if (queueStore.scope() !== syncScope) {
+        return { ok: false, skipped: "account-change", synced, failed };
+      }
       if (failed) console.warn(`[OfflineQueue] ${failed} action(s) deferred; later actions continued.`);
       if (synced) {
         toastInfo(message(`${synced} action(s) hors ligne synchronisee(s).`, `${synced} offline action(s) synced.`));
@@ -392,7 +402,7 @@
       clearInterval(leaseTimer);
       syncing = false;
       releaseLock();
-      dispatchChanged({ synced, failed });
+      dispatchChanged(queueStore.scope() === syncScope ? { synced, failed } : undefined);
     }
   }
 

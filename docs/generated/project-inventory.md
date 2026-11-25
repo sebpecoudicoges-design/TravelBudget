@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `b802d481e1aa6c10054928abde924a7ab2dd63b1`
-> Empreinte du snapshot : `eaea57b1866993fccff8c1c8565fb871ae31bb0081f9e0484073548d8fce30a0`
-> Généré le : `2026-11-25T07:29:09.258Z`
+> Commit analysé : `3f0d7e50c345ad94f4e54f5603f53e17e5f4034c`
+> Empreinte du snapshot : `ff7b70764595117c2a7342e4d1fe1a829fa2efe45cc497e8d17950367f6fd68f`
+> Généré le : `2026-11-25T07:49:56.314Z`
 
 # Inventaire du projet TravelBudget
 
@@ -15,10 +15,10 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 28 |
-| Modules data | 12 |
+| Modules data | 13 |
 | Modules features | 64 |
-| Fichiers de tests | 204 |
-| Migrations Supabase | 178 |
+| Fichiers de tests | 206 |
+| Migrations Supabase | 179 |
 | Fonctions Edge | 15 |
 | Projet Android présent | Oui |
 
@@ -218,6 +218,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `src/data/mcpReadCatalog.js`
 - `src/data/mutationQueueStore.js`
 - `src/data/nutritionRepository.js`
+- `src/data/nutritionSleepRepository.js`
 - `src/data/sportRepository.js`
 - `src/data/storageQuota.js`
 - `src/data/supabaseRepository.js`
@@ -446,6 +447,7 @@ Modules :
 - `tests/data/networkReachability.test.js`
 - `tests/data/nutritionPersistenceFailure.test.js`
 - `tests/data/nutritionRepository.test.js`
+- `tests/data/nutritionSleepSync.test.js`
 - `tests/data/nutritionSyncConcurrency.test.js`
 - `tests/data/recurringBudgetPeriodMigration.test.js`
 - `tests/data/recurringRuleReconciliationMigration.test.js`
@@ -487,6 +489,7 @@ Modules :
 - `tests/features/accounting/accountingRules.test.js`
 - `tests/features/analysis/analysisCashBreakdown.test.js`
 - `tests/features/analysis/analysisChartOptions.test.js`
+- `tests/features/analysis/analysisModelCharts.test.js`
 - `tests/features/analysis/analysisPeriodRules.test.js`
 - `tests/features/analysis/analysisView.test.js`
 - `tests/features/assets/assetBudgetData.test.js`
@@ -798,6 +801,7 @@ Modules :
 - `supabase/migrations/20261106213201_delete_trip_atomic.sql`
 - `supabase/migrations/20261107035117_retain_detached_trip_payment_origin.sql`
 - `supabase/migrations/20261124090000_account_deletion_checkpoint.sql`
+- `supabase/migrations/20261125074406_remove_duplicate_transactions_trip_match_indexes.sql`
 - `supabase/migrations/20261125100000_account_write_admission.sql`
 
 ## Android et budgets de modules
@@ -816,6 +820,7 @@ Modules :
 - `docs/ACCOUNT_DELETION_RECOVERY.md`
 - `docs/ADMIN_TEST_RETURNS.md`
 - `docs/ADMOB_ANDROID.md`
+- `docs/ANALYSE_GRAPH_AUDIT_2026_11_25.md`
 - `docs/ANDROID_10_5_388.md`
 - `docs/ANDROID_10_5_389.md`
 - `docs/ANDROID_10_5_390.md`
@@ -826,6 +831,7 @@ Modules :
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`
+- `docs/AUDIT_PROGRESS_2026_11_25.md`
 - `docs/AUDIT_STATUS_2026_11_04.md`
 - `docs/AUDIT_STATUS_2026_11_24.md`
 - `docs/BACKLOG.md`

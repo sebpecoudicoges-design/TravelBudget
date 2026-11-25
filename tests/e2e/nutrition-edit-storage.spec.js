@@ -3,7 +3,7 @@ import fs from 'node:fs';
 const source = fs.readFileSync('public/legacy/js/48_nutrition_ui.js', 'utf8');
 const section = (from, to) => source.slice(source.indexOf(from), source.indexOf(to, source.indexOf(from)));
 const functions = section('  function requireNutritionWrite(', '  function localNutritionRowKey(')
-  + section('  function saveSleepRows(', '  function mergeSleepRows(')
+  + section('  async function flushPendingSleep(', '  function sleepForDay(')
   + section('  async function saveSleep(', '  async function deleteNutritionItem(')
   + section('  async function deleteNutritionItem(', '  window.renderNutrition =')
   + section('  async function saveNutritionMeal(', '  function applyMealFavorite(');
@@ -16,7 +16,7 @@ for (const width of [1440, 390]) for (const dark of [false, true]) {
     await page.addStyleTag({ url: '/src/ui/premium-theme.css' });
     await page.evaluate(async () => {
       const repo = await import('/src/data/nutritionRepository.js');
-      window.repository = () => repo;
+      window.repository = () => repo.createNutritionRepository(null);
       window.blocked = true; window.remoteCalls = 0; window.renders = [];
       window.CACHE = { items: [{ id: 'local_item_one' }], editingItemId: 'local_item_one' };
       localStorage.setItem('meals', JSON.stringify([{ syncId: 'stable', syncAttempts: 2, meal: { id: 'local_meal_one' }, item: { id: 'local_item_one', grams: 100 } }]));
@@ -63,3 +63,35 @@ for (const width of [1440, 390]) for (const dark of [false, true]) {
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('meals')))).toEqual([]);
   });
 }
+
+test('two browser tabs keep an offline night deletion and the other tab’s edit', async ({ page, context }) => {
+  await context.route('**/nutrition-two-tab-test', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Local sleep test</title>' }));
+  const other = await context.newPage();
+  await Promise.all([page.goto('/nutrition-two-tab-test'), other.goto('/nutrition-two-tab-test')]);
+  const firstDay = '2026-11-23';
+  const secondDay = '2026-11-24';
+  await page.evaluate(({ firstDay, secondDay }) => {
+    localStorage.setItem('sleep::test', JSON.stringify({
+      [firstDay]: { hours: 7, quality: 'ok', updatedAt: '2026-11-23T08:00:00Z' },
+      [secondDay]: { hours: 8, quality: 'good', updatedAt: '2026-11-24T08:00:00Z' },
+    }));
+  }, { firstDay, secondDay });
+  const save = (tab, day, hours) => tab.evaluate(async ({ day, hours }) => {
+    const { saveSleepDraft } = await import('/src/data/nutritionSleepRepository.js');
+    await saveSleepDraft({ storage: localStorage, key: 'sleep::test', day, hours, quality: 'ok' });
+  }, { day, hours });
+  expect(await page.evaluate(() => typeof navigator.locks?.request)).toBe('function');
+  await Promise.all([save(page, firstDay, 0), save(other, secondDay, 9)]);
+  const remaining = await other.evaluate(async ({ firstDay, secondDay }) => {
+    const { visibleSleepRows, loadSleepRows } = await import('/src/data/nutritionRepository.js');
+    const { mergeSleepSnapshot } = await import('/src/data/nutritionSleepRepository.js');
+    await mergeSleepSnapshot({ storage: localStorage, key: 'sleep::test', rows: {
+      [firstDay]: { hours: 7, updatedAt: '2026-11-23T08:00:00Z' },
+      [secondDay]: { hours: 8, updatedAt: '2026-11-24T08:00:00Z' },
+    } });
+    return visibleSleepRows(loadSleepRows({ storage: localStorage, key: 'sleep::test' }));
+  }, { firstDay, secondDay });
+  expect(remaining[firstDay]).toBeUndefined();
+  expect(remaining[secondDay]).toMatchObject({ hours: 9, pending: true });
+  await other.close();
+});

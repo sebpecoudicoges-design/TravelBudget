@@ -4,7 +4,7 @@ function requireClient(getClient) {
   return client;
 }
 
-function unwrap(result) {
+export function unwrap(result) {
   if (result?.error) throw result.error;
   if (result && Object.prototype.hasOwnProperty.call(result, 'data')) return result.data;
   return [];
@@ -24,7 +24,7 @@ function readJson(storage, key, fallback) {
   }
 }
 
-function writeJson(storage, key, value) {
+export function writeJson(storage, key, value) {
   try {
     const raw = JSON.stringify(value);
     if (typeof window !== 'undefined' && typeof window.tbSafeLocalStorageSet === 'function' && storage === window.localStorage) {
@@ -44,7 +44,7 @@ export function loadCachedFoods({ storage, key }) {
   return Array.isArray(rows) ? rows : [];
 }
 
-function requireLocalWrite(ok, pendingRows) {
+export function requireLocalWrite(ok, pendingRows) {
   if (ok) return;
   const error = new Error('Nutrition could not be saved on this device.');
   error.code = 'NUTRITION_STORAGE_FAILED';
@@ -199,23 +199,8 @@ export function loadSleepRows({ storage, key, strict = false }) {
   return rows && typeof rows === 'object' && !Array.isArray(rows) ? rows : {};
 }
 
-export function saveSleepRows({ storage, key, rows }) {
-  try { loadSleepRows({ storage, key, strict: true }); } catch (_) { return false; }
-  return writeJson(storage, key, rows || {});
-}
-
-export function mergeSleepRows({ storage, key, rows, now = () => new Date() }) {
-  const current = loadSleepRows({ storage, key, strict: true });
-  Object.entries(rows || {}).forEach(([day, row]) => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))) return;
-    current[day] = {
-      hours: safeNumber(row.hours, 0),
-      quality: String(row.quality || 'ok'),
-      updatedAt: row.updatedAt || row.updated_at || now().toISOString(),
-    };
-  });
-  requireLocalWrite(saveSleepRows({ storage, key, rows: current }));
-  return current;
+export function visibleSleepRows(rows) {
+  return Object.fromEntries(Object.entries(rows || {}).filter(([, row]) => row && !row.deleted));
 }
 
 export function createNutritionRepository(getClient) {
@@ -236,8 +221,8 @@ export function createNutritionRepository(getClient) {
     saveLocalNutritionRowOnce,
     saveLocalNutritionRowsOnce,
     loadSleepRows,
-    saveSleepRows,
-    mergeSleepRows,
+    visibleSleepRows,
+    sleepWrites: () => import("./nutritionSleepRepository.js"),
 
     async findMealBySyncId({ table, userId, syncId }) {
       if (!syncId) return null;

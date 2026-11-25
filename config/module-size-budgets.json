@@ -3,8 +3,8 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 279,
-    "lazyJsMaxKiB": 601,
-    "totalJsMaxKiB": 879,
+    "lazyJsMaxKiB": 605,
+    "totalJsMaxKiB": 884,
     "totalCssMaxKiB": 81.5,
     "mainJsGzipMaxKiB": 110,
     "vendorJsMaxKiB": 2340
@@ -209,6 +209,11 @@
         "src/features/nutrition/nutritionStore.js",
         "src/features/nutrition/nutritionView.js"
       ]
+    },
+    {
+      "name": "nutrition-sleep-replay-lazy",
+      "maxKiB": 6.5,
+      "paths": ["src/data/nutritionSleepRepository.js"]
     },
     {
       "name": "work-domain",

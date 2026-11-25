@@ -89,7 +89,9 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('scheduleNutritionRender("meal-favorite")');
     expect(legacy).toContain('renderFoodOptions(root, key)');
     expect(legacy).not.toContain('renderNutrition("food-pick")');
-    expect(legacy).toContain('ev?.detail?.offline === false && loadLocalMeals().length');
+    expect(legacy).toContain('if (ev?.detail?.offline !== false) return;');
+    expect(legacy).toContain('if (loadLocalMeals().length) requestNutritionSync("online")');
+    expect(legacy).toContain('requestNutritionRefreshWhenIdle("sleep-online")');
     expect(offlineState).toContain('const wasUnavailable = Boolean(');
     expect(offlineState).toContain('if (wasUnavailable) {');
     expect(legacy).not.toContain('publishNutrition("save-local");\n        enqueueNutritionSync();');
@@ -107,7 +109,7 @@ describe('nutrition domain extraction contract', () => {
     expect(repository).toContain('async syncLocalRow');
     expect(repository).toContain('async upsertMeal');
     expect(repository).toContain('async insertMealItem');
-    expect(repository).toContain('mergeSleepRows');
+    expect(repository).toContain('nutritionSleepRepository.js');
     expect(store).toContain('hydrateRemote');
     expect(store).toContain('hydrateLocal');
     expect(store).toContain('appSnapshot');

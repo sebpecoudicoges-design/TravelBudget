@@ -838,7 +838,7 @@ function _sumTxArray(txs, base){
     let spent = 0;
     let paidSpent = 0;
 
-    function _txAmountInVisibleWindow(tx){
+    function _txAmountInVisibleWindow(tx, includedDays = daySet){
       const cashDate = _txCashDate(tx);
       const budgetStart = _txBudgetStart(tx);
       const budgetEnd = _txBudgetEnd(tx);
@@ -850,7 +850,7 @@ if (!fullBudgetDays.length) {
 }
 
 const visibleBudgetDays = fullBudgetDays
-  .filter(d => daySet.has(d))
+  .filter(d => includedDays.has(d))
   .filter(d => !cutoffEnd || d <= cutoffEnd);
 
       if (!visibleBudgetDays.length) {
@@ -953,16 +953,10 @@ if (sub) {
     let comparableExcludedSpent = 0;
     const comparableCategoryMap = new Map(analysisBuckets.map((bucket) => [bucket, 0]));
     const unmappedCategoryMap = new Map();
+    const allocateComparable = (tx) => _txAmountInVisibleWindow(tx, comparableDaySet);
     for (const tx of txs) {
-      const cashDate = _txCashDate(tx);
-      const budgetStart = _txBudgetStart(tx);
-      const budgetEnd = _txBudgetEnd(tx);
-      const comparableBudgetDays = _daysInclusive(budgetStart, budgetEnd)
-        .filter((d) => comparableDaySet.has(d));
-
-      if (!comparableBudgetDays.length) continue;
-
-      const amt = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const { amount: amt, visibleBudgetDays } = allocateComparable(tx);
+      if (!visibleBudgetDays.length) continue;
       const raw = _norm(tx?.category || 'Autre');
       const mapping = _mapToSourcedBucket(raw, tx);
 
@@ -986,9 +980,7 @@ if (sub) {
       );
     }
     const refundComparison = window.TBAnalysisCashBreakdown?.applyComparableOffsets?.({
-      offsets: expenseOffsets, days: comparableDaySet,
-      budgetDays: (tx) => _daysInclusive(_txBudgetStart(tx), _txBudgetEnd(tx)), cashDate: _txCashDate, category: _txCategory,
-      convert: (tx, date) => _convert(tx?.amount, tx?.currency || base, date || _txBudgetStart(tx), base), mapping: _mapToSourcedBucket,
+      offsets: expenseOffsets, allocate: allocateComparable, category: _txCategory, mapping: _mapToSourcedBucket,
       comparableCategoryMap, unmappedCategoryMap,
     }) || {};
     comparableIncludedSpent += _safeNum(refundComparison.included);
@@ -1024,8 +1016,9 @@ if (sub) {
       cumSpent.push(Number(runSpent.toFixed(2)));
       cumTarget.push(Number(runTarget.toFixed(2)));
       cumReference.push(Number(runReference.toFixed(2)));
-      velocity.push(Number((_safeNum(dailyMap[d])).toFixed(2)));
-      heat.push([idx, 0, Number((_safeNum(paidMap[d] || dailyMap[d])).toFixed(2))]);
+      const daySpent = Number(_safeNum(dailyMap[d]).toFixed(2));
+      velocity.push(daySpent);
+      heat.push([idx, 0, daySpent]);
     });
 
     const periodDays = Math.max(days.length, 1);

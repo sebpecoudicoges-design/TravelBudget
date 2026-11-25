@@ -1,0 +1,48 @@
+name: Offline and Analyse audit checks
+
+on:
+  push:
+    branches: [codex/handoff-audit-2026-11-25-cloud]
+    paths:
+      - '.github/workflows/audit-continuation.yml'
+      - 'config/module-size-budgets.json'
+      - 'public/legacy/js/00_offline_queue.js'
+      - 'public/legacy/js/33_budget_analysis.js'
+      - 'public/legacy/js/48_nutrition_ui.js'
+      - 'src/data/mutationQueueStore.js'
+      - 'src/data/nutrition*Repository.js'
+      - 'src/features/analysis/**'
+      - 'tests/data/nutrition*.test.js'
+      - 'tests/e2e/nutrition-edit-storage.spec.js'
+      - 'tests/features/analysis/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-continuation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: .ms-playwright
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --maxWorkers=2
+      - run: npm run docs:check
+      - run: npm run build
+      - run: npm run perf:budget
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -- tests/e2e/nutrition-edit-storage.spec.js --project=desktop-chromium

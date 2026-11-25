@@ -233,18 +233,23 @@ export async function flushMutationQueue({ store, run, force = false, canContinu
     attempted += 1;
     try {
       await run(current);
-      if (store.remove(item.id, current)) await onSuccess?.(current);
-      synced += 1;
     } catch (error) {
       if (isPermanentFailure?.(current, error)) {
         if (store.remove(item.id, current)) {
           discarded += 1;
           await onPermanentFailure?.(current, error);
         }
-        continue;
+      } else if (store.markFailure(item.id, error, current)) {
+        failed += 1;
       }
-      store.markFailure(item.id, error, current);
-      failed += 1;
+      continue;
+    }
+    // Only the matching, durably acknowledged attempt is synced. The remote
+    // reply for a superseded revision is no longer the state of this queue.
+    // Persistence and post-success errors are not remote execution failures.
+    if (store.remove(item.id, current)) {
+      synced += 1;
+      await onSuccess?.(current);
     }
   }
 

@@ -1,7 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import { saveLocalNutritionRows, saveLocalNutritionRowsOnce, discardLocalNutritionRow, discardAllLocalNutritionRows, mergeSleepRows, saveSleepRows } from '../../src/data/nutritionRepository.js';
+import { saveLocalNutritionRows, saveLocalNutritionRowsOnce, discardLocalNutritionRow, discardAllLocalNutritionRows } from '../../src/data/nutritionRepository.js';
+
+import { mergeSleepRows, saveSleepRows } from '../../src/data/nutritionSleepRepository.js';
 
 afterEach(() => vi.unstubAllGlobals());
 it.each(['{broken', 'null', '[]', '{"2026-11-23":null}', 'read-error'])('preserves unreadable sleep history: %s', raw => {

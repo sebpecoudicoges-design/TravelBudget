@@ -121,7 +121,7 @@ window.tbEnsureActivityData = async function tbEnsureActivityData(options = {}) 
   return pending;
 };
 
-function tbPublishNutritionKpiRows({ meals, items, sleep, reason } = {}) {
+function tbPublishNutritionKpiRows({ meals, items, sleep, reason, userId } = {}) {
   if (!window.state) window.state = {};
   if (Array.isArray(meals)) window.state.nutritionMeals = meals;
   if (Array.isArray(items)) window.state.nutritionMealItems = items;
@@ -131,6 +131,20 @@ function tbPublishNutritionKpiRows({ meals, items, sleep, reason } = {}) {
       if (day) rows[day] = { hours: Number(row.hours) || 0, quality: String(row.quality || "ok"), updatedAt: row.updated_at || "" };
       return rows;
     }, {});
+    if (userId) try {
+      const prefix = window.TB_CONST?.LS_KEYS?.nutrition_sleep || "travelbudget_nutrition_sleep_v1";
+      const local = window.Data?.nutritionRepository?.loadSleepRows?.({
+        storage: window.localStorage, key: `${prefix}::${userId}`,
+      }) || {};
+      for (const [day, draft] of Object.entries(local)) {
+        const remoteAt = window.state.nutritionSleep[day]?.updatedAt || "";
+        if (draft?.deleted && (draft.pending || !remoteAt || Date.parse(remoteAt) <= Date.parse(draft.updatedAt))) {
+          delete window.state.nutritionSleep[day];
+        } else if (draft?.pending) {
+          window.state.nutritionSleep[day] = { hours: draft.hours, quality: draft.quality, updatedAt: draft.updatedAt };
+        }
+      }
+    } catch (_) {}
   }
   window.state.nutritionKpiDataLoaded = true;
   try {
@@ -189,7 +203,7 @@ window.tbEnsureNutritionKpiData = async function tbEnsureNutritionKpiData(option
     const itemError = itemResults.find(result => result?.error)?.error;
     if (itemError) throw itemError;
     const items = itemResults.flatMap(result => result?.data || []);
-    tbPublishNutritionKpiRows({ meals, items, sleep: sleepResult?.data || [], reason });
+    tbPublishNutritionKpiRows({ meals, items, sleep: sleepResult?.data || [], reason, userId });
     try { window.dispatchEvent(new CustomEvent("tb:nutrition:kpi_data_loaded", { detail: { reason } })); } catch (_) {}
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
     return { loaded: true, mealCount: meals.length, itemCount: items.length };

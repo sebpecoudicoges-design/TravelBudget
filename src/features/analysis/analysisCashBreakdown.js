@@ -135,11 +135,12 @@ export function applyBudgetOffsets({ offsets = [], allocate, category, subcatego
   return delta;
 }
 
-export function applyComparableOffsets({ offsets = [], days, budgetDays, cashDate, category, convert, mapping, comparableCategoryMap, unmappedCategoryMap } = {}) {
+export function applyComparableOffsets({ offsets = [], allocate, category, mapping, comparableCategoryMap, unmappedCategoryMap } = {}) {
   const totals = { included: 0, mapped: 0, excluded: 0 };
   for (const tx of offsets) {
-    if (!budgetDays(tx).some((day) => days.has(day))) continue;
-    const amount = -num(convert(tx, cashDate(tx)));
+    const allocation = allocate(tx);
+    if (!allocation.visibleBudgetDays.length) continue;
+    const amount = -num(allocation.amount);
     const raw = category(tx) || 'Autre';
     const target = mapping(raw, tx);
     if (target.mode === 'excluded') { totals.excluded += amount; continue; }

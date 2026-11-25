@@ -969,39 +969,26 @@
     saveMealFavorites(next);
     return favorite;
   }
-  function loadSleepRows() {
+  function loadSleepRows(includeDeleted = false) {
     const repo = repository();
-    if (typeof repo.loadSleepRows === "function") return repo.loadSleepRows({ storage: localStorage, key: sleepKey() });
-    try {
-      const raw = JSON.parse(localStorage.getItem(sleepKey()) || "{}");
-      return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
-    } catch (_) {
-      return {};
-    }
+    const rows = repo.loadSleepRows?.({ storage: localStorage, key: sleepKey() }) || {};
+    return includeDeleted ? rows : (repo.visibleSleepRows?.(rows) || rows);
   }
-  function saveSleepRows(rows) {
-    const repo = repository();
-    if (typeof repo.saveSleepRows === "function") return requireNutritionWrite(repo.saveSleepRows({ storage: localStorage, key: sleepKey(), rows }));
-    let saved = false;
-    try { localStorage.setItem(sleepKey(), JSON.stringify(rows || {})); saved = true; } catch (_) {}
-    return requireNutritionWrite(saved);
-  }
-  function mergeSleepRows(rows) {
-    const repo = repository();
-    if (typeof repo.mergeSleepRows === "function") return repo.mergeSleepRows({ storage: localStorage, key: sleepKey(), rows });
-    const current = loadSleepRows();
-    Object.entries(rows || {}).forEach(([day, row]) => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ""))) return;
-      current[day] = { hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updatedAt || row.updated_at || new Date().toISOString() };
+  async function flushPendingSleep(c, accountId, key) {
+    if (!c || !accountId || navigator.onLine === false) return 0;
+    const repo = await repository().sleepWrites();
+    const isCurrent = () => uid() === accountId && sleepKey() === key;
+    return repo.flushSleepDrafts({
+      storage: localStorage, key, isCurrent,
+      write: (day, row) => repo.persistSleepDraft({ client: c, table: table("nutrition_sleep"), userId: accountId, day, row, isCurrent }),
     });
-    saveSleepRows(current);
-    return current;
   }
   function sleepForDay(day) {
     const targetDay = String(day || selectedDateISO());
     const nightDay = offsetDateISO(targetDay, -1);
-    const rows = loadSleepRows();
-    const row = rows[nightDay] || rows[targetDay] || {};
+    const rows = loadSleepRows(true);
+    const recorded = rows[nightDay] || rows[targetDay];
+    const row = recorded?.deleted ? {} : (recorded || {});
     return { hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updatedAt || "", nightDay };
   }
   function ensureNutritionShell() {
@@ -1139,21 +1126,32 @@
         }
       }
       if (c && uid()) {
-        await syncLocalNutritionRows("load");
+        try { await syncLocalNutritionRows("load"); }
+        catch (error) { CACHE.error = error?.message || String(error); }
         try {
+          const sleepAccount = uid();
+          const currentSleepKey = sleepKey();
+          try { await flushPendingSleep(c, sleepAccount, currentSleepKey); }
+          catch (err) { CACHE.error = err?.message || String(err); }
+          const sameSleepScope = () => uid() === sleepAccount && sleepKey() === currentSleepKey;
+          if (!sameSleepScope()) return false;
           const sleepSince = offsetDateISO(selectedDateISO(), -21);
           const sleep = await c.from(table("nutrition_sleep"))
             .select("sleep_date,hours,quality,updated_at")
-            .eq("user_id", uid())
+            .eq("user_id", sleepAccount)
             .gte("sleep_date", sleepSince)
             .order("sleep_date", { ascending: false });
+          if (!sameSleepScope()) return false;
           if (!sleep.error) {
             const remoteSleep = {};
             (sleep.data || []).forEach(row => {
               const sleepDay = localDateISO(row.sleep_date);
               if (sleepDay) remoteSleep[sleepDay] = { hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updated_at || "" };
             });
-            mergeSleepRows(remoteSleep);
+            await (await repository().sleepWrites()).mergeSleepSnapshot({
+              storage: localStorage, key: currentSleepKey, rows: remoteSleep, isCurrent: sameSleepScope,
+            });
+            if (!sameSleepScope()) return false;
             try { nutritionStore()?.replace?.({ sleep: loadSleepRows() }); } catch (_) {}
           }
         } catch (e) {
@@ -2489,37 +2487,26 @@
   async function saveSleep(root) {
     const hours = Math.max(0, Math.min(14, n(root.querySelector("#nutrition-sleep-hours")?.value, 0)));
     const quality = String(root.querySelector("#nutrition-sleep-quality")?.value || "ok");
-    const rows = loadSleepRows();
+    const accountId = uid();
+    const key = sleepKey();
+    const sameScope = () => uid() === accountId && sleepKey() === key;
     const nightDay = offsetDateISO(selectedDateISO(), -1);
-    if (hours > 0) {
-      rows[nightDay] = { hours, quality, updatedAt: new Date().toISOString() };
-    } else {
-      delete rows[nightDay];
-    }
-    try { saveSleepRows(rows); }
-    catch (error) { showNutritionWriteError(root, error); return; }
+    try {
+      const draft = await (await repository().sleepWrites()).saveSleepDraft({
+        storage: localStorage, key, day: nightDay, hours, quality, isCurrent: sameScope,
+      });
+      if (!draft || !sameScope()) return;
+    } catch (error) { showNutritionWriteError(root, error); return; }
     CACHE.error = "";
     root?.querySelector("[data-nutrition-write-error]")?.remove();
-    const c = client();
-    if (c && uid()) {
-      try {
-        if (hours > 0) {
-          const { error } = await c.from(table("nutrition_sleep")).upsert({
-            user_id: uid(),
-            sleep_date: nightDay,
-            hours,
-            quality,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: "user_id,sleep_date" });
-          if (error) throw error;
-        } else {
-          const { error } = await c.from(table("nutrition_sleep")).delete().eq("user_id", uid()).eq("sleep_date", nightDay);
-          if (error) throw error;
-        }
-      } catch (e) {
-        CACHE.error = e?.message || String(e);
-      }
+    try { await flushPendingSleep(client(), accountId, key); }
+    catch (e) {
+      if (!sameScope()) return;
+      CACHE.error = e?.code === "NUTRITION_SLEEP_CONFLICT"
+        ? txt("Sommeil modifié sur un autre appareil. Ta saisie locale est conservée.", e.message)
+        : e?.message || String(e);
     }
+    if (!sameScope()) return;
     publishNutrition("sleep");
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
     try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
@@ -2569,7 +2556,13 @@
     });
   } catch (_) {}
   try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadNutrition(); } catch (_) {} }); } catch (_) {}
-  try { window.addEventListener("tb:offline_state_changed", (ev) => { if (ev?.detail?.offline === false && loadLocalMeals().length) requestNutritionSync("online"); }); } catch (_) {}
+  try {
+    window.addEventListener("tb:offline_state_changed", (ev) => {
+      if (ev?.detail?.offline !== false) return;
+      if (loadLocalMeals().length) requestNutritionSync("online");
+      if (Object.values(loadSleepRows(true)).some(row => row.pending)) requestNutritionRefreshWhenIdle("sleep-online");
+    });
+  } catch (_) {}
   window.tbNutritionSyncLocal = async function tbNutritionSyncLocal(reason) {
     const synced = await syncLocalNutritionRows(reason || "offline-queue");
     if (loadLocalMeals(true).length) throw new Error("Nutrition sync incomplete: pending local rows remain");
