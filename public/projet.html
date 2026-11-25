@@ -2787,6 +2787,7 @@
       const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
       const fmt = (n, cur) => `${Math.round(n).toLocaleString(state.lang === "fr" ? "fr-FR" : "en-US")} ${cur}`;
       const t = (key) => copy[state.lang][key] || key;
+      const releaseFallbacks = new WeakMap();
       const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
       }[char]));
@@ -2821,7 +2822,15 @@
       function applyLang(lang) {
         state.lang = lang;
         document.documentElement.lang = lang;
-        document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const key = el.dataset.i18n;
+          if (el.closest("#releaseSource")) {
+            if (!releaseFallbacks.has(el)) releaseFallbacks.set(el, el.textContent);
+            el.textContent = copy[lang][key] || copy.fr[key] || releaseFallbacks.get(el);
+          } else {
+            el.textContent = t(key);
+          }
+        });
         document.querySelectorAll("[data-lang]").forEach((btn) => btn.classList.toggle("active", btn.dataset.lang === lang));
         renderMockModule();
         renderScenario();
