@@ -992,7 +992,12 @@
     const rows = loadSleepRows(true);
     const recorded = rows[nightDay] || rows[targetDay];
     const row = recorded?.deleted ? {} : (recorded || {});
-    return { hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updatedAt || "", nightDay };
+    return {
+      hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updatedAt || "", nightDay,
+      pending: rows[nightDay]?.pending === true,
+      conflict: rows[nightDay]?.conflict,
+      writeId: rows[nightDay]?.writeId,
+    };
   }
   function ensureNutritionShell() {
     const tabs = document.querySelector(".tabs") || document.querySelector(".app-tabs");
@@ -1135,7 +1140,7 @@
           const sleepAccount = uid();
           const currentSleepKey = sleepKey();
           try { await flushPendingSleep(c, sleepAccount, currentSleepKey); }
-          catch (err) { CACHE.error = err?.message || String(err); }
+          catch (err) { if (err?.code !== "NUTRITION_SLEEP_CONFLICT") CACHE.error = err?.message || String(err); }
           const sameSleepScope = () => uid() === sleepAccount && sleepKey() === currentSleepKey;
           if (!sameSleepScope()) return false;
           const sleepSince = offsetDateISO(selectedDateISO(), -21);
@@ -2102,8 +2107,7 @@
     if (cancel) cancel.onclick = () => { CACHE.editingItemId = ""; renderNutrition("edit-cancel"); };
     const waterOnly = root.querySelector("#nutrition-water-only");
     if (waterOnly) waterOnly.onclick = () => saveWaterOnly(root);
-    const sleepSave = root.querySelector("#nutrition-sleep-save");
-    if (sleepSave) sleepSave.onclick = () => saveSleep(root);
+    bindSleepControls(root);
     root.querySelectorAll("[data-nutrition-water-quick]").forEach(btn => {
       btn.onclick = () => {
         const input = root.querySelector("#nutrition-water-ml");
@@ -2487,6 +2491,39 @@
       renderNutrition("water-delete-error");
     }
   }
+  function bindSleepControls(root) {
+    const sleepSave = root.querySelector("#nutrition-sleep-save");
+    if (sleepSave) sleepSave.onclick = () => saveSleep(root);
+    root.querySelectorAll("[data-sleep-conflict-choice]").forEach(button => {
+      button.onclick = () => resolveSleepChoice(root, button.dataset.sleepDay, button.dataset.sleepWriteId, button.dataset.sleepConflictChoice);
+    });
+  }
+  async function resolveSleepChoice(root, day, writeId, choice) {
+    const accountId = uid();
+    const key = sleepKey();
+    const sameScope = () => uid() === accountId && sleepKey() === key;
+    try {
+      const repo = await repository().sleepWrites();
+      const applied = await repo.resolveSleepConflict({
+        storage: localStorage, key, day, writeId, choice, isCurrent: sameScope,
+      });
+      if (!sameScope()) return;
+      CACHE.error = "";
+      if (applied && choice === "local") await flushPendingSleep(client(), accountId, key);
+    } catch (error) {
+      if (!sameScope()) return;
+      if (error?.code === "NUTRITION_STORAGE_FAILED") { showNutritionWriteError(root, error); return; }
+      if (error?.code !== "NUTRITION_SLEEP_CONFLICT") CACHE.error = error?.message || String(error);
+    }
+    if (!sameScope()) return;
+    publishSleep("sleep-conflict");
+  }
+  function publishSleep(reason) {
+    publishNutrition(reason);
+    try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+    try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
+    renderNutrition(reason);
+  }
   async function saveSleep(root) {
     const hours = Math.max(0, Math.min(14, n(root.querySelector("#nutrition-sleep-hours")?.value, 0)));
     const quality = String(root.querySelector("#nutrition-sleep-quality")?.value || "ok");
@@ -2510,10 +2547,7 @@
         : e?.message || String(e);
     }
     if (!sameScope()) return;
-    publishNutrition("sleep");
-    try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
-    try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
-    renderNutrition("sleep");
+    publishSleep("sleep");
   }
   async function deleteNutritionItem(id) {
     const key = String(id || "");
