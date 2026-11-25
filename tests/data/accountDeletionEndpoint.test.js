@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ createClient: vi.fn(), process: vi.fn() }));
 vi.mock('npm:@supabase/supabase-js@2.57.4', () => ({ createClient: mocks.createClient }));
-vi.mock('../../supabase/functions/process-account-deletions/processor.ts', () => ({ processAccountDeletions: mocks.process }));
+vi.mock('../../supabase/functions/process-account-deletions/processor.ts', () => ({ processAccountDeletions: mocks.process, accountFileDeletionReadiness: vi.fn() }));
 
 let handler;
 const env = new Map();
@@ -17,6 +17,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   env.clear();
   env.set('ACCOUNT_DELETION_PROCESSOR_SECRET', 'synthetic-secret');
+  env.set('ACCOUNT_DELETION_EXECUTION_MODE', 'verified-drain');
   env.set('SUPABASE_URL', 'https://example.invalid');
   env.set('SUPABASE_SERVICE_ROLE_KEY', 'synthetic-key');
   mocks.createClient.mockReturnValue(admin);
@@ -58,12 +59,20 @@ it('answers preflight without creating an admin client or starting deletion', as
   expect(mocks.process).not.toHaveBeenCalled();
 });
 
+it('does not start a destructive worker while execution is disabled', async () => {
+  env.delete('ACCOUNT_DELETION_EXECUTION_MODE');
+  const response = await handler(request('POST', 'synthetic-secret'));
+  expect(response.status).toBe(503);
+  expect(mocks.createClient).not.toHaveBeenCalled();
+  expect(mocks.process).not.toHaveBeenCalled();
+});
+
 it('runs one processor invocation for an authorized POST', async () => {
   const response = await handler(request('POST', 'synthetic-secret'));
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ processed: 0, results: [] });
   expect(mocks.createClient).toHaveBeenCalledOnce();
-  expect(mocks.process).toHaveBeenCalledExactlyOnceWith(admin, expect.any(Function));
+  expect(mocks.process).toHaveBeenCalledExactlyOnceWith(admin, expect.any(Function), undefined, expect.any(Function));
 });
 
 it('reports backend failure without returning a successful deletion response', async () => {

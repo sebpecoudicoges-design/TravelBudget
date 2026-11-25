@@ -127,6 +127,23 @@ enabled = false
       SELECT bucket_id, name, owner_id FROM storage.objects;
     REVOKE ALL ON public.f13_fixture_object_owners FROM PUBLIC, anon, authenticated;
     GRANT SELECT ON public.f13_fixture_object_owners TO service_role;
+    -- Only the disposable stack has this synthetic observation helper.
+    CREATE FUNCTION public.f13_fixture_record_drain(p_request_id uuid, p_marker uuid)
+    RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $fixture$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM public.f13_fixture_guard WHERE id = p_marker) THEN
+        RAISE EXCEPTION 'Wrong fixture';
+      END IF;
+      INSERT INTO account_lifecycle_private.legacy_upload_drains(request_id, observed_closed_at)
+      SELECT r.id, g.closed_at FROM public.account_deletion_requests r
+      JOIN account_lifecycle_private.closed_account_writes g ON g.user_id = r.user_id
+      JOIN auth.users u ON u.id = r.user_id
+      WHERE r.id = p_request_id AND u.email LIKE ('travelbudget-f13-%-' || p_marker::text || '@example.test');
+      IF NOT FOUND THEN RAISE EXCEPTION 'No synthetic closed account'; END IF;
+    END;
+    $fixture$;
+    REVOKE ALL ON FUNCTION public.f13_fixture_record_drain(uuid,uuid) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.f13_fixture_record_drain(uuid,uuid) TO service_role;
     NOTIFY pgrst, 'reload schema';\nCOMMIT;`,
   });
   console.log(await command(process.execPath, [local('node_modules/deno/bin.cjs'), 'run', '--no-config',

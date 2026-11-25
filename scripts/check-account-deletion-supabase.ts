@@ -236,4 +236,32 @@ const drainedReport = await report();
 assert.equal(drainedReport.closed_at, closingReport.closed_at);
 assert.equal(drainedReport.service_writes_drained, true);
 assert.equal(await checked(admin.rpc('begin_account_file_write', { p_user_id: closing })), null);
+const syntheticRelease = await createUser('guarded-worker');
+const syntheticReleaseId = await scheduleFixtureDeletion(syntheticRelease.id);
+let purgeInvocations = 0;
+const guardedPurge: typeof purgeAccount = (...args) => {
+  purgeInvocations += 1;
+  return purgeAccount(...args);
+};
+const guardClock = new Date();
+const initial = await processAccountDeletions(admin, guardedPurge, () => guardClock, accountFileDeletionReadiness);
+assert.deepEqual(initial.results, [{
+  id: syntheticReleaseId, status: 'processing', waitingFor: 'legacy_upload_drain_unverified',
+}]);
+assert.equal(purgeInvocations, 0);
+assert.equal((await requestState(syntheticReleaseId))?.attempt_count, 0);
+assert.equal((await checked(admin.auth.admin.getUserById(syntheticRelease.id))).user?.id, syntheticRelease.id);
+console.log('PASS live PostgREST worker waits without deleting Auth or consuming retries when a drain has not been verified');
+await checked(admin.rpc('f13_fixture_record_drain', {
+  p_request_id: syntheticReleaseId, p_marker: marker,
+}));
+const nextGuardClock = new Date(guardClock.getTime() + 31 * 60_000);
+const guardedResult = await processAccountDeletions(admin, guardedPurge, () => nextGuardClock, accountFileDeletionReadiness);
+assert.equal(guardedResult.results[0]?.status, 'completed');
+assert.equal(purgeInvocations, 1);
+assert.equal((await requestState(syntheticReleaseId))?.attempt_count, 1);
+assert.equal((await admin.auth.admin.getUserById(syntheticRelease.id)).error?.status, 404);
+console.log('PASS guarded worker resumes only after its synthetic closure proof and removes the intended fixture account');
+
+
 console.log('PASS real Storage admission keeps neighboring uploads working; existing Inbox ticket drains explicitly without reopening');

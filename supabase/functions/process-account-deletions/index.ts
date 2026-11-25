@@ -5,7 +5,7 @@ import {
   purgeAccount,
 } from "../_shared/account-data.ts";
 
-import { processAccountDeletions } from "./processor.ts";
+import { accountFileDeletionReadiness, processAccountDeletions } from "./processor.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -15,8 +15,12 @@ Deno.serve(async (req: Request) => {
   const receivedSecret = req.headers.get("x-account-deletion-secret");
   if (!expectedSecret || receivedSecret !== expectedSecret) return json({ error: "Unauthorized" }, 401);
 
+  if (Deno.env.get("ACCOUNT_DELETION_EXECUTION_MODE") !== "verified-drain") {
+    return json({ error: "Account deletion execution disabled" }, 503);
+  }
+
   try {
-    return json(await processAccountDeletions(adminClient(), purgeAccount));
+    return json(await processAccountDeletions(adminClient(), purgeAccount, undefined, accountFileDeletionReadiness));
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }

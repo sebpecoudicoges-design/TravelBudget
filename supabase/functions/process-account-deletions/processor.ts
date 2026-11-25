@@ -5,10 +5,27 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2.57.4";
 export const DELETION_RECLAIM_MS = 30 * 60 * 1000;
 export const MAX_DELETION_ATTEMPTS = 3;
 
+export type DeletionReadiness = "ready" | "service_writes_pending" | "legacy_upload_drain_unverified";
+
+export async function accountFileDeletionReadiness(
+  admin: SupabaseClient, requestId: string, startedAt: string,
+): Promise<DeletionReadiness> {
+  const { data, error } = await admin.rpc("account_file_deletion_readiness", {
+    p_request_id: requestId, p_started_at: startedAt,
+  });
+  if (error) throw error;
+  if (data !== "ready" && data !== "service_writes_pending" && data !== "legacy_upload_drain_unverified") {
+    throw new Error("Account file deletion readiness is unavailable");
+  }
+  return data;
+}
+
+
 export async function processAccountDeletions(
   admin: SupabaseClient,
   purge: (admin: SupabaseClient, userId: string, beforeAuthDeletion: () => Promise<void>) => Promise<Record<string, unknown>>,
   now = () => new Date(),
+  readiness?: (admin: SupabaseClient, requestId: string, startedAt: string) => Promise<DeletionReadiness>,
 ) {
   const cutoff = new Date(now().getTime() - DELETION_RECLAIM_MS).toISOString();
   const { data: requests, error } = await admin.from("account_deletion_requests")
@@ -27,7 +44,8 @@ export async function processAccountDeletions(
     const startedAt = now().toISOString();
     let claim = admin.from("account_deletion_requests")
       .update({ status: "processing", processing_started_at: startedAt, updated_at: startedAt, failure_reason: null,
-        data_purged_at: request.user_id === null ? request.data_purged_at : null, attempt_count: attemptCount })
+        data_purged_at: request.user_id === null ? request.data_purged_at : null,
+        attempt_count: readiness ? request.attempt_count : attemptCount })
       .eq("id", request.id).eq("status", request.status);
     claim = request.user_id === null ? claim.is("user_id", null) : claim.eq("user_id", request.user_id);
     if (request.status === "processing") claim = claim.eq("processing_started_at", request.processing_started_at);
@@ -48,6 +66,15 @@ export async function processAccountDeletions(
       await finish({ status: "completed", completed_at: now().toISOString() });
       results.push({ id: request.id, status: "completed", reconciled: true });
       continue;
+    }
+    if (readiness) {
+      const gate = await readiness(admin, request.id, startedAt);
+      if (gate !== "ready") {
+        await finish({ failure_reason: gate });
+        results.push({ id: request.id, status: "processing", waitingFor: gate });
+        continue;
+      }
+      await finish({ attempt_count: attemptCount });
     }
     let result;
     let checkpointWritten = false;

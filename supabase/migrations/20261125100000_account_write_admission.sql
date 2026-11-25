@@ -107,3 +107,41 @@ revoke all on function public.close_account_file_admission(uuid) from public, an
 grant execute on function public.begin_account_file_write(uuid) to service_role;
 grant execute on function public.finish_account_file_write(uuid, uuid) to service_role;
 grant execute on function public.close_account_file_admission(uuid) to service_role;
+
+-- A trusted operations process supplies evidence only after verifying that old
+-- direct clients can no longer have an in-flight write for this closure.
+-- Neither the HTTP worker nor its service-role credential can assert this.
+create table account_lifecycle_private.legacy_upload_drains (
+  request_id uuid primary key references public.account_deletion_requests(id) on delete cascade,
+  observed_closed_at timestamptz not null,
+  verified_at timestamptz not null default pg_catalog.clock_timestamp(),
+  check (verified_at >= observed_closed_at)
+);
+alter table account_lifecycle_private.legacy_upload_drains enable row level security;
+revoke all on account_lifecycle_private.legacy_upload_drains from public, anon, authenticated, service_role;
+
+create function public.account_file_deletion_readiness(p_request_id uuid, p_started_at timestamptz)
+returns text
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  closure_time timestamptz;
+  service_drained boolean;
+begin
+  perform 1 from public.account_deletion_requests r
+    where r.id = p_request_id and r.status = 'processing'
+      and r.processing_started_at = p_started_at and r.user_id is not null for update;
+  if not found then raise exception 'Active deletion lease required'; end if;
+  select report.closed_at, report.service_writes_drained into strict closure_time, service_drained
+    from public.close_account_file_admission(p_request_id) as report;
+  if not service_drained then return 'service_writes_pending'; end if;
+  if not exists (
+    select 1 from account_lifecycle_private.legacy_upload_drains d
+    where d.request_id = p_request_id and d.observed_closed_at = closure_time
+      and d.verified_at <= pg_catalog.clock_timestamp()
+  ) then return 'legacy_upload_drain_unverified'; end if;
+  return 'ready';
+end;
+$$;
+revoke all on function public.account_file_deletion_readiness(uuid, timestamptz) from public, anon, authenticated;
+grant execute on function public.account_file_deletion_readiness(uuid, timestamptz) to service_role;
