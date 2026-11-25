@@ -376,6 +376,18 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     await expect(page.locator('#analysis-category-pie-note')).toContainText('Aucune catégorie à dépense nette positive');
     expect(await pie.evaluate(el => window.echarts.getInstanceByDom(el).getOption().series[0].data)).toEqual([]);
     await expect(picker.locator('option').last()).toContainText(/Remboursements fictifs.*-7/);
+
+    const heatmap = page.locator('#analysis-heatmap-chart');
+    const signedHeat = await heatmap.evaluate(el => {
+      const chart = window.echarts.getInstanceByDom(el);
+      const { visualMap: [scale], series: [cells], tooltip: [tooltip] } = chart.getOption();
+      const [data] = cells.data;
+      const zero = chart.getModel().getComponent('visualMap').targetVisuals.inRange.color.mapValueToVisual(0);
+      const negative = chart.getModel().getComponent('visualMap').targetVisuals.inRange.color.mapValueToVisual(data[2]);
+      return { min: scale.min, max: scale.max, value: data[2], label: cells.label.formatter({ data }), hover: tooltip.formatter({ data }), hasDistinctColor: zero !== negative };
+    });
+    expect(signedHeat).toMatchObject({ min: -7, max: 7, value: -7, label: '−', hasDistinctColor: true });
+    expect(signedHeat.hover).toMatch(/2026-10-23.*-7/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }

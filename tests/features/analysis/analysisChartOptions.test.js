@@ -108,4 +108,16 @@ describe('Analysis chart option builders', () => {
     expect(heatmap.visualMap.max).toBe(24);
     expect(heatmap.tooltip.formatter({ data: [1, 0, 24] })).toContain('2026-07-02');
   });
+  it('shows a symmetric heat scale for net negative days and leaves zero neutral', () => {
+    const option = buildAnalysisHeatmapOption({
+      model: { base: 'AUD', days: ['2026-07-01', '2026-07-02', '2026-07-03'], heat: [[0, 0, -40], [1, 0, 12], [2, 0, 0]] },
+      theme, formatCurrency,
+    });
+    expect(option.visualMap).toMatchObject({ min: -40, max: 40, dimension: 2 });
+    expect(option.visualMap.inRange.color).toHaveLength(3);
+    expect(option.series[0].label.formatter({ data: [0, 0, -40] })).toBe('−');
+    expect(option.series[0].label.formatter({ data: [2, 0, 0] })).toBe('');
+    expect(option.tooltip.formatter({ data: [0, 0, -40] })).toContain('-40 AUD');
+  });
+
 });

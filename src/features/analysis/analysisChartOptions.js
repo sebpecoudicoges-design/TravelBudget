@@ -1,3 +1,5 @@
+const tooltipTheme = { backgroundColor: 'rgba(15,23,42,.92)', borderWidth: 0, textStyle: { color: '#fff' } };
+
 function safeNum(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -47,7 +49,7 @@ export function buildAnalysisTrajectoryOption({
   return {
     animationDuration: 900,
     animationEasing: 'cubicOut',
-    tooltip: { trigger: 'axis', backgroundColor: 'rgba(15,23,42,.92)', borderWidth: 0, textStyle: { color: '#fff' } },
+    tooltip: { trigger: 'axis', ...tooltipTheme },
     legend: { top: 6, textStyle: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 11 }, itemWidth: 14, itemHeight: 8, data: [spent, target] },
     grid: { left: 24, right: 24, top: 52, bottom: 30, containLabel: true },
     xAxis: { type: 'category', boundaryGap: false, data: days.map((d) => String(d).slice(5)), axisLine: { lineStyle: { color: grid } }, axisLabel: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 10, margin: 8 } },
@@ -107,9 +109,7 @@ export function buildAnalysisCategoryPieOption({
     animationDuration: 1000,
     tooltip: {
       trigger: 'item',
-      backgroundColor: 'rgba(15,23,42,.92)',
-      borderWidth: 0,
-      textStyle: { color: '#fff' },
+      ...tooltipTheme,
       renderMode: 'richText',
       formatter: (p) => `${p.name}\n${fmt(p.value, model.base)} • ${p.percent}%`,
     },
@@ -141,9 +141,7 @@ export function buildAnalysisCategoryBarsOption({
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(15,23,42,.92)',
-      borderWidth: 0,
-      textStyle: { color: '#fff' },
+      ...tooltipTheme,
       formatter: (p) => `${p?.[0]?.axisValue || ''}<br>${fmt(p?.[0]?.value || 0, model.base)}`,
     },
     grid: { left: 110, right: 20, top: 10, bottom: 20, containLabel: false },
@@ -171,7 +169,7 @@ export function buildAnalysisVelocityOption({
 
   return {
     animationDuration: 900,
-    tooltip: { trigger: 'axis', backgroundColor: 'rgba(15,23,42,.92)', borderWidth: 0, textStyle: { color: '#fff' } },
+    tooltip: { trigger: 'axis', ...tooltipTheme },
     legend: { top: 6, textStyle: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 11 }, data: [spent, target] },
     grid: { left: 18, right: 12, top: 54, bottom: 24, containLabel: true },
     xAxis: { type: 'category', data: days.map((d) => String(d).slice(5)), axisLabel: { color: themeValue(theme, 'muted', '#94a3b8') }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
@@ -191,14 +189,23 @@ export function buildAnalysisHeatmapOption({
   const fmt = moneyFormatter(formatCurrency);
   const days = Array.isArray(model.days) ? model.days : [];
   const heat = Array.isArray(model.heat) ? model.heat : [];
+  const values = heat.map((row) => row[2]);
+  const min = Math.min(0, ...values);
+  const max = Math.max(1, -min, ...values);
+  const colors = [theme.grid || '#94a3b866', theme.accent || '#3b82f6'];
+  if (min) colors.unshift(theme.good || '#22c55e');
 
   return {
     animationDuration: 950,
-    tooltip: { position: 'top', backgroundColor: 'rgba(15,23,42,.92)', borderWidth: 0, textStyle: { color: '#fff' }, formatter: (p) => `${days[p.data?.[0]]}<br>${fmt(p.data?.[2], model.base)}` },
+    tooltip: { position: 'top', ...tooltipTheme, formatter: (p) => `${days[p.data?.[0]]}<br>${fmt(p.data?.[2], model.base)}` },
     grid: { left: 8, right: 8, top: 10, bottom: 22, containLabel: true },
     xAxis: { type: 'category', data: days.map((d) => String(d).slice(5)), splitArea: { show: false }, axisLabel: { color: themeValue(theme, 'muted', '#94a3b8'), interval: Math.max(0, Math.floor(days.length / 10)) }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
     yAxis: { type: 'category', data: ['Intensité'], axisLabel: { color: themeValue(theme, 'muted', '#94a3b8') }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
-    visualMap: { min: 0, max: Math.max(...heat.map((h) => safeNum(h?.[2])), 1), show: false, inRange: { color: ['rgba(30,41,59,.18)', 'rgba(59,130,246,.28)', 'rgba(59,130,246,.92)'] } },
-    series: [{ type: 'heatmap', data: heat, label: { show: false }, itemStyle: { borderRadius: 8, borderColor: 'rgba(255,255,255,.05)', borderWidth: 2 } }],
+    visualMap: { min: min ? -max : 0, max, dimension: 2, show: false, inRange: { color: colors } },
+    series: [{
+      type: 'heatmap', data: heat,
+      label: { show: min < 0, formatter: ({ data }) => data[2] < 0 ? '−' : '', color: '#fff', textBorderColor: '#000', textBorderWidth: 1 },
+      itemStyle: { borderRadius: 8, borderColor: 'rgba(255,255,255,.05)', borderWidth: 2 },
+    }],
   };
 }
