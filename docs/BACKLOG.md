@@ -1,5 +1,18 @@
 # Fonctionnalités à planifier
 
+## Revue complète du module Analyse
+
+Demande du 25 novembre 2026. Statut : **à planifier**, sans revue exhaustive commencée. À intégrer aux travaux de cohérence des données de l'audit.
+
+- Inventorier tous les indicateurs, tableaux et graphiques, leurs sources et leurs règles de calcul ; examiner aussi les filtres, périodes, devises, arrondis et états sans données.
+- Vérifier la cohérence entre Analyse, transactions, wallets, budgets, Trip et comptabilité, en expliquant les écarts légitimes entre trésorerie, consommation budgétaire et résultat.
+- Pour chaque graphique, préciser le besoin utilisateur et la question à laquelle il répond ; vérifier si le type de graphique, les axes, unités, légendes et comparaisons servent ce besoin.
+- Documenter les données incluses et exclues : dépenses/entrées, virements internes, remboursements, avances, paiements Trip bruts et quotes-parts personnelles, dépenses prépayées, éléments hors budget, biens et amortissements. Préserver le débit brut en trésorerie et éviter de compter deux fois paiement Trip et quote-part.
+- Contrôler les dates de paiement et dates budgétaires, la ventilation sur plusieurs jours, les périodes passées/futures, les changements de devise et les filtres de catégories/sous-catégories.
+- Balayer les graphiques un par un avec l'utilisateur : besoin, formule, périmètre, exemples chiffrés vérifiables, anomalies et décision (conserver, corriger, simplifier ou remplacer).
+
+Livrable attendu : matrice par graphique avec besoin, sources, formule, inclusions/exclusions, rapprochement chiffré et statut. Ajouter des tests sur les écarts reproduits avant correction. Une somme cohérente avec un autre écran n'est pas suffisante si les deux utilisent une règle incorrecte. Toute modification visuelle devra respecter `VISUAL_SYSTEM.md` et préserver les commandes et filtres existants.
+
 ## Ordre demandé le 20 novembre 2026
 
 Consigne du 22 novembre : poursuivre les corrections en local ; publication et reconstruction APK différées à une demande ultérieure.
@@ -10,13 +23,13 @@ Consigne suivante du 22 novembre : publication et reconstruction APK de nouveau 
 2. Reprendre les corrections de l'audit : fiabilité des données, architecture/qualité, puis dette SQL et problèmes fonctionnels restants. Suivi dans [le point d'audit](AUDIT_STATUS_2026_11_04.md).
 3. Améliorer le visuel et l'expérience de l'application : partir des écrans existants, préserver les fonctionnalités et appliquer `VISUAL_SYSTEM.md`, avec vérification clair/sombre à 1440 et 390 px.
 4. Passer aux publicités réelles Android : finaliser AdMob, vérifier consentement et éligibilité, préparer une version signée de diffusion avec les unités de production. Conserver les annonces de test dans les builds debug et les tests de développement. Le compte et l'association boutique devront être revérifiés au démarrage de ce lot.
-5. Reprendre la publication Play Store : fiche TravelBudget / `fr.pecloud.travelbudget`, France, support `seb.pecoud.icoges@gmail.com`, bundle signé et test fermé. Les testeurs restent à recruter. Détails et tâches restantes dans [le suivi Play Store](PLAY_STORE_READINESS.md).
+5. Reprendre la publication Play Store : fiche TravelBudget / `fr.pecloud.travelbudget`, France, adresse de support configurée dans la console, bundle signé et test fermé. Les testeurs restent à recruter. Détails et tâches restantes dans [le suivi Play Store](PLAY_STORE_READINESS.md).
 
 La publication Play Store est différée à cette séquence ; les préparatifs existants sont conservés. Aucune activation commerciale ni publication ne découle de cette seule inscription au backlog. Si AdMob exige une association à la boutique avant la diffusion réelle, traiter cette dépendance avec le lot Play Store.
 
-## Suivi prioritaire — quote-part « Avance Hostel »
+## Suivi prioritaire — quote-part Trip absente du budget journalier
 
-Signalement du 20 novembre 2026 : dépense Trip du 18 novembre, montant total 11,70 EUR, budget du 20 au 21 novembre ; part absente du budget journalier « Today ». Lecture serveur ciblée : part personnelle de 5,85 EUR présente et liée, dates correctes. Cause : le filtre du budget rejetait le mot « Avance » dans le nom d'une quote-part sans identifiant Trip direct sur la transaction. Correction locale du prédicat ; le paiement brut reste exclu du budget par ses indicateurs et la quote-part ne crée pas de sortie wallet. Attendu : 2,925 EUR par jour avant conversion/arrondi. À valider après livraison web et reconstruction Android ; aucune donnée financière modifiée pour ce diagnostic.
+Une quote-part personnelle Trip correctement liée pouvait être absente du budget journalier. Cause : le filtre rejetait le mot « Avance » dans le nom d'une quote-part sans identifiant Trip direct sur la transaction. Correction du prédicat : le paiement brut reste exclu du budget par ses indicateurs et la quote-part ne crée pas de sortie wallet ; sa part budgétaire est répartie sur les jours concernés. Vérifier la livraison effective et le parcours appareil avant clôture. Les montants, libellés et dates de données utilisateur sont omis de ce document public.
 
 ## Sortie d'une immobilisation : casse, vol ou vente
 

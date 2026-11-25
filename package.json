@@ -12,6 +12,8 @@
     "preview": "vite preview --port 4173",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:sql:account-deletion": "node scripts/test-account-deletion-postgres.mjs",
+    "test:rest:account-deletion": "node scripts/test-account-deletion-postgres.mjs --rest",
     "test:e2e": "node scripts/run-playwright.mjs",
     "atlas:generate": "node scripts/generate-project-atlas.mjs",
     "docs:check": "node scripts/check-project-docs.mjs",

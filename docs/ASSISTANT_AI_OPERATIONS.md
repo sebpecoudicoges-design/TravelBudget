@@ -46,6 +46,8 @@ Retour arrière immédiat : `ASSISTANT_AI_ENABLED=false`. Les réponses locales 
 
 ## Validation locale
 
+Complément du 25 novembre 2026, non déployé : l'aide décrit désormais la Comptabilité existante (synthèse, résultat, bilan, plan de comptes et paramétrage), au lieu de la déclarer absente. La destination `accounting` est admise par le serveur et le client ; le bouton affiche Comptabilité/Accounting. L'aide ne reçoit toujours aucun montant ni document et ne prétend pas vérifier les chiffres ou synchroniser les paramètres. Un test de contrat serveur-client et les quatre parcours 1440/390 clair/sombre couvrent cette navigation, avec réponses IA simulées. Aucun nouveau comportement graphique ni commande supprimée. L'ancien texte contradictoire est retiré ; les destinations précédentes restent autorisées.
+
 - Tests Vitest du serveur : paramètres Responses, accès, liste pilote, quotas refusés, taille, réponses incomplètes, délais et absence de relance.
 - Tests du client : minimisation, destinations autorisées et interruption même si le transport ignore le signal.
 - Tests Playwright : fonctionnement local, réponse IA simulée, navigation, erreur, annulation, clair/sombre, 1440/390 px.

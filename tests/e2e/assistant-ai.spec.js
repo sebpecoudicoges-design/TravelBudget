@@ -28,6 +28,10 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await expect(page.locator('#tb-assist-thread script')).toHaveCount(0);
     await page.locator('#tb-assist-thread [data-assist-view="assets"]').click();
     expect(await page.evaluate(() => window.lastView)).toBe('assets');
+    await page.evaluate(() => { window.tbRequestAssistantHelp = async () => ({ answer: 'Consulte la Comptabilité.', view: 'accounting', source: 'ai' }); });
+    await input.fill('Où voir mon résultat ?'); await page.locator('#tb-assist-send').click();
+    await page.getByRole('button', { name: 'Ouvrir Comptabilité', exact: true }).click();
+    expect(await page.evaluate(() => window.lastView)).toBe('accounting');
     await page.evaluate(() => { window.tbRequestAssistantHelp = async () => { throw new Error('offline'); }; });
     await input.fill('Bonjour'); await page.locator('#tb-assist-send').click();
     await expect(page.locator('#tb-assist-status')).toContainText('réponse locale');

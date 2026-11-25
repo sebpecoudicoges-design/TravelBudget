@@ -8,6 +8,18 @@ export const corsHeaders = {
 
 export const ACCOUNT_EXPORT_SCHEMA_VERSION = 1;
 
+function assertAccountStoragePath(userId: string, bucket: string, path: string) {
+  // Service-role Storage calls bypass object policies. Database references are
+  // not authorization: accept only the formats produced by our upload paths.
+  const prefix = bucket === "personal-documents" ? `${userId}/`
+    : bucket === "inbox-documents" ? `whatsapp/${userId}/` : null;
+  if (!prefix || typeof path !== "string" || !path.startsWith(prefix)
+    || /[%\\\u0000-\u001f\u007f]/.test(path)
+    || path.split("/").some((part) => !part || part === "." || part === "..")) {
+    throw new Error("Storage path denied: account reference outside allowed namespace");
+  }
+}
+
 type OwnedTable = {
   table: string;
   column: "user_id" | "created_by" | "auth_user_id";
@@ -178,18 +190,34 @@ async function selectAll(
   table: string,
   column: string,
   value: string,
+  stableInventory = false,
 ) {
   const rows: unknown[] = [];
+  const seen = new Set<string>();
   const pageSize = 1000;
-  for (let from = 0; from < 50000; from += pageSize) {
-    const { data, error } = await admin
-      .from(table)
-      .select("*")
-      .eq(column, value)
-      .range(from, from + pageSize - 1);
+  const rowLimit = 50000;
+  // A short page can be a server-side API cap, not the end of the result.
+  while (true) {
+    const from = rows.length;
+    let query = admin.from(table).select("*").eq(column, value);
+    if (stableInventory) query = query.order("id", { ascending: true });
+    const { data, error } = await query.range(from, Math.min(from + pageSize - 1, rowLimit));
     if (error) throw new Error(`${table}: ${error.message}`);
-    rows.push(...(data || []));
-    if ((data || []).length < pageSize) break;
+    if (!data?.length) break;
+    if (from + data.length > rowLimit) throw new Error(`${table}: row limit exceeded; account inventory incomplete`);
+    if (stableInventory) {
+      for (const row of data) {
+        if ((typeof row.id !== "string" && typeof row.id !== "number") || seen.has(String(row.id))) {
+          throw new Error(`${table}: unstable account inventory`);
+        }
+        seen.add(String(row.id));
+      }
+    } else if (data.length < pageSize) {
+      // Exports for legacy tables do not assume an id column.
+      rows.push(...data);
+      break;
+    }
+    rows.push(...data);
   }
   return rows;
 }
@@ -199,15 +227,18 @@ async function selectByIds(
   table: string,
   column: string,
   ids: string[],
+  requireAll = false,
 ) {
   if (!ids.length) return [];
   const rows: unknown[] = [];
   for (let offset = 0; offset < ids.length; offset += 200) {
-    const { data, error } = await admin
-      .from(table)
-      .select("*")
-      .in(column, ids.slice(offset, offset + 200));
+    const expected = ids.slice(offset, offset + 200);
+    const { data, error } = await admin.from(table).select("*").in(column, expected);
     if (error) throw new Error(`${table}: ${error.message}`);
+    if (requireAll) {
+      const found = new Set((data || []).map((row) => row[column]));
+      if (!expected.every((id) => found.has(id))) throw new Error(`${table}: account inventory incomplete`);
+    }
     rows.push(...(data || []));
   }
   return rows;
@@ -282,6 +313,7 @@ export async function collectAccountData(
   const storageFiles: Array<Record<string, unknown>> = [];
   for (const document of (tables.documents || []) as any[]) {
     if (!document.storage_bucket || !document.storage_path) continue;
+    assertAccountStoragePath(userId, document.storage_bucket, document.storage_path);
     const { data } = await admin.storage
       .from(document.storage_bucket)
       .createSignedUrl(document.storage_path, 3600);
@@ -297,6 +329,7 @@ export async function collectAccountData(
   }
   for (const item of (tables.inbox_items || []) as any[]) {
     if (!item.storage_path) continue;
+    assertAccountStoragePath(userId, "inbox-documents", item.storage_path);
     const { data } = await admin.storage
       .from("inbox-documents")
       .createSignedUrl(item.storage_path, 3600);
@@ -328,13 +361,14 @@ export async function removeAccountStorage(
   const files = new Map<string, Set<string>>();
   const add = (bucket: string, path: string) => {
     if (!bucket || !path) return;
+    assertAccountStoragePath(userId, bucket, path);
     if (!files.has(bucket)) files.set(bucket, new Set());
     files.get(bucket)!.add(path);
   };
 
-  const documents = await selectAll(admin, "documents", "user_id", userId) as any[];
+  const documents = await selectAll(admin, "documents", "user_id", userId, true) as any[];
   documents.forEach((row) => add(row.storage_bucket, row.storage_path));
-  const inboxItems = await selectAll(admin, "inbox_items", "user_id", userId) as any[];
+  const inboxItems = await selectAll(admin, "inbox_items", "user_id", userId, true) as any[];
   inboxItems.forEach((row) => add("inbox-documents", row.storage_path));
 
   let removed = 0;
@@ -351,42 +385,52 @@ export async function removeAccountStorage(
 }
 
 async function preserveSharedTripGroups(admin: SupabaseClient, userId: string) {
-  const groups = await selectAll(admin, "trip_groups", "user_id", userId) as any[];
+  const ownedGroups = await selectAll(admin, "trip_groups", "user_id", userId, true) as any[];
+  const ownedIds = new Set(ownedGroups.map((group) => group.id));
+  // A contributor can own shared rows without owning the group or still having
+  // a participant row. Discover these groups from the rows we must preserve.
+  const sharedTables = ["trip_expense_documents", "trip_expense_shares", "trip_expenses", "trip_members", "trip_settlements"];
+  const contributedIds = new Set<string>();
+  for (const table of sharedTables) {
+    const rows = await selectAll(admin, table, "user_id", userId, true) as any[];
+    rows.forEach((row) => { if (row.trip_id && !ownedIds.has(row.trip_id)) contributedIds.add(row.trip_id); });
+  }
+  const otherGroups = await selectByIds(admin, "trip_groups", "id", [...contributedIds], true) as any[];
+  const groups = [...ownedGroups, ...otherGroups];
   let transferred = 0;
 
   for (const group of groups) {
-    const { data: participants, error: participantsError } = await admin
-      .from("trip_participants")
-      .select("auth_user_id,created_at")
-      .eq("trip_id", group.id)
-      .neq("auth_user_id", userId)
-      .order("created_at", { ascending: true })
-      .limit(1);
-    if (participantsError) throw new Error(`trip_participants: ${participantsError.message}`);
-
-    let successorId = participants?.[0]?.auth_user_id || null;
-    if (!successorId) {
-      const { data: members, error: membersError } = await admin
-        .from("trip_members")
+    const ownsGroup = ownedIds.has(group.id);
+    let successorId = ownsGroup ? null : group.user_id;
+    if (ownsGroup) {
+      const { data: participants, error: participantsError } = await admin
+        .from("trip_participants")
         .select("auth_user_id,created_at")
         .eq("trip_id", group.id)
-        .not("auth_user_id", "is", null)
         .neq("auth_user_id", userId)
         .order("created_at", { ascending: true })
         .limit(1);
-      if (membersError) throw new Error(`trip_members: ${membersError.message}`);
-      successorId = members?.[0]?.auth_user_id || null;
+      if (participantsError) throw new Error(`trip_participants: ${participantsError.message}`);
+
+      successorId = participants?.[0]?.auth_user_id || null;
+      if (!successorId) {
+        const { data: members, error: membersError } = await admin
+          .from("trip_members")
+          .select("auth_user_id,created_at")
+          .eq("trip_id", group.id)
+          .not("auth_user_id", "is", null)
+          .neq("auth_user_id", userId)
+          .order("created_at", { ascending: true })
+          .limit(1);
+        if (membersError) throw new Error(`trip_members: ${membersError.message}`);
+        successorId = members?.[0]?.auth_user_id || null;
+      }
     }
     if (!successorId) continue;
 
-    for (const table of [
-      "trip_expense_budget_links",
-      "trip_expense_documents",
-      "trip_expense_shares",
-      "trip_expenses",
-      "trip_members",
-      "trip_settlements",
-    ]) {
+    // Personal budget links belong to their transaction owner. DELETE_ORDER
+    // removes the departing user's links; never reassign another user's budget.
+    for (const table of sharedTables) {
       const { error } = await admin
         .from(table)
         .update({ user_id: successorId })
@@ -394,29 +438,33 @@ async function preserveSharedTripGroups(admin: SupabaseClient, userId: string) {
         .eq("user_id", userId);
       if (error) throw new Error(`${table}: ${error.message}`);
     }
-    const { error: groupError } = await admin
-      .from("trip_groups")
-      .update({ user_id: successorId, closed_by: group.closed_by === userId ? null : group.closed_by })
-      .eq("id", group.id)
-      .eq("user_id", userId);
-    if (groupError) throw new Error(`trip_groups: ${groupError.message}`);
+    if (ownsGroup) {
+      const { error: groupError } = await admin
+        .from("trip_groups")
+        .update({ user_id: successorId, closed_by: group.closed_by === userId ? null : group.closed_by })
+        .eq("id", group.id)
+        .eq("user_id", userId);
+      if (groupError) throw new Error(`trip_groups: ${groupError.message}`);
+      transferred += 1;
+    }
 
-    await admin
+    const { error: memberCleanupError } = await admin
       .from("trip_members")
       .update({ auth_user_id: null, email: null, name: "Utilisateur supprimé", is_me: false })
       .eq("trip_id", group.id)
       .eq("auth_user_id", userId);
-    await admin
+    if (memberCleanupError) throw new Error(`trip_members: ${memberCleanupError.message}`);
+    const { error: participantCleanupError } = await admin
       .from("trip_participants")
       .delete()
       .eq("trip_id", group.id)
       .eq("auth_user_id", userId);
-    transferred += 1;
+    if (participantCleanupError) throw new Error(`trip_participants: ${participantCleanupError.message}`);
   }
   return transferred;
 }
 
-export async function purgeAccount(admin: SupabaseClient, userId: string) {
+export async function purgeAccount(admin: SupabaseClient, userId: string, beforeAuthDeletion?: () => Promise<void>) {
   const storageObjectsRemoved = await removeAccountStorage(admin, userId);
   const sharedTripGroupsTransferred = await preserveSharedTripGroups(admin, userId);
   const deletedRows: Record<string, number> = {};
@@ -432,13 +480,17 @@ export async function purgeAccount(admin: SupabaseClient, userId: string) {
   }
 
   // These references deliberately preserve shared history without retaining identity.
-  await admin
+  const { error: memberCleanupError } = await admin
     .from("trip_members")
     .update({ auth_user_id: null, email: null, name: "Utilisateur supprimé", is_me: false })
     .eq("auth_user_id", userId);
-  await admin.from("asset_owners").update({ user_id: null }).eq("user_id", userId);
-  await admin.from("trip_groups").update({ closed_by: null }).eq("closed_by", userId);
+  if (memberCleanupError) throw new Error(`trip_members: ${memberCleanupError.message}`);
+  const { error: ownerCleanupError } = await admin.from("asset_owners").update({ user_id: null }).eq("user_id", userId);
+  if (ownerCleanupError) throw new Error(`asset_owners: ${ownerCleanupError.message}`);
+  const { error: groupCleanupError } = await admin.from("trip_groups").update({ closed_by: null }).eq("closed_by", userId);
+  if (groupCleanupError) throw new Error(`trip_groups: ${groupCleanupError.message}`);
 
+  await beforeAuthDeletion?.();
   const { error: authError } = await admin.auth.admin.deleteUser(userId);
   if (authError) throw new Error(`auth.users: ${authError.message}`);
 

@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "ef58ab2f9d351fced725c53782452071cc4ec4f2",
-  "snapshotFingerprint": "a11b415fa47c5d41303e86d6566576a778b8be0bf0ec17c90a310d74e4f58f8f",
-  "generatedAt": "2026-11-23T06:47:19.704Z",
+  "commit": "bf5daa6fd7d212d388330a0ae53083194dadfb9e",
+  "snapshotFingerprint": "b998a13b89b19f69c26695e2e48c094ab2df768399544243904d5ee540186f28",
+  "generatedAt": "2026-11-25T05:36:11.596Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
@@ -16,6 +16,8 @@
     "preview": "vite preview --port 4173",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:sql:account-deletion": "node scripts/test-account-deletion-postgres.mjs",
+    "test:rest:account-deletion": "node scripts/test-account-deletion-postgres.mjs --rest",
     "test:e2e": "node scripts/run-playwright.mjs",
     "atlas:generate": "node scripts/generate-project-atlas.mjs",
     "docs:check": "node scripts/check-project-docs.mjs",
@@ -322,6 +324,9 @@
     "tests/core/walletJournal.test.js",
     "tests/core/webhookSecurityRules.test.js",
     "tests/core/workRules.test.js",
+    "tests/data/accountDeletionEndpoint.test.js",
+    "tests/data/accountDeletionProcessor.test.js",
+    "tests/data/accountPurgeFailure.test.js",
     "tests/data/assetTransactionLinksMigration.test.js",
     "tests/data/entityStore.test.js",
     "tests/data/mcpFinanceRead.test.js",
@@ -736,7 +741,8 @@
     "supabase/migrations/20261106052013_atomic_trip_expense_edit.sql",
     "supabase/migrations/20261106212256_save_sport_workout_atomic.sql",
     "supabase/migrations/20261106213201_delete_trip_atomic.sql",
-    "supabase/migrations/20261107035117_retain_detached_trip_payment_origin.sql"
+    "supabase/migrations/20261107035117_retain_detached_trip_payment_origin.sql",
+    "supabase/migrations/20261124090000_account_deletion_checkpoint.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",
@@ -767,6 +773,7 @@
     "docs/ACCOUNTING_CHARGES_10_5_383.md",
     "docs/ACCOUNTING_MODULE_BRIEF.md",
     "docs/ACCOUNT_DATA_LIFECYCLE.md",
+    "docs/ACCOUNT_DELETION_RECOVERY.md",
     "docs/ADMIN_TEST_RETURNS.md",
     "docs/ADMOB_ANDROID.md",
     "docs/ANDROID_10_5_388.md",
@@ -780,6 +787,7 @@
     "docs/ARCHITECTURE_DECISIONS.md",
     "docs/ASSISTANT_AI_OPERATIONS.md",
     "docs/AUDIT_STATUS_2026_11_04.md",
+    "docs/AUDIT_STATUS_2026_11_24.md",
     "docs/BACKLOG.md",
     "docs/BRIDGE_RECOVERY_10_5_385.md",
     "docs/CASHFLOW_CPU_10_5_381.md",
@@ -788,6 +796,7 @@
     "docs/CONNECTED_STARTUP.md",
     "docs/DEPENDENCIES_10_5_377.md",
     "docs/GPT6_AND_ACCOUNTING_PLAN.md",
+    "docs/HANDOFF_AUDIT_2026_11_25.md",
     "docs/KPI_RECOVERY_10_5_379.md",
     "docs/KPI_SCOPE_10_5_380.md",
     "docs/LOADER_RECOVERY_10_5_376.md",

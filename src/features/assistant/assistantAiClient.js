@@ -1,4 +1,4 @@
-const VIEWS = new Set(['dashboard', 'transactions', 'analysis', 'assets', 'documents', 'trip', 'settings', 'help']);
+const VIEWS = new Set(['dashboard', 'transactions', 'analysis', 'accounting', 'assets', 'documents', 'trip', 'settings', 'help']);
 
 export async function requestAssistantHelp({ client, question, language, view, signal, timeoutMs = 25000 }) {
   if (!client?.functions?.invoke || !question?.trim() || question.length > 1500) throw new Error('AI_UNAVAILABLE');

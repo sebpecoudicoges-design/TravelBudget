@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `ef58ab2f9d351fced725c53782452071cc4ec4f2`
-> Empreinte du snapshot : `a11b415fa47c5d41303e86d6566576a778b8be0bf0ec17c90a310d74e4f58f8f`
-> Généré le : `2026-11-23T06:47:19.704Z`
+> Commit analysé : `bf5daa6fd7d212d388330a0ae53083194dadfb9e`
+> Empreinte du snapshot : `b998a13b89b19f69c26695e2e48c094ab2df768399544243904d5ee540186f28`
+> Généré le : `2026-11-25T05:36:11.596Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,8 +17,8 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 12 |
 | Modules features | 64 |
-| Fichiers de tests | 201 |
-| Migrations Supabase | 176 |
+| Fichiers de tests | 204 |
+| Migrations Supabase | 177 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
 
@@ -34,6 +34,8 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `preview` | `vite preview --port 4173` |
 | `test` | `vitest run` |
 | `test:watch` | `vitest` |
+| `test:sql:account-deletion` | `node scripts/test-account-deletion-postgres.mjs` |
+| `test:rest:account-deletion` | `node scripts/test-account-deletion-postgres.mjs --rest` |
 | `test:e2e` | `node scripts/run-playwright.mjs` |
 | `atlas:generate` | `node scripts/generate-project-atlas.mjs` |
 | `docs:check` | `node scripts/check-project-docs.mjs` |
@@ -431,6 +433,9 @@ Modules :
 - `tests/core/walletJournal.test.js`
 - `tests/core/webhookSecurityRules.test.js`
 - `tests/core/workRules.test.js`
+- `tests/data/accountDeletionEndpoint.test.js`
+- `tests/data/accountDeletionProcessor.test.js`
+- `tests/data/accountPurgeFailure.test.js`
 - `tests/data/assetTransactionLinksMigration.test.js`
 - `tests/data/entityStore.test.js`
 - `tests/data/mcpFinanceRead.test.js`
@@ -790,6 +795,7 @@ Modules :
 - `supabase/migrations/20261106212256_save_sport_workout_atomic.sql`
 - `supabase/migrations/20261106213201_delete_trip_atomic.sql`
 - `supabase/migrations/20261107035117_retain_detached_trip_payment_origin.sql`
+- `supabase/migrations/20261124090000_account_deletion_checkpoint.sql`
 
 ## Android et budgets de modules
 
@@ -804,6 +810,7 @@ Modules :
 - `docs/ACCOUNTING_CHARGES_10_5_383.md`
 - `docs/ACCOUNTING_MODULE_BRIEF.md`
 - `docs/ACCOUNT_DATA_LIFECYCLE.md`
+- `docs/ACCOUNT_DELETION_RECOVERY.md`
 - `docs/ADMIN_TEST_RETURNS.md`
 - `docs/ADMOB_ANDROID.md`
 - `docs/ANDROID_10_5_388.md`
@@ -817,6 +824,7 @@ Modules :
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`
 - `docs/AUDIT_STATUS_2026_11_04.md`
+- `docs/AUDIT_STATUS_2026_11_24.md`
 - `docs/BACKLOG.md`
 - `docs/BRIDGE_RECOVERY_10_5_385.md`
 - `docs/CASHFLOW_CPU_10_5_381.md`
@@ -825,6 +833,7 @@ Modules :
 - `docs/CONNECTED_STARTUP.md`
 - `docs/DEPENDENCIES_10_5_377.md`
 - `docs/GPT6_AND_ACCOUNTING_PLAN.md`
+- `docs/HANDOFF_AUDIT_2026_11_25.md`
 - `docs/KPI_RECOVERY_10_5_379.md`
 - `docs/KPI_SCOPE_10_5_380.md`
 - `docs/LOADER_RECOVERY_10_5_376.md`

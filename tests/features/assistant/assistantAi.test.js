@@ -16,6 +16,21 @@ const request = (body = { question: 'Comment suivre mon patrimoine ?', language:
 });
 
 describe('assistant server boundaries', () => {
+  it('describes existing accounting and carries its destination through server and client', async () => {
+    const answer = { answer: 'Ouvre la Comptabilité pour consulter les charges et le résultat.', view: 'accounting' };
+    const deps = setup({ fetchImpl: vi.fn(async () => response({ output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: JSON.stringify(answer) }] }] })) });
+    const result = await requestAssistantHelp({ question: 'Où voir mon résultat ?', language: 'fr', view: 'accounting', client: {
+      functions: { invoke: async (_name, { body }) => ({ data: await (await deps.handler(request(body))).json() }) },
+    } });
+    expect(result).toEqual({ ...answer, source: 'ai' });
+    const body = JSON.parse(deps.fetchImpl.mock.calls[0][1].body);
+    expect(JSON.parse(body.input).view).toBe('accounting');
+    expect(body.text.format.schema.properties.view.enum).toContain('accounting');
+    expect(body.instructions).toContain('income statement, balance sheet');
+    expect(body.instructions).toContain('result is not the wallet balance');
+    expect(body.instructions).toContain('You cannot access personal balances or records');
+    expect(body.instructions).not.toContain('accounting module is not implemented');
+  });
   it('uses Responses and ignores injected configuration/history/data', async () => {
     const deps = setup();
     const result = await deps.handler(request({ question: 'Help', language: 'en', view: 'settings', model: 'evil', userId: 'other', history: ['secret'], snapshot: { balance: 999 } }));

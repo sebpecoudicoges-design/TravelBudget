@@ -56,15 +56,18 @@ export function saveCachedFoods({ storage, key, rows, limit = 500 }) {
   return writeJson(storage, key, (rows || []).slice(0, limit));
 }
 
-export function loadLocalNutritionRows({ storage, key, strict = false }) {
-  if (strict) {
+function readStoredCollection(storage, key, empty) {
     const raw = storage.getItem(key);
-    const rows = raw === null ? [] : JSON.parse(raw);
-    if (!Array.isArray(rows) || rows.some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
+    const rows = raw === null ? empty : JSON.parse(raw);
+    if (!rows || typeof rows !== 'object' || Array.isArray(rows) !== Array.isArray(empty)
+      || Object.values(rows).some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
       throw new Error('Nutrition pending data is unreadable; saved data retained.');
     }
     return rows;
-  }
+}
+
+export function loadLocalNutritionRows({ storage, key, strict = false }) {
+  if (strict) return readStoredCollection(storage, key, []);
   const rows = readJson(storage, key, []);
   return Array.isArray(rows) ? rows : [];
 }
@@ -190,17 +193,19 @@ export function saveLocalNutritionRowsOnce({ storage, key, rows }) {
   return next;
 }
 
-export function loadSleepRows({ storage, key }) {
+export function loadSleepRows({ storage, key, strict = false }) {
+  if (strict) return readStoredCollection(storage, key, {});
   const rows = readJson(storage, key, {});
   return rows && typeof rows === 'object' && !Array.isArray(rows) ? rows : {};
 }
 
 export function saveSleepRows({ storage, key, rows }) {
+  try { loadSleepRows({ storage, key, strict: true }); } catch (_) { return false; }
   return writeJson(storage, key, rows || {});
 }
 
 export function mergeSleepRows({ storage, key, rows, now = () => new Date() }) {
-  const current = loadSleepRows({ storage, key });
+  const current = loadSleepRows({ storage, key, strict: true });
   Object.entries(rows || {}).forEach(([day, row]) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))) return;
     current[day] = {

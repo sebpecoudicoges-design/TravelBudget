@@ -68,6 +68,7 @@
       transactions: t("assistant.action.transactions"),
       settings: t("assistant.action.settings"),
       analysis: t("assistant.action.analysis"),
+      accounting: atxt("Comptabilité", "Accounting"),
       documents: t("assistant.action.documents"),
       assets: t("assistant.action.assets"),
       trip: t("assistant.action.trip"),

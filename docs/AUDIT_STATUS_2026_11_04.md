@@ -1,5 +1,7 @@
 # Point d’audit — 4 novembre 2026
 
+État consolidé au 24 novembre : voir [le point actualisé](AUDIT_STATUS_2026_11_24.md). Les états ci-dessous sont historiques et leurs versions de livraison ne constituent pas le dernier état.
+
 Ce point complète le rapport du 10 octobre sans remplacer ses preuves historiques. Il distingue correction, publication et validation réelle. Les constats SQL non revérifiés ne sont pas présentés comme des mesures actuelles de production.
 
 ## Progression par étape
