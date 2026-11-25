@@ -537,9 +537,10 @@
     const raw = String(row?.syncId || row?.meal?.sync_id || row?.meal?.id || row?.item?.id || "").trim();
     return raw || `idx_${Math.max(0, n(index, 0))}`;
   }
-  function discardNutritionQueue() {
-    try { if (typeof window.tbOfflineQueueDiscardKind === "function") window.tbOfflineQueueDiscardKind("nutrition.sync_local"); } catch (_) {}
-    try { if (typeof window.tbOfflineQueueDiscardFailed === "function") window.tbOfflineQueueDiscardFailed("nutrition.sync_local"); } catch (_) {}
+  async function discardNutritionQueue() {
+    try {
+      await window.tbOfflineQueueDiscardKind?.("nutrition.sync_local", () => loadLocalMeals(true).length === 0);
+    } catch (_) {}
   }
   function discardLocalNutritionRow(key) {
     const repo = repository();
@@ -594,10 +595,10 @@
     if (typeof repo.isOfflineSkipError === "function") return repo.isOfflineSkipError(err);
     return /offline mode|supabase request skipped|failed to fetch|network/i.test(String(err?.message || err || ""));
   }
-  function enqueueNutritionSync() {
+  async function enqueueNutritionSync() {
     try {
       if (typeof window.tbOfflineQueueEnqueue === "function") {
-        window.tbOfflineQueueEnqueue("nutrition.sync_local", {}, { label: "nutrition" });
+        await window.tbOfflineQueueEnqueue("nutrition.sync_local", {}, { label: "nutrition" });
       }
     } catch (_) {}
   }

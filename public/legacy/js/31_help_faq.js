@@ -466,14 +466,16 @@
         }
         if (target.hasAttribute("data-diag-clear-failed")) {
           if (confirm(tx("Retirer les actions offline en erreur sur cet appareil ?", "Remove failed offline actions on this device?"))) {
-            try { if (typeof window.tbOfflineQueueDiscardFailed === "function") window.tbOfflineQueueDiscardFailed(); } catch (_) {}
+            try { if (typeof window.tbOfflineQueueDiscardFailed === "function") await window.tbOfflineQueueDiscardFailed(); } catch (_) {}
             renderDiagnostics(root);
           }
         }
         if (target.hasAttribute("data-diag-clear-trip")) {
           if (confirm(tx("Retirer les anciennes actions Trip bloquees sur cet appareil ?", "Remove old blocked Trip actions on this device?"))) {
-            try { if (typeof window.tbOfflineQueueDiscardTripConflicts === "function") window.tbOfflineQueueDiscardTripConflicts(); } catch (_) {}
-            try { if (typeof window.tbClearOfflineSnapshots === "function") window.tbClearOfflineSnapshots(); } catch (_) {}
+            try {
+              await window.tbOfflineQueueDiscardTripConflicts?.();
+              window.tbClearOfflineSnapshots?.();
+            } catch (_) {}
             renderDiagnostics(root);
           }
         }

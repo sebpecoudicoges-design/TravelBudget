@@ -1309,7 +1309,7 @@ async function saveModal() {
           ..._txBuildFxSnapshotArgs(cashDate, wallet.currency, { skipInteractiveFx: offlineNow })
         };
         if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
-          const queueItem = window.tbOfflineQueueEnqueue("transaction.update_v2", {
+          const queueItem = await window.tbOfflineQueueEnqueue("transaction.update_v2", {
             rpcName: TB_CONST.RPCS.update_transaction_v2 || "update_transaction_v2",
             args: updateArgs,
           }, {
@@ -1367,7 +1367,7 @@ async function saveModal() {
         coreArgs.offlineDedupeKey = _txOfflineDedupeKey(coreArgs);
         const rpcArgs = _txBuildApplyV2Args(coreArgs, { skipInteractiveFx: offlineNow });
         if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
-          const queueItem = window.tbOfflineQueueEnqueue("transaction.apply_v2", {
+          const queueItem = await window.tbOfflineQueueEnqueue("transaction.apply_v2", {
             rpcName: TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2",
             args: rpcArgs,
             coreArgs,
@@ -1551,7 +1551,7 @@ async function deleteTx(txId) {
         ? await window.tbShouldUseOfflineMode("transaction:delete")
         : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
       if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
-        window.tbOfflineQueueEnqueue("transaction.delete", {
+        await window.tbOfflineQueueEnqueue("transaction.delete", {
           txId,
           rpcName: TB_CONST?.RPCS?.delete_transaction || "delete_transaction",
         }, {
@@ -1666,9 +1666,9 @@ async function markTxAsPaid(txId) {
         p_trip_share_link_id: tx.tripShareLinkId || tx.trip_share_link_id || null,
         ...fxArgs
       };
-      const queuePaidUpdate = () => {
+      const queuePaidUpdate = async () => {
         if (typeof window.tbOfflineQueueEnqueue !== "function") return false;
-        const queueItem = window.tbOfflineQueueEnqueue("transaction.update_v2", {
+        const queueItem = await window.tbOfflineQueueEnqueue("transaction.update_v2", {
           rpcName: TB_CONST.RPCS.update_transaction_v2 || "update_transaction_v2",
           args: updateArgs,
         }, {
@@ -1686,13 +1686,13 @@ async function markTxAsPaid(txId) {
         return true;
       };
 
-      if (offlineNow && queuePaidUpdate()) return;
+      if (offlineNow && await queuePaidUpdate()) return;
 
       try {
         const { error } = await _updateTransactionRpcCompat(updateArgs);
         if (error) throw error;
       } catch (e) {
-        if (_txIsOfflineSkipError(e) && queuePaidUpdate()) return;
+        if (_txIsOfflineSkipError(e) && await queuePaidUpdate()) return;
         throw e;
       }
 

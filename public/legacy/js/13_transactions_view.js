@@ -321,7 +321,7 @@ async function applyBulkTxDelete() {
       : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
     if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
       for (const tx of selectedRows) {
-        window.tbOfflineQueueEnqueue("transaction.delete", {
+        await window.tbOfflineQueueEnqueue("transaction.delete", {
           txId: tx.id,
           rpcName: TB_CONST?.RPCS?.delete_transaction || "delete_transaction",
         }, {

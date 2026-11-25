@@ -18,8 +18,8 @@ for (const failure of [false, true]) test(`browser lock prevents a second tab re
   const second = await context.newPage();
   await prepare(first);
   await prepare(second);
-  await first.evaluate(() => {
-    window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 10 }, { entityId: 'one' });
+  await first.evaluate(async () => {
+    await window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 10 }, { entityId: 'one' });
     window.tbTripReplayOfflineExpenseMutation = async payload => {
       window.replayed.push(payload.amount);
       await new Promise((resolve, reject) => { window.finishReplay = failed => failed ? reject(new Error('network failure')) : resolve(); });
@@ -51,17 +51,73 @@ test('another tab receives queue changes only for its active account', async ({ 
       if (ev.detail.source === 'another-tab') window.peerUpdates.push(ev.detail.count);
     });
   });
-  const id = await writer.evaluate(() => window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 25 }, { entityId: 'x' }).id);
+  const id = await writer.evaluate(async () => (await window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 25 }, { entityId: 'x' })).id);
   await expect.poll(() => reader.evaluate(() => window.peerUpdates.slice())).toEqual([1]);
   await writer.evaluate(id => window.tbOfflineQueueRemove(id), id);
   await expect.poll(() => reader.evaluate(() => window.peerUpdates.slice())).toEqual([1, 0]);
-  await writer.evaluate(() => {
+  await writer.evaluate(async () => {
     window.sbUser = { id: 'another-synthetic-account' };
-    window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 50 }, { entityId: 'y' });
+    await window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 50 }, { entityId: 'y' });
     window.sbUser = { id: 'synthetic-tabs' };
-    window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 75 }, { entityId: 'z' });
+    await window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 75 }, { entityId: 'z' });
   });
   await expect.poll(() => reader.evaluate(() => window.peerUpdates.slice())).toEqual([1, 0, 1]);
   expect(await reader.evaluate(() => window.tbOfflineQueuePending().map(item => item.payload.amount))).toEqual([75]);
   expect(await reader.evaluate(() => window.replayed)).toEqual([]);
+});
+
+test('serializes concurrent writes and rejects a waiting write after account change', async ({ context }) => {
+  const first = await context.newPage();
+  const second = await context.newPage();
+  await prepare(first);
+  await prepare(second);
+  await first.evaluate(() => {
+    window.holdWrites = navigator.locks.request('tb:offline-write:travelbudget_offline_queue_v2_synthetic-tabs',
+      () => new Promise(resolve => { window.releaseWrites = resolve; }));
+  });
+  await expect.poll(() => first.evaluate(() => typeof window.releaseWrites)).toBe('function');
+  const stage = page => page.evaluate(amount => {
+    window.writerResult = window.tbOfflineQueueEnqueue('trip.expense.create', { amount })
+      .then(() => 'saved', error => error.message);
+  }, page === first ? 10 : 20);
+  await Promise.all([stage(first), stage(second)]);
+  await expect.poll(() => first.evaluate(async () => (await navigator.locks.query()).pending
+    .filter(lock => lock.name.startsWith('tb:offline-write:')).length)).toBe(2);
+  expect(await first.evaluate(() => window.tbOfflineQueueCount())).toBe(0);
+  await first.evaluate(() => { window.releaseWrites(); });
+  expect(await first.evaluate(() => window.writerResult)).toBe('saved');
+  expect(await second.evaluate(() => window.writerResult)).toBe('saved');
+  expect((await second.evaluate(() => window.tbOfflineQueuePending().map(item => item.payload.amount))).sort()).toEqual([10, 20]);
+
+  await first.evaluate(() => {
+    window.releaseWrites = null;
+    window.holdWrites = navigator.locks.request('tb:offline-write:travelbudget_offline_queue_v2_synthetic-tabs',
+      () => new Promise(resolve => { window.releaseWrites = resolve; }));
+  });
+  await expect.poll(() => first.evaluate(() => typeof window.releaseWrites)).toBe('function');
+  await stage(second);
+  await second.evaluate(() => { window.sbUser = { id: 'second-account' }; });
+  await first.evaluate(() => { window.releaseWrites(); });
+  expect(await second.evaluate(() => window.writerResult)).toContain('compte a change');
+  expect(await second.evaluate(() => window.tbOfflineQueueCount())).toBe(0);
+  expect(await first.evaluate(() => window.tbOfflineQueueCount())).toBe(2);
+});
+
+test('another tab can enqueue while a previous action awaits the server', async ({ context }) => {
+  const first = await context.newPage();
+  const second = await context.newPage();
+  await prepare(first);
+  await prepare(second);
+  await first.evaluate(async () => {
+    await window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 10 }, { entityId: 'one' });
+    window.tbTripReplayOfflineExpenseMutation = () => new Promise(resolve => { window.finishReplay = resolve; });
+    window.sending = window.tbOfflineQueueSync('manual');
+  });
+  await expect.poll(() => first.evaluate(() => typeof window.finishReplay)).toBe('function');
+  await second.evaluate(() => window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 20 }, { entityId: 'one' }));
+  await first.evaluate(() => { window.finishReplay(); });
+  expect(await first.evaluate(() => window.sending)).toMatchObject({ synced: 0, failed: 0 });
+  expect(await second.evaluate(() => window.tbOfflineQueuePending().map(item => item.payload.amount))).toEqual([20]);
+  expect(await second.evaluate(() => window.tbOfflineQueueSync('manual'))).toMatchObject({ synced: 1 });
+  expect(await second.evaluate(() => window.replayed)).toEqual([20]);
 });

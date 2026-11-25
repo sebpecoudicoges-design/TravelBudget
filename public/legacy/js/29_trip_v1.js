@@ -3343,7 +3343,7 @@ async function _persistSettlementWithWallet(wallet) {
     }
     const kind = mode === "update" ? "trip.expense.update" : "trip.expense.create";
     if (typeof window.tbOfflineQueueEnqueue !== "function") throw new Error("File offline indisponible.");
-    const queueItem = window.tbOfflineQueueEnqueue(kind, {
+    const queueItem = await window.tbOfflineQueueEnqueue(kind, {
       tripId: tripState.activeTripId,
       mode,
       expenseId: expenseId || null,
