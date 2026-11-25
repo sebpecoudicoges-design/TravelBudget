@@ -561,6 +561,8 @@
       "analysis.card.category_split": "Repartition categories",
       "analysis.card.detail": "Vue detaillee",
       "analysis.card.all_categories": "Toutes les categories",
+      "analysis.category.detail": "Détail par catégorie",
+      "analysis.category.open": "Voir",
       "analysis.card.subcategories": "Sous-categories",
       "analysis.card.top_subcategories": "Sous-categories dominantes",
       "analysis.card.pace": "Rythme",

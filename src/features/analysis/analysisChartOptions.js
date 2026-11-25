@@ -129,7 +129,7 @@ export function buildAnalysisCategoryBarsOption({
   formatCurrency,
 } = {}) {
   const fmt = moneyFormatter(formatCurrency);
-  const rows = (Array.isArray(model.categorySeries) ? model.categorySeries : []).slice(0, 12).reverse();
+  const rows = (Array.isArray(model.categorySeries) ? [...model.categorySeries] : []).reverse();
   const muted = themeValue(theme, 'muted', '#94a3b8');
   const grid = themeValue(theme, 'grid', 'rgba(148,163,184,.18)');
 
@@ -145,7 +145,7 @@ export function buildAnalysisCategoryBarsOption({
     },
     grid: { left: 110, right: 20, top: 10, bottom: 20, containLabel: false },
     xAxis: { type: 'value', axisLabel: { color: muted, formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: grid } } },
-    yAxis: { type: 'category', data: rows.map((r) => r.name), axisLabel: { color: themeValue(theme, 'text', '#e5e7eb') } },
+    yAxis: { type: 'category', data: rows.map((r) => r.name), axisLabel: { color: themeValue(theme, 'text', '#e5e7eb'), interval: 0, width: 100, overflow: 'truncate' } },
     series: [{
       name: 'Réel',
       type: 'bar',

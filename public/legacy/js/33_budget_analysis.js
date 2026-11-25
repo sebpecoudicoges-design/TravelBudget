@@ -1448,7 +1448,7 @@ function _ensureTxDrilldownStyles(){
   document.head.appendChild(style);
 }
 
-function _openTxDrilldown(kind, key, model){
+function _openTxDrilldown(kind, key, model, opener){
   _ensureTxDrilldownStyles();
 
   const sourceModel = model || lastAnalysisModel || {};
@@ -1505,17 +1505,17 @@ function _openTxDrilldown(kind, key, model){
     end: sourceModel.end,
   }) || '';
 
-  const close = () => { overlay.remove(); };
-  overlay.querySelector('[data-close]')?.addEventListener('click', close);
-  overlay.addEventListener('click', (ev) => { if (ev.target === overlay) close(); });
-
-  const onKey = (ev) => {
-    if (ev.key === 'Escape') {
-      close();
-      window.removeEventListener('keydown', onKey);
-    }
+  const close = () => {
+    overlay.remove();
+    window.removeEventListener('keydown', onKey);
+    opener?.focus();
   };
+  const onKey = (ev) => { if (ev.key === 'Escape') close(); };
+  const closeButton = overlay.querySelector('[data-close]');
+  closeButton?.addEventListener('click', close);
+  overlay.addEventListener('click', (ev) => { if (ev.target === overlay) close(); });
   window.addEventListener('keydown', onKey);
+  if (opener) closeButton?.focus();
 }
   const THEME_FALLBACKS = { text:'#e5e7eb', muted:'#94a3b8', grid:'rgba(148,163,184,.18)', accent:'#3b82f6', good:'#22c55e', warn:'#f59e0b', bad:'#ef4444' };
   function _theme(name){ return getComputedStyle(document.body).getPropertyValue(`--${name === 'grid' ? 'gridline' : name}`).trim() || THEME_FALLBACKS[name] || '#94a3b8'; }
@@ -1576,8 +1576,33 @@ function _openTxDrilldown(kind, key, model){
   } catch (_) {}
 }
   function _renderCategoryBars(model){
+  const host = _el('analysis-category-bars-chart');
+  if (!host) return;
+  const rows = model.categorySeries || [];
+  const detail = _el('analysis-category-detail');
+  const picker = _el('analysis-category-drilldown');
+  const open = _el('analysis-category-open');
+  if (detail && picker && open) {
+    const previous = picker.value;
+    const label = _t('analysis.category.detail');
+    picker.setAttribute('aria-label', label);
+    picker.options[0].text = label;
+    picker.options.length = 1;
+    for (const { name, actual } of rows) {
+      picker.add(new Option(`${name} · ${_fmtMoney(actual, model.base)}`, name));
+    }
+    picker.value = rows.some(({ name }) => name === previous) ? previous : '';
+    detail.hidden = !rows.length;
+    open.disabled = !picker.value;
+    picker.onchange = () => { open.disabled = !picker.value; };
+    open.onclick = () => {
+      if (picker.value) _openTxDrilldown('category', picker.value, model, open);
+    };
+  }
+  host.style.height = `${Math.max(280, 30 + rows.length * 24)}px`;
   const chart = _ensureChart('categoryBars','analysis-category-bars-chart');
   if (!chart) return;
+  chart.resize();
 
   chart.setOption(window.TBAnalysisCharts?.buildAnalysisCategoryBarsOption?.({
     model,

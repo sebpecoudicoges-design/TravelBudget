@@ -551,6 +551,8 @@
       "analysis.card.category_split": "Category split",
       "analysis.card.detail": "Detailed view",
       "analysis.card.all_categories": "All categories",
+      "analysis.category.detail": "Category details",
+      "analysis.category.open": "View",
       "analysis.card.subcategories": "Subcategories",
       "analysis.card.top_subcategories": "Top subcategories",
       "analysis.card.pace": "Pace",

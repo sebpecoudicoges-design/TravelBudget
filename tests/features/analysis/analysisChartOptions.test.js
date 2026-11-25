@@ -57,22 +57,23 @@ describe('Analysis chart option builders', () => {
     expect(empty.series[0].data[0].name).toBe('Aucune dépense');
   });
 
-  it('builds horizontal category bars from the top categories only', () => {
+  it('builds horizontal bars for every category and preserves negative net amounts', () => {
     const model = {
       base: 'AUD',
       categorySeries: Array.from({ length: 13 }, (_, idx) => ({
         name: `Cat ${idx + 1}`,
-        actual: idx + 0.49,
+        actual: idx === 12 ? -12.49 : 12 - idx + 0.49,
         color: '#2563eb',
       })),
     };
 
     const option = buildAnalysisCategoryBarsOption({ model, theme, formatCurrency });
 
-    expect(option.yAxis.data).toHaveLength(12);
-    expect(option.yAxis.data[0]).toBe('Cat 12');
-    expect(option.series[0].data[0].value).toBe(11.49);
-    expect(option.tooltip.formatter([{ axisValue: 'Cat 12', value: 11.49 }])).toContain('11 AUD');
+    expect(option.yAxis.data).toHaveLength(13);
+    expect(option.yAxis.data[0]).toBe('Cat 13');
+    expect(option.yAxis.data.at(-1)).toBe('Cat 1');
+    expect(option.series[0].data[0].value).toBe(-12.49);
+    expect(option.tooltip.formatter([{ axisValue: 'Cat 13', value: -12.49 }])).toContain('-12 AUD');
   });
 
   it('builds velocity and heatmap options from daily analysis data', () => {

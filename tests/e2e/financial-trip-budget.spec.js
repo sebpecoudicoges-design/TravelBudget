@@ -306,3 +306,61 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     expect(await page.evaluate(() => window.tbGetBudgetAnalysisNotificationSummary())).toMatchObject({ referencePerDay: 35 });
   });
 }
+
+for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
+  test(`Analyse exposes every category and its transactions (${width}px, ${theme})`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: theme });
+    const date = '2026-10-23';
+    const category = 'Remboursements fictifs';
+    const label = 'Avoir catégorie 14';
+    const categoryTables = {
+      ...fixtureTables,
+      profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+      settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
+      transactions: [
+        ...Array.from({ length: 13 }, (_, idx) => row(`cat-${idx}`, idx + 1, date, {
+          category: `Poste fictif ${idx + 1}`, budget_date_start: date, budget_date_end: date,
+        })),
+        row('cat-before-refund', 1, date, { category, budget_date_start: date, budget_date_end: date }),
+        row('cat-refund', 8, date, {
+          type: 'income', category, label, budget_date_start: date, budget_date_end: date,
+        }),
+      ],
+    };
+    await installConnectedFixture(page, baseURL, { tables: categoryTables });
+    await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+    await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+    await page.goto('/?freeze=1');
+    await navigate(page, 'analysis');
+    await page.locator('#analysis-period').selectOption('range');
+    await page.locator('#analysis-scope').selectOption('all');
+    await page.locator('#analysis-range-start').fill(date);
+    await page.locator('#analysis-range-end').fill(date);
+
+    const host = page.locator('#analysis-category-bars-chart');
+    await expect.poll(() => host.evaluate(el =>
+      window.echarts?.getInstanceByDom(el)?.getOption()?.yAxis?.[0]?.data?.length,
+    )).toBe(14);
+    expect(await host.evaluate(el => window.echarts.getInstanceByDom(el).getOption().series[0].data[0].value)).toBe(-7);
+    const region = host.locator('..');
+    await region.focus();
+    await page.keyboard.press('End');
+    await expect.poll(() => region.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+
+    const picker = page.locator('#analysis-category-drilldown');
+    await expect(picker.locator('option')).toHaveCount(15);
+    await expect(picker.locator('option').last()).toContainText(/Remboursements fictifs.*-7/);
+    await picker.selectOption(category);
+    const open = page.locator('#analysis-category-open');
+    await open.focus();
+    await page.keyboard.press('Enter');
+    const drilldown = page.locator('#tb-analysis-tx-drilldown');
+    await expect(drilldown).toContainText(label);
+    await expect(drilldown.locator('[data-close]')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(drilldown).toHaveCount(0);
+    await expect(open).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  });
+}
