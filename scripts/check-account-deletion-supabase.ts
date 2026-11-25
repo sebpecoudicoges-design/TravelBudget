@@ -11,7 +11,7 @@ const key = Deno.env.get('F13_LOCAL_SERVICE_KEY');
 const anon = Deno.env.get('F13_LOCAL_ANON_KEY');
 assert.ok(key && anon);
 const admin = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
-async function checked<T>(promise: PromiseLike<{ data: T; error: unknown }>): Promise<T> {
+async function checked<R extends { data: unknown; error: unknown }>(promise: PromiseLike<R>): Promise<R["data"]> {
   const { data, error } = await promise;
   if (error) throw error;
   return data;
