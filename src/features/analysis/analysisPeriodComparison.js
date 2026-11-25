@@ -30,6 +30,10 @@ export function renderPreviousPeriodComparison({ host, current, periodPreset = '
     const range = clampRange(previousComparableRange(current, periodPreset), travelBounds);
     if (!range.start) throw new Error('no previous range');
     const previous = computeForRange(range);
+    if (current?.missingFx?.length || previous?.missingFx?.length || (current?.base && previous?.base && current.base !== previous.base)) {
+      host.innerHTML = `<div class="analysis-stat" role="status">${esc(isEn ? 'Previous period comparison unavailable: missing exchange rate.' : 'Comparaison précédente indisponible : taux de change manquant.')}</div>`;
+      return { range, previous, metrics: null };
+    }
     const metrics = comparisonMetrics(current, previous);
     host.innerHTML = renderPeriodComparison({ current, previous, range, metrics, formatCurrency, isEn });
     return { range, previous, metrics };

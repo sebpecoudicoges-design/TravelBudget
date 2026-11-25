@@ -43,7 +43,7 @@
     return ((c - t) / t) * 100;
   }
   function _analysisNotificationSummaryFromModel(model){
-    if (!model) return null;
+    if (!model || model.missingFx?.length) return null;
     const today = _iso(new Date());
     const addDays = (iso, days) => {
       const d = _parse(iso) || new Date();
@@ -643,53 +643,28 @@ function _analysisBucketOrder(){
     _updateCategoryExcludeSummary();
   }
 
-  function _convert(amount, cur, dateISO, forcedBase){
-  const base = _upper(forcedBase || _currency());
-  const a = _safeNum(amount);
-  const from = _upper(cur || base);
-
-  if (!a) return 0;
-  if (from === base) return a;
-
-  const seg = (typeof getBudgetSegmentForDate === 'function')
-    ? getBudgetSegmentForDate(dateISO)
-    : null;
-
-  try {
-    if (typeof window.amountToBudgetBaseForDate === 'function' && seg) {
-      const inSegBase = window.amountToBudgetBaseForDate(a, from, dateISO);
-      const segBase = _upper(seg.baseCurrency || seg.base_currency || state?.period?.baseCurrency || 'EUR');
-
-      if (segBase === base) return _safeNum(inSegBase);
-
-      if (typeof window.tbFxConvertForDateCached === 'function') {
-        const out = window.tbFxConvertForDateCached(inSegBase, segBase, base, dateISO);
-        if (out !== null && Number.isFinite(Number(out))) return Number(out);
-      }
-    }
-  } catch (_) {}
-
-  try {
-    if (typeof window.tbFxConvertForDateCached === 'function') {
-      const out = window.tbFxConvertForDateCached(a, from, base, dateISO);
-      if (out !== null && Number.isFinite(Number(out))) return Number(out);
-    }
-  } catch (_) {}
-
-  try {
-    if (typeof _toBaseForDate === 'function' && base === _upper(state?.user?.baseCurrency || 'EUR')) {
-      return _safeNum(_toBaseForDate(a, from, dateISO));
-    }
-  } catch (_) {}
-
-  return 0;
-}
-  function _dailyBudgetForDate(dateISO, analysisBase){
-    const base = _upper(analysisBase || _currency());
+  function _convertAnalysisAmount(amount, cur, dateISO, base){
+    const value = _safeNum(amount);
+    if (!value || cur === base) return value;
+    // Legacy budget helpers can silently return the original amount or zero when FX is absent.
+    // Check the date-aware result; do not propagate either of those fallback amounts.
+    try {
+      const out = Number(window.tbFxConvertForDateCached?.(value, cur, base, dateISO));
+      if (Number.isFinite(out) && out !== 0) return out;
+    } catch (_) {}
+    try {
+      const seg = window.getBudgetSegmentForDate?.(dateISO);
+      const rates = seg && window.fxRatesForSegment?.(seg);
+      const out = Number(window.fxConvert?.(value, cur, base, rates || undefined));
+      if (Number.isFinite(out) && out !== 0) return out;
+    } catch (_) {}
+    return null;
+  }
+  function _dailyBudgetForDate(dateISO, base, convert){
     const seg = _segmentForDate(dateISO);
     const segCur = _upper(seg?.baseCurrency || seg?.base_currency || state?.period?.baseCurrency || 'EUR');
     const dailyNominal = _safeNum(seg?.dailyBudgetBase ?? seg?.daily_budget_base ?? state?.period?.dailyBudgetBase ?? 0);
-    return _convert(dailyNominal, segCur, dateISO, base);
+    return convert(dailyNominal, segCur, dateISO);
   }
   function _baseExpenseTransactions(){
     const travelId = _getSelectedTravelId();
@@ -716,10 +691,10 @@ function _analysisBucketOrder(){
     rowType: _txType, rowTravelId: (tx) => tx?.travel_id || tx?.travelId, budgetStart: _txBudgetStart, budgetEnd: _txBudgetEnd,
   }) || [];
 }
-function _sumTxArray(txs, base){
+function _sumTxArray(txs, base, convert){
   return txs.reduce((sum, tx) => {
     const cashDate = _txCashDate(tx);
-    return sum + _convert(tx.amount, tx.currency || base, cashDate, base);
+    return sum + convert(tx.amount, tx.currency || base, cashDate);
   }, 0);
 }
   function _filteredIncomeTransactions(){
@@ -804,11 +779,19 @@ function _sumTxArray(txs, base){
     });
   }
 
-  function _computeModel(){
+  function _computeModel(forcedBase){
     const txs = _filteredTransactions();
     const { start, end } = _analysisRange();
     const cutoffEnd = _analysisCutoffEnd();
-    const base = _resolveAnalysisCurrency(start, end);
+    const base = forcedBase || _resolveAnalysisCurrency(start, end);
+    const missingFx = new Set();
+    const convert = (amount, source, dateISO) => {
+      const from = _upper(source || base);
+      const value = _convertAnalysisAmount(amount, from, dateISO, base);
+      if (value !== null) return value;
+      missingFx.add(`${from} → ${base}`);
+      return 0; // Partial numerical fields must not be shown; consumers check missingFx.
+    };
     const incomeTxs = _filteredIncomeTransactions();
     // Posted cash uses the operation date; budget rows below still use allocation dates.
     const cashFlows = window.TBAnalysisCashBreakdown?.selectCashFlows?.({
@@ -824,9 +807,9 @@ function _sumTxArray(txs, base){
     const expenseCats = [...new Set(txs.map(_txCategory).filter(Boolean))];
     const expenseOffsets = incomeTxs.filter((tx) => window.TBAnalysisCashBreakdown?.isExpenseOffsetIncome?.(tx, expenseCats));
 
-    const incomeRealAmount = _sumTxArray(cashIncomeReal, base);
-    const cashExpenseRealAmount = _sumTxArray(cashExpenseReal, base);
-    const incomePlannedAmount = _sumTxArray(incomePlanned, base);
+    const incomeRealAmount = _sumTxArray(cashIncomeReal, base, convert);
+    const cashExpenseRealAmount = _sumTxArray(cashExpenseReal, base, convert);
+    const incomePlannedAmount = _sumTxArray(incomePlanned, base, convert);
     const days = _daysInclusive(start, end);
     const daySet = new Set(days);
     const dailyMap = Object.fromEntries(days.map(d => [d, 0]));
@@ -858,7 +841,7 @@ const visibleBudgetDays = fullBudgetDays
         return { amount: 0, fullBudgetDays, visibleBudgetDays: [], perDay: 0, cashDate, budgetStart, budgetEnd };
       }
 
-      const fullAmount = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const fullAmount = convert(tx?.amount, tx?.currency || base, cashDate || budgetStart);
       const perDay = fullAmount / fullBudgetDays.length;
       const visibleAmount = perDay * visibleBudgetDays.length;
 
@@ -927,14 +910,14 @@ if (sub) {
       isReal: (tx) => _txPaid(tx) || !!window.TBAnalysisCashBreakdown?.isTripBudgetIncomeShare?.(tx),
     }) || 0;
 
-    const targetDaily = days.map(d => _dailyBudgetForDate(d, base));
+    const targetDaily = days.map(d => _dailyBudgetForDate(d, base, convert));
     const coveredDays = [];
     const referenceDaily = days.map((d) => {
       const row = _referenceRowForDate(d);
       const cur = _upper(row?.currency_code || '');
       const hasRef = !!(_safeNum(row?.recommended_daily_amount) > 0 && cur);
       if (hasRef) coveredDays.push(d);
-      return _safeNum(_convert(row?.recommended_daily_amount || 0, cur || base, d, base));
+      return _safeNum(convert(row?.recommended_daily_amount || 0, cur || base, d));
     });
 
     const analysisBuckets = _analysisBucketOrder();
@@ -1049,13 +1032,13 @@ if (sub) {
         const cur = _upper(row?.currency_code || '');
         if (!row || !cur) return;
 
-        refSums.daily += _safeNum(_convert(row?.recommended_daily_amount || 0, cur, d, base));
-        refSums.misc += _safeNum(_convert(row?.recommended_misc_daily_amount || 0, cur, d, base));
-        refSums.Logement += _safeNum(_convert(row?.recommended_accommodation_daily_amount || 0, cur, d, base));
-        refSums.Repas += _safeNum(_convert(row?.recommended_food_daily_amount || 0, cur, d, base));
-        refSums.Transport += _safeNum(_convert(row?.recommended_transport_daily_amount || 0, cur, d, base));
-        refSums.Activités += _safeNum(_convert(row?.recommended_activities_daily_amount || 0, cur, d, base));
-        refSums.Autre += _safeNum(_convert(row?.recommended_misc_daily_amount || 0, cur, d, base));
+        refSums.daily += _safeNum(convert(row?.recommended_daily_amount || 0, cur, d));
+        refSums.misc += _safeNum(convert(row?.recommended_misc_daily_amount || 0, cur, d));
+        refSums.Logement += _safeNum(convert(row?.recommended_accommodation_daily_amount || 0, cur, d));
+        refSums.Repas += _safeNum(convert(row?.recommended_food_daily_amount || 0, cur, d));
+        refSums.Transport += _safeNum(convert(row?.recommended_transport_daily_amount || 0, cur, d));
+        refSums.Activités += _safeNum(convert(row?.recommended_activities_daily_amount || 0, cur, d));
+        refSums.Autre += _safeNum(convert(row?.recommended_misc_daily_amount || 0, cur, d));
       });
 
       referencePerDay = refSums.daily / referenceCoverageDays;
@@ -1108,7 +1091,7 @@ const visibleBudgetDays = fullBudgetDays
 
       if (!visibleBudgetDays.length) return sum;
 
-      const fullAmount = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const fullAmount = convert(tx?.amount, tx?.currency || base, cashDate || budgetStart);
       const perDay = fullAmount / fullBudgetDays.length;
       return sum + (perDay * visibleBudgetDays.length);
     }, 0);
@@ -1132,7 +1115,7 @@ const visibleBudgetDays = fullBudgetDays
         : null;
       const bs = _txBudgetStart(tx);
       const budgetDate = _txBudgetStart(tx) || _txCashDate(tx);
-      const spentAmt = _convert(tx?.amount, tx?.currency || base, _txCashDate(tx) || budgetDate, base);
+      const spentAmt = convert(tx?.amount, tx?.currency || base, _txCashDate(tx) || budgetDate);
       nightCoveredCount += 1;
       nightCoveredTransportSpent += spentAmt;
       if (insight && Number.isFinite(insight.amount)) {
@@ -1173,7 +1156,7 @@ const todayBudgetConsumed = todayIdx >= 0
 
       if (!fullBudgetDays.length) return sum;
 
-      const fullAmount = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const fullAmount = convert(tx?.amount, tx?.currency || base, cashDate || budgetStart);
       const perDay = fullAmount / fullBudgetDays.length;
 
       return sum + perDay;
@@ -1201,7 +1184,7 @@ const deltaProjectedWithBudget =
 const cashBreakdown = window.TBAnalysisCashBreakdown?.buildCashBreakdown?.({
   income: cashIncomeReal,
   expenses: cashExpenseReal,
-  convert: (tx) => _convert(tx?.amount, tx?.currency || base, _txCashDate(tx), base),
+  convert: (tx) => convert(tx?.amount, tx?.currency || base, _txCashDate(tx)),
   category: _txCategory,
   subcategory: _txSubcategory,
   isPaid: () => true,
@@ -1209,7 +1192,7 @@ const cashBreakdown = window.TBAnalysisCashBreakdown?.buildCashBreakdown?.({
 }) || {};
 
 return {
-  base, start, end, days, txs, spent, paidSpent,
+  base, start, end, days, txs, spent, paidSpent, missingFx: Array.from(missingFx).sort(),
 
   incomeReal: incomeRealAmount,
   incomeToDate: incomeRealAmount,
@@ -1688,6 +1671,28 @@ function _openTxDrilldown(kind, key, model){
     }
   }
 
+  function _showAnalysisFxState(model){
+    const missing = model.missingFx?.length > 0;
+    const view = _el('view-analysis');
+    const blocked = [view.querySelector('.analysis-main-grid'), _el('analysis-custom-layout'), _el('analysis-overview-strip')];
+    for (const node of blocked) node?.classList.toggle('hidden', missing);
+    if (!missing) return false;
+
+    const isEn = _analysisIsEnglish();
+    const label = isEn ? 'Exchange rate unavailable' : 'Taux de change indisponible';
+    const summary = _el('analysis-summary');
+    const notice = document.createElement('div');
+    notice.className = 'analysis-stat';
+    notice.setAttribute('role', 'status');
+    notice.textContent = isEn
+      ? `${label}: ${model.missingFx.join(', ')}. Totals and charts are hidden rather than showing incomplete amounts. Change the currency or date range, or refresh.`
+      : `${label} : ${model.missingFx.join(', ')}. Les totaux et graphiques sont masqués pour ne pas afficher de montants incomplets. Change la devise ou la période, ou actualise.`;
+    summary?.replaceChildren(notice);
+    const pill = _el('analysis-live-pill');
+    if (pill) pill.textContent = label;
+    return true;
+  }
+
   function _renderAll(){
     if (!_el('view-analysis')) return;
     _saveFilters();
@@ -1709,6 +1714,7 @@ function _openTxDrilldown(kind, key, model){
 
     const comparisonHost = _el('analysis-period-comparison');
     if (comparisonHost) comparisonHost.innerHTML = '';
+    if (_showAnalysisFxState(model)) return;
     if (comparisonHost && _el('analysis-comparison')?.value === 'previous') {
       const period = _el('analysis-period');
       const inputs = _rangeInputs();
@@ -1722,7 +1728,7 @@ function _openTxDrilldown(kind, key, model){
             if (period) period.value = 'range';
             if (inputs.start) inputs.start.value = range.start;
             if (inputs.end) inputs.end.value = range.end;
-            return _computeModel();
+            return _computeModel(model.base);
           } finally {
             if (period) period.value = saved.period;
             if (inputs.start) inputs.start.value = saved.start;

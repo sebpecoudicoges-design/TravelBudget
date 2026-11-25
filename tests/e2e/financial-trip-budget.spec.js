@@ -199,3 +199,60 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await expect(account).toHaveText(/^500[,.]00/);
   });
 }
+
+for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
+  test(`Analyse masks incomplete totals and the previous comparison only when needed (${width}px, ${theme})`, async ({ page, baseURL }) => {
+    test.setTimeout(60000);
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: theme });
+    const expense = (id, amount, date, currency) => row(id, amount, date, {
+      currency, label: id, budget_date_start: date, budget_date_end: date,
+    });
+    const fxTables = {
+      ...fixtureTables,
+      profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+      settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
+      budget_segments: [
+        { ...fixtureTables.budget_segments[0], end_date: '2026-10-22' },
+        { ...fixtureTables.budget_segments[0], id: 'later-aud', sort_order: 1, start_date: '2026-10-23', base_currency: 'AUD', eur_base_rate_fixed: 1.65 },
+      ],
+      transactions: [
+        expense('Known EUR', 30, '2026-10-23', 'EUR'),
+        expense('Known AUD', 33, '2026-10-24', 'AUD'),
+        expense('Missing conversion fixture', 100, '2026-10-22', 'ZFX'),
+      ],
+    };
+    await installConnectedFixture(page, baseURL, { tables: fxTables });
+    await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+    await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+    await page.goto('/?freeze=1');
+    await navigate(page, 'analysis');
+    await page.locator('#analysis-scope').selectOption('all');
+    await page.locator('#analysis-currency').selectOption('account');
+    await page.locator('#analysis-period').selectOption('range');
+    const start = page.locator('#analysis-range-start');
+    const end = page.locator('#analysis-range-end');
+    const summary = page.locator('#analysis-summary');
+    const comparison = page.locator('#analysis-period-comparison');
+    const chart = page.locator('#analysis-trajectory-chart');
+    await start.fill('2026-10-23');
+    await end.fill('2026-10-24');
+    await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^50[,.]00/);
+    await expect(chart).toBeVisible();
+    await page.locator('#analysis-comparison').selectOption('previous');
+    await expect(comparison.getByRole('status')).toContainText('taux de change manquant');
+    await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^50[,.]00/);
+
+    await start.fill('2026-10-22');
+    await expect(summary.getByRole('status')).toContainText('ZFX → EUR');
+    await expect(summary.locator('.analysis-stat-value')).toHaveCount(0);
+    await expect(comparison).toBeEmpty();
+    await expect(chart).toBeHidden();
+    await expect(start).toBeVisible();
+
+    await start.fill('2026-10-23');
+    await expect(summary.getByRole('status')).toHaveCount(0);
+    await expect(chart).toBeVisible();
+    await expect(comparison.getByRole('status')).toContainText('taux de change manquant');
+  });
+}
