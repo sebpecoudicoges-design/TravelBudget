@@ -112,3 +112,90 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await expect(outflow).toHaveText(/Sorties payees\s*0[,.]00/);
   });
 }
+
+for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
+  test(`records and cancels a two-currency Trip reimbursement (${width}px, ${theme})`, async ({ page, baseURL }) => {
+    test.setTimeout(75_000);
+    await page.setViewportSize({ width, height: 900 });
+    const audWallet = { ...wallet, id: 'wallet-aud', currency: 'AUD', name: 'Compte AUD fictif' };
+    const scopedTables = {
+      ...structuredClone(tables),
+      profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+      settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
+      wallets: [wallet, audWallet],
+    };
+    const requests = [];
+    await installConnectedFixture(page, baseURL, { tables: scopedTables });
+    await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+    // Simulate PostgREST responses while exercising the actual modal, repository,
+    // refresh, and render paths. No live requests or real accounts.
+    await page.route('**/rest/v1/rpc/trip_apply_settlement_v2', async route => {
+      const data = route.request().postDataJSON();
+      requests.push(data);
+      const id = data.p_event_id;
+      if (!scopedTables.trip_settlement_events.some(event => event.id === id)) {
+        scopedTables.trip_settlement_events.push(tripRow(id, {
+          amount: data.p_amount, currency: data.p_currency, from_member_id: data.p_from_member_id,
+          to_member_id: data.p_to_member_id, created_by: fixtureUser, created_at: '2026-10-24T03:00:00Z',
+          transaction_id: id,
+        }));
+        scopedTables.transactions.push(row(id, data.p_wallet_amount, data.p_date, {
+          wallet_id: data.p_wallet_id, currency: data.p_wallet_currency, type: 'income',
+          affects_budget: false, out_of_budget: true, category: 'Mouvement interne',
+          label: `[Trip] SETTLE:${id} • Règlement reçu de Voyageur B`,
+          budget_date_start: data.p_date, budget_date_end: data.p_date,
+        }));
+      }
+      // A committed write with a lost acknowledgment must reuse the same request ID.
+      if (requests.length === 1) return route.abort('connectionreset');
+      return route.fulfill({ json: id });
+    });
+    await page.route('**/rest/v1/rpc/trip_cancel_settlement_v1', async route => {
+      const { p_event_id: id } = route.request().postDataJSON();
+      const event = scopedTables.trip_settlement_events.find(item => item.id === id);
+      if (!event) return route.fulfill({ status: 404, json: { message: 'Unknown settlement' } });
+      event.cancelled_at = '2026-10-24T03:05:00Z';
+      scopedTables.transactions = scopedTables.transactions.filter(tx => tx.id !== event.transaction_id);
+      event.transaction_id = null;
+      return route.fulfill({ status: 204 });
+    });
+    await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+    await page.goto('/');
+    const account = page.locator(`#wallets-container [data-wallet-id="${audWallet.id}"] .tb-wallet-card-main p strong`).first();
+    await expect(account).toHaveText(/^500[,.]00/);
+    await expect(page.locator('body')).toHaveClass(new RegExp(`theme-${theme}`));
+    await navigate(page, 'trip');
+    const trip = page.locator('.trip-analysis-summary');
+    await expect(trip).toContainText(/Voyageur B doit 75(?:[,.]00)? EUR/);
+    await page.getByRole('button', { name: 'Je reçois de Voyageur B' }).click();
+    await page.locator('#tripSettleWallet').selectOption(wallet.id);
+    await expect(page.locator('#tripSettleDebtAmount')).toBeHidden();
+    await page.locator('#tripSettleWallet').selectOption(audWallet.id);
+    await expect(page.locator('#tripSettleAmount')).toHaveValue('');
+    await expect(page.locator('#tripSettleDebtAmount')).toBeVisible();
+    await page.locator('#tripSettleAmount').fill('40');
+    await page.locator('#tripSettleDebtAmount').fill('25');
+    const submit = page.locator('#tripSettleConfirm');
+    await submit.click();
+    await expect.poll(() => requests.length).toBe(1);
+    await expect(submit).toBeEnabled();
+    await submit.click();
+    await expect.poll(() => requests.length).toBe(2);
+    expect(requests[0]).toMatchObject({ p_amount: 25, p_currency: 'EUR', p_wallet_amount: 40, p_wallet_currency: 'AUD' });
+    expect(requests[1]).toEqual(requests[0]);
+    await expect(trip).toContainText(/Voyageur B doit 50(?:[,.]00)? EUR/);
+    await navigate(page, 'dashboard');
+    await expect(account).toHaveText(/^540[,.]00/);
+
+    await page.reload();
+    await expect(account).toHaveText(/^540[,.]00/);
+    await navigate(page, 'trip');
+    await expect(trip).toContainText(/Voyageur B doit 50(?:[,.]00)? EUR/);
+    page.once('dialog', dialog => dialog.accept());
+    await page.locator('[data-cancel-settle]').click();
+    await expect(trip).toContainText(/Voyageur B doit 75(?:[,.]00)? EUR/);
+    await expect(page.locator('[data-cancel-settle]')).toHaveCount(0);
+    await navigate(page, 'dashboard');
+    await expect(account).toHaveText(/^500[,.]00/);
+  });
+}

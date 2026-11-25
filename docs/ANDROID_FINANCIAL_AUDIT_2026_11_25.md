@@ -27,3 +27,19 @@ ainsi que le total de 30 EUR et l'avoir de 15 EUR dans Analyse.
 Il contrôle aussi que la sortie de 120 EUR apparaît selon sa date réelle, pas selon
 les dates de ventilation. Les réponses du serveur sont simulées ; ce scénario
 ne valide ni la saisie et sa persistance serveur, ni le WebView Android natif.
+
+### Règlement Trip dans une autre devise
+
+Le montant du règlement reste exprimé dans la devise de la dette. La transaction
+de compte conserve son montant et sa devise propres. Quand elles diffèrent, la
+fenêtre demande les deux montants séparément ; en devise identique, le montant
+saisi reste commun, y compris pour un règlement partiel.
+
+Le scénario navigateur simule un reçu en AUD qui règle une partie d’une dette
+en EUR, une réponse perdue, un nouvel essai avec le même identifiant, une
+actualisation puis l’annulation depuis Trip. Le serveur est simulé pour ce
+test d’interface. En complément, `node scripts/test-trip-settlement-postgres.mjs /chemin/vers/pglite/dist/index.js`
+rejoue les fonctions SQL réelles dans PostgreSQL en mémoire (PGlite 0.3.15,
+schéma de test minimal) et vérifie qu’un seul mouvement est créé et que deux
+annulations préservent une transaction indépendante. Aucun projet connecté
+n’est utilisé par ces scénarios.

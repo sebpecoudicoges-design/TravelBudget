@@ -473,6 +473,10 @@ export function renderTripSettlementModalContent({ escapeHTML = fallbackEscape }
           <label for="tripSettleAmount">${escapeHTML('Montant dans la devise choisie')}</label>
           <input id="tripSettleAmount" class="input" type="number" step="0.01" />
         </div>
+        <div class="field hidden" id="tripSettleDebtRow">
+          <label for="tripSettleDebtAmount" id="tripSettleDebtLabel"></label>
+          <input id="tripSettleDebtAmount" class="input" type="number" step="0.01" min="0.01" />
+        </div>
       </div>`;
 }
 
