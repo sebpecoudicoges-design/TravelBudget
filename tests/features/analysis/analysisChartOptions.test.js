@@ -40,21 +40,30 @@ describe('Analysis chart option builders', () => {
     expect(option.series[1].markPoint.data[0].coord).toEqual([1, 55]);
   });
 
-  it('builds category pie options with empty and populated states', () => {
-    const model = { base: 'AUD', topCategories: [['Food', 42.12]] };
+  it('computes proportional slices from all positive net categories and groups the rest', () => {
+    const categorySeries = [
+      ...[31, 10, 10, 10, 10, 10, 10, 5, 3, 1].map((actual, idx) => ({
+        name: idx === 0 ? 'Autres' : `Cat ${idx + 1}`, actual, color: '#f97316',
+      })),
+      { name: 'Zero', actual: 0 },
+      { name: 'Credit', actual: -20 },
+    ];
+    const option = buildAnalysisCategoryPieOption({ model: { base: 'AUD', categorySeries }, theme, formatCurrency });
+    const { data, roseType } = option.series[0];
+
+    expect(roseType).toBeUndefined();
+    expect(data).toHaveLength(9);
+    expect(data[0]).toMatchObject({ name: 'Autres', value: 31, itemStyle: { color: '#f97316' } });
+    expect(data.at(-1)).toMatchObject({ grouped: true, value: 4 });
+    expect(data.reduce((sum, row) => sum + row.value, 0)).toBe(100);
+    expect(option.tooltip.formatter({ name: 'Autres', value: 31, percent: 31 })).toContain('31 AUD • 31%');
+  });
+
+  it('does not invent a pie slice when there are no positive net categories', () => {
     const option = buildAnalysisCategoryPieOption({
-      model,
-      categoryColor: (name) => (name === 'Food' ? '#f97316' : '#2563eb'),
-      theme,
-      formatCurrency,
+      model: { categorySeries: [{ name: 'Credit', actual: -2 }, { name: 'Zero', actual: 0 }] }, theme,
     });
-
-    expect(option.series[0].roseType).toBe('area');
-    expect(option.series[0].data[0]).toMatchObject({ name: 'Food', value: 42.12 });
-    expect(option.tooltip.formatter({ name: 'Food', value: 42.12, percent: 33 })).toContain('42 AUD');
-
-    const empty = buildAnalysisCategoryPieOption({ model: { topCategories: [] }, theme });
-    expect(empty.series[0].data[0].name).toBe('Aucune dépense');
+    expect(option.series[0].data).toEqual([]);
   });
 
   it('builds horizontal bars for every category and preserves negative net amounts', () => {

@@ -343,6 +343,17 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
       window.echarts?.getInstanceByDom(el)?.getOption()?.yAxis?.[0]?.data?.length,
     )).toBe(14);
     expect(await host.evaluate(el => window.echarts.getInstanceByDom(el).getOption().series[0].data[0].value)).toBe(-7);
+    const pie = page.locator('#analysis-category-chart');
+    await expect(page.locator('#analysis-category-pie-note')).toContainText('dépense nette positive');
+    const pieState = await pie.evaluate(el => {
+      const chart = window.echarts.getInstanceByDom(el);
+      const [series] = chart.getOption().series;
+      return { data: series.data, largestShare: chart.getModel().getSeriesByIndex(0).getDataParams(0).percent };
+    });
+    expect(pieState.data).toHaveLength(9);
+    expect(pieState.data.reduce((sum, row) => sum + row.value, 0)).toBe(91);
+    expect(pieState.data.at(-1)).toMatchObject({ value: 15, grouped: true });
+    expect(pieState.largestShare).toBeCloseTo(100 * 13 / 91, 1);
     const region = host.locator('..');
     await region.focus();
     await page.keyboard.press('End');
@@ -361,6 +372,10 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     await page.keyboard.press('Escape');
     await expect(drilldown).toHaveCount(0);
     await expect(open).toBeFocused();
+    await page.locator('#analysis-category-filter').selectOption(category);
+    await expect(page.locator('#analysis-category-pie-note')).toContainText('Aucune catégorie à dépense nette positive');
+    expect(await pie.evaluate(el => window.echarts.getInstanceByDom(el).getOption().series[0].data)).toEqual([]);
+    await expect(picker.locator('option').last()).toContainText(/Remboursements fictifs.*-7/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }

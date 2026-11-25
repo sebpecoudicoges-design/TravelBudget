@@ -1558,20 +1558,33 @@ function _openTxDrilldown(kind, key, model, opener){
   function _renderCategory(model){
   const chart = _ensureChart('category','analysis-category-chart');
   if (!chart) return;
-
-  chart.setOption(window.TBAnalysisCharts?.buildAnalysisCategoryPieOption?.({
+  const option = window.TBAnalysisCharts?.buildAnalysisCategoryPieOption?.({
     model,
-    categoryColor: _categoryColor,
+    groupedLabel: _t('analysis.category.grouped'),
     theme: _analysisChartTheme(),
     formatCurrency: _fmtMoney,
-  }) || {});
+  });
+  if (!option) return;
+  chart.setOption(option);
+
+  let note = _el('analysis-category-pie-note');
+  if (!note) {
+    note = document.createElement('p');
+    note.id = 'analysis-category-pie-note';
+    note.className = 'muted';
+    chart.getDom().insertAdjacentElement('beforebegin', note);
+  }
+  note.textContent = _t(option.series[0].data.length ? 'analysis.category.pie_basis' : 'analysis.category.pie_empty');
 
   try {
     chart.off('click');
     chart.on('click', (params) => {
+      if (params?.data?.grouped) {
+        _el('analysis-category-drilldown')?.focus();
+        return;
+      }
       const name = _norm(params?.name || '');
-      if (!name || name === 'Aucune dépense') return;
-      _openTxDrilldown('category', name, model);
+      if (name) _openTxDrilldown('category', name, model);
     });
   } catch (_) {}
 }

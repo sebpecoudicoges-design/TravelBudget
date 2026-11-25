@@ -84,16 +84,22 @@ export function buildAnalysisTrajectoryOption({
 
 export function buildAnalysisCategoryPieOption({
   model = {},
-  categoryColor = () => '#3b82f6',
+  groupedLabel = 'Autres catégories (groupées)',
   theme = {},
   formatCurrency,
 } = {}) {
   const fmt = moneyFormatter(formatCurrency);
-  const data = (Array.isArray(model.topCategories) ? model.topCategories : []).map((it) => ({
-    name: it?.[0],
-    value: Number(safeNum(it?.[1]).toFixed(2)),
-    itemStyle: { color: categoryColor(it?.[0]) },
+  const positive = (model.categorySeries || []).filter((row) => safeNum(row.actual) > 0);
+  const data = positive.slice(0, 8).map(({ name, actual, color }) => ({
+    name, value: safeNum(actual), itemStyle: { color },
   }));
+  if (positive.length > 8) {
+    data.push({
+      name: groupedLabel, grouped: true,
+      value: positive.slice(8).reduce((sum, row) => sum + safeNum(row.actual), 0),
+      itemStyle: { color: themeValue(theme, 'muted', '#94a3b8') },
+    });
+  }
 
   return {
     animationDuration: 1000,
@@ -102,23 +108,18 @@ export function buildAnalysisCategoryPieOption({
       backgroundColor: 'rgba(15,23,42,.92)',
       borderWidth: 0,
       textStyle: { color: '#fff' },
-      formatter: (p) => `${p.name}<br>${fmt(p.value, model.base)} • ${p.percent}%`,
+      renderMode: 'richText',
+      formatter: (p) => `${p.name}\n${fmt(p.value, model.base)} • ${p.percent}%`,
     },
     series: [{
       type: 'pie',
       radius: ['34%', '78%'],
       center: ['50%', '56%'],
-      roseType: 'area',
       avoidLabelOverlap: true,
       itemStyle: { borderRadius: 10, borderColor: 'rgba(255,255,255,.06)', borderWidth: 2 },
       label: { color: themeValue(theme, 'text', '#e5e7eb'), formatter: (p) => `${p.name}\n${p.percent}%`, fontWeight: 700 },
       labelLine: { length: 10, length2: 8 },
-      data: data.length ? data : [{
-        name: 'Aucune dépense',
-        value: 1,
-        itemStyle: { color: 'rgba(148,163,184,.25)' },
-        label: { color: themeValue(theme, 'muted', '#94a3b8') },
-      }],
+      data,
     }],
   };
 }
