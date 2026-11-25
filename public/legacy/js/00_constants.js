@@ -8,7 +8,7 @@ window.tbWritePersonalDocument = async function tbWritePersonalDocument(client, 
   const [, docId, filename] = String(path).split("/");
   const result = await client.functions.invoke("write-personal-document", {
     headers: {
-      "Content-Type": file.type || "application/octet-stream",
+      "x-document-content-type": file.type || "application/octet-stream",
       "x-document-id": docId,
       "x-document-filename": filename
     },

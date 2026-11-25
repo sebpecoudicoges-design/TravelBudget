@@ -7,7 +7,7 @@ const filename = /^[a-zA-Z0-9._-]{1,120}$/;
 const headers = {
   ...corsHeaders,
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": corsHeaders["Access-Control-Allow-Headers"] + ", x-document-id, x-document-filename",
+  "Access-Control-Allow-Headers": corsHeaders["Access-Control-Allow-Headers"] + ", x-document-id, x-document-filename, x-document-content-type",
 };
 function send(body: unknown, status: number) {
   return Response.json(body, { status, headers });
@@ -36,7 +36,7 @@ export async function writePersonalDocument(req: Request, getAdmin: () => Supaba
   if (declaredSize !== null && (!/^\d+$/.test(declaredSize) || Number(declaredSize) > MAX_DOCUMENT_BYTES)) {
     return send({ error: "Document exceeds the size limit" }, 413);
   }
-  const contentType = req.headers.get("content-type") || "application/octet-stream";
+  const contentType = req.headers.get("x-document-content-type") || req.headers.get("content-type") || "application/octet-stream";
   const reader = req.body?.getReader();
   const chunks: Uint8Array<ArrayBuffer>[] = [];
   let size = 0;
@@ -58,6 +58,7 @@ export async function writePersonalDocument(req: Request, getAdmin: () => Supaba
       reader.releaseLock();
     }
   }
+  if (size === 0) return send({ error: "Document body is empty" }, 400);
   const body = new Blob(chunks, { type: contentType });
   chunks.length = 0;
   const path = `${userId}/${documentId}/${fileName}`;
