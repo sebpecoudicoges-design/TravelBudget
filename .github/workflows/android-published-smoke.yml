@@ -38,21 +38,21 @@ jobs:
           sudo chmod a+rw /dev/kvm
           sdk=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)
           image='system-images;android-35;google_apis;x86_64'
-          "$sdk" --install "$image"
+          "$sdk" --install platform-tools "$image"
           echo no | "$(dirname "$sdk")/avdmanager" create avd --force -n tb-audit-device -k "$image"
           "$ANDROID_HOME/emulator/emulator" -avd tb-audit-device -port 5554 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on >"$RUNNER_TEMP/android-audit-emulator.log" 2>&1 &
-          timeout 240 adb -s emulator-5554 wait-for-device
+          timeout 240 "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 wait-for-device || { tail -80 "$RUNNER_TEMP/android-audit-emulator.log"; exit 1; }
           for retry in $(seq 1 100); do
-            if [ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; then break; fi
+            if [ "$( "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; then break; fi
             sleep 2
           done
-          test "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = 1
+          test "$( "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = 1
       - name: Install the public upgrade and check offline launch
         shell: bash
         run: |
           set -euo pipefail
           pkg=com.travelbudget.app
-          device() { adb -s emulator-5554 "$@"; }
+          device() { "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 "$@"; }
           device shell cmd connectivity airplane-mode enable
           device shell svc wifi disable
           device shell svc data disable
@@ -72,4 +72,4 @@ jobs:
           echo 'PASS: official APK signature, in-place 10.5.394 → 10.5.395 upgrade, Android OAuth routing, declared notification permission and offline launch'
       - name: Stop the emulator
         if: always()
-        run: adb -s emulator-5554 emu kill || true
+        run: '"$ANDROID_HOME/platform-tools/adb" -s emulator-5554 emu kill || true'
