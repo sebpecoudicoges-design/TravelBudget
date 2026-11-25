@@ -1619,13 +1619,14 @@
             <div class="release-filters" id="releaseFilters" aria-label="Filtres versions"></div>
           </div>
           <div class="release-spotlight" id="releaseSpotlight"></div>
+          <p data-i18n="audit.connected.startup">Audit du 25 octobre : le démarrage connecté est désormais mesuré avec 1 200 transactions synthétiques sur ordinateur et mobile simulé. Validation sur compte réel et téléphone restante.</p>
+          <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
+          <div class="release-list" id="releaseSource" hidden>
+            <div class="release-row" data-family="docs"><strong>10.5.396 · Audit</strong><span data-i18n="release.audit.20261125">Audit du 25/11 : le sommeil protège l’historique illisible, la suppression de compte peut reprendre après un échec et l’aide comptable a été corrigée. APK 10.5.396 de test partagé en privé ; APK public : 10.5.395. La validation Supabase Auth et Storage reste à faire.</span></div>
           <div class="release-row"><strong>10.5.396</strong><span data-i18n="release.105396">Nutrition : les saisies modifiées pendant une synchronisation sont conservées ; les écritures sont refusées si la réserve locale est illisible. Correctif web, APK disponible : 10.5.395.</span></div>
           <div class="release-row"><strong>10.5.395</strong><span data-i18n="release.105395">Précache Android corrigé, dates d’analyse cohérentes en Nouvelle-Zélande et protection contre les écritures hors ligne périmées.</span></div>
           <div class="release-row"><strong>10.5.394</strong><span data-i18n="release.105394">Les actions hors ligne en erreur sont conservées au redémarrage et la synchronisation est protégée entre onglets compatibles. Le correctif des quotes-parts Trip nommées « Avance » est inclus dans cet APK.</span></div>
           <div class="release-row"><strong>10.5.393 web</strong><span data-i18n="release.105393">Les quotes-parts Trip restent dans le budget même si leur nom contient « Avance ». La synchronisation protège mieux les actions en attente sur réseau lent ou en cas d’échec du stockage. APK disponible : 10.5.392.</span></div>
-          <p data-i18n="audit.connected.startup">Audit du 25 octobre : le démarrage connecté est désormais mesuré avec 1 200 transactions synthétiques sur ordinateur et mobile simulé. Validation sur compte réel et téléphone restante.</p>
-          <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
-          <div class="release-list" id="releaseSource" hidden>
 <div class="release-row"><strong>01/11/2026</strong><span data-i18n="release.mcpPilot">Connexion ChatGPT : analyses budgétaires, Trip détaillé, comptabilité et patrimoine disponibles sur activation. Documents choisis explicitement, lecture seule. Depuis le 02/11 : tous les documents sur autorisation explicite, Sport et Nutrition avec consentements séparés.</span><a href="/connect-chatgpt.html" data-i18n="release.mcpManage">Gérer mes accès</a></div>
 <div class="release-row"><strong>01/11/2026</strong><span data-i18n="release.mcpAuth">Connexion ChatGPT : cycle serveur des autorisations et registre privé testés. Consentement web et connexion effective encore à réaliser ; aucun accès activé.</span></div>
 <div class="release-row"><strong>01/11/2026</strong><span data-i18n="release.mcpFoundation">Connexion ChatGPT : préparation des outils finance en lecture seule et de leur isolation. Authentification et connexion effective encore à réaliser.</span></div>
@@ -2166,6 +2167,7 @@
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
           "release.105393": "Les quotes-parts Trip restent dans le budget même si leur nom contient « Avance ». La synchronisation protège mieux les actions en attente sur réseau lent ou en cas d’échec du stockage. APK disponible : 10.5.392.",
           "release.105394": "Les actions hors ligne en erreur sont conservées au redémarrage et la synchronisation est protégée entre onglets compatibles. Le correctif des quotes-parts Trip nommées « Avance » est inclus dans cet APK.",
+          "release.audit.20261125": "Audit du 25/11 : le sommeil protège l’historique illisible, la suppression de compte peut reprendre après un échec et l’aide comptable a été corrigée. APK 10.5.396 de test partagé en privé ; APK public : 10.5.395. La validation Supabase Auth et Storage reste à faire.",
           "release.105396": "Nutrition : les saisies modifiées pendant une synchronisation sont conservées ; les écritures sont refusées si la réserve locale est illisible. Correctif web, APK disponible : 10.5.395.",
           "release.105395": "Précache Android corrigé, dates d’analyse cohérentes en Nouvelle-Zélande et protection contre les écritures hors ligne périmées.",
           "app.apk.body.105395": "Précache Android corrigé, dates d’analyse cohérentes en Nouvelle-Zélande et protection contre les écritures hors ligne périmées.",
@@ -2397,6 +2399,7 @@
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
           "release.105393": "Trip personal shares stay in the budget even when their name contains Avance. Synchronization better protects pending actions on slow networks or when local storage fails. Available APK: 10.5.392.",
           "release.105394": "Failed offline actions survive restart and synchronization is protected across compatible tabs. This APK also includes the fix for Trip shares named Avance.",
+          "release.audit.20261125": "25 Nov audit: sleep history is protected if unreadable, account deletion can resume after a failure, and accounting help has been corrected. Test APK 10.5.396 was shared privately; public APK: 10.5.395. Supabase Auth and Storage validation is still pending.",
           "release.105396": "Nutrition: edits made during synchronization are retained; writes are refused when pending local data cannot be read. Web fix; available APK: 10.5.395.",
           "release.105395": "Fixed Android precaching, consistent analysis dates in New Zealand, and protection against stale offline writes.",
           "app.apk.body.105395": "Fixed Android precaching, consistent analysis dates in New Zealand, and protection against stale offline writes.",
@@ -2877,13 +2880,13 @@
         return Array.from(document.querySelectorAll("#releaseSource .release-row")).map((row, index) => {
           const version = row.querySelector("strong")?.textContent?.trim() || "";
           const text = row.querySelector("span")?.textContent?.trim() || "";
-          const family = detectReleaseFamily(text);
+          const family = row.dataset.family || detectReleaseFamily(text);
           const title = text.includes(":") ? text.split(":")[0].trim() : text.split(".")[0].trim();
           const detailParts = text
             .split(/(?<=[.!?])\s+/)
             .map((part) => part.trim())
             .filter(Boolean);
-          return { version, text, title: title || version, family, index, detailParts };
+          return { id: String(index), version, text, title: title || version, family, detailParts };
         }).filter((entry) => entry.version && entry.text);
       }
 
@@ -2922,8 +2925,8 @@
           spotlight.innerHTML = "";
           return;
         }
-        if (!state.activeRelease || !entries.some((entry) => entry.version === state.activeRelease)) {
-          state.activeRelease = entries[0].version;
+        if (!state.activeRelease || !entries.some((entry) => entry.id === state.activeRelease)) {
+          state.activeRelease = entries[0].id;
         }
         const familyOrder = ["all", "settings", "analysis", "dashboard", "trip", "sport", "nutrition", "assets", "work", "mobile", "docs"];
         const available = new Set(entries.map((entry) => entry.family));
@@ -2935,17 +2938,17 @@
           btn.addEventListener("click", () => {
             state.releaseFilter = btn.dataset.releaseFilter || "all";
             const filtered = entries.filter((entry) => state.releaseFilter === "all" || entry.family === state.releaseFilter);
-            state.activeRelease = filtered[0]?.version || entries[0].version;
+            state.activeRelease = filtered[0]?.id || entries[0].id;
             renderReleaseTimeline();
           });
         });
         const filtered = entries.filter((entry) => state.releaseFilter === "all" || entry.family === state.releaseFilter);
-        const active = filtered.find((entry) => entry.version === state.activeRelease) || filtered[0] || entries[0];
+        const active = filtered.find((entry) => entry.id === state.activeRelease) || filtered[0] || entries[0];
         const filterLabel = releaseFamilyLabel(state.releaseFilter);
-        const countLabel = state.lang === "fr" ? `${filtered.length} versions affichees` : `${filtered.length} versions shown`;
+        const countLabel = state.lang === "fr" ? `${filtered.length} entrées affichées` : `${filtered.length} entries shown`;
         spotlight.innerHTML = `
           <div class="release-spotlight-version">
-            <small>${state.lang === "fr" ? "Version active" : "Active version"}</small>
+            <small>${state.lang === "fr" ? "Entrée sélectionnée" : "Selected entry"}</small>
             <strong>${escapeHtml(active.version)}</strong>
             <span>${escapeHtml(releaseFamilyLabel(active.family))}</span>
           </div>
@@ -2961,7 +2964,7 @@
         `;
         timeline.innerHTML = filtered.length
           ? filtered.map((entry) => `
-              <article class="release-card${entry.version === active.version ? " active" : ""}" tabindex="0" data-release-version="${escapeHtml(entry.version)}">
+              <article class="release-card${entry.id === active.id ? " active" : ""}" tabindex="0" data-release-version="${escapeHtml(entry.version)}" data-release-entry="${entry.id}">
                 <div class="release-card-head">
                   <strong class="release-version">${escapeHtml(entry.version)}</strong>
                   <div>
@@ -2977,7 +2980,7 @@
           : `<div class="release-empty">${state.lang === "fr" ? "Aucune version dans ce filtre." : "No version in this filter."}</div>`;
         timeline.querySelectorAll("[data-release-version]").forEach((card) => {
           const activate = () => {
-            state.activeRelease = card.dataset.releaseVersion || active.version;
+            state.activeRelease = card.dataset.releaseEntry || active.id;
             renderReleaseTimeline();
           };
           card.addEventListener("click", activate);
