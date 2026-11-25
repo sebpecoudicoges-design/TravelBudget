@@ -32,10 +32,12 @@ export function buildAnalysisTrajectoryMeta(model = {}) {
 export function buildAnalysisTrajectoryOption({
   model = {},
   todayLabel = '',
+  labels = {},
   theme = {},
   formatCurrency,
 } = {}) {
   const fmt = moneyFormatter(formatCurrency);
+  const { spent = 'Dépenses cumulées', target = 'Cible cumulée' } = labels;
   const days = Array.isArray(model.days) ? model.days : [];
   const cumTarget = Array.isArray(model.cumTarget) ? model.cumTarget : [];
   const cumSpent = Array.isArray(model.cumSpent) ? model.cumSpent : [];
@@ -46,13 +48,13 @@ export function buildAnalysisTrajectoryOption({
     animationDuration: 900,
     animationEasing: 'cubicOut',
     tooltip: { trigger: 'axis', backgroundColor: 'rgba(15,23,42,.92)', borderWidth: 0, textStyle: { color: '#fff' } },
-    legend: { top: 6, textStyle: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 11 }, itemWidth: 14, itemHeight: 8, data: ['Réel cumulé', 'Cible cumulée'] },
+    legend: { top: 6, textStyle: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 11 }, itemWidth: 14, itemHeight: 8, data: [spent, target] },
     grid: { left: 24, right: 24, top: 52, bottom: 30, containLabel: true },
     xAxis: { type: 'category', boundaryGap: false, data: days.map((d) => String(d).slice(5)), axisLine: { lineStyle: { color: grid } }, axisLabel: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 10, margin: 8 } },
     yAxis: { type: 'value', axisLabel: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 10, formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: grid } } },
     series: [
       {
-        name: 'Cible cumulée',
+        id: 'target', name: target,
         type: 'line',
         smooth: false,
         symbol: 'none',
@@ -62,7 +64,7 @@ export function buildAnalysisTrajectoryOption({
         markLine: days.length ? { symbol: 'none', lineStyle: { type: 'dashed', color: grid }, label: { show: false }, data: [{ xAxis: todayLabel }] } : undefined,
       },
       {
-        name: 'Réel cumulé',
+        id: 'spent', name: spent,
         type: 'line',
         smooth: true,
         symbol: 'circle',
@@ -158,22 +160,25 @@ export function buildAnalysisCategoryBarsOption({
 
 export function buildAnalysisVelocityOption({
   model = {},
+  labels = {},
   theme = {},
   formatCurrency,
 } = {}) {
   const fmt = moneyFormatter(formatCurrency);
+  const { spent = 'Dépenses du jour', target = 'Budget moyen/jour' } = labels;
   const days = Array.isArray(model.days) ? model.days : [];
   const velocity = Array.isArray(model.velocity) ? model.velocity : [];
 
   return {
     animationDuration: 900,
     tooltip: { trigger: 'axis', backgroundColor: 'rgba(15,23,42,.92)', borderWidth: 0, textStyle: { color: '#fff' } },
-    grid: { left: 18, right: 12, top: 12, bottom: 24, containLabel: true },
+    legend: { top: 6, textStyle: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 11 }, data: [spent, target] },
+    grid: { left: 18, right: 12, top: 54, bottom: 24, containLabel: true },
     xAxis: { type: 'category', data: days.map((d) => String(d).slice(5)), axisLabel: { color: themeValue(theme, 'muted', '#94a3b8') }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
     yAxis: { type: 'value', axisLabel: { color: themeValue(theme, 'muted', '#94a3b8'), formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
     series: [
-      { type: 'bar', barMaxWidth: 22, data: velocity, itemStyle: { borderRadius: [8, 8, 0, 0], color: linearGradient([{ offset: 0, color: themeValue(theme, 'accent', '#3b82f6') }, { offset: 1, color: 'rgba(59,130,246,.25)' }]) } },
-      { type: 'line', smooth: true, symbol: 'none', data: days.map(() => Number(safeNum(model.budgetPerDay).toFixed(2))), lineStyle: { color: themeValue(theme, 'warn', '#f59e0b'), width: 2, type: 'dashed' } },
+      { id: 'spent', name: spent, type: 'bar', barMaxWidth: 22, data: velocity, itemStyle: { borderRadius: [8, 8, 0, 0], color: linearGradient([{ offset: 0, color: themeValue(theme, 'accent', '#3b82f6') }, { offset: 1, color: 'rgba(59,130,246,.25)' }]) } },
+      { id: 'target', name: target, type: 'line', smooth: true, symbol: 'none', data: days.map(() => Number(safeNum(model.budgetPerDay).toFixed(2))), lineStyle: { color: themeValue(theme, 'warn', '#f59e0b'), width: 2, type: 'dashed' } },
     ],
   };
 }

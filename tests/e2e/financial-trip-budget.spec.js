@@ -379,3 +379,59 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }
+
+for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
+  test(`Analyse labels average budget and planned spending separately (${width}px, ${theme})`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: theme });
+    const start = '2026-10-23';
+    const end = '2026-10-24';
+    const segment = fixtureTables.budget_segments[0];
+    const graphTables = {
+      ...fixtureTables,
+      profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+      settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
+      budget_segments: [
+        { ...segment, start_date: start, end_date: start, daily_budget_base: 20 },
+        { ...segment, id: 'later-budget', sort_order: 1, start_date: end, end_date: end, daily_budget_base: 30 },
+      ],
+      transactions: [
+        row('paid-day', 12, start, { budget_date_start: start, budget_date_end: start }),
+        row('planned-day', 8, end, { budget_date_start: end, budget_date_end: end, pay_now: false, paid_at: null }),
+      ],
+    };
+    await installConnectedFixture(page, baseURL, { tables: graphTables });
+    await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+    await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+    await page.goto('/?freeze=1');
+    await navigate(page, 'analysis');
+    await page.locator('#analysis-period').selectOption('range');
+    await page.locator('#analysis-range-start').fill(start);
+    await page.locator('#analysis-range-end').fill(end);
+    const mode = page.locator('#analysis-mode');
+    const series = (id) => page.locator(id).evaluate(el =>
+      window.echarts?.getInstanceByDom(el)?.getOption()?.series.map(({ name, data }) => ({ name, data })),
+    );
+    const trajectory = '#analysis-trajectory-chart';
+    const pace = '#analysis-velocity-chart';
+    await mode.selectOption('expenses');
+    await expect.poll(() => series(trajectory)).toEqual([
+      { name: 'Cible cumulée', data: [20, 50] },
+      { name: 'Dépenses cumulées', data: [12, 12] },
+    ]);
+    await expect.poll(() => series(pace)).toEqual([
+      { name: 'Dépenses du jour', data: [12, 0] },
+      { name: 'Budget moyen/jour', data: [25, 25] },
+    ]);
+    await mode.selectOption('planned');
+    await expect.poll(() => series(trajectory)).toEqual([
+      { name: 'Cible cumulée', data: [20, 50] },
+      { name: 'Cumul avec prévisions', data: [12, 20] },
+    ]);
+    await expect.poll(() => series(pace)).toEqual([
+      { name: 'Avec prévisions', data: [12, 8] },
+      { name: 'Budget moyen/jour', data: [25, 25] },
+    ]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  });
+}

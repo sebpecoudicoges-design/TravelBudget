@@ -1195,7 +1195,7 @@ const cashBreakdown = window.TBAnalysisCashBreakdown?.buildCashBreakdown?.({
 }) || {};
 
 return {
-  base, start, end, days, txs, spent, paidSpent, missingFx: Array.from(missingFx).sort(),
+  base, start, end, days, mode: cashflowMode, txs, spent, paidSpent, missingFx: Array.from(missingFx).sort(),
 
   incomeReal: incomeRealAmount,
   incomeToDate: incomeRealAmount,
@@ -1541,6 +1541,10 @@ function _openTxDrilldown(kind, key, model, opener){
     if (!chart) return;
     chart.setOption(window.TBAnalysisCharts?.buildAnalysisTrajectoryOption?.({
       model,
+      labels: {
+        spent: _t(model.mode === 'planned' ? 'analysis.chart.cumulative_planned' : 'analysis.chart.cumulative_spent'),
+        target: _t('analysis.chart.cumulative_target'),
+      },
       todayLabel: _iso(new Date()).slice(5),
       theme: _analysisChartTheme(),
       formatCurrency: _fmtMoney,
@@ -1659,6 +1663,10 @@ function _openTxDrilldown(kind, key, model, opener){
     if (!chart) return;
     chart.setOption(window.TBAnalysisCharts?.buildAnalysisVelocityOption?.({
       model,
+      labels: {
+        spent: _t(model.mode === 'planned' ? 'analysis.chart.daily_planned' : 'analysis.chart.daily_spent'),
+        target: _t('analysis.chart.daily_target'),
+      },
       theme: _analysisChartTheme(),
       formatCurrency: _fmtMoney,
     }) || {});

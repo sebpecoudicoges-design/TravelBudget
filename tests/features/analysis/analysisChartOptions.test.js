@@ -34,7 +34,10 @@ describe('Analysis chart option builders', () => {
     const option = buildAnalysisTrajectoryOption({ model, todayLabel: '07-02', theme, formatCurrency });
 
     expect(meta).toEqual({ start: '2026-07-01', end: '2026-07-02', days: 2, currency: 'AUD' });
-    expect(option.legend.data).toEqual(['Réel cumulé', 'Cible cumulée']);
+    expect(option.legend.data).toEqual(['Dépenses cumulées', 'Cible cumulée']);
+    const planned = buildAnalysisTrajectoryOption({ model, labels: { spent: 'Cumul avec prévisions', target: 'Objectif cumulé' } });
+    expect(planned.series.map(({ name }) => name)).toEqual(['Objectif cumulé', 'Cumul avec prévisions']);
+    expect(planned.series.map(({ data }) => data)).toEqual([model.cumTarget, model.cumSpent]);
     expect(option.xAxis.data).toEqual(['07-01', '07-02']);
     expect(option.series[0].markLine.data[0].xAxis).toBe('07-02');
     expect(option.series[1].markPoint.data[0].coord).toEqual([1, 55]);
@@ -99,6 +102,8 @@ describe('Analysis chart option builders', () => {
 
     expect(velocity.series[0].type).toBe('bar');
     expect(velocity.series[1].lineStyle.type).toBe('dashed');
+    expect(velocity.legend.data).toEqual(['Dépenses du jour', 'Budget moyen/jour']);
+    expect(velocity.series[1].name).toBe('Budget moyen/jour');
     expect(velocity.series[1].data).toEqual([20, 20]);
     expect(heatmap.visualMap.max).toBe(24);
     expect(heatmap.tooltip.formatter({ data: [1, 0, 24] })).toContain('2026-07-02');
