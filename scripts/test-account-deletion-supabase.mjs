@@ -45,8 +45,9 @@ console.log(`Local Supabase CLI: ${await command(cli, ['--version'])}`);
 const work = await mkdtemp(join(tmpdir(), 'travelbudget-f13-'));
 const project = `tb-f13-${randomUUID().slice(0, 12)}`;
 const marker = randomUUID();
-const service = (...args) => command(cli, [...args, '--workdir', work], { cwd: work, redact: true });
+const service = (...args) => command(cli, [...args, '--workdir', work], { cwd: work, redact: args[0] === 'status' });
 let started = false;
+let testFailure;
 try {
   const ports = await Promise.all([reservePort(), reservePort(), reservePort()]);
   const [api, db, shadow] = ports.map(server => server.address().port);
@@ -114,9 +115,15 @@ enabled = false
     `--lock=${local('config/edge-check.lock')}`, '--frozen',
     `--allow-net=127.0.0.1:${api}`, '--allow-env=F13_LOCAL_SERVICE_KEY', local('scripts/check-account-deletion-supabase.ts'),
     `http://127.0.0.1:${api}`, marker], { env: { ...cleanEnv, F13_LOCAL_SERVICE_KEY: status.SERVICE_ROLE_KEY } }));
+} catch (error) {
+  testFailure = error;
+  throw error;
 } finally {
   try {
     if (started) await service('stop', '--no-backup');
+  } catch (cleanupError) {
+    if (!testFailure) throw cleanupError;
+    console.error(`Disposable Supabase cleanup failed: ${cleanupError.message}`);
   } finally {
     await rm(work, { recursive: true, force: true });
   }
