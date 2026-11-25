@@ -9,7 +9,7 @@ const legacy = fs.readFileSync(new URL('../../../public/legacy/js/33_budget_anal
 
 function computeAnalysis({ transactions, mode = 'planned', convert, forcedBase, currency = 'account',
   first = '2026-08-10', last = '2026-08-12', segments, legacyFallback, rawConvert,
-  withSummary = false,
+  withSummary = false, referenceCurrency = 'EUR',
 }) {
   const window = {
     TBCore: { budgetAnalysisRules: rules },
@@ -41,7 +41,7 @@ function computeAnalysis({ transactions, mode = 'planned', convert, forcedBase, 
   });
   vm.runInContext(legacy.replace('  function _computeModel(', '  window.__fixtureModel = _computeModel; window.__fixtureSummary = _analysisNotificationSummaryFromModel; window.__fixtureReference = referenceCache;\n  function _computeModel('), context);
   window.__fixtureReference.bySegment['ref-day'] = {
-    currency_code: 'EUR', recommended_daily_amount: 35, recommended_transport_daily_amount: 35,
+    currency_code: referenceCurrency, recommended_daily_amount: 35, recommended_transport_daily_amount: 35,
   };
   const model = window.__fixtureModel(forcedBase);
   return withSummary ? { model, notification: window.__fixtureSummary(model) } : model;
@@ -167,4 +167,31 @@ it('distinguishes a prior-period conversion failure from an empty prior-period c
   expect(result.metrics).toBeNull();
   expect(host.innerHTML).toContain('taux de change manquant');
   expect(host.innerHTML).not.toContain('Nouvelle référence');
+});
+
+
+it('keeps the paid total and comparison when only the optional country reference lacks an exchange rate', () => {
+  const { model, notification } = computeAnalysis({
+    transactions: [transaction({ amount: 45 })], referenceCurrency: 'ABC', convert: () => null,
+    withSummary: true,
+  });
+  expect(model.missingFx).toEqual([]);
+  expect(model.referenceStatus).toBe('fx');
+  expect(model.missingReferenceFx).toEqual(['ABC → EUR']);
+  expect(model.spentToToday).toBe(45);
+  expect(notification).toMatchObject({ spentToToday: 45, deltaReferenceAmount: null, deltaReferencePct: null,
+    paceReferencePct: null, referenceToToday: null, referencePerDay: null });
+  const host = { innerHTML: '' };
+  expect(renderPreviousPeriodComparison({host, current: model, computeForRange: () => ({
+    ...model, avgPerDay: 10, spentToToday: 30,
+  })}).metrics).toMatchObject({ delta: 5 });
+});
+
+it('distinguishes no reference from a real zero gap against an available reference', () => {
+  const available = computeAnalysis({ transactions: [transaction({ amount: 35 })], withSummary: true });
+  expect(available.model.referenceStatus).toBe('available');
+  expect(available.notification).toMatchObject({ deltaReferenceAmount: 0, paceReferencePct: 100 });
+  const none = computeAnalysis({ transactions: [transaction({ amount: 35 })], segments, withSummary: true });
+  expect(none.model.referenceStatus).toBe('none');
+  expect(none.notification).toMatchObject({ spentToToday: 35, deltaReferenceAmount: null, paceReferencePct: null });
 });

@@ -66,8 +66,9 @@
     }, 0);
     const deltaBudgetAmount = _safeNum(model.spentToToday) - _safeNum(model.targetToToday);
     const deltaBudgetPct = _signedPct(model.spentToToday, model.targetToToday);
-    const deltaReferenceAmount = _safeNum(model.spentToToday) - _safeNum(model.referenceToToday);
-    const deltaReferencePct = _signedPct(model.spentToToday, model.referenceToToday);
+    const referenceAtDate = model.referenceStatus === 'available' && model.referenceToToday > 0;
+    const deltaReferenceAmount = referenceAtDate ? model.spentToToday - model.referenceToToday : null;
+    const deltaReferencePct = referenceAtDate ? _signedPct(model.spentToToday, model.referenceToToday) : null;
     const elapsedDays = Math.max(1, _safeNum(model.elapsedDays) || 1);
     const outAmount = _safeNum(model.outAmount);
     const spentToToday = _safeNum(model.spentToToday);
@@ -83,11 +84,11 @@
       deltaReferencePct,
       spentToToday,
       targetToToday: _safeNum(model.targetToToday),
-      referenceToToday: _safeNum(model.referenceToToday),
+      referenceToToday: referenceAtDate ? model.referenceToToday : null,
       projection: _safeNum(model.projection),
       totalBudget: _safeNum(model.totalBudget),
       paceAppPct: _safeNum(model.targetToToday) > 0 ? (spentToToday / _safeNum(model.targetToToday)) * 100 : 0,
-      paceReferencePct: _safeNum(model.referenceToToday) > 0 ? (spentToToday / _safeNum(model.referenceToToday)) * 100 : 0,
+      paceReferencePct: referenceAtDate ? (spentToToday / model.referenceToToday) * 100 : null,
       avgBudgetPerDay: spentToToday / elapsedDays,
       avgOutPerDay: outAmount / elapsedDays,
       avgAllPerDay: (spentToToday + outAmount) / elapsedDays,
@@ -95,7 +96,7 @@
       excludedPerDay: _safeNum(model.excludedPerDay),
       unmappedPerDay: _safeNum(model.unmappedPerDay),
       comparablePerDay: _safeNum(model.comparablePerDay),
-      referencePerDay: _safeNum(model.referencePerDay),
+      referencePerDay: model.referenceStatus === 'available' ? model.referencePerDay : null,
       budgetPerDay: _safeNum(model.budgetPerDay),
       pendingJ1Amount: pendingSum('future', addDays(today, 1)),
       pendingJ1Count: pendingCount('future', addDays(today, 1)),
@@ -785,13 +786,15 @@ function _sumTxArray(txs, base, convert){
     const cutoffEnd = _analysisCutoffEnd();
     const base = forcedBase || _resolveAnalysisCurrency(start, end);
     const missingFx = new Set();
-    const convert = (amount, source, dateISO) => {
+    const missingReferenceFx = new Set();
+    const convert = (amount, source, dateISO, failures = missingFx) => {
       const from = _upper(source || base);
       const value = _convertAnalysisAmount(amount, from, dateISO, base);
       if (value !== null) return value;
-      missingFx.add(`${from} → ${base}`);
-      return 0; // Partial numerical fields must not be shown; consumers check missingFx.
+      failures.add(`${from} → ${base}`);
+      return 0; // Partial accumulators need their corresponding unavailable state.
     };
+    const convertReference = (amount, source, dateISO) => convert(amount, source, dateISO, missingReferenceFx);
     const incomeTxs = _filteredIncomeTransactions();
     // Posted cash uses the operation date; budget rows below still use allocation dates.
     const cashFlows = window.TBAnalysisCashBreakdown?.selectCashFlows?.({
@@ -917,7 +920,7 @@ if (sub) {
       const cur = _upper(row?.currency_code || '');
       const hasRef = !!(_safeNum(row?.recommended_daily_amount) > 0 && cur);
       if (hasRef) coveredDays.push(d);
-      return _safeNum(convert(row?.recommended_daily_amount || 0, cur || base, d));
+      return _safeNum(convertReference(row?.recommended_daily_amount || 0, cur || base, d));
     });
 
     const analysisBuckets = _analysisBucketOrder();
@@ -1032,13 +1035,13 @@ if (sub) {
         const cur = _upper(row?.currency_code || '');
         if (!row || !cur) return;
 
-        refSums.daily += _safeNum(convert(row?.recommended_daily_amount || 0, cur, d));
-        refSums.misc += _safeNum(convert(row?.recommended_misc_daily_amount || 0, cur, d));
-        refSums.Logement += _safeNum(convert(row?.recommended_accommodation_daily_amount || 0, cur, d));
-        refSums.Repas += _safeNum(convert(row?.recommended_food_daily_amount || 0, cur, d));
-        refSums.Transport += _safeNum(convert(row?.recommended_transport_daily_amount || 0, cur, d));
-        refSums.Activités += _safeNum(convert(row?.recommended_activities_daily_amount || 0, cur, d));
-        refSums.Autre += _safeNum(convert(row?.recommended_misc_daily_amount || 0, cur, d));
+        refSums.daily += _safeNum(convertReference(row?.recommended_daily_amount || 0, cur, d));
+        refSums.misc += _safeNum(convertReference(row?.recommended_misc_daily_amount || 0, cur, d));
+        refSums.Logement += _safeNum(convertReference(row?.recommended_accommodation_daily_amount || 0, cur, d));
+        refSums.Repas += _safeNum(convertReference(row?.recommended_food_daily_amount || 0, cur, d));
+        refSums.Transport += _safeNum(convertReference(row?.recommended_transport_daily_amount || 0, cur, d));
+        refSums.Activités += _safeNum(convertReference(row?.recommended_activities_daily_amount || 0, cur, d));
+        refSums.Autre += _safeNum(convertReference(row?.recommended_misc_daily_amount || 0, cur, d));
       });
 
       referencePerDay = refSums.daily / referenceCoverageDays;
@@ -1215,6 +1218,8 @@ deltaProjectedWithBudget,
   referenceComparisonSeries, unmappedCategorySeries, outAmount,
   spentToToday, targetToToday, referenceToToday, referenceGap,
   referenceCoverageDays, referenceContext, comparableDays,
+  referenceStatus: missingReferenceFx.size ? 'fx' : (referenceCoverageDays ? 'available' : 'none'),
+  missingReferenceFx: Array.from(missingReferenceFx).sort(),
   elapsedDays, periodDays,
   comparableIncludedSpent, comparableExcludedSpent, unmappedComparableSpent,
   nightCoveredCount, nightCoveredPotentialSavings, nightCoveredAverageSaving,
@@ -1266,6 +1271,7 @@ categoryTxMap, subcategoryTxMap
       scope,
       mode,
       currencyMode,
+      isEn: _analysisIsEnglish(),
       t: _t,
     }) || '';
   }
@@ -1316,11 +1322,12 @@ categoryTxMap, subcategoryTxMap
     };
     const ratioText = (current, total) => `${_fmtMoney(current, model.base)} / ${_fmtMoney(total, model.base)}`;
     const deltaBudgetPct = signedPct(model.projection, model.totalBudget);
-    const deltaReferencePct = signedPct(model.projection, model.totalReferencePeriod);
+    const referenceAvailable = model.referenceStatus === 'available';
+    const deltaReferencePct = referenceAvailable ? signedPct(model.projection, model.totalReferencePeriod) : null;
     const deltaBudgetTone = deltaBudgetPct > 0 ? _theme('bad') : (deltaBudgetPct < 0 ? _theme('good') : _theme('muted'));
     const deltaReferenceTone = deltaReferencePct > 0 ? _theme('bad') : (deltaReferencePct < 0 ? _theme('good') : _theme('muted'));
     const deltaBudgetAmount = _safeNum(model.projection) - _safeNum(model.totalBudget);
-    const deltaReferenceAmount = _safeNum(model.projection) - _safeNum(model.totalReferencePeriod);
+    const deltaReferenceAmount = referenceAvailable ? _safeNum(model.projection) - _safeNum(model.totalReferencePeriod) : null;
     const isEn = _analysisIsEnglish();
     const trA = (fr, en) => isEn ? en : fr;
     const dayWord = trA('jours', 'days');
@@ -1339,7 +1346,7 @@ categoryTxMap, subcategoryTxMap
         shell:'rgba(251,207,232,.72)',
         haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.42))'
       },
-      {
+      ...(referenceAvailable ? [{
         label: trA('Rythme référence pays', 'Country reference pace'),
         title: trA('Référence à date', 'Reference to date'),
         value: ratioText(model.totalReferenceElapsed, model.totalReferencePeriod),
@@ -1351,7 +1358,7 @@ categoryTxMap, subcategoryTxMap
         glow:'rgba(74,222,128,.20)',
         shell:'rgba(187,247,208,.78)',
         haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(236,253,245,.40))'
-      },
+      }] : []),
       {
         label: trA('Budget net vs projection', 'Net budget vs projection'),
         title: trA('Net vs final', 'Net vs final'),
@@ -1397,6 +1404,7 @@ categoryTxMap, subcategoryTxMap
 host.innerHTML = progressView?.renderAnalysisProgressPanels?.({
   progressCards,
   delta: {
+    referenceAvailable,
     atDateAmount: _safeNum(model.spentToToday) - _safeNum(model.targetToToday),
     deltaBudgetTone,
     deltaBudgetPct,
@@ -1631,9 +1639,10 @@ function _openTxDrilldown(kind, key, model){
     const chartEl = _el('analysis-reference-mix-chart');
     const chart = charts.referenceMix;
     const analysisView = window.TBAnalysisView;
+    const isEn = _analysisIsEnglish();
     if (summary) {
       summary.innerHTML = analysisView?.renderAnalysisReferenceSummary?.({
-        model,
+        model, isEn,
         formatCurrency: _fmtMoney,
       }) || '';
     }

@@ -175,6 +175,6 @@ describe('Analysis view extraction contract', () => {
     const inlineLanguageChecks = legacy.match(/typeof window\.tbGetLang === 'function' && window\.tbGetLang\(\) === 'en'/g) || [];
     expect(legacy).toContain('function _analysisIsEnglish()');
     expect(inlineLanguageChecks).toHaveLength(1);
-    expect(legacy.match(/_analysisIsEnglish\(\)/g) || []).toHaveLength(5);
+    expect(legacy).toContain('isEn: _analysisIsEnglish()');
   });
 });

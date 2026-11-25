@@ -256,3 +256,53 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     await expect(comparison.getByRole('status')).toContainText('taux de change manquant');
   });
 }
+
+for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
+  test(`Analyse isolates a missing rate for the optional country reference (${width}px, ${theme})`, async ({ page, baseURL }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: theme });
+    const referenceTables = {
+      ...fixtureTables,
+      profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+      settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
+      budget_segments: [{ ...fixtureTables.budget_segments[0], id: '55555555-5555-4555-8555-555555555555' }],
+      transactions: [['previous', 60, '2026-10-22'], ['current', 50, '2026-10-23']].map(([id, amount, date]) =>
+        row(id, amount, date, { budget_date_start: date, budget_date_end: date })),
+    };
+    await installConnectedFixture(page, baseURL, { tables: referenceTables });
+    await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+    let referenceCurrency = 'ZFX';
+    await page.route('**/rest/v1/rpc/rpc_budget_reference_resolve_for_budget_segment', route => route.fulfill({
+      json: [{ currency_code: referenceCurrency, recommended_daily_amount: 35, recommended_food_daily_amount: 35 }],
+    }));
+    await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+    // The synthetic HTTP fixture intercepts all Supabase requests; freeze blocks even read-only RPCs.
+    await page.goto('/');
+    await navigate(page, 'analysis');
+    await page.locator('#analysis-period').selectOption('range');
+    await page.locator('#analysis-range-start').fill('2026-10-23');
+    await page.locator('#analysis-range-end').fill('2026-10-24');
+    await page.locator('#analysis-comparison').selectOption('previous');
+
+    const summary = page.locator('#analysis-summary');
+    const reference = page.locator('#analysis-reference-summary');
+    const insights = page.locator('#analysis-insights');
+    await expect(reference.getByRole('status')).toContainText('ZFX → EUR');
+    await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^50[,.]00/);
+    await expect(summary).not.toContainText(/Rythme référence pays|Vs référence pays/);
+    await expect(insights).not.toContainText(/comparable sourcé|Réel au-dessus du sourcé|Réel sous le sourcé/);
+    await expect(page.locator('#analysis-trajectory-chart')).toBeVisible();
+    await expect(page.locator('#analysis-period-comparison')).toContainText('COMPARAISON DE RYTHME');
+    expect(await page.evaluate(() => window.tbGetBudgetAnalysisNotificationSummary())).toMatchObject({
+      spentToToday: 50, deltaReferenceAmount: null, paceReferencePct: null,
+    });
+
+    referenceCurrency = 'EUR';
+    await page.locator('#analysis-refresh').click();
+    await expect(reference.getByRole('status')).toHaveCount(0);
+    await expect(reference.getByText('Sourcé / jour')).toBeVisible();
+    await expect(summary).toContainText('Vs référence pays');
+    expect(await page.evaluate(() => window.tbGetBudgetAnalysisNotificationSummary())).toMatchObject({ referencePerDay: 35 });
+  });
+}
