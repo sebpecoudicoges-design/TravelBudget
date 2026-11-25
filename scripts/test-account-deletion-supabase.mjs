@@ -92,29 +92,41 @@ enabled = false
   assert.equal(endpoint.protocol, 'http:');
   assert.equal(endpoint.port, String(api));
   assert.ok(typeof status.SERVICE_ROLE_KEY === 'string' && status.SERVICE_ROLE_KEY.length > 0);
+  assert.ok(typeof status.ANON_KEY === 'string' && status.ANON_KEY.length > 0);
   const container = `supabase_db_${project}`;
   const fixtureNames = [...new Set([...((await readFile(local('supabase/functions/_shared/account-data.ts'), 'utf8')).matchAll(/\{ table: "([a-z_]+)", column:/g))].map(match => match[1]))];
   for (const name of ['trip_groups', 'documents', 'inbox_items']) assert.ok(fixtureNames.includes(name));
-  const fixtureSql = fixtureNames.map(name => `CREATE TABLE public.${name} (
+  const fixtureSql = fixtureNames.filter(name => !['assistant_request_quota', 'nutrition_foods', 'sport_exercise_favorites'].includes(name)).map(name => `CREATE TABLE public.${name} (
     id uuid PRIMARY KEY, user_id uuid, created_by uuid, auth_user_id uuid, trip_id uuid, expense_id uuid, member_id uuid,
     transaction_id uuid, closed_by uuid, created_at timestamptz DEFAULT now(), email text, name text, is_me boolean,
     amount numeric, storage_bucket text, storage_path text);
     ALTER TABLE public.${name} ENABLE ROW LEVEL SECURITY;
     GRANT SELECT, INSERT, UPDATE, DELETE ON public.${name} TO service_role;`).join('\n');
   const migrations = await Promise.all([
-    '20260725234344_account_data_requests.sql', '20261124090000_account_deletion_checkpoint.sql',
+    '20260725234344_account_data_requests.sql', '20260925012905_assistant_ai_quota.sql',
+    '20261124090000_account_deletion_checkpoint.sql', '20260611090500_sport_exercise_library.sql',
   ].map(name => readFile(local(`supabase/migrations/${name}`), 'utf8')));
+  const nutrition = await readFile(local('supabase/migrations/20260611091500_nutrition_foundation.sql'), 'utf8');
+  const foodDdl = nutrition.split('create table if not exists public.nutrition_meals')[0];
   await command(docker, ['exec', '-i', container, 'psql', '-Xq', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', 'postgres'], {
-    input: `BEGIN;\n${migrations.join('\n')}\n${fixtureSql}\nCREATE TABLE public.f13_fixture_guard (id uuid PRIMARY KEY);
+    input: `BEGIN;\n${migrations.join('\n')}\n${fixtureSql}\n${foodDdl}\nCREATE TABLE public.f13_fixture_guard (id uuid PRIMARY KEY);
     ALTER TABLE public.f13_fixture_guard ENABLE ROW LEVEL SECURITY;
     GRANT SELECT ON public.f13_fixture_guard TO service_role;
     INSERT INTO public.f13_fixture_guard VALUES ('${marker}');
+    CREATE POLICY f13_fixture_owner_upload ON storage.objects FOR INSERT TO authenticated
+      WITH CHECK (bucket_id = 'personal-documents' AND (storage.foldername(name))[1] = (SELECT auth.uid())::text);
+    GRANT USAGE ON SCHEMA storage TO service_role;
+    GRANT SELECT ON storage.objects TO service_role;
+    CREATE VIEW public.f13_fixture_object_owners WITH (security_invoker = true) AS
+      SELECT bucket_id, name, owner_id FROM storage.objects;
+    REVOKE ALL ON public.f13_fixture_object_owners FROM PUBLIC, anon, authenticated;
+    GRANT SELECT ON public.f13_fixture_object_owners TO service_role;
     NOTIFY pgrst, 'reload schema';\nCOMMIT;`,
   });
   console.log(await command(process.execPath, [local('node_modules/deno/bin.cjs'), 'run', '--no-config',
     `--lock=${local('config/edge-check.lock')}`, '--frozen',
-    `--allow-net=127.0.0.1:${api}`, '--allow-env=F13_LOCAL_SERVICE_KEY', local('scripts/check-account-deletion-supabase.ts'),
-    `http://127.0.0.1:${api}`, marker], { env: { ...cleanEnv, F13_LOCAL_SERVICE_KEY: status.SERVICE_ROLE_KEY } }));
+    `--allow-net=127.0.0.1:${api}`, '--allow-env=F13_LOCAL_SERVICE_KEY,F13_LOCAL_ANON_KEY', local('scripts/check-account-deletion-supabase.ts'),
+    `http://127.0.0.1:${api}`, marker], { env: { ...cleanEnv, F13_LOCAL_SERVICE_KEY: status.SERVICE_ROLE_KEY, F13_LOCAL_ANON_KEY: status.ANON_KEY } }));
 } catch (error) {
   testFailure = error;
   throw error;

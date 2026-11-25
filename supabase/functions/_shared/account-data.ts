@@ -100,6 +100,7 @@ export const RELATED_TABLES = [
 // Children first. This also covers RESTRICT constraints before Auth is removed.
 export const DELETE_ORDER: OwnedTable[] = [
   { table: "app_error_logs", column: "user_id" },
+  { table: "assistant_request_quota", column: "user_id" },
   { table: "asset_transaction_links", column: "user_id" },
   { table: "asset_documents", column: "user_id" },
   { table: "asset_owners", column: "user_id" },
@@ -354,10 +355,52 @@ export async function collectAccountData(
   };
 }
 
+const accountStoragePrefixes = (userId: string) => [
+  ["personal-documents", userId],
+  ["inbox-documents", `whatsapp/${userId}`],
+] as const;
+
+async function listAccountStorage(admin: SupabaseClient, userId: string, bucket: string, root: string) {
+  const storage = admin.storage.from(bucket);
+  const files: string[] = [];
+  const folders = [{ path: root, depth: 0 }];
+  const seen = new Set<string>();
+  for (let index = 0; index < folders.length; index++) {
+    const { path, depth } = folders[index];
+    let offset = 0;
+    while (true) {
+      const { data, error } = await storage.list(path, { limit: 100, offset, sortBy: { column: "name", order: "asc" } });
+      if (error) throw new Error(`storage ${bucket}: ${error.message}`);
+      if (!data) throw new Error(`storage ${bucket}: account inventory unavailable`);
+      if (!data.length) break;
+      for (const entry of data) {
+        if (typeof entry.name !== "string" || entry.name.includes("/")) {
+          throw new Error(`storage ${bucket}: invalid inventory entry`);
+        }
+        const entryPath = `${path}/${entry.name}`;
+        assertAccountStoragePath(userId, bucket, entryPath);
+        if (seen.has(entryPath) || seen.size >= 50000) throw new Error(`storage ${bucket}: account inventory unstable or exceeds 50000 entries`);
+        seen.add(entryPath);
+        if (entry.id === null) {
+          if (depth >= 20) throw new Error(`storage ${bucket}: account folder depth exceeds 20`);
+          folders.push({ path: entryPath, depth: depth + 1 });
+        } else if (typeof entry.id === "string" && entry.id) {
+          files.push(entryPath);
+        } else {
+          throw new Error(`storage ${bucket}: invalid inventory entry`);
+        }
+      }
+      offset += data.length;
+    }
+  }
+  return files;
+}
+
 export async function removeAccountStorage(
   admin: SupabaseClient,
   userId: string,
 ) {
+  if (!/^[a-z0-9-]+$/i.test(userId)) throw new Error("Storage path denied: invalid account identifier");
   const files = new Map<string, Set<string>>();
   const add = (bucket: string, path: string) => {
     if (!bucket || !path) return;
@@ -371,6 +414,13 @@ export async function removeAccountStorage(
   const inboxItems = await selectAll(admin, "inbox_items", "user_id", userId, true) as any[];
   inboxItems.forEach((row) => add("inbox-documents", row.storage_path));
 
+  // An upload can succeed before its application row is committed. Inventory
+  // Storage itself as well as references, but only inside the known account
+  // folders. Finish both inventories before deleting a single object.
+  for (const [bucket, root] of accountStoragePrefixes(userId)) {
+    for (const path of await listAccountStorage(admin, userId, bucket, root)) add(bucket, path);
+  }
+
   let removed = 0;
   for (const [bucket, paths] of files.entries()) {
     const names = [...paths];
@@ -379,6 +429,11 @@ export async function removeAccountStorage(
       const { error } = await admin.storage.from(bucket).remove(chunk);
       if (error) throw new Error(`storage ${bucket}: ${error.message}`);
       removed += chunk.length;
+    }
+  }
+  for (const [bucket, root] of accountStoragePrefixes(userId)) {
+    if ((await listAccountStorage(admin, userId, bucket, root)).length) {
+      throw new Error(`storage ${bucket}: account inventory not empty after cleanup`);
     }
   }
   return removed;
@@ -470,13 +525,13 @@ export async function purgeAccount(admin: SupabaseClient, userId: string, before
   const deletedRows: Record<string, number> = {};
 
   for (const spec of DELETE_ORDER) {
-    const { data, error } = await admin
-      .from(spec.table)
-      .delete()
-      .eq(spec.column, userId)
-      .select("id");
+    // Some owned tables use another primary key (e.g. quota.scope). Count
+    // mutations without requesting an id column or a capped result payload.
+    const { count, error } = await admin.from(spec.table)
+      .delete({ count: "exact" }).eq(spec.column, userId);
     if (error) throw new Error(`${spec.table}: ${error.message}`);
-    deletedRows[spec.table] = (data || []).length;
+    if (count === null) throw new Error(`${spec.table}: deletion count unavailable`);
+    deletedRows[spec.table] = count;
   }
 
   // These references deliberately preserve shared history without retaining identity.

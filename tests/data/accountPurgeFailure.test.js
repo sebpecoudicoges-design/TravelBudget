@@ -2,9 +2,11 @@ import { expect, it, vi } from 'vitest';
 vi.mock('npm:@supabase/supabase-js@2.57.4', () => ({ createClient: vi.fn() }));
 import { collectAccountData, purgeAccount, removeAccountStorage } from '../../supabase/functions/_shared/account-data.ts';
 
+const emptyList = async () => ({ data: [], error: null });
+
 function client(failure, shared = false) {
   const deleteUser = vi.fn(async () => ({ error: null }));
-  return { auth: { admin: { deleteUser } }, from: table => {
+  return { auth: { admin: { deleteUser } }, storage: { from: () => ({ list: emptyList }) }, from: table => {
     let operation = 'select'; let patch; let pageStart = 0; const filters = [];
     const query = {
       select: () => query, range: from => { pageStart = from; return query; }, order: () => query, limit: () => query,
@@ -17,7 +19,7 @@ function client(failure, shared = false) {
         let data = [];
         if (shared && !pageStart && operation === 'select' && table === 'trip_groups') data = [{ id: 'shared-trip', closed_by: 'other' }];
         if (shared && operation === 'select' && table === 'trip_participants') data = [{ auth_user_id: 'successor' }];
-        return Promise.resolve(resolve({ data, error: fail ? { message: 'injected failure' } : null }));
+        return Promise.resolve(resolve({ data, count: 0, error: fail ? { message: 'injected failure' } : null }));
       },
     };
     return query;
@@ -53,7 +55,7 @@ it('does not delete Auth if checkpoint persistence fails', async () => {
 function largeDocumentClient(total) {
   const admin = client(null);
   const originalFrom = admin.from;
-  admin.storage = { from: () => ({ remove: vi.fn(async () => ({ error: null })) }) };
+  admin.storage = { from: () => ({ list: emptyList, remove: vi.fn(async () => ({ error: null })) }) };
   admin.from = table => {
     if (table !== 'documents') return originalFrom(table);
     const query = { select: () => query, eq: () => query, order: () => query, delete: () => originalFrom(table).delete(),
@@ -81,7 +83,7 @@ function storageRecords(bucket, path) {
       const data = table === 'documents' || table === 'inbox_items' && bucket === 'inbox-documents' ? [{ id: table, storage_bucket: bucket, storage_path: path }] : [];
       const query = { select: () => query, eq: () => query, maybeSingle: async () => ({ data: null, error: null }), order: () => query, range: async from => ({ data: data.slice(from), error: null }) };
       return query;
-    }, storage: { from: () => ({ remove, createSignedUrl }) },
+    }, storage: { from: () => ({ list: emptyList, remove, createSignedUrl }) },
   } };
 }
 
@@ -123,7 +125,7 @@ it('continues past capped inventory pages in stable order before removing any fi
   const admin = client(null);
   const from = admin.from;
   admin.from = table => table === 'documents' ? query : from(table);
-  admin.storage = { from: () => ({ remove }) };
+  admin.storage = { from: () => ({ list: emptyList, remove }) };
   await expect(removeAccountStorage(admin, 'synthetic-user')).resolves.toBe(3);
   expect(paginate.mock.calls.map(([offset]) => offset)).toEqual([0, 1, 2, 3]);
   expect(order).toHaveBeenCalledWith('id', { ascending: true });
@@ -138,7 +140,65 @@ it('stops before any file removal if a stable inventory returns a repeated row',
   const admin = client(null);
   const from = admin.from;
   admin.from = table => table === 'documents' ? query : from(table);
-  admin.storage = { from: () => ({ remove }) };
+  admin.storage = { from: () => ({ list: emptyList, remove }) };
   await expect(removeAccountStorage(admin, 'synthetic-user')).rejects.toThrow('documents: unstable account inventory');
   expect(remove).not.toHaveBeenCalled();
+});
+
+
+it('clears referenced and unreferenced files under the account folders while leaving a neighboring account untouched', async () => {
+  const admin = client(null);
+  const files = {
+    'personal-documents': new Set(['synthetic-user/a/receipt.pdf', 'synthetic-user/a/draft.pdf', 'neighbor/a/receipt.pdf']),
+    'inbox-documents': new Set(['whatsapp/synthetic-user/receipt.pdf']),
+  };
+  const list = vi.fn(async (bucket, prefix, { offset }) => {
+    const children = new Map();
+    for (const key of files[bucket]) {
+      if (!key.startsWith(prefix + '/')) continue;
+      const remainder = key.slice(prefix.length + 1);
+      const [name, ...rest] = remainder.split('/');
+      children.set(name, { name, id: rest.length ? null : key });
+    }
+    // Deliberately use capped one-item pages to verify offsets are advanced by actual length.
+    return { data: [...children.values()].sort((x, y) => x.name.localeCompare(y.name)).slice(offset, offset + 1), error: null };
+  });
+  const remove = vi.fn(async (bucket, paths) => {
+    for (const path of paths) files[bucket].delete(path);
+    return { error: null };
+  });
+  admin.storage = { from: bucket => ({ list: (...args) => list(bucket, ...args), remove: paths => remove(bucket, paths) }) };
+  await expect(removeAccountStorage(admin, 'synthetic-user')).resolves.toBe(3);
+  expect([...files['personal-documents']]).toEqual(['neighbor/a/receipt.pdf']);
+  expect([...files['inbox-documents']]).toEqual([]);
+  expect(list.mock.calls.every(([bucket, path]) => path.startsWith(bucket === 'inbox-documents' ? 'whatsapp/synthetic-user' : 'synthetic-user'))).toBe(true);
+});
+
+it('keeps the checkpoint and Auth untouched if Storage still reports a file after removal', async () => {
+  const admin = client(null);
+  admin.storage = { from: bucket => ({
+    list: async (_prefix, { offset }) => ({
+      data: offset || bucket !== 'personal-documents' ? [] : [{ id: 'fixture-file', name: 'receipt.pdf' }], error: null,
+    }),
+    remove: async () => ({ error: null }),
+  }) };
+  const checkpoint = vi.fn();
+  await expect(purgeAccount(admin, 'synthetic-user', checkpoint)).rejects.toThrow('account inventory not empty');
+  expect(checkpoint).not.toHaveBeenCalled();
+  expect(admin.auth.admin.deleteUser).not.toHaveBeenCalled();
+});
+
+
+it('counts deletes without assuming an id column on tables such as assistant_request_quota', async () => {
+  const admin = client(null);
+  const from = admin.from;
+  const select = vi.fn(() => { throw new Error('quota has no id column'); });
+  const eq = vi.fn(async () => ({ count: 7, error: null }));
+  const remove = vi.fn(() => ({ eq, select }));
+  admin.from = table => table === 'assistant_request_quota' ? { delete: remove } : from(table);
+  const result = await purgeAccount(admin, 'synthetic-user');
+  expect(result.deletedRows.assistant_request_quota).toBe(7);
+  expect(remove).toHaveBeenCalledWith({ count: 'exact' });
+  expect(eq).toHaveBeenCalledWith('user_id', 'synthetic-user');
+  expect(select).not.toHaveBeenCalled();
 });

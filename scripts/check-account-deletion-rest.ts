@@ -121,7 +121,7 @@ const purgeRest = createClient(endpoint, "isolated-test-key", {
 });
 const purgeClient = {
   from: purgeRest.from.bind(purgeRest),
-  storage: { from: () => ({ remove: async () => ({ error: storageFails ? { message: "injected Storage failure" } : null }) }) },
+  storage: { from: () => ({ list: async () => ({ data: [], error: null }), remove: async () => ({ error: storageFails ? { message: "injected Storage failure" } : null }) }) },
   auth: { admin: { deleteUser: async () => { authCalls++; assert.equal(checkpointCalls, 1); return { error: null }; } } },
 } as unknown as typeof admin;
 const checkpoint = async () => { checkpointCalls++; };

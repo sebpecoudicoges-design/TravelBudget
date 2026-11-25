@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest';
 import { processAccountDeletions } from '../../supabase/functions/process-account-deletions/processor.ts';
 
 const now = () => new Date('2026-11-24T00:00:00Z');
-const request = (id, patch = {}) => ({ id, user_id: `user-${id}`, status: 'pending', execute_after: '2026-11-23T00:00:00Z', processing_started_at: null, ...patch });
+const request = (id, patch = {}) => ({ id, user_id: `user-${id}`, status: 'pending', execute_after: '2026-11-23T00:00:00Z', processing_started_at: null, attempt_count: 0, ...patch });
 function database(rows, fail = () => false) {
   return { from: () => {
     let patch; const predicates = [];
@@ -53,7 +53,7 @@ it.each(['pending', 'processing'])('allows only one claimant for a %s request', 
 });
 
 it.each(['claim', 'completion', 'failure'])('propagates a database error during %s', async phase => {
-  const rows = [request('one')];
+  const rows = [request('one', { attempt_count: phase === 'failure' ? 2 : 0 })];
   const admin = database(rows, patch => patch?.status === { claim: 'processing', completion: 'completed', failure: 'failed' }[phase]);
   const purge = vi.fn(async () => { if (phase === 'failure') throw new Error('purge failed'); return {}; });
   await expect(processAccountDeletions(admin, purge, now)).rejects.toThrow('database unavailable');
@@ -72,8 +72,8 @@ it('does not acknowledge an attempt whose ownership changed', async () => {
 it('records a purge failure and keeps the user reference for investigation', async () => {
   const rows = [request('one')];
   const result = await processAccountDeletions(database(rows), async () => { throw new Error('storage failed'); }, now);
-  expect(result.results[0]).toMatchObject({ status: 'failed', error: 'storage failed' });
-  expect(rows[0]).toMatchObject({ status: 'failed', user_id: 'user-one' });
+  expect(result.results[0]).toMatchObject({ status: 'processing', retryScheduled: true, error: 'storage failed' });
+  expect(rows[0]).toMatchObject({ status: 'processing', user_id: 'user-one', attempt_count: 1 });
 });
 
 it('reconciles a crash after Auth deletion only with a persisted checkpoint', async () => {
@@ -99,7 +99,7 @@ it('does not allow a checkpoint failure to reach Auth deletion', async () => {
     await checkpoint(); deleteAuth(); return {};
   }, now);
   expect(deleteAuth).not.toHaveBeenCalled();
-  expect(rows[0].status).toBe('failed');
+  expect(rows[0].status).toBe('processing');
 });
 
 it('invalidates an old checkpoint when restarting a purge for an existing user', async () => {
@@ -108,7 +108,7 @@ it('invalidates an old checkpoint when restarting a purge for an existing user',
     expect(rows[0].data_purged_at).toBeNull();
     throw new Error('new cleanup failed');
   }, now);
-  expect(rows[0]).toMatchObject({ status: 'failed', data_purged_at: null });
+  expect(rows[0]).toMatchObject({ status: 'processing', data_purged_at: null });
 });
 
 it.each([true, false])('keeps an ambiguous Auth outcome recoverable, user still exists=%s', async userExists => {
@@ -136,4 +136,34 @@ it('still completes other due requests when an Auth response is lost', async () 
   await expect(processAccountDeletions(database(rows), purge, now)).rejects.toThrow('Auth response lost');
   expect(rows[0]).toMatchObject({ status: 'processing', data_purged_at: now().toISOString(), failure_reason: 'Auth response lost' });
   expect(rows[1]).toMatchObject({ status: 'completed', user_id: null });
+});
+
+
+it('retries cleanup after the cooldown, then protects against unlimited pre-checkpoint failures', async () => {
+  const rows = [request('one')];
+  const admin = database(rows);
+  const temporaryFailure = vi.fn(async () => { throw new Error('temporary local dependency outage'); });
+  const later = hours => () => new Date(`2026-11-24T0${hours}:00:00Z`);
+  await processAccountDeletions(admin, temporaryFailure, now);
+  expect((await processAccountDeletions(admin, temporaryFailure, now)).processed).toBe(0);
+  await processAccountDeletions(admin, temporaryFailure, later(1));
+  const result = await processAccountDeletions(admin, temporaryFailure, later(2));
+  expect(result.results[0]).toMatchObject({ status: 'failed', retryScheduled: false });
+  expect(rows[0]).toMatchObject({ status: 'failed', attempt_count: 3, user_id: 'user-one' });
+  expect((await processAccountDeletions(admin, temporaryFailure, later(3))).processed).toBe(0);
+  expect(temporaryFailure).toHaveBeenCalledTimes(3);
+});
+
+it('completes after a transient pre-checkpoint failure and does not stall another request', async () => {
+  const rows = [request('one'), request('other')];
+  const admin = database(rows);
+  const purge = vi.fn(async (_admin, id, checkpoint) => {
+    if (id === 'user-one' && rows[0].attempt_count === 1) throw new Error('temporary local dependency outage');
+    await checkpoint();
+    return {};
+  });
+  const result = await processAccountDeletions(admin, purge, now);
+  expect(result.results.map(row => row.status)).toEqual(['processing', 'completed']);
+  await processAccountDeletions(admin, purge, () => new Date('2026-11-24T01:00:00Z'));
+  expect(rows[0]).toMatchObject({ status: 'completed', attempt_count: 2 });
 });

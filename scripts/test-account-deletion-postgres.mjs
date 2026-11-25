@@ -89,6 +89,7 @@ try {
   }
   assert.ok(ready, 'Isolated PostgreSQL did not become ready');
   await sql(`CREATE SCHEMA IF NOT EXISTS auth; CREATE TABLE IF NOT EXISTS auth.users(id uuid PRIMARY KEY);
+    CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULL::uuid $$;
     DO $$ BEGIN
       IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon; END IF;
       IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated; END IF;
@@ -125,12 +126,16 @@ try {
     const accountSource = await readFile(new URL('../supabase/functions/_shared/account-data.ts', import.meta.url), 'utf8');
     const fixtureTables = [...new Set([...accountSource.matchAll(/\{ table: "([a-z_]+)", column:/g)].map(match => match[1]))];
     assert.ok(fixtureTables.includes('trip_groups') && fixtureTables.includes('documents'));
-    await sql(fixtureTables.map(tableName => `CREATE TABLE public.${tableName} (
+    await sql(fixtureTables.filter(name => !['assistant_request_quota', 'nutrition_foods', 'sport_exercise_favorites'].includes(name)).map(tableName => `CREATE TABLE public.${tableName} (
       id uuid PRIMARY KEY, user_id uuid, created_by uuid, auth_user_id uuid,
       trip_id uuid, expense_id uuid, member_id uuid, transaction_id uuid, closed_by uuid, created_at timestamptz DEFAULT now(),
       email text, name text, is_me boolean, amount numeric, storage_bucket text, storage_path text);
       ALTER TABLE public.${tableName} ENABLE ROW LEVEL SECURITY;
       GRANT SELECT,INSERT,UPDATE,DELETE ON public.${tableName} TO service_role;`).join('\n'));
+    await sql(await readFile(new URL('../supabase/migrations/20260925012905_assistant_ai_quota.sql', import.meta.url), 'utf8'));
+    await sql(await readFile(new URL('../supabase/migrations/20260611090500_sport_exercise_library.sql', import.meta.url), 'utf8'));
+    const nutrition = await readFile(new URL('../supabase/migrations/20260611091500_nutrition_foundation.sql', import.meta.url), 'utf8');
+    await sql(nutrition.split('create table if not exists public.nutrition_meals')[0]);
     // Execute the repository's actual budget-link guard, not a test imitation.
     const integrityMigration = await readFile(new URL('../supabase/migrations/20260606084112_harden_trip_budget_links_and_delete.sql', import.meta.url), 'utf8');
     const guard = integrityMigration.split('revoke execute on function public.trip_validate_budget_link_integrity()')[0];

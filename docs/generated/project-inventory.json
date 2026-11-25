@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "7b4b0299bc065b5a42a3a80057cf7255635d6b7c",
-  "snapshotFingerprint": "ea58b2df80e2705e6188bb524a11823c9d691f263b706ae824b12e2d6235e87e",
-  "generatedAt": "2026-11-25T06:43:38.958Z",
+  "commit": "400dc5ed4d867864b6d8ea1fe5ef3fba87cfbcf0",
+  "snapshotFingerprint": "e75894b299ba40abd932f81dfe820c490b6289599bcbddf478c33cf1a07622e0",
+  "generatedAt": "2026-11-25T06:49:24.362Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
