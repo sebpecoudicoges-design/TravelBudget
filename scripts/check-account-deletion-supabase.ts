@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { purgeAccount } from '../supabase/functions/_shared/account-data.ts';
-import { DELETION_RECLAIM_MS, processAccountDeletions } from '../supabase/functions/process-account-deletions/processor.ts';
+import { accountFileDeletionReadiness, DELETION_RECLAIM_MS, processAccountDeletions } from '../supabase/functions/process-account-deletions/processor.ts';
 
 const [url, marker] = Deno.args;
 assert.match(url, /^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/);
