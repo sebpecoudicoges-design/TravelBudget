@@ -13,6 +13,12 @@ on:
       - 'src/data/mutationQueueStore.js'
       - 'src/data/nutrition*Repository.js'
       - 'src/features/analysis/**'
+      - 'src/features/dashboard/**'
+      - 'src/features/trip/**'
+      - 'public/legacy/js/27_cashflow_curve.js'
+      - 'public/legacy/js/29_trip_v1.js'
+      - 'scripts/fixtures/connectedStartup.mjs'
+      - 'tests/e2e/financial-trip-budget.spec.js'
       - 'tests/data/nutrition*.test.js'
       - 'tests/e2e/nutrition-edit-storage.spec.js'
       - 'tests/features/analysis/**'
@@ -47,3 +53,4 @@ jobs:
       - run: npm run perf:budget
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e -- tests/e2e/nutrition-edit-storage.spec.js --project=desktop-chromium
+      - run: npm run test:e2e -- tests/e2e/financial-trip-budget.spec.js --project=desktop-chromium

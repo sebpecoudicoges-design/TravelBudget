@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `b8c7c260d7195b1277300f4075012e861bdec759`
-> Empreinte du snapshot : `8c0ac54e517f18ad1941d42b5fd14e0bef14cad854b054882847c9a90cd26b87`
-> Généré le : `2026-11-25T08:21:18.867Z`
+> Commit analysé : `cba72cab90372d9a43e283230bf511c075079346`
+> Empreinte du snapshot : `127eaf7578667db08b7698919614525853d7472f5c8ba17cfab6e4fdd13e81a5`
+> Généré le : `2026-11-25T08:39:58.452Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 13 |
 | Modules features | 64 |
-| Fichiers de tests | 207 |
+| Fichiers de tests | 208 |
 | Migrations Supabase | 179 |
 | Fonctions Edge | 15 |
 | Projet Android présent | Oui |
@@ -380,6 +380,7 @@ Modules :
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/cashflow-controls.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/financial-trip-budget.spec.js`
 - `tests/e2e/first-setup.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
@@ -467,6 +468,7 @@ Modules :
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/cashflow-controls.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/financial-trip-budget.spec.js`
 - `tests/e2e/first-setup.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`

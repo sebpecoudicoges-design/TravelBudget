@@ -16,3 +16,14 @@ Le workflow `Published Android APK smoke` établit une preuve séparée en émul
 ## Contrôle physique minimal
 
 Avant toute mise à jour, relever la version installée et le package. Ne pas désinstaller l’application pour résoudre une incompatibilité de signature. Vérifier ensuite démarrage et retour Google (sans fermer une session contenant des actions non synchronisées), ouverture d’un document de test, état des notifications et réseau faible/reconnexion. Les essais d’écriture nécessitent un compte fictif ou un environnement isolé ; utiliser les données réelles uniquement en lecture si leur propriétaire l’autorise.
+
+## Contrôle du parcours dans le navigateur
+
+`npm run test:e2e -- tests/e2e/financial-trip-budget.spec.js --project=desktop-chromium`
+ouvre la vraie application en 1440 et 390 px, en clair et sombre, avec un compte de test fictif.
+Le parcours vérifie le solde du compte (395 EUR), la part personnelle (45 EUR) et
+le montant à recevoir (75 EUR) dans Trip, les trois jours de budget à 10 EUR nets,
+ainsi que le total de 30 EUR et l'avoir de 15 EUR dans Analyse.
+Il contrôle aussi que la sortie de 120 EUR apparaît selon sa date réelle, pas selon
+les dates de ventilation. Les réponses du serveur sont simulées ; ce scénario
+ne valide ni la saisie et sa persistance serveur, ni le WebView Android natif.

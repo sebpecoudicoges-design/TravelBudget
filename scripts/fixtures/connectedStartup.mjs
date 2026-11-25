@@ -25,18 +25,32 @@ export const fixtureTables = {
   trip_invites: [], category_subcategories: [], analytic_category_mappings: [], v_transaction_analytic_mapping: [], v_analytic_mapping_audit: [],
 };
 
-export function fixtureResponse(url, method = 'GET', headers = {}) {
+export function fixtureResponse(url, method = 'GET', headers = {}, tables = fixtureTables) {
   const target = new URL(url);
   if (target.origin !== projectOrigin) throw new Error(`Unexpected external origin: ${target.origin}`);
   if (target.pathname === '/auth/v1/user' && method === 'GET') return { id: fixtureUser, email: 'startup@example.invalid', aud: 'authenticated', role: 'authenticated' };
   if (target.pathname === '/auth/v1/health' && method === 'GET') return { name: 'synthetic-auth' };
   if (target.pathname === '/functions/v1/fx-latest' && method === 'POST') return { base: 'EUR', date: '2026-10-24', rates: { EUR: 1, AUD: 1.6, USD: 1.1 } };
   const table = target.pathname.match(/^\/rest\/v1\/([a-z_]+)$/)?.[1];
-  if (!table || !Object.hasOwn(fixtureTables, table) || !['GET', 'HEAD'].includes(method)) throw new Error(`Unconfigured fixture request: ${method} ${target.pathname}`);
-  let rows = fixtureTables[table];
+  if (!table || !Object.hasOwn(tables, table) || !['GET', 'HEAD'].includes(method)) throw new Error(`Unconfigured fixture request: ${method} ${target.pathname}`);
+  let rows = tables[table];
   for (const [column, value] of target.searchParams) {
     if (value.startsWith('eq.')) rows = rows.filter(row => String(row[column]) === value.slice(3));
+    else if (value.startsWith('gt.')) rows = rows.filter(row => String(row[column]) > value.slice(3));
+    else if (value === 'is.null') rows = rows.filter(row => row[column] == null);
     else if (value.startsWith('in.(')) rows = rows.filter(row => value.slice(4, -1).split(',').includes(String(row[column])));
+  }
+  const order = target.searchParams.get('order');
+  if (order) {
+    const sorting = order.split(',').map(term => term.split('.'));
+    rows = [...rows].sort((a, b) => {
+      for (const [key, direction] of sorting) {
+        const left = String(a[key] ?? '');
+        const right = String(b[key] ?? '');
+        if (left !== right) return (left < right ? -1 : 1) * (direction === 'desc' ? -1 : 1);
+      }
+      return 0;
+    });
   }
   const range = headers.range?.match(/^(\d+)-(\d+)$/);
   const offset = Number(target.searchParams.get('offset') || range?.[1] || 0);
@@ -47,7 +61,7 @@ export function fixtureResponse(url, method = 'GET', headers = {}) {
   return headers.accept?.includes('application/vnd.pgrst.object+json') ? (rows[0] || null) : rows;
 }
 
-export async function installConnectedFixture(page, localOrigin) {
+export async function installConnectedFixture(page, localOrigin, { tables = fixtureTables } = {}) {
   const calls = [];
   const failures = [];
   // Shift calendar time only; keep native performance marks and real timers.
@@ -63,7 +77,7 @@ export async function installConnectedFixture(page, localOrigin) {
     const req = route.request();
     if (new URL(req.url()).origin === localOrigin) return route.continue();
     try {
-      const body = fixtureResponse(req.url(), req.method(), req.headers());
+      const body = fixtureResponse(req.url(), req.method(), req.headers(), tables);
       const json = JSON.stringify(body);
       calls.push({ path: new URL(req.url()).pathname, query: new URL(req.url()).search, method: req.method(), responseBytes: Buffer.byteLength(json) });
       return route.fulfill({ status: 200, contentType: 'application/json', body: req.method() === 'HEAD' ? '' : json });
