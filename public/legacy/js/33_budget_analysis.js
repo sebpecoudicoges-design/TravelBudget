@@ -810,9 +810,10 @@ function _sumTxArray(txs, base){
     const cutoffEnd = _analysisCutoffEnd();
     const base = _resolveAnalysisCurrency(start, end);
     const incomeTxs = _filteredIncomeTransactions();
+    // Posted cash uses the operation date; budget rows below still use allocation dates.
     const cashFlows = window.TBAnalysisCashBreakdown?.selectCashFlows?.({
       rows: _analysisTransactions(), scope: _el('analysis-scope')?.value || 'budget', travelId: _getSelectedTravelId(), start, end,
-      rowType: _txType, rowTravelId: (tx) => tx?.travel_id || tx?.travelId, budgetStart: _txBudgetStart, budgetEnd: _txBudgetEnd,
+      rowType: _txType, rowTravelId: (tx) => tx?.travel_id || tx?.travelId, budgetStart: _txCashDate, budgetEnd: _txCashDate,
       paid: _txPaid, internal: _isAnalysisInternalMovement, out: _txOut, category: _txCategory, subcategory: _txSubcategory,
       excluded: _excludedCategorySet(), categoryFilter: _selectedCategoryFilter(), subcategoryFilter: _selectedSubcategoryFilter(),
     }) || {};

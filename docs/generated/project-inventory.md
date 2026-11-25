@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `4b0a33154d4c6d325581a0a531789ee322fa045b`
-> Empreinte du snapshot : `f7511dedebb74cadead825064633f4903247b880e15559c87aab2a402fac8aab`
-> Généré le : `2026-11-25T07:53:41.234Z`
+> Commit analysé : `b8c7c260d7195b1277300f4075012e861bdec759`
+> Empreinte du snapshot : `8c0ac54e517f18ad1941d42b5fd14e0bef14cad854b054882847c9a90cd26b87`
+> Généré le : `2026-11-25T08:21:18.867Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 13 |
 | Modules features | 64 |
-| Fichiers de tests | 206 |
+| Fichiers de tests | 207 |
 | Migrations Supabase | 179 |
 | Fonctions Edge | 15 |
 | Projet Android présent | Oui |
@@ -405,6 +405,7 @@ Modules :
 - `tests/core/dailyBudgetRules.test.js`
 - `tests/core/detachedTripPayment.test.js`
 - `tests/core/documentRules.test.js`
+- `tests/core/financialTripBudgetFlow.test.js`
 - `tests/core/frankfurterRules.test.js`
 - `tests/core/fxDecisionRules.test.js`
 - `tests/core/fxRules.test.js`
@@ -828,6 +829,7 @@ Modules :
 - `docs/ANDROID_10_5_392.md`
 - `docs/ANDROID_10_5_394.md`
 - `docs/ANDROID_10_5_395.md`
+- `docs/ANDROID_FINANCIAL_AUDIT_2026_11_25.md`
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`

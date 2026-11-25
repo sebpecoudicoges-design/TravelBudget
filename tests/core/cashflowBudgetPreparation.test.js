@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { isTripBudgetShare } from '../../src/core/dailyBudgetRules.js';
 
 const source = fs.readFileSync('public/legacy/js/27_cashflow_curve.js', 'utf8');
 function harness(transactions) {
@@ -11,6 +12,7 @@ function harness(transactions) {
     toRenderForDate: vi.fn((amount, currency, date) => amount * (currency === 'AUD' ? (date.endsWith('02') ? 0.6 : 0.5) : 1)),
   };
   context.window.tbShouldHideFromBudgetViews = (t) => !!t.is_internal || !!t.hidden;
+  context.window.tbIsTripBudgetShare = isTripBudgetShare;
   vm.createContext(context);
   vm.runInContext(source.slice(source.indexOf('  function prepareBudgetExpenses('), source.indexOf('  function toBase(')) + source.slice(source.indexOf('  function txBudgetDateRange('), source.indexOf('  function addDistributed(')), context);
   const calculate = () => {
@@ -32,7 +34,7 @@ describe('cashflow budget preparation', () => {
     expect(spent('2026-12-04')).toBe(0);
   });
   it('preserves exclusions, unpaid cash expenses and budget-only Trip shares', () => {
-    const excluded = [{ hidden: true }, { is_internal: true }, { type: 'income' }, { category: 'excluded' }, { affectsBudget: false }, { outOfBudget: true }, { out_of_budget: true }, { pay_now: false }, { pay_now: false, label: '[Trip] Avance' }];
+    const excluded = [{ hidden: true }, { is_internal: true }, { type: 'income' }, { category: 'excluded' }, { affectsBudget: false }, { outOfBudget: true }, { out_of_budget: true }, { pay_now: false }, { pay_now: false, label: '[Trip] Avance - group purchase', affects_budget: false, out_of_budget: true }];
     const { calculate } = harness([...excluded.map((flags) => ({ ...expense, ...flags })), { ...expense, pay_now: false, label: '[Trip] quote-part' }, { ...expense, pay_now: false, affectsCash: false }]);
     expect(calculate()('2026-12-02')).toBe(40);
   });
