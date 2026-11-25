@@ -2090,10 +2090,7 @@ async function _uploadTripExpenseDocumentFile(expenseId, file, relationType = "r
   const path = `${uid}/${docId}/${safe}`;
   const baseName = String(file.name || "Document").replace(/\.[a-z0-9]{1,8}$/i, "");
 
-  const up = await sb.storage.from(bucket).upload(path, file, {
-    upsert: false,
-    contentType: file.type || undefined
-  });
+  const up = await window.tbWritePersonalDocument(sb, path, file);
   if(up.error) throw up.error;
 
   const ins = await sb.from(_tripDocumentsTable()).insert({

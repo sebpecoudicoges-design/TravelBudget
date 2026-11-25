@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `57287f3685d8bc04de9dfa424ffaf0f4308d9d45`
-> Empreinte du snapshot : `babb02e881669f81525e184a998c09687aef6b5a6a4beb03d3b3d19e299e0369`
-> Généré le : `2026-11-25T07:13:45.724Z`
+> Commit analysé : `509a0bf69df688e7be504e0712fa384831bc64d7`
+> Empreinte du snapshot : `205a3cc7d986381301581adc8f2203ac7dd73f98e14ecadc276a5866ccfaf02b`
+> Généré le : `2026-11-25T07:20:23.680Z`
 
 # Inventaire du projet TravelBudget
 
@@ -19,7 +19,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules features | 64 |
 | Fichiers de tests | 204 |
 | Migrations Supabase | 178 |
-| Fonctions Edge | 14 |
+| Fonctions Edge | 15 |
 | Projet Android présent | Oui |
 
 ## Scripts npm
@@ -617,6 +617,7 @@ Modules :
 - `send-mobile-notification`
 - `travelbudget-mcp`
 - `whatsapp-inbox`
+- `write-personal-document`
 
 ### Migrations
 

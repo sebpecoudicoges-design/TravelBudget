@@ -1,6 +1,25 @@
 window.TB_VERSION = window.TB_VERSION || "10.5.396";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
+
+// Keep Documents, transaction receipts and Trip receipts on the same server
+// admission path. The server derives the account from its verified session.
+window.tbWritePersonalDocument = async function tbWritePersonalDocument(client, path, file) {
+  const [, docId, filename] = String(path).split("/");
+  const result = await client.functions.invoke("write-personal-document", {
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+      "x-document-id": docId,
+      "x-document-filename": filename
+    },
+    body: file
+  });
+  if (!result.error && result.data?.path !== path) {
+    return { data: null, error: new Error("Document storage did not confirm the expected path") };
+  }
+  return result;
+};
+
 try { if (!window.__tbBuildLogged) { window.__tbBuildLogged = true; console.info(`TB BUILD ${window.TB_VERSION}`); } } catch (_) {}
 window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {
   try {

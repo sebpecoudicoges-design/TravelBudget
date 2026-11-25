@@ -1,6 +1,7 @@
 // Run via test-account-deletion-supabase.mjs, not on shared/staging projects.
 import assert from 'node:assert/strict';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { writePersonalDocument } from '../supabase/functions/write-personal-document/handler.ts';
 import { purgeAccount } from '../supabase/functions/_shared/account-data.ts';
 import { accountFileDeletionReadiness, DELETION_RECLAIM_MS, processAccountDeletions } from '../supabase/functions/process-account-deletions/processor.ts';
 
@@ -265,3 +266,23 @@ console.log('PASS guarded worker resumes only after its synthetic closure proof 
 
 
 console.log('PASS real Storage admission keeps neighboring uploads working; existing Inbox ticket drains explicitly without reopening');
+const syntheticForward = async (client: typeof survivorClient, id: string) => {
+  const session = await checked(client.auth.getSession());
+  assert.ok(session.session?.access_token);
+  return await writePersonalDocument(new Request('http://127.0.0.1/write-personal-document', {
+    method: 'POST',
+    headers: {
+      'authorization': `Bearer ${session.session.access_token}`,
+      'x-document-id': id, 'x-document-filename': 'fixture-receipt.txt',
+      'content-type': 'text/plain',
+    },
+    body: 'real Storage through the guarded function',
+  }), () => admin);
+};
+const successfulForward = await syntheticForward(survivorClient, crypto.randomUUID());
+assert.equal(successfulForward.status, 201);
+const forwarded = await successfulForward.json();
+assert.equal((await (await checked(admin.storage.from('personal-documents').download(forwarded.path)))?.text()),
+  'real Storage through the guarded function');
+assert.equal((await syntheticForward(closingClient, crypto.randomUUID())).status, 409);
+console.log('PASS guarded document handler writes an ordinary synthetic upload to real Storage and does not admit a closed account');

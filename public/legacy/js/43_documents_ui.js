@@ -824,7 +824,7 @@ function setSelectedSort(v){
       const docId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const safe = cleanFilename(file.name || 'document');
       const path = `${uid}/${docId}/${safe}`;
-      const up = await c.storage.from(BUCKET).upload(path, file, { upsert:false, contentType:file.type || undefined });
+      const up = await window.tbWritePersonalDocument(c, path, file);
       if(up.error) throw up.error;
 
       const baseName = String(file.name || 'Document').replace(/\.[a-z0-9]{1,8}$/i,'');

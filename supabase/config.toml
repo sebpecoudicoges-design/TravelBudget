@@ -436,3 +436,7 @@ enabled = true
 # Opaque MCP tokens are verified by the handler; Supabase JWTs are not accepted as MCP tokens.
 verify_jwt = false
 entrypoint = "./functions/travelbudget-mcp/index.ts"
+
+[functions.write-personal-document]
+# The handler resolves the user's bearer token with Auth before any write.
+verify_jwt = false

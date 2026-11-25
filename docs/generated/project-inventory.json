@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "57287f3685d8bc04de9dfa424ffaf0f4308d9d45",
-  "snapshotFingerprint": "babb02e881669f81525e184a998c09687aef6b5a6a4beb03d3b3d19e299e0369",
-  "generatedAt": "2026-11-25T07:13:45.724Z",
+  "commit": "509a0bf69df688e7be504e0712fa384831bc64d7",
+  "snapshotFingerprint": "205a3cc7d986381301581adc8f2203ac7dd73f98e14ecadc276a5866ccfaf02b",
+  "generatedAt": "2026-11-25T07:20:23.680Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
@@ -760,7 +760,8 @@
     "request-account-deletion",
     "send-mobile-notification",
     "travelbudget-mcp",
-    "whatsapp-inbox"
+    "whatsapp-inbox",
+    "write-personal-document"
   ],
   "android": {
     "present": true,

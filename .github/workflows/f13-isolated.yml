@@ -14,6 +14,7 @@ on:
       - 'supabase/migrations/*account_deletion*'
       - 'supabase/migrations/*account_write_admission*'
       - 'supabase/functions/whatsapp-inbox/**'
+      - 'supabase/functions/write-personal-document/**'
   workflow_dispatch:
 
 permissions:
@@ -43,6 +44,7 @@ jobs:
           supabase/functions/request-account-deletion/index.ts
           supabase/functions/export-account-data/index.ts
           supabase/functions/whatsapp-inbox/index.ts
+          supabase/functions/write-personal-document/index.ts
           scripts/check-account-deletion-supabase.ts
       - uses: supabase/setup-cli@v3
         with:

@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
   "version": "10.5.396",
-  "commit": "57287f3685d8bc04de9dfa424ffaf0f4308d9d45",
-  "generatedAt": "2026-11-25T07:13:45.724Z",
+  "commit": "509a0bf69df688e7be504e0712fa384831bc64d7",
+  "generatedAt": "2026-11-25T07:20:23.680Z",
   "counts": {
     "screens": 18,
     "criticalFeatures": 11,
@@ -11,7 +11,7 @@
     "featureModules": 64,
     "coreModules": 28,
     "dataModules": 12,
-    "edgeFunctions": 14
+    "edgeFunctions": 15
   },
   "domains": [
     "accounting",
