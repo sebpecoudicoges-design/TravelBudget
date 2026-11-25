@@ -107,8 +107,12 @@ export function createNutritionStore(initialState = {}, options = {}) {
       const current = snapshot();
       const meal = Object.assign({}, row.meal, { localOnly: true, offlinePending: true });
       const item = row.item ? Object.assign({}, row.item, { localOnly: true, offlinePending: true }) : null;
-      const meals = cleanArray(current.meals).filter(existing => String(existing?.id || '') !== String(meal.id || ''));
-      const items = cleanArray(current.items).filter(existing => String(existing?.id || '') !== String(item?.id || ''));
+      const syncId = row.syncId || meal.sync_id;
+      const related = current.meals.find(existing => syncId && existing?.sync_id === syncId && !existing.localOnly);
+      if (row.syncConflict && related) return current;
+      const obsolete = new Set([meal.id, related?.id].filter(Boolean));
+      const meals = cleanArray(current.meals).filter(existing => !obsolete.has(existing?.id));
+      const items = cleanArray(current.items).filter(existing => !obsolete.has(existing?.meal_id));
       meals.unshift(meal);
       if (item) items.unshift(item);
       return replace({ meals, items, loaded: true });

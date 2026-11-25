@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `66ba564fdbe485b4b1e927d206077eb8b455cf44`
-> Empreinte du snapshot : `3c8a855bde9fed4ac3d05898d961dcbd8a7f0d1fb6ae04c0190ccfca5727b1db`
-> Généré le : `2026-11-25T11:03:10.662Z`
+> Commit analysé : `dbea4e6be47ccb9e8618232ea5a386822f5a29b8`
+> Empreinte du snapshot : `1062efa9c238194451c60afb1901f2ba34d8094790ce394cc6cec2ad8a480f05`
+> Généré le : `2026-11-25T12:09:01.833Z`
 
 # Inventaire du projet TravelBudget
 
@@ -15,7 +15,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 28 |
-| Modules data | 13 |
+| Modules data | 14 |
 | Modules features | 64 |
 | Fichiers de tests | 208 |
 | Migrations Supabase | 179 |
@@ -217,6 +217,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `src/data/mcpHealthCatalog.js`
 - `src/data/mcpReadCatalog.js`
 - `src/data/mutationQueueStore.js`
+- `src/data/nutritionMealReplayRepository.js`
 - `src/data/nutritionRepository.js`
 - `src/data/nutritionSleepRepository.js`
 - `src/data/sportRepository.js`

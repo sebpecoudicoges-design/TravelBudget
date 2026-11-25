@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
+import { createClient } from '@supabase/supabase-js';
 import vm from 'node:vm';
 import {
   createNutritionRepository,
@@ -134,11 +135,11 @@ describe('nutrition repository', () => {
   });
 
   it('syncs a local meal row through the Supabase boundary once', async () => {
-    const client = clientWith(({ table, operation }) => {
+    const client = clientWith(({ table, operation, payload }) => {
       if (table === 'meals' && operation === 'select') return { data: null, error: null };
-      if (table === 'meals' && operation === 'upsert') return { data: { id: 'meal-1' }, error: null };
+      if (table === 'meals' && operation === 'upsert') return { data: { ...payload, id: 'meal-1', consumed_time: '07:45:00' }, error: null };
       if (table === 'items' && operation === 'select') return { data: [], error: null };
-      if (table === 'items' && operation === 'upsert') return { data: [], error: null };
+      if (table === 'items' && operation === 'insert') return { data: null, error: null };
       return { data: [], error: null };
     });
     const repository = createNutritionRepository(client);
@@ -167,42 +168,104 @@ describe('nutrition repository', () => {
       table: 'meals',
       method: 'upsert',
       value: expect.objectContaining({ sync_id: 'nutrition_muesli', notes: 'tb_sync:nutrition_muesli', consumed_time: '07:45' }),
-      options: { onConflict: 'user_id,sync_id' },
+      options: { onConflict: 'user_id,sync_id', ignoreDuplicates: true },
     });
     expect(client.calls).toContainEqual({
       table: 'items',
-      method: 'upsert',
+      method: 'insert',
       value: expect.objectContaining({ meal_id: 'meal-1', label: 'Muesli', grams: 45 }),
-      options: { ignoreDuplicates: true },
     });
   });
 
-  it('treats an exact item conflict as an already synchronized local row', async () => {
-    const client = clientWith(({ table, operation }) => {
-      if (table === 'meals' && operation === 'select') return { data: { id: 'meal-1', label: 'Muesli' }, error: null };
-      if (table === 'items' && operation === 'select') return { data: [], error: null };
-      if (table === 'items' && operation === 'upsert') {
-        return { data: null, error: { code: '23505', message: 'nutrition_meal_items_exact_dedupe_idx' } };
-      }
-      return { data: [], error: null };
-    });
-    const repository = createNutritionRepository(client);
-    const row = makeLocalNutritionRow({
-      food: { key: 'muesli', name: 'Muesli' },
-      grams: 45,
-      nut: { kcal: 164 },
-      mealType: 'breakfast',
-      mealDate: '2026-07-10',
-      syncId: 'nutrition_muesli',
-      userId: 'user-1',
-    });
+  const replayRow = makeLocalNutritionRow({
+    food: { key: 'muesli', name: 'Muesli' }, grams: 45, nut: { kcal: 164 }, mealType: 'breakfast',
+    mealDate: '2026-07-10', syncId: 'nutrition_muesli', userId: 'user-1',
+  });
+  const meal = { ...replayRow.meal, id: 'meal-1' };
+  const replay = (client, row = replayRow, extra = {}) => createNutritionRepository(client).syncLocalRow({
+    tables: { meals: 'meals', items: 'items' }, row, userId: 'user-1', travelId: 'not-the-saved-travel',
+    fallbackDate: '2026-07-10', ...extra,
+  });
 
-    await expect(repository.syncLocalRow({
-      tables: { meals: 'meals', items: 'items' },
-      row,
-      userId: 'user-1',
-      fallbackDate: '2026-07-10',
-    })).resolves.toEqual({ mealId: 'meal-1', syncedItem: true });
+  it('confirms exact item collision only after reading the matching committed values', async () => {
+    let reads = 0;
+    const client = clientWith(({ table, operation }) => {
+      if (table === 'meals') return { data: meal };
+      if (operation === 'select') return { data: ++reads === 1 ? [] : [replayRow.item] };
+      return { error: { code: '23505', message: 'nutrition_meal_items_exact_dedupe_idx' } };
+    });
+    await expect(replay(client)).resolves.toEqual({ mealId: 'meal-1', syncedItem: true });
+    expect(reads).toBe(2);
+  });
+
+  it.each([
+    ['edited grams', {}, [{ ...replayRow.item, grams: 20 }]],
+    ['changed macros with the same label and amount', {}, [{ ...replayRow.item, fiber_g: 4 }]],
+    ['different food with an identical label', {}, [{ ...replayRow.item, food_key: 'other' }]],
+    ['ambiguous multiple items', {}, [replayRow.item, replayRow.item]],
+    ['water changed in an otherwise matching meal', { water_ml: 150 }, [replayRow.item]],
+    ['semantically different meal time', { consumed_time: '07:45:21' }, [replayRow.item]],
+  ])('does not insert or confirm a different remote meal: %s', async (_description, header, items) => {
+    const client = clientWith(({ table }) => ({ data: table === 'meals' ? { ...meal, ...header } : items }));
+    await expect(replay(client)).resolves.toEqual({ mealId: 'meal-1', skippedItem: true });
+    expect(client.calls.some(call => ['upsert', 'insert'].includes(call.method))).toBe(false);
+  });
+
+  it('re-reads a meal won by a competing request without overwriting its header', async () => {
+    let reads = 0;
+    const client = clientWith(({ table, operation }) => {
+      expect(table).toBe('meals');
+      return { data: operation === 'select' && ++reads > 1 ? { ...meal, water_ml: 250 } : null };
+    });
+    await expect(replay(client)).resolves.toEqual({ mealId: 'meal-1', skippedItem: true });
+    expect(client.calls.find(call => call.method === 'upsert').options.ignoreDuplicates).toBe(true);
+  });
+
+  it('uses the real Supabase client to recover an ignored race without a replacing write', async () => {
+    const requests = [];
+    let mealReads = 0;
+    const client = createClient('https://fixture.example', 'synthetic-key', {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      global: { fetch: async (url, init) => {
+        const method = init.method;
+        const path = new URL(url);
+        requests.push({ method, path, prefer: new Headers(init.headers).get('prefer') });
+        if (method === 'POST') return Response.json([], { status: 201 });
+        if (path.pathname.endsWith('/meals')) return Response.json(++mealReads === 1 ? [] : [meal]);
+        return Response.json([replayRow.item]);
+      } },
+    });
+    await expect(replay(client)).resolves.toEqual({ mealId: 'meal-1', syncedItem: true });
+    expect(requests.map(r => r.method)).toEqual(['GET', 'POST', 'GET', 'GET']);
+    expect(requests[1].path.searchParams.get('on_conflict')).toBe('user_id,sync_id');
+    expect(requests[1].prefer).toContain('resolution=ignore-duplicates');
+    expect(requests[2].path.searchParams.get('user_id')).toBe('eq.user-1');
+    expect(requests[3].path.searchParams.get('meal_id')).toBe('eq.meal-1');
+  });
+
+  it('keeps a header when only the item failed and retries without a second header', async () => {
+    let committedMeal = null;
+    let fail = true;
+    const client = clientWith(({ table, operation, payload }) => {
+      if (table === 'meals' && operation === 'select') return { data: committedMeal };
+      if (table === 'meals' && operation === 'upsert') return { data: committedMeal = { ...payload, id: 'meal-1' } };
+      if (operation === 'select') return { data: [] };
+      return fail ? { error: new Error('offline') } : { data: null };
+    });
+    await expect(replay(client)).rejects.toThrow('offline');
+    fail = false;
+    await expect(replay(client)).resolves.toEqual({ mealId: 'meal-1', syncedItem: true });
+    expect(client.calls.filter(call => call.method === 'upsert')).toHaveLength(1);
+  });
+
+  it('does not write after an account switch while loading the meal', async () => {
+    let current = true;
+    const client = clientWith(() => {
+      current = false;
+      return { data: null };
+    });
+    await expect(replay(client, replayRow, { isCurrent: () => current })).rejects.toThrow('entry changed');
+    expect(client.calls.some(call => ['upsert', 'insert'].includes(call.method))).toBe(false);
   });
 
   it('keeps sync markers idempotent and classifies common sync errors', () => {

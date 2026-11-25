@@ -191,3 +191,76 @@ for (const [width, choose] of [[390, 'local'], [1440, 'remote']]) {
     else await expect(page.getByRole('status')).toHaveCount(0);
   });
 }
+
+test('two tabs replay a meal once and keep a newer portion pending after an older request commits', async ({ page, context }) => {
+  await context.route('**/meal-replay-test', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Meal replay test</title>' }));
+  const other = await context.newPage();
+  const routeReady = Promise.withResolvers();
+  const allowInsert = Promise.withResolvers();
+  const items = [];
+  const remoteMeal = { id: 'server-meal', travel_id: null, meal_date: '2026-11-24', meal_type: 'meal', label: 'Riz', water_ml: 0, consumed_time: null };
+  await context.route('**/fixture-meal-rest/*', async route => {
+    if (route.request().url().endsWith('/meals')) return route.fulfill({ json: { data: remoteMeal } });
+    if (route.request().method() === 'GET') return route.fulfill({ json: { data: items } });
+    routeReady.resolve();
+    await allowInsert.promise;
+    items.push(route.request().postDataJSON());
+    await route.fulfill({ json: { data: null } });
+  });
+  const setup = async tab => {
+    await tab.goto('/meal-replay-test');
+    await tab.addScriptTag({ content: section('  async function syncLocalNutritionRows(', '  function loadFoodKeys(') });
+    await tab.evaluate(async () => {
+      const repo = await import('/src/data/nutritionRepository.js');
+      const key = 'meal-queue::fixture';
+      window.CACHE = {};
+      window.client = () => ({
+        from(table) {
+          let body;
+          const resolve = () => fetch('/fixture-meal-rest/' + table, body ? { method: 'POST', body: JSON.stringify(body) } : {}).then(response => response.json());
+          const chain = {
+            select: () => chain, eq: () => chain, limit: () => chain, maybeSingle: resolve,
+            insert: row => { body = row; return chain; }, then: (yes, no) => resolve().then(yes, no),
+          };
+          return chain;
+        },
+      });
+      window.repository = () => repo.createNutritionRepository(window.client());
+      window.uid = () => 'fixture';
+      window.localMealKey = () => key;
+      window.loadLocalMeals = strict => repo.loadLocalNutritionRows({ storage: localStorage, key, strict });
+      window.saveLocalMeals = rows => repo.saveLocalNutritionRows({ storage: localStorage, key, rows });
+      window.table = name => name === 'nutrition_meals' ? 'meals' : 'items';
+      window.activeTravelId = () => null;
+      window.localDateISO = value => value;
+      window.txt = fr => fr;
+      window.n = value => Number(value) || 0;
+      window.isOfflineSkipError = () => false;
+      window.discardNutritionQueue = () => { window.discarded = true; };
+      window.publishNutrition = () => {};
+      window.newRow = grams => repo.makeLocalNutritionRow({
+        grams, nut: { kcal: grams }, food: { key: 'rice', name: 'Riz' }, mealDate: '2026-11-24', syncId: 'tb-one-meal',
+      });
+    });
+  };
+  await Promise.all([setup(page), setup(other)]);
+  await page.evaluate(() => saveLocalMeals([newRow(100)]));
+  const first = page.evaluate(() => syncLocalNutritionRows('manual'));
+  try {
+    await routeReady.promise;
+    await other.evaluate(() => {
+      const [row] = loadLocalMeals(true);
+      row.item = { ...row.item, grams: 200, kcal: 200 };
+      saveLocalMeals([row]);
+    });
+    const second = other.evaluate(() => syncLocalNutritionRows('manual'));
+    await expect.poll(async () => other.evaluate(async () => (await navigator.locks.query()).pending.length)).toBe(1);
+    allowInsert.resolve();
+    expect(await first).toBe(0); // The old acknowledgement must not confirm the new portion.
+    expect(await second).toBe(0); // The new version is different, not a second food.
+    expect(items.map(row => row.grams)).toEqual([100]);
+    const result = await other.evaluate(() => ({ rows: loadLocalMeals(true), discarded: !!window.discarded }));
+    expect(result.rows).toMatchObject([{ syncId: 'tb-one-meal', syncConflict: true, item: { grams: 200 } }]);
+    expect(result.discarded).toBe(false);
+  } finally { allowInsert.resolve(); }
+});

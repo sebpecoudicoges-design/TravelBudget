@@ -710,8 +710,11 @@
       }
       const meal = Object.assign({}, row.meal, { localOnly: true, offlinePending: true });
       const item = row.item ? Object.assign({}, row.item, { localOnly: true, offlinePending: true }) : null;
-      CACHE.meals = Array.isArray(CACHE.meals) ? CACHE.meals.filter(existing => String(existing.id || "") !== String(meal.id || "")) : [];
-      CACHE.items = Array.isArray(CACHE.items) ? CACHE.items.filter(existing => String(existing.id || "") !== String(item?.id || "")) : [];
+      const syncId = nutritionSyncId(row);
+      const related = (CACHE.meals || []).find(existing => syncId && existing?.sync_id === syncId && !existing.localOnly);
+      if (row.syncConflict && related) return;
+      CACHE.meals = (CACHE.meals || []).filter(existing => existing.id !== meal.id && existing.id !== related?.id);
+      CACHE.items = (CACHE.items || []).filter(existing => existing.meal_id !== meal.id && existing.meal_id !== related?.id);
       CACHE.meals.unshift(meal);
       if (item) CACHE.items.unshift(item);
       CACHE.loaded = true;
@@ -838,6 +841,11 @@
     if (!c || !userId || CACHE.syncingLocal) return 0;
     const scope = localMealKey();
     const sameScope = () => uid() === userId && localMealKey() === scope;
+    const run = () => syncNutritionBatch(reason, options, userId, sameScope);
+    return navigator?.locks?.request ? navigator.locks.request(`travelbudget:nutrition-replay:${scope}`, run) : run();
+  }
+  async function syncNutritionBatch(reason, options, userId, sameScope) {
+    if (!sameScope() || CACHE.syncingLocal) return 0;
     const allRows = loadLocalMeals(true);
     if (!allRows.length) return 0;
     const rows = allRows.slice(0, 25);
@@ -862,21 +870,26 @@
       for (const row of rows) {
         if (!sameScope()) return synced;
         const snapshot = JSON.stringify(row);
-        if (!loadLocalMeals(true).some(current => JSON.stringify(current) === snapshot)) continue;
+        const isCurrent = () => sameScope() && loadLocalMeals(true).some(current => JSON.stringify(current) === snapshot);
+        if (!isCurrent()) continue;
         try {
           const meal = row.meal || {};
           const mealDate = localDateISO(meal.meal_date) || selectedDateISO();
           const result = await repository().syncLocalRow({
             tables: { meals: table("nutrition_meals"), items: table("nutrition_meal_items") },
-            row, userId, travelId: activeTravelId(), fallbackDate: mealDate,
+            row, userId, travelId: activeTravelId(), fallbackDate: mealDate, isCurrent,
           });
-          if (result?.skippedItem) throw new Error(txt("Repas distant different : modification locale conservee.", "Remote meal differs: local change retained."));
+          if (result?.skippedItem) {
+            const error = new Error(txt("Repas distant different : modification locale conservee.", "Remote meal differs: local change retained."));
+            error.code = "NUTRITION_MEAL_CONFLICT";
+            throw error;
+          }
           outcomes.set(snapshot, []);
-          synced += 1;
         } catch (e) {
           const msg = e?.message || String(e);
           outcomes.set(snapshot, [Object.assign({}, row, {
             syncError: msg,
+            syncConflict: row.syncConflict === true || e?.code === "NUTRITION_MEAL_CONFLICT",
             syncAttempts: Math.max(0, n(row.syncAttempts, 0)) + 1,
             syncUpdatedAt: new Date().toISOString(),
           })]);
@@ -884,7 +897,12 @@
         }
       }
       if (!sameScope()) return synced;
-      const remaining = loadLocalMeals(true).flatMap(row => outcomes.get(JSON.stringify(row)) || [row]);
+      const remaining = loadLocalMeals(true).flatMap(row => {
+        const result = outcomes.get(JSON.stringify(row));
+        if (!result) return [row];
+        if (!result.length) synced += 1;
+        return result;
+      });
       saveLocalMeals(remaining);
       CACHE.syncStatus = remaining.length
         ? txt(`${synced} synchronise(s), ${remaining.length} encore en attente.`, `${synced} synced, ${remaining.length} still pending.`)
@@ -1170,7 +1188,7 @@
           const selectedSince = offsetDateISO(selectedDateISO(), -1);
           const since = selectedSince < recentSince ? selectedSince : recentSince;
           const meals = await c.from(table("nutrition_meals"))
-            .select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,consumed_time,created_at")
+            .select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,consumed_time,created_at,sync_id")
             .eq("user_id", uid())
             .gte("meal_date", since)
             .order("meal_date", { ascending: false })

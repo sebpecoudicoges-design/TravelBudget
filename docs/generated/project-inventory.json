@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "66ba564fdbe485b4b1e927d206077eb8b455cf44",
-  "snapshotFingerprint": "3c8a855bde9fed4ac3d05898d961dcbd8a7f0d1fb6ae04c0190ccfca5727b1db",
-  "generatedAt": "2026-11-25T11:03:10.662Z",
+  "commit": "dbea4e6be47ccb9e8618232ea5a386822f5a29b8",
+  "snapshotFingerprint": "1062efa9c238194451c60afb1901f2ba34d8094790ce394cc6cec2ad8a480f05",
+  "generatedAt": "2026-11-25T12:09:01.833Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
@@ -193,6 +193,7 @@
     "src/data/mcpHealthCatalog.js",
     "src/data/mcpReadCatalog.js",
     "src/data/mutationQueueStore.js",
+    "src/data/nutritionMealReplayRepository.js",
     "src/data/nutritionRepository.js",
     "src/data/nutritionSleepRepository.js",
     "src/data/sportRepository.js",
