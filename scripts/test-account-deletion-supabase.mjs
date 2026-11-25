@@ -105,6 +105,7 @@ enabled = false
   const migrations = await Promise.all([
     '20260725234344_account_data_requests.sql', '20260925012905_assistant_ai_quota.sql',
     '20261124090000_account_deletion_checkpoint.sql', '20260611090500_sport_exercise_library.sql',
+    '20261125100000_account_write_admission.sql',
   ].map(name => readFile(local(`supabase/migrations/${name}`), 'utf8')));
   const nutrition = await readFile(local('supabase/migrations/20260611091500_nutrition_foundation.sql'), 'utf8');
   const foodDdl = nutrition.split('create table if not exists public.nutrition_meals')[0];

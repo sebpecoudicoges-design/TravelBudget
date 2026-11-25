@@ -140,108 +140,141 @@ Deno.serve(async (req) => {
       return textResponse("OK");
     }
 
-    const media = [];
-    let storagePath: string | null = null;
+    const { data: writeTicket, error: admissionError } = await supabase.rpc(
+      "begin_account_file_write", { p_user_id: profile.id },
+    );
+    if (admissionError) {
+      console.error("[whatsapp-inbox] write admission unavailable");
+      return textResponse("Admission unavailable", 503);
+    }
+    if (typeof writeTicket !== "string") return textResponse("Account closed");
+    // Release only when no durable write was started or its response arrived.
+    // An ambiguous Storage/DB response keeps the ticket visible to operators.
+    let acknowledged = true;
+    try {
+      const media = [];
+      let storagePath: string | null = null;
 
-    // Download + upload first media
-    if (numMedia > 0) {
-      const mediaUrl = String(form.get("MediaUrl0") || "");
-      const mediaContentType = String(form.get("MediaContentType0") || "");
+      // Download + upload first media
+      if (numMedia > 0) {
+        const mediaUrl = String(form.get("MediaUrl0") || "");
+        const mediaContentType = String(form.get("MediaContentType0") || "");
 
-      media.push({
-        index: 0,
-        url: mediaUrl,
-        contentType: mediaContentType,
-      });
+        media.push({
+          index: 0,
+          url: mediaUrl,
+          contentType: mediaContentType,
+        });
 
-      if (!twilioSid || !twilioToken) {
-        console.error("[whatsapp-inbox] missing Twilio env", {
+        if (!twilioSid || !twilioToken) {
+          console.error("[whatsapp-inbox] missing Twilio env", {
+            hasSid: !!twilioSid,
+            hasToken: !!twilioToken,
+          });
+        }
+
+        // Twilio media download
+        const mediaResp = await fetch(mediaUrl, {
+          headers: twilioSid && twilioToken
+            ? { Authorization: "Basic " + btoa(`${twilioSid}:${twilioToken}`) }
+            : {},
+          signal: AbortSignal.timeout(30_000),
+        });
+
+        console.log("[whatsapp-inbox] media download", {
+          mediaContentType,
+          status: mediaResp.status,
+          ok: mediaResp.ok,
           hasSid: !!twilioSid,
           hasToken: !!twilioToken,
         });
-      }
 
-      // Twilio media download
-      const mediaResp = await fetch(mediaUrl, {
-        headers: twilioSid && twilioToken
-          ? { Authorization: "Basic " + btoa(`${twilioSid}:${twilioToken}`) }
-          : {},
-      });
+        if (mediaResp.ok) {
+          const blob = await mediaResp.blob();
 
-      console.log("[whatsapp-inbox] media download", {
-  mediaContentType,
-  status: mediaResp.status,
-  ok: mediaResp.ok,
-  hasSid: !!twilioSid,
-  hasToken: !!twilioToken,
-});
+          const ext =
+            mediaContentType === "image/png"
+              ? "png"
+              : mediaContentType === "application/pdf"
+              ? "pdf"
+              : "jpg";
 
-if (mediaResp.ok) {
-  const blob = await mediaResp.blob();
+          storagePath = `whatsapp/${profile.id}/${messageSid}.${ext}`;
 
-        const ext =
-          mediaContentType === "image/png"
-            ? "png"
-            : mediaContentType === "application/pdf"
-            ? "pdf"
-            : "jpg";
-
-        storagePath = `whatsapp/${profile.id}/${messageSid}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("inbox-documents")
-          .upload(storagePath, blob, {
-            contentType: mediaContentType,
-            upsert: true,
+          acknowledged = false;
+          const { error: uploadError } = await supabase.storage
+            .from("inbox-documents")
+            .upload(storagePath, blob, {
+              contentType: mediaContentType,
+              upsert: true,
+            });
+          console.log("[whatsapp-inbox] storage upload", {
+            storagePath: storagePath ? `whatsapp/.../${shortId(messageSid)}` : null,
+            ok: !uploadError,
           });
-        console.log("[whatsapp-inbox] storage upload", {
-  storagePath: storagePath ? `whatsapp/.../${shortId(messageSid)}` : null,
-  ok: !uploadError,
-});
 
-        if (uploadError) {
-          console.error("[whatsapp-inbox] upload error", uploadError);
+          if (uploadError) {
+            console.error("[whatsapp-inbox] upload was not acknowledged");
+            return textResponse("Upload error", 500);
+          }
+          acknowledged = true;
         }
       }
-    }
 
-    // Insert inbox item
-    const { error: insertError } = await supabase
-      .from("inbox_items")
-      .insert({
+      // Insert inbox item
+      acknowledged = false;
+      const { error: insertError } = await supabase
+        .from("inbox_items")
+        .insert({
+          user_id: profile.id,
+
+          source: "whatsapp",
+          source_from: fromRaw,
+          source_to: toRaw,
+          source_message_id: messageSid,
+
+          raw_text: body,
+
+          media_count: numMedia,
+          media_url: media[0]?.url || null,
+          media_content_type: media[0]?.contentType || null,
+          media,
+
+          storage_path: storagePath,
+
+          status: "pending",
+        });
+
+      if (insertError) {
+        console.error("[whatsapp-inbox] insert error", insertError);
+
+        return textResponse("Insert error", 500);
+      }
+
+      acknowledged = true;
+      console.log("[whatsapp-inbox] stored", {
         user_id: profile.id,
-
-        source: "whatsapp",
-        source_from: fromRaw,
-        source_to: toRaw,
-        source_message_id: messageSid,
-
-        raw_text: body,
-
-        media_count: numMedia,
-        media_url: media[0]?.url || null,
-        media_content_type: media[0]?.contentType || null,
-        media,
-
-        storage_path: storagePath,
-
-        status: "pending",
+        bodyLength: body.length,
+        hasStorage: !!storagePath,
+        messageSid: shortId(messageSid),
       });
 
-    if (insertError) {
-      console.error("[whatsapp-inbox] insert error", insertError);
-
-      return textResponse("Insert error", 500);
+      return textResponse("OK");
+    } finally {
+      if (acknowledged) {
+        try {
+          const { data, error } = await supabase.rpc("finish_account_file_write", {
+            p_user_id: profile.id,
+            p_ticket: writeTicket,
+          });
+          if (error || data !== true) console.error("[whatsapp-inbox] write admission was not cleared");
+        } catch {
+          console.error("[whatsapp-inbox] write admission was not cleared");
+        }
+      } else {
+        console.error("[whatsapp-inbox] write admission needs reconciliation");
+      }
     }
-
-    console.log("[whatsapp-inbox] stored", {
-      user_id: profile.id,
-      bodyLength: body.length,
-      hasStorage: !!storagePath,
-      messageSid: shortId(messageSid),
-    });
-
-    return textResponse("OK");
   } catch (e) {
     console.error("[whatsapp-inbox] fatal", e);
 

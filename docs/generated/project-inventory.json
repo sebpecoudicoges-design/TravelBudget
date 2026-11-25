@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "2dcc2879693e4aa90af7b448796504c7b663ced9",
-  "snapshotFingerprint": "7ea23f14fa19ec3ac9e7b9cd00c36254091b8b8b0c71534aaa7f7a3be56c168e",
-  "generatedAt": "2026-11-25T06:58:54.558Z",
+  "commit": "c5d31ad612c6a6378a8cb3c63077292cefb78dce",
+  "snapshotFingerprint": "78be68ded0e672bfe50fbf1697b7af52b8f18dcfab530af2dccc7c06b63c1b6a",
+  "generatedAt": "2026-11-25T07:03:03.356Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
@@ -743,7 +743,8 @@
     "supabase/migrations/20261106212256_save_sport_workout_atomic.sql",
     "supabase/migrations/20261106213201_delete_trip_atomic.sql",
     "supabase/migrations/20261107035117_retain_detached_trip_payment_origin.sql",
-    "supabase/migrations/20261124090000_account_deletion_checkpoint.sql"
+    "supabase/migrations/20261124090000_account_deletion_checkpoint.sql",
+    "supabase/migrations/20261125100000_account_write_admission.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

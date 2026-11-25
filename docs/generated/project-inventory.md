@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `2dcc2879693e4aa90af7b448796504c7b663ced9`
-> Empreinte du snapshot : `7ea23f14fa19ec3ac9e7b9cd00c36254091b8b8b0c71534aaa7f7a3be56c168e`
-> Généré le : `2026-11-25T06:58:54.558Z`
+> Commit analysé : `c5d31ad612c6a6378a8cb3c63077292cefb78dce`
+> Empreinte du snapshot : `78be68ded0e672bfe50fbf1697b7af52b8f18dcfab530af2dccc7c06b63c1b6a`
+> Généré le : `2026-11-25T07:03:03.356Z`
 
 # Inventaire du projet TravelBudget
 
@@ -18,7 +18,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules data | 12 |
 | Modules features | 64 |
 | Fichiers de tests | 204 |
-| Migrations Supabase | 177 |
+| Migrations Supabase | 178 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
 
@@ -797,6 +797,7 @@ Modules :
 - `supabase/migrations/20261106213201_delete_trip_atomic.sql`
 - `supabase/migrations/20261107035117_retain_detached_trip_payment_origin.sql`
 - `supabase/migrations/20261124090000_account_deletion_checkpoint.sql`
+- `supabase/migrations/20261125100000_account_write_admission.sql`
 
 ## Android et budgets de modules
 

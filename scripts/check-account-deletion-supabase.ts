@@ -204,3 +204,36 @@ assert.equal(repeats, 0);
 assert.equal((await requestState(interruptedId))?.attempt_count, 1);
 assert.equal((await processAccountDeletions(admin, repeatPurge, expired)).processed, 0);
 console.log('PASS completed real Auth deletion reconciles after interrupted bookkeeping without a second purge');
+
+// Admission is separate from the destructive worker until legacy transfers
+// can be drained. Exercise ordinary uploads from existing test sessions.
+const { id: closing, client: closingClient } = await createUser('write-admission');
+const admissionPath = `${closing}/receipt-before-closure.txt`;
+await checked(closingClient.storage.from('personal-documents').upload(admissionPath, payload));
+const ticket = await checked(admin.rpc('begin_account_file_write', { p_user_id: closing }));
+assert.equal(typeof ticket, 'string');
+const admissionRequest = crypto.randomUUID();
+await checked(admin.from('account_deletion_requests').insert({
+  id: admissionRequest, user_id: closing, status: 'processing',
+  execute_after: new Date(Date.now() + 86_400_000).toISOString(),
+}));
+const report = async () => {
+  const rows = await checked(admin.rpc('close_account_file_admission', { p_request_id: admissionRequest }));
+  assert.equal(rows?.length, 1);
+  return rows[0];
+};
+const closingReport = await report();
+assert.ok(closingReport.closed_at);
+assert.equal(closingReport.service_writes_drained, false);
+assert.equal(await checked(admin.rpc('begin_account_file_write', { p_user_id: closing })), null);
+const rejected = await closingClient.storage.from('personal-documents').upload(`${closing}/receipt-after-closure.txt`, payload);
+assert.ok(rejected.error, 'ordinary personal uploads are declined once the account closes');
+await checked(survivorClient.storage.from('personal-documents').upload(`${survivor}/ordinary-receipt.txt`, payload));
+assert.equal(await checked(admin.rpc('finish_account_file_write', {
+  p_user_id: closing, p_ticket: ticket,
+})), true);
+const drainedReport = await report();
+assert.equal(drainedReport.closed_at, closingReport.closed_at);
+assert.equal(drainedReport.service_writes_drained, true);
+assert.equal(await checked(admin.rpc('begin_account_file_write', { p_user_id: closing })), null);
+console.log('PASS real Storage admission keeps neighboring uploads working; existing Inbox ticket drains explicitly without reopening');
