@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/audit-continuation.yml'
       - 'config/module-size-budgets.json'
+      - 'docs/generated/project-inventory.json'
       - 'public/legacy/js/00_offline_queue.js'
       - 'public/legacy/js/33_budget_analysis.js'
       - 'public/legacy/js/48_nutrition_ui.js'
