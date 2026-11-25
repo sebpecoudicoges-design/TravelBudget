@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `66196841d562e636e93cd836ea67a6a1395153c5`
-> Empreinte du snapshot : `7c3a9c4acad385f1102f446ef2c54275920c062233472f999540f082a08ddbb4`
-> Généré le : `2026-11-25T19:07:04.059Z`
+> Commit analysé : `117bd4adaff8dbc912e1e34984d05d084c909865`
+> Empreinte du snapshot : `c6bf50e32181d5c0bb57d6d4f533fd2dbef458034057eb209f4361beb31a24af`
+> Généré le : `2026-11-25T20:07:32.560Z`
 
 # Inventaire du projet TravelBudget
 

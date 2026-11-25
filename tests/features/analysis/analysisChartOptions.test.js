@@ -31,16 +31,29 @@ describe('Analysis chart option builders', () => {
     };
 
     const meta = buildAnalysisTrajectoryMeta(model);
-    const option = buildAnalysisTrajectoryOption({ model, todayLabel: '07-02', theme, formatCurrency });
+    const option = buildAnalysisTrajectoryOption({ model, todayDate: '2026-07-02', theme, formatCurrency });
 
     expect(meta).toEqual({ start: '2026-07-01', end: '2026-07-02', days: 2, currency: 'AUD' });
     expect(option.legend.data).toEqual(['Dépenses cumulées', 'Cible cumulée']);
     const planned = buildAnalysisTrajectoryOption({ model, labels: { spent: 'Cumul avec prévisions', target: 'Objectif cumulé' } });
     expect(planned.series.map(({ name }) => name)).toEqual(['Objectif cumulé', 'Cumul avec prévisions']);
     expect(planned.series.map(({ data }) => data)).toEqual([model.cumTarget, model.cumSpent]);
-    expect(option.xAxis.data).toEqual(['07-01', '07-02']);
-    expect(option.series[0].markLine.data[0].xAxis).toBe('07-02');
+    expect(option.xAxis.data).toEqual(model.days);
+    expect(option.xAxis.axisLabel.formatter('2026-07-02')).toBe('07-02');
+    expect(option.series[0].markLine.data[0].xAxis).toBe('2026-07-02');
     expect(option.series[1].markPoint.data[0].coord).toEqual([1, 55]);
+  });
+
+  it('keeps full dates on all three axes across years and marks today only if in range', () => {
+    const days = ['2025-01-02', '2026-01-02'];
+    const model = { days };
+    const traj = buildAnalysisTrajectoryOption({ model, todayDate: '2026-01-02' });
+    for (const chart of [traj, buildAnalysisVelocityOption({ model }), buildAnalysisHeatmapOption({ model })]) {
+      expect(chart.xAxis.data).toEqual(days);
+      expect(days.map(chart.xAxis.axisLabel.formatter)).toEqual(days);
+    }
+    expect(traj.series[0].markLine.data).toEqual([{ xAxis: '2026-01-02' }]);
+    expect(buildAnalysisTrajectoryOption({ model, todayDate: '2027-01-02' }).series[0].markLine.data).toEqual([]);
   });
 
   it('computes proportional slices from all positive net categories and groups the rest', () => {

@@ -1545,7 +1545,7 @@ function _openTxDrilldown(kind, key, model, opener){
         spent: _t(model.mode === 'planned' ? 'analysis.chart.cumulative_planned' : 'analysis.chart.cumulative_spent'),
         target: _t('analysis.chart.cumulative_target'),
       },
-      todayLabel: _iso(new Date()).slice(5),
+      todayDate: _iso(new Date()),
       theme: _analysisChartTheme(),
       formatCurrency: _fmtMoney,
     }) || {});

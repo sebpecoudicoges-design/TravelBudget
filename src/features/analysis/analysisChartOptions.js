@@ -21,6 +21,15 @@ function linearGradient(stops) {
   return { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: stops };
 }
 
+function dateAxisLabels(days, theme) {
+  const compact = days.at(0)?.slice(0, 4) === days.at(-1)?.slice(0, 4);
+  return {
+    color: themeValue(theme, 'muted', '#94a3b8'),
+    hideOverlap: true,
+    formatter: (date) => compact ? date.slice(5) : date,
+  };
+}
+
 export function buildAnalysisTrajectoryMeta(model = {}) {
   const days = Array.isArray(model.days) ? model.days.length : 0;
   return {
@@ -33,7 +42,7 @@ export function buildAnalysisTrajectoryMeta(model = {}) {
 
 export function buildAnalysisTrajectoryOption({
   model = {},
-  todayLabel = '',
+  todayDate = '',
   labels = {},
   theme = {},
   formatCurrency,
@@ -52,7 +61,7 @@ export function buildAnalysisTrajectoryOption({
     tooltip: { trigger: 'axis', ...tooltipTheme },
     legend: { top: 6, textStyle: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 11 }, itemWidth: 14, itemHeight: 8, data: [spent, target] },
     grid: { left: 24, right: 24, top: 52, bottom: 30, containLabel: true },
-    xAxis: { type: 'category', boundaryGap: false, data: days.map((d) => String(d).slice(5)), axisLine: { lineStyle: { color: grid } }, axisLabel: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 10, margin: 8 } },
+    xAxis: { type: 'category', boundaryGap: false, data: days, axisLine: { lineStyle: { color: grid } }, axisLabel: { ...dateAxisLabels(days, theme), fontSize: 10, margin: 8 } },
     yAxis: { type: 'value', axisLabel: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 10, formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: grid } } },
     series: [
       {
@@ -63,7 +72,7 @@ export function buildAnalysisTrajectoryOption({
         lineStyle: { width: 3, color: themeValue(theme, 'good', '#22c55e'), opacity: 0.95, type: 'dashed' },
         areaStyle: { color: 'transparent' },
         data: cumTarget,
-        markLine: days.length ? { symbol: 'none', lineStyle: { type: 'dashed', color: grid }, label: { show: false }, data: [{ xAxis: todayLabel }] } : undefined,
+        markLine: { symbol: 'none', lineStyle: { type: 'dashed', color: grid }, label: { show: false }, data: days.includes(todayDate) ? [{ xAxis: todayDate }] : [] },
       },
       {
         id: 'spent', name: spent,
@@ -172,7 +181,7 @@ export function buildAnalysisVelocityOption({
     tooltip: { trigger: 'axis', ...tooltipTheme },
     legend: { top: 6, textStyle: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 11 }, data: [spent, target] },
     grid: { left: 18, right: 12, top: 54, bottom: 24, containLabel: true },
-    xAxis: { type: 'category', data: days.map((d) => String(d).slice(5)), axisLabel: { color: themeValue(theme, 'muted', '#94a3b8') }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
+    xAxis: { type: 'category', data: days, axisLabel: dateAxisLabels(days, theme), axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
     yAxis: { type: 'value', axisLabel: { color: themeValue(theme, 'muted', '#94a3b8'), formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
     series: [
       { id: 'spent', name: spent, type: 'bar', barMaxWidth: 22, data: velocity, itemStyle: { borderRadius: [8, 8, 0, 0], color: linearGradient([{ offset: 0, color: themeValue(theme, 'accent', '#3b82f6') }, { offset: 1, color: 'rgba(59,130,246,.25)' }]) } },
@@ -199,7 +208,7 @@ export function buildAnalysisHeatmapOption({
     animationDuration: 950,
     tooltip: { position: 'top', ...tooltipTheme, formatter: (p) => `${days[p.data?.[0]]}<br>${fmt(p.data?.[2], model.base)}` },
     grid: { left: 8, right: 8, top: 10, bottom: 22, containLabel: true },
-    xAxis: { type: 'category', data: days.map((d) => String(d).slice(5)), splitArea: { show: false }, axisLabel: { color: themeValue(theme, 'muted', '#94a3b8'), interval: Math.max(0, Math.floor(days.length / 10)) }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
+    xAxis: { type: 'category', data: days, splitArea: { show: false }, axisLabel: { ...dateAxisLabels(days, theme), interval: Math.max(0, Math.floor(days.length / 10)) }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
     yAxis: { type: 'category', data: ['Intensité'], axisLabel: { color: themeValue(theme, 'muted', '#94a3b8') }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
     visualMap: { min: min ? -max : 0, max, dimension: 2, show: false, inRange: { color: colors } },
     series: [{

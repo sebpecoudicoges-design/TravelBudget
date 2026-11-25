@@ -396,11 +396,13 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
   test(`Analyse labels average budget and planned spending separately (${width}px, ${theme})`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ colorScheme: theme });
-    const start = '2026-10-23';
-    const end = '2026-10-24';
+    const start = '2025-12-31';
+    const end = '2026-01-01';
     const segment = fixtureTables.budget_segments[0];
     const graphTables = {
       ...fixtureTables,
+      travels: [{ ...fixtureTables.travels[0], start_date: start, end_date: end }],
+      periods: [{ ...fixtureTables.periods[0], start_date: start, end_date: end }],
       profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
       settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
       budget_segments: [
@@ -444,6 +446,16 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
       { name: 'Avec prévisions', data: [12, 8] },
       { name: 'Budget moyen/jour', data: [25, 25] },
     ]);
+    for (const id of [trajectory, pace, '#analysis-heatmap-chart']) {
+      const dates = await page.locator(id).evaluate(el => {
+        const [axis] = window.echarts.getInstanceByDom(el).getOption().xAxis;
+        return { values: axis.data, labels: axis.data.map(axis.axisLabel.formatter) };
+      });
+      expect(dates).toEqual({ values: [start, end], labels: [start, end] });
+    }
+    expect(await page.locator(trajectory).evaluate(el =>
+      window.echarts.getInstanceByDom(el).getOption().series[0].markLine.data,
+    )).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }
