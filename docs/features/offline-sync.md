@@ -37,7 +37,8 @@ Comportement transversal lorsque le réseau disparaît, revient ou que l'applica
 - Le démarrage ne purge pas les erreurs Trip. Le nettoyage reste une commande explicite.
 - Si Web Locks est disponible, une synchronisation prend un verrou exclusif par compte pour toute la durée du rejeu. Un autre onglet abandonne immédiatement cette tentative ; le bail local reste utilisé pour compatibilité avec les anciens clients. Un refus du gestionnaire de verrous ne déclenche pas de rejeu de secours sans verrou.
 - Wallet, budget, Trip, Sport, Nutrition, Travail et Patrimoine resynchronisés.
-- Chargement du bridge et du domaine lazy avant le rejeu sur Android.
+- Chargement du bridge et du domaine lazy avant le rejeu sur Android. Sport et Nutrition conservent leur action en attente si le gestionnaire est indisponible ; une vérification du compte et du bail après le chargement évite de lancer le rejeu dans un autre contexte.
+- Les compteurs de synchronisation et les notifications reflètent uniquement la révision dont le résultat a été enregistré dans la file. La réponse d’une ancienne révision remplacée ou retirée n’est ni un succès affiché ni une erreur de la nouvelle saisie. Un échec d’enregistrement de l’accusé n’est pas reclassé en échec de la requête distante.
 
 ## Risques connus
 

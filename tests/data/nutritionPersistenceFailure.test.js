@@ -1,9 +1,17 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import { saveLocalNutritionRows, saveLocalNutritionRowsOnce, discardLocalNutritionRow, discardAllLocalNutritionRows, mergeSleepRows } from '../../src/data/nutritionRepository.js';
+import { saveLocalNutritionRows, saveLocalNutritionRowsOnce, discardLocalNutritionRow, discardAllLocalNutritionRows } from '../../src/data/nutritionRepository.js';
+
+import { mergeSleepRows, saveSleepRows } from '../../src/data/nutritionSleepRepository.js';
 
 afterEach(() => vi.unstubAllGlobals());
+it.each(['{broken', 'null', '[]', '{"2026-11-23":null}', 'read-error'])('preserves unreadable sleep history: %s', raw => {
+  const storage = { getItem: () => { if (raw === 'read-error') throw new Error('denied'); return raw; }, setItem: vi.fn() };
+  expect(saveSleepRows({ storage, key: 'sleep', rows: {} })).toBe(false);
+  expect(() => mergeSleepRows({ storage, key: 'sleep', rows: { '2026-11-24': { hours: 8 } } })).toThrow();
+  expect(storage.setItem).not.toHaveBeenCalled();
+});
 it.each(['{broken', 'null', '{}', '[null]', 'read-error'])('never replaces an unreadable pending reserve: %s', raw => {
   const storage = { getItem: () => { if (raw === 'read-error') throw new Error('denied'); return raw; }, setItem: vi.fn() };
   expect(saveLocalNutritionRows({ storage, key: 'pending', rows: [] })).toBe(false);

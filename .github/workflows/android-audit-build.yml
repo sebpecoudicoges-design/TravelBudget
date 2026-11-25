@@ -1,0 +1,61 @@
+name: Build Android audit APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/android-audit-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build web bundle and sync Android
+        run: |
+          npm ci
+          npm run build
+          npx --no-install cap sync android
+      - name: Assemble and identify the test APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)
+          "$sdk" --install "platforms;android-36" "build-tools;36.0.0"
+          (cd android && bash ./gradlew --no-daemon :app:assembleDebug)
+          mkdir -p "$RUNNER_TEMP/travelbudget-apk"
+          version=$(node -p 'require("./package.json").version')
+          apk="$RUNNER_TEMP/travelbudget-apk/TravelBudget-$version-TEST-ne-remplace-pas-APK-officiel.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$apk"
+          {
+            echo "Test build only: GitHub runner debug certificate; does not upgrade the existing distributed app."
+            echo "Commit: ${GITHUB_SHA}"
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk"
+            "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > "$RUNNER_TEMP/apk-badging.txt"
+            head -1 "$RUNNER_TEMP/apk-badging.txt"
+          } | tee "$RUNNER_TEMP/travelbudget-apk/BUILD.txt"
+          grep -F "versionName='$version'" "$RUNNER_TEMP/apk-badging.txt"
+          grep -F "package: name='com.travelbudget.app'" "$RUNNER_TEMP/apk-badging.txt"
+          grep -F "assets/public/index.html" <(unzip -Z1 "$apk")
+          (cd "$(dirname "$apk")" && sha256sum "$(basename "$apk")" > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v5
+        with:
+          name: TravelBudget-Android-audit-test
+          path: ${{ runner.temp }}/travelbudget-apk/
+          if-no-files-found: error
+          retention-days: 30

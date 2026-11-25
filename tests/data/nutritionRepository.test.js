@@ -97,10 +97,10 @@ describe('nutrition repository', () => {
     expect(rows[0].syncError).toBe('retry');
   });
 
-  it('merges sleep rows locally with normalized values', () => {
+  it('merges sleep rows locally with normalized values', async () => {
     const storage = memoryStorage();
     const repository = createNutritionRepository(null);
-    repository.mergeSleepRows({
+    (await repository.sleepWrites()).mergeSleepRows({
       storage,
       key: 'sleep',
       rows: {

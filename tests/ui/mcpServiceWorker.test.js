@@ -6,7 +6,7 @@ const cachePrefix = `travelbudget-pwa-${JSON.parse(fs.readFileSync('package.json
 function worker() {
   const events={}, put=vi.fn(async()=>{}), remove=vi.fn(async()=>true);
   const fetch=vi.fn(async()=>new Response('page'));
-  const caches={open:vi.fn(async()=>({put,addAll:async()=>{}})),match:vi.fn(async()=>null),keys:vi.fn(async()=>[`${cachePrefix}-runtime`,`${cachePrefix}-mcp-safe-runtime`,`${cachePrefix}-mcp-safe-static`,'travelbudget-pwa-previous-runtime','other-cache']),delete:remove};
+  const caches={open:vi.fn(async()=>({put,addAll:async()=>{}})),match:vi.fn(async()=>null),keys:vi.fn(async()=>[`${cachePrefix}-runtime`,`${cachePrefix}-mcp-safe-runtime`,`${cachePrefix}-mcp-safe-static`,`${cachePrefix}-mcp-safe-audit-r1-runtime`,`${cachePrefix}-mcp-safe-audit-r1-static`,'travelbudget-pwa-previous-runtime','other-cache']),delete:remove};
   const context=vm.createContext({Request,Response,URL,fetch,caches, self:{location:{origin:'https://budget.example'},addEventListener:(type,fn)=>{events[type]=fn;},clients:{claim:async()=>{}},skipWaiting:async()=>{}}});
   vm.runInContext(fs.readFileSync('public/sw.js','utf8'),context);
   return {events,put,remove,fetch,caches};
@@ -29,7 +29,7 @@ it('does not warm up private endpoints through the service worker message API',a
 });
 it('removes the previous same-version cache on activation',async()=>{
   const {events,remove}=worker();let pending;events.activate({waitUntil:p=>{pending=p;}});await pending;
-  expect(remove.mock.calls.map(([name])=>name)).toEqual([`${cachePrefix}-runtime`,'travelbudget-pwa-previous-runtime']);
+  expect(remove.mock.calls.map(([name])=>name)).toEqual([`${cachePrefix}-runtime`,`${cachePrefix}-mcp-safe-runtime`,`${cachePrefix}-mcp-safe-static`,'travelbudget-pwa-previous-runtime']);
 });
 it('keeps ancillary navigations from replacing the offline app shell',async()=>{
   const {events,put}=worker();let pending;

@@ -1,6 +1,6 @@
 const TB_SW_VERSION = "travelbudget-pwa-10.5.396";
-const TB_STATIC_CACHE = `${TB_SW_VERSION}-mcp-safe-static`;
-const TB_RUNTIME_CACHE = `${TB_SW_VERSION}-mcp-safe-runtime`;
+const TB_STATIC_CACHE = `${TB_SW_VERSION}-mcp-safe-audit-r1-static`;
+const TB_RUNTIME_CACHE = `${TB_SW_VERSION}-mcp-safe-audit-r1-runtime`;
 
 const APP_SHELL = [
   "/",

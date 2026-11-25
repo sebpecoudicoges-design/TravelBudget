@@ -353,7 +353,7 @@ function getKpiScope() {
         const cat = (t.category !== undefined && t.category !== null) ? String(t.category) : '';
         if (cat && excludedCats.has(cat)) continue;
 
-        const affectsBudget = (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
+        const affectsBudget = (t.affectsBudget ?? t.affects_budget) !== false;
         if (!affectsBudget) continue;
         const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
         if (outOfBudget) continue;
@@ -367,12 +367,7 @@ function getKpiScope() {
         const p = (t.payNow ?? t.pay_now);
         const isPaid = (p === undefined) ? true : !!p;
 
-        const label = String(t.label || '');
-        const isTrip = label.includes('[Trip]');
-        const isTripAdvance = isTrip && label.includes('Avance');
-        const affectsCashRaw = (t.affectsCash === undefined || t.affectsCash === null) ? null : !!t.affectsCash;
-        const isTripUnpaidShare = isTrip && !isTripAdvance && type === 'expense';
-        const affectsCash = (affectsCashRaw === null) ? (!isTripUnpaidShare) : affectsCashRaw;
+        const affectsCash = t.affectsCash ?? !isTripBudgetOnlyTx(t);
         const isBudgetOnly = !isPaid && affectsBudget && !affectsCash;
         if (!isPaid && !isBudgetOnly) continue;
 
@@ -546,10 +541,6 @@ function getKpiScope() {
     const cat = (t.category !== undefined && t.category !== null) ? String(t.category) : "";
     const catExcluded = cat && excludedCats.has(cat);
 
-    const label = String(t.label || "");
-    const isTrip = label.includes("[Trip]");
-    const isTripAdvance = isTrip && label.includes("Avance");
-
     const cashRng = txCashDateRange(t);
     if (!cashRng) continue;
 
@@ -575,7 +566,7 @@ function getKpiScope() {
     const amount = safeNum(t.amount || 0);
     if (!Number.isFinite(amount) || amount === 0) continue;
 
-    const affectsBudget = (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
+    const affectsBudget = (t.affectsBudget ?? t.affects_budget) !== false;
     const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
 
     const totalCashDays = daysInclusive(cashRng.start, cashRng.end);
@@ -612,9 +603,7 @@ function getKpiScope() {
         });
       }
     } else {
-      const affectsCashRaw = (t.affectsCash === undefined || t.affectsCash === null) ? null : !!t.affectsCash;
-      const isTripUnpaidShare = isTrip && !isTripAdvance && type === "expense";
-      const affectsCash = (affectsCashRaw === null) ? (!isTripUnpaidShare) : affectsCashRaw;
+      const affectsCash = t.affectsCash ?? !isTripBudgetOnlyTx(t);
       const isBudgetOnly = affectsBudget && !affectsCash;
 
       if (isBudgetOnly) {

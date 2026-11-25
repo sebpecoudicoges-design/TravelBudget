@@ -54,6 +54,14 @@ describe('Trip settlement retry safety', () => {
     expect(apply).toHaveBeenCalledTimes(1);
     expect(context.toastWarn).toHaveBeenCalledOnce();
   });
+  it('keeps the Trip debt and wallet movement in their respective currencies', async () => {
+    const apply = vi.fn().mockResolvedValue('request-1');
+    const { context } = harness(apply);
+    await context._persistSettlementWithWallet({ ...wallet, walletCurrency: 'EUR', walletAmount: 30, tripAmount: 48 });
+    expect(apply.mock.calls[0][0].args).toMatchObject({
+      p_currency: 'AUD', p_amount: 48, p_wallet_currency: 'EUR', p_wallet_amount: 30,
+    });
+  });
   it('uses the same atomic path for settlement without a wallet', async () => {
     const apply = vi.fn().mockResolvedValue('request-1');
     const { context } = harness(apply);

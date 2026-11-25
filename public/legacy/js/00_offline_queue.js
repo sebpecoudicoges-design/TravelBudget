@@ -253,7 +253,7 @@
     return removed;
   }
 
-  async function runItem(item) {
+  async function runItem(item, mayReplay) {
     if (!item || item.status === "done") return true;
     if (item.kind === "transaction.apply_v2") {
       const rpcName = item.payload?.rpcName || window.TB_CONST?.RPCS?.apply_transaction_v2 || "apply_transaction_v2";
@@ -286,24 +286,35 @@
       if (typeof window.tbSportSyncLocalWorkouts !== "function" && typeof window.tbLoadLegacyDomain === "function") {
         await window.tbLoadLegacyDomain("sport");
       }
-      if (typeof window.tbSportSyncLocalWorkouts === "function") {
-        await window.tbSportSyncLocalWorkouts();
+      if (!mayReplay()) throw new Error("Synchronisation interrompue : compte ou verrou modifie.");
+      if (typeof window.tbSportSyncLocalWorkouts !== "function") {
+        throw new Error("Sport indisponible pour synchroniser les donnees hors ligne.");
       }
+      await window.tbSportSyncLocalWorkouts();
       return true;
     }
     if (item.kind === "nutrition.sync_local") {
-      if (typeof window.tbNutritionSyncLocal === "function") {
-        await window.tbNutritionSyncLocal("offline-queue");
+      if (typeof window.tbNutritionSyncLocal !== "function" && typeof window.tbLoadLegacyDomain === "function") {
+        await window.tbLoadLegacyDomain("nutrition");
       }
+      if (!mayReplay()) throw new Error("Synchronisation interrompue : compte ou verrou modifie.");
+      if (typeof window.tbNutritionSyncLocal !== "function") {
+        throw new Error("Nutrition indisponible pour synchroniser les donnees hors ligne.");
+      }
+      await window.tbNutritionSyncLocal("offline-queue");
       return true;
     }
     if (item.kind === "trip.expense.create" || item.kind === "trip.expense.update") {
+      if (typeof window.tbTripReplayOfflineExpenseMutation !== "function" && typeof window.tbLoadLegacyDomain === "function") {
+        await window.tbLoadLegacyDomain("trip");
+      }
+      if (!mayReplay()) throw new Error("Synchronisation interrompue : action, compte ou verrou modifie.");
       if (typeof window.tbTripReplayOfflineExpenseMutation !== "function") {
         throw new Error("Trip indisponible pour rejouer l'action offline");
       }
       await window.tbTripReplayOfflineExpenseMutation(Object.assign({}, item.payload || {}, {
         mode: item.kind === "trip.expense.update" ? "update" : "create",
-      }));
+      }), mayReplay);
       return true;
     }
     throw new Error(`Type de queue inconnu: ${item.kind}`);
@@ -354,9 +365,12 @@
       if (!todo.length) return { ok: true, synced: 0 };
 
       const syncedKinds = [];
+      const isCurrentAttempt = (attempt) => queueStore.scope() === syncScope && renewLease()
+        && queueStore.read().some(item => item.id === attempt.id
+          && item.revision === attempt.revision && item.attemptToken === attempt.attemptToken);
       const result = await window.Data.flushMutationQueue({
         store: queueStore,
-        run: runItem,
+        run: item => runItem(item, () => isCurrentAttempt(item)),
         force,
         canContinue: renewLease,
         onSuccess: (item) => {
@@ -369,6 +383,9 @@
       });
       synced = result.synced;
       failed = result.failed;
+      if (queueStore.scope() !== syncScope) {
+        return { ok: false, skipped: "account-change", synced, failed };
+      }
       if (failed) console.warn(`[OfflineQueue] ${failed} action(s) deferred; later actions continued.`);
       if (synced) {
         toastInfo(message(`${synced} action(s) hors ligne synchronisee(s).`, `${synced} offline action(s) synced.`));
@@ -392,7 +409,7 @@
       clearInterval(leaseTimer);
       syncing = false;
       releaseLock();
-      dispatchChanged({ synced, failed });
+      dispatchChanged(queueStore.scope() === syncScope ? { synced, failed } : undefined);
     }
   }
 
@@ -405,6 +422,13 @@
   window.tbOfflineQueueDiscardKind = discardKind;
   window.tbOfflineQueueDiscardTripConflicts = discardTripConflicts;
   window.tbOfflineQueueCleanupOptimistic = cleanupOptimisticRows;
+
+  window.addEventListener("storage", (event) => {
+    if (event.storageArea !== localStorage || event.key !== queueStore.scope()) return;
+    const items = safeRead();
+    try { window.Data?.appStore?.set("offlineMutations", items); } catch (_) {}
+    dispatchChanged({ source: "another-tab" });
+  });
 
   window.addEventListener("online", () => {
     setTimeout(() => { sync("online").catch((e) => console.warn("[OfflineQueue] sync failed", e?.message || e)); }, 1200);

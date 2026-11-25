@@ -4,7 +4,7 @@ function requireClient(getClient) {
   return client;
 }
 
-function unwrap(result) {
+export function unwrap(result) {
   if (result?.error) throw result.error;
   if (result && Object.prototype.hasOwnProperty.call(result, 'data')) return result.data;
   return [];
@@ -24,7 +24,7 @@ function readJson(storage, key, fallback) {
   }
 }
 
-function writeJson(storage, key, value) {
+export function writeJson(storage, key, value) {
   try {
     const raw = JSON.stringify(value);
     if (typeof window !== 'undefined' && typeof window.tbSafeLocalStorageSet === 'function' && storage === window.localStorage) {
@@ -44,7 +44,7 @@ export function loadCachedFoods({ storage, key }) {
   return Array.isArray(rows) ? rows : [];
 }
 
-function requireLocalWrite(ok, pendingRows) {
+export function requireLocalWrite(ok, pendingRows) {
   if (ok) return;
   const error = new Error('Nutrition could not be saved on this device.');
   error.code = 'NUTRITION_STORAGE_FAILED';
@@ -56,15 +56,18 @@ export function saveCachedFoods({ storage, key, rows, limit = 500 }) {
   return writeJson(storage, key, (rows || []).slice(0, limit));
 }
 
-export function loadLocalNutritionRows({ storage, key, strict = false }) {
-  if (strict) {
+function readStoredCollection(storage, key, empty) {
     const raw = storage.getItem(key);
-    const rows = raw === null ? [] : JSON.parse(raw);
-    if (!Array.isArray(rows) || rows.some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
+    const rows = raw === null ? empty : JSON.parse(raw);
+    if (!rows || typeof rows !== 'object' || Array.isArray(rows) !== Array.isArray(empty)
+      || Object.values(rows).some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
       throw new Error('Nutrition pending data is unreadable; saved data retained.');
     }
     return rows;
-  }
+}
+
+export function loadLocalNutritionRows({ storage, key, strict = false }) {
+  if (strict) return readStoredCollection(storage, key, []);
   const rows = readJson(storage, key, []);
   return Array.isArray(rows) ? rows : [];
 }
@@ -190,27 +193,14 @@ export function saveLocalNutritionRowsOnce({ storage, key, rows }) {
   return next;
 }
 
-export function loadSleepRows({ storage, key }) {
+export function loadSleepRows({ storage, key, strict = false }) {
+  if (strict) return readStoredCollection(storage, key, {});
   const rows = readJson(storage, key, {});
   return rows && typeof rows === 'object' && !Array.isArray(rows) ? rows : {};
 }
 
-export function saveSleepRows({ storage, key, rows }) {
-  return writeJson(storage, key, rows || {});
-}
-
-export function mergeSleepRows({ storage, key, rows, now = () => new Date() }) {
-  const current = loadSleepRows({ storage, key });
-  Object.entries(rows || {}).forEach(([day, row]) => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))) return;
-    current[day] = {
-      hours: safeNumber(row.hours, 0),
-      quality: String(row.quality || 'ok'),
-      updatedAt: row.updatedAt || row.updated_at || now().toISOString(),
-    };
-  });
-  requireLocalWrite(saveSleepRows({ storage, key, rows: current }));
-  return current;
+export function visibleSleepRows(rows) {
+  return Object.fromEntries(Object.entries(rows || {}).filter(([, row]) => row && !row.deleted));
 }
 
 export function createNutritionRepository(getClient) {
@@ -231,8 +221,8 @@ export function createNutritionRepository(getClient) {
     saveLocalNutritionRowOnce,
     saveLocalNutritionRowsOnce,
     loadSleepRows,
-    saveSleepRows,
-    mergeSleepRows,
+    visibleSleepRows,
+    sleepWrites: () => import("./nutritionSleepRepository.js"),
 
     async findMealBySyncId({ table, userId, syncId }) {
       if (!syncId) return null;

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `ef58ab2f9d351fced725c53782452071cc4ec4f2`
-> Empreinte du snapshot : `a11b415fa47c5d41303e86d6566576a778b8be0bf0ec17c90a310d74e4f58f8f`
-> Généré le : `2026-11-23T06:47:19.704Z`
+> Commit analysé : `689fb21243544cc5f893497e6b9edbac6e685ac5`
+> Empreinte du snapshot : `763b6036b14194b5650f7e84f2f9a97bfb3edd81b21036842dcf585b40b13671`
+> Généré le : `2026-11-25T09:11:05.686Z`
 
 # Inventaire du projet TravelBudget
 
@@ -15,9 +15,9 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 28 |
-| Modules data | 12 |
+| Modules data | 13 |
 | Modules features | 64 |
-| Fichiers de tests | 201 |
+| Fichiers de tests | 205 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -215,6 +215,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `src/data/mcpReadCatalog.js`
 - `src/data/mutationQueueStore.js`
 - `src/data/nutritionRepository.js`
+- `src/data/nutritionSleepRepository.js`
 - `src/data/sportRepository.js`
 - `src/data/storageQuota.js`
 - `src/data/supabaseRepository.js`
@@ -376,6 +377,7 @@ Modules :
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/cashflow-controls.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/financial-trip-budget.spec.js`
 - `tests/e2e/first-setup.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
@@ -401,6 +403,7 @@ Modules :
 - `tests/core/dailyBudgetRules.test.js`
 - `tests/core/detachedTripPayment.test.js`
 - `tests/core/documentRules.test.js`
+- `tests/core/financialTripBudgetFlow.test.js`
 - `tests/core/frankfurterRules.test.js`
 - `tests/core/fxDecisionRules.test.js`
 - `tests/core/fxRules.test.js`
@@ -440,6 +443,7 @@ Modules :
 - `tests/data/networkReachability.test.js`
 - `tests/data/nutritionPersistenceFailure.test.js`
 - `tests/data/nutritionRepository.test.js`
+- `tests/data/nutritionSleepSync.test.js`
 - `tests/data/nutritionSyncConcurrency.test.js`
 - `tests/data/recurringBudgetPeriodMigration.test.js`
 - `tests/data/recurringRuleReconciliationMigration.test.js`
@@ -458,6 +462,7 @@ Modules :
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/cashflow-controls.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/financial-trip-budget.spec.js`
 - `tests/e2e/first-setup.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
@@ -481,6 +486,7 @@ Modules :
 - `tests/features/accounting/accountingRules.test.js`
 - `tests/features/analysis/analysisCashBreakdown.test.js`
 - `tests/features/analysis/analysisChartOptions.test.js`
+- `tests/features/analysis/analysisModelCharts.test.js`
 - `tests/features/analysis/analysisPeriodRules.test.js`
 - `tests/features/analysis/analysisView.test.js`
 - `tests/features/assets/assetBudgetData.test.js`
@@ -806,6 +812,7 @@ Modules :
 - `docs/ACCOUNT_DATA_LIFECYCLE.md`
 - `docs/ADMIN_TEST_RETURNS.md`
 - `docs/ADMOB_ANDROID.md`
+- `docs/ANALYSE_GRAPH_AUDIT_2026_11_25.md`
 - `docs/ANDROID_10_5_388.md`
 - `docs/ANDROID_10_5_389.md`
 - `docs/ANDROID_10_5_390.md`
@@ -813,9 +820,11 @@ Modules :
 - `docs/ANDROID_10_5_392.md`
 - `docs/ANDROID_10_5_394.md`
 - `docs/ANDROID_10_5_395.md`
+- `docs/ANDROID_FINANCIAL_AUDIT_2026_11_25.md`
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`
+- `docs/AUDIT_PROGRESS_2026_11_25.md`
 - `docs/AUDIT_STATUS_2026_11_04.md`
 - `docs/BACKLOG.md`
 - `docs/BRIDGE_RECOVERY_10_5_385.md`
@@ -853,6 +862,7 @@ Modules :
 - `docs/WALLET_JOURNAL_10_5_386.md`
 - `docs/WEB_10_5_393.md`
 - `docs/WEB_10_5_396.md`
+- `docs/WEB_HOTFIX_10_5_396.md`
 - `docs/assistant-ai-evaluation.md`
 - `docs/deployment_settings_checklist.md`
 

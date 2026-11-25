@@ -1816,10 +1816,10 @@ function _ensureSettleModal() {
   return modal;
 }
 
-function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }) {
+function _openSettlementModal({ fromId, toId, currency, amount, members }) {
   if (_settleModalState?.pending) return;
   const modal = _ensureSettleModal();
-  _settleModalState = { fromId, toId, currency, amount, isOut };
+  _settleModalState = { fromId, toId, currency, amount };
   const from = members.find(x => x.id === fromId)?.name || "—";
   const to = members.find(x => x.id === toId)?.name || "—";
   modal.querySelector("#tripSettleContext").textContent =
@@ -1839,37 +1839,30 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
 
   const inputAmt = modal.querySelector("#tripSettleAmount");
   const inputCur = modal.querySelector("#tripSettleCurrency");
+  const debtRow = modal.querySelector("#tripSettleDebtRow");
+  const debtAmount = modal.querySelector("#tripSettleDebtAmount");
+  const debtCur = String(currency || "").toUpperCase();
   let currencyDirty = false;
-  const refreshCurrencyOptions = () => {
-    const selected = String(inputCur.value || wallets.find(x => x.id === sel.value)?.currency || currency || '').toUpperCase();
-    inputCur.innerHTML = _tripCurrencyOptionsHTML(selected);
-    inputCur.value = selected;
-  };
-  refreshCurrencyOptions();
-  inputAmt.value = String(_round2(amount));
+  let previousCurrency = null;
+  inputCur.innerHTML = _tripCurrencyOptionsHTML(debtCur);
+  inputCur.value = debtCur;
+  debtAmount.value = String(_round2(amount));
+  modal.querySelector("#tripSettleDebtLabel").textContent = `Montant à déduire du Trip (${debtCur})`;
   inputCur.onchange = () => { currencyDirty = true; refreshNote(); };
 
   const refreshNote = () => {
-    const wid = sel.value;
-    const w = wallets.find(x => x.id === wid);
-    const wCur = String(w?.currency || "").toUpperCase();
-    if (!currencyDirty) {
-      refreshCurrencyOptions();
-      inputCur.value = wCur || String(currency || '').toUpperCase();
-    }
-    const txCur = String(inputCur.value || '').toUpperCase();
+    const wCur = String(wallets.find(x => x.id === sel.value)?.currency || "").toUpperCase();
+    if (!currencyDirty) inputCur.value = wCur || debtCur;
+    const txCur = String(inputCur.value || "").toUpperCase();
+    if (txCur !== previousCurrency) inputAmt.value = txCur === debtCur ? String(_round2(amount)) : "";
+    previousCurrency = txCur;
+    const crossCurrency = Boolean(txCur && txCur !== debtCur);
+    debtRow.classList.toggle("hidden", !crossCurrency);
     const note = modal.querySelector("#tripSettleWalletNote");
-    if (!wCur || !txCur) {
-      note.textContent = "";
-      return;
-    }
-    if (wCur !== txCur) {
-      note.textContent = `⚠ Wallet en ${wCur}. La transaction sera créée en ${txCur} : vérifie que ce comportement est voulu.`;
-    } else if (txCur !== String(currency||"").toUpperCase()) {
-      note.textContent = `ℹ Règlement Trip en ${String(currency||"").toUpperCase()} mais transaction wallet saisie en ${txCur}.`;
-    } else {
-      note.textContent = "";
-    }
+    const messages = [];
+    if (crossCurrency) messages.push(`Saisis le montant réellement payé ou reçu en ${txCur} et le montant à déduire du Trip en ${debtCur}.`);
+    if (wCur && txCur && wCur !== txCur) messages.push(`Wallet en ${wCur} : la transaction sera créée en ${txCur}.`);
+    note.textContent = messages.join(" ");
   };
   sel.onchange = refreshNote;
   refreshNote();
@@ -1898,7 +1891,9 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
       const amtW = _round2(_tripParseLocaleAmount(inputAmt.value));
       if (!(amtW > 0)) throw new Error("Montant invalide.");
       if (!txCur) throw new Error("Devise invalide.");
-      await _persistSettlementWithWallet({ walletId: wid, walletCurrency: txCur, walletAmount: amtW, walletNativeCurrency: walletCur });
+      const tripAmount = txCur === debtCur ? amtW : _round2(_tripParseLocaleAmount(debtAmount.value));
+      if (!(tripAmount > 0)) throw new Error("Montant à déduire du Trip invalide.");
+      await _persistSettlementWithWallet({ walletId: wid, walletCurrency: txCur, walletAmount: amtW, tripAmount });
       modal._tbModalHandle?.close();
       _settleModalState = null;
       toastOk("Règlement enregistré.");
@@ -2525,8 +2520,8 @@ async function _persistSettlement(wallet = null) {
       tripId: tripState.activeTripId,
       fromMemberId: model.fromId,
       toMemberId: model.toId,
-      currency: wallet?.walletCurrency || model.currency,
-      amount: wallet ? wallet.walletAmount : model.amount,
+      currency: model.currency,
+      amount: wallet ? (wallet.walletCurrency === model.currency ? wallet.walletAmount : wallet.tripAmount) : model.amount,
     }),
     p_wallet_id: wallet?.walletId || null,
     p_wallet_currency: wallet?.walletCurrency || null,
@@ -3414,7 +3409,14 @@ async function _persistSettlementWithWallet(wallet) {
     }
   }
 
-  async function _tripReplayOfflineExpenseMutation(payload) {
+  async function _tripReplayOfflineExpenseMutation(payload, mayReplay = () => true) {
+    const accountId = String(sbUser?.id || "");
+    const ensureCurrent = () => {
+      if (String(sbUser?.id || "") !== accountId || !mayReplay()) {
+        throw new Error("Synchronisation Trip interrompue : compte ou action modifie.");
+      }
+    };
+    ensureCurrent();
     const tripId = String(payload?.tripId || "");
     if (!tripId) throw new Error("Trip manquant dans l'action offline.");
     if (tripState._offlineReplaySaving) throw new Error("Synchronisation Trip deja en cours.");
@@ -3425,6 +3427,7 @@ async function _persistSettlementWithWallet(wallet) {
         _setActiveTripId(tripId);
       }
       await _loadActiveData();
+      ensureCurrent();
       if (!(tripState.members || []).length && Array.isArray(payload?.members) && payload.members.length) {
         tripState.members = payload.members.map((m) => ({
           id: m.id,
@@ -3440,12 +3443,13 @@ async function _persistSettlementWithWallet(wallet) {
         await _updateExpense(Object.assign({ expenseId: payload.expenseId }, form));
       } else {
         const existingExpenseId = await _findExistingTripExpenseForReplay(tripId, form);
+        ensureCurrent();
         if (existingExpenseId) return existingExpenseId;
         await _addExpense(Object.assign({}, form, { skipDuplicateCheck: true }));
       }
     } finally {
       tripState._offlineReplaySaving = false;
-      if (previousTripId && previousTripId !== tripState.activeTripId) {
+      if (String(sbUser?.id || "") === accountId && previousTripId && previousTripId !== tripState.activeTripId) {
         try {
           _setActiveTripId(previousTripId);
           await _loadActiveData();
@@ -4536,10 +4540,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
           const amt = Number(btn.getAttribute("data-settle-amt") || 0);
 
           if (!fromId || !toId || !cur || !(amt > 0)) throw new Error("Règlement invalide.");
-          const me = members.find(x => x.isMe);
-          const isOut = me && (fromId === me.id);
-
-          _openSettlementModal({ fromId, toId, currency: cur, amount: amt, isOut, members });
+          _openSettlementModal({ fromId, toId, currency: cur, amount: amt, members });
         } catch (e) {
           toastWarn(e?.message || String(e));
         }
@@ -4559,7 +4560,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
           if (!fromId || !toId || !cur || !(amt > 0)) throw new Error("Règlement invalide.");
 
           // Create a settlement event ONLY (does not touch wallets)
-          btn._settlementState ||= { fromId, toId, currency: cur, amount: amt, isOut: null };
+          btn._settlementState ||= { fromId, toId, currency: cur, amount: amt };
           _settleModalState = btn._settlementState;
           await _persistSettlementEventOnly();
           _settleModalState = null;

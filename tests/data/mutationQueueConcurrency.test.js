@@ -208,13 +208,14 @@ it.each(['success','retry','permanent'])('preserves a newer persisted payload af
   const {store,reload}=fixture();
   store.enqueue('update',{amount:10},{entityId:'one'});
   const onSuccess=vi.fn(),onPermanentFailure=vi.fn();
-  await flushMutationQueue({store,onSuccess,onPermanentFailure,isPermanentFailure:()=>outcome==='permanent',run:async item=>{
+  const result=await flushMutationQueue({store,onSuccess,onPermanentFailure,isPermanentFailure:()=>outcome==='permanent',run:async item=>{
     expect(item.payload.amount).toBe(10);
     store.enqueue('update',{amount:20},{entityId:'one'});
     store.enqueue('update',{amount:30},{entityId:'one'});
     if(outcome!=='success') throw new Error('old failure');
   }});
   const next=reload();
+  expect(result).toMatchObject({synced:0,failed:0,discarded:0,attempted:1});
   expect(next.read()).toHaveLength(1);
   expect(next.read()[0]).toMatchObject({payload:{amount:30},status:'pending',error:null,nextAttemptAt:null});
   expect(onSuccess).not.toHaveBeenCalled(); expect(onPermanentFailure).not.toHaveBeenCalled();
@@ -270,14 +271,104 @@ it('reads and sends persisted version-3 items without losing their payload',asyn
 it('keeps Trip optimistic state until its latest revision is acknowledged by the real adapter',async()=>{
   const values=new Map(),cleanup=vi.fn();
   const storage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
-  const window={Data:{createMutationQueueStore,flushMutationQueue},sbUser:{id:'synthetic'},addEventListener(){},dispatchEvent(){},toastOk(){},tbTripCleanupOfflineOptimistic:cleanup};
+  const window={Data:{createMutationQueueStore,flushMutationQueue},sbUser:{id:'synthetic'},addEventListener(){},dispatchEvent(){},toastOk:vi.fn(),tbTripCleanupOfflineOptimistic:cleanup};
   vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js','utf8'),{window,localStorage:storage,navigator:{language:'fr'},setTimeout(){},setInterval,clearInterval,console});
   const enqueue=amount=>window.tbOfflineQueueEnqueue('trip.expense.update',{amount},{entityId:'trip-one'});
   const item=enqueue(10);
-  window.tbTripReplayOfflineExpenseMutation=async()=>{enqueue(20);};
-  await window.tbOfflineQueueSync('manual');
+  window.tbTripReplayOfflineExpenseMutation=async()=>{enqueue(20);window.toastOk.mockClear();};
+  expect(await window.tbOfflineQueueSync('manual')).toMatchObject({synced:0,failed:0});
   expect(cleanup).not.toHaveBeenCalled();expect(window.tbOfflineQueueCount()).toBe(1);
+  expect(window.toastOk).not.toHaveBeenCalled();
   window.tbTripReplayOfflineExpenseMutation=async payload=>expect(payload.amount).toBe(20);
   await window.tbOfflineQueueSync('manual');
   expect(cleanup).toHaveBeenCalledExactlyOnceWith(item.id);expect(window.tbOfflineQueueCount()).toBe(0);
+});
+
+it.each([
+  ['sport', 'tbSportSyncLocalWorkouts'],
+  ['nutrition', 'tbNutritionSyncLocal'],
+])('keeps %s intent until its lazy handler is available and never starts it for a new account', async (domain, adapter) => {
+  const values = new Map();
+  const storage = { getItem: key => values.get(key) || null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
+  const replay = vi.fn(async () => {});
+  const window = { Data: { createMutationQueueStore, flushMutationQueue }, sbUser: { id: 'first' },
+    addEventListener() {}, dispatchEvent() {}, toastOk: vi.fn(), tbLoadLegacyDomain: vi.fn(async () => {}) };
+  vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8'), {
+    window, localStorage: storage, navigator: { language: 'fr' }, setTimeout() {}, setInterval, clearInterval,
+    console: { warn() {} },
+  });
+  const original = window.tbOfflineQueueEnqueue(`${domain}.sync_local`);
+  window.toastOk.mockClear();
+  expect(await window.tbOfflineQueueSync('manual')).toMatchObject({ ok: false, failed: 1, synced: 0 });
+  expect(window.tbLoadLegacyDomain).toHaveBeenCalledWith(domain);
+  expect(window.tbOfflineQueuePending()[0]).toMatchObject({ id: original.id, status: 'pending', error: expect.stringContaining('indisponible') });
+  expect(window.toastOk).not.toHaveBeenCalled();
+  window.tbLoadLegacyDomain.mockImplementation(async () => {
+    window[adapter] = replay;
+    window.sbUser = { id: 'second' };
+  });
+  expect(await window.tbOfflineQueueSync('manual')).toMatchObject({ ok: false, skipped: 'account-change', synced: 0 });
+  expect(replay).not.toHaveBeenCalled();
+  expect(window.tbOfflineQueueCount()).toBe(0);
+  window.sbUser = { id: 'first' };
+  expect(window.tbOfflineQueuePending()[0].id).toBe(original.id);
+});
+
+it.each(['same-intent', 'newer-revision', 'account-change'])('replays a cold Trip action only when still current: %s', async scenario => {
+  const values = new Map();
+  const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
+  const send = vi.fn(async () => {});
+  const window = {
+    Data: { createMutationQueueStore, flushMutationQueue }, sbUser: { id: 'a' }, toastOk() {},
+    addEventListener() {}, dispatchEvent() {},
+    tbLoadLegacyDomain: vi.fn(async () => {
+      if (scenario === 'newer-revision') enqueue(20);
+      if (scenario === 'account-change') window.sbUser = { id: 'b' };
+      window.tbTripReplayOfflineExpenseMutation = send;
+    }),
+  };
+  vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8'), {
+    window, localStorage: storage, navigator: { language: 'fr' }, setTimeout() {}, setInterval, clearInterval, console,
+  });
+  const enqueue = amount => window.tbOfflineQueueEnqueue('trip.expense.update', { amount }, { entityId: 'expense-1' });
+  enqueue(10);
+  const result = await window.tbOfflineQueueSync('manual');
+  expect(window.tbLoadLegacyDomain).toHaveBeenCalledExactlyOnceWith('trip');
+  if (scenario === 'same-intent') {
+    expect(result).toMatchObject({ ok: true, synced: 1 });
+    expect(send).toHaveBeenCalledExactlyOnceWith({ mode: 'update', amount: 10 }, expect.any(Function));
+    expect(window.tbOfflineQueueCount()).toBe(0);
+  } else {
+    expect(send).not.toHaveBeenCalled();
+    window.sbUser = { id: 'a' };
+    expect(window.tbOfflineQueuePending()[0].payload.amount).toBe(scenario === 'newer-revision' ? 20 : 10);
+    if (scenario === 'account-change') {
+      // Simulate the original scope's abandoned attempt aging past the recovery window.
+      const key = 'travelbudget_offline_queue_v2_a';
+      const snapshot = JSON.parse(values.get(key));
+      snapshot.items[0].updatedAt = new Date(Date.now() - 61_000).toISOString();
+      values.set(key, JSON.stringify(snapshot));
+    }
+    expect(await window.tbOfflineQueueSync('manual')).toMatchObject({ ok: true, synced: 1 });
+    expect(send).toHaveBeenCalledOnce();
+  }
+});
+
+it.each(['load', 'fingerprint'])('does not write a Trip replay after its intent changes during %s', async boundary => {
+  const source = fs.readFileSync('public/legacy/js/29_trip_v1.js', 'utf8');
+  const code = source.slice(source.indexOf('async function _tripReplayOfflineExpenseMutation'), source.indexOf('window.tbTripReplayOfflineExpenseMutation ='));
+  let allowed = true;
+  const context = {
+    sbUser: { id: 'first' },
+    tripState: { activeTripId: 'trip', members: [] },
+    _loadActiveData: async () => { if (boundary === 'load') allowed = false; },
+    _findExistingTripExpenseForReplay: async () => { allowed = false; return 'similar-expense'; },
+    _tripExpenseFormForQueue: form => form,
+    _addExpense: vi.fn(), _updateExpense: vi.fn(), console,
+  };
+  vm.runInNewContext(code, context);
+  await expect(context._tripReplayOfflineExpenseMutation({ tripId: 'trip', form: {} }, () => allowed)).rejects.toThrow('interrompue');
+  expect(context._addExpense).not.toHaveBeenCalled();
+  expect(context._updateExpense).not.toHaveBeenCalled();
+  expect(context.tripState._offlineReplaySaving).toBe(false);
 });
