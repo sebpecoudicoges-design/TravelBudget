@@ -13,7 +13,7 @@ const priorYear = value => { const [y, m, d] = value.split('-').map(Number); con
 
 export function installAccountingRuntime(win = window) {
   if (win.renderAccounting) return;
-  let generation = 0, scope = '', data = null, settings = {}, ui = null, status = '', pending = false;
+  let generation = 0, scope = '', data = null, settings = {}, settingsRaw, ui = null, status = '', pending = false;
   let fxRequest = null;
   const root = () => win.document.getElementById('accounting-root');
   const identity = () => `${win.sbUser?.id || ''}|${win.state?.activeTravelId || ''}`;
@@ -65,12 +65,17 @@ export function installAccountingRuntime(win = window) {
         data = { ...result, manualRates: win.tbFxGetManualRates?.() || win.state.fx?.manualRates || {}, asOf: localToday() }; status = 'Données actualisées. Paramétrage enregistré sur cet appareil uniquement.';
       }
       if (!current()) return;
-      settings = readSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId);
+      try { [settings, settingsRaw] = readSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId); }
+      catch {
+        reset();
+        root().innerHTML = '<div class="tb-accounting-panel"><p role="alert">Paramétrage local illisible. Les données n’ont pas été remplacées.</p><button class="btn" data-ac-refresh type="button">Réessayer</button></div>';
+        return;
+      }
       const mapped = !data.partial && data.transactions.length ? completeInitialMapping(data.transactions, settings) : settings;
       const completed = assignWalletAccounts(data.wallets, mapped);
       if (completed !== settings) {
-        try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, completed); settings = completed; }
-        catch { status = 'Classement initial non enregistré : stockage local indisponible.'; }
+        try { storeSettings(completed); }
+        catch (error) { status = saveFailure(error); }
       }
       const today = localToday();
       ui ||= { tab: 'summary', source: null, start: `${today.slice(0, 4)}-01-01`, end: today, currency: String(win.state.user?.baseCurrency || 'EUR').toUpperCase(), mode: 'consolidated' };
@@ -81,14 +86,24 @@ export function installAccountingRuntime(win = window) {
       else root().innerHTML = '<div class="tb-accounting-panel"><p role="alert">Lecture comptable indisponible. Vérifie la connexion et réessaie ; aucune donnée n’a été modifiée.</p><button class="btn" data-ac-refresh type="button">Réessayer</button></div>';
     } finally { if (current()) pending = false; }
   }
+  function storeSettings(next) {
+    settingsRaw = saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next, settingsRaw);
+    settings = next;
+  }
+  function saveFailure(error) {
+    return error instanceof Error && error.message.includes('autre onglet')
+      ? error.message
+      : 'Enregistrement local impossible. Les données précédentes sont conservées.';
+  }
+  function persist(next, message) {
+    try { storeSettings(next); ui.dialog = null; status = message; draw(); return true; }
+    catch (error) { setStatus(saveFailure(error)); return false; }
+  }
   function persistDebts(debts, archive = settings.archivedDebts || []) {
-    const next = { ...settings, debts, archivedDebts: archive };
-    try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; ui.dialog = null; status = 'Dettes et remboursements enregistrés sur cet appareil.'; draw(); return true; }
-    catch { setStatus('Enregistrement local impossible. Les données précédentes sont conservées.'); return false; }
+    return persist({ ...settings, debts, archivedDebts: archive }, 'Dettes et remboursements enregistrés sur cet appareil.');
   }
   function persistPositions(next) {
-    try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; ui.dialog = null; status = 'Rattachements enregistrés sur cet appareil.'; draw(); return true; }
-    catch { setStatus('Enregistrement local impossible ; aucun rattachement modifié.'); return false; }
+    return persist(next, 'Rattachements enregistrés sur cet appareil.');
   }
   function setStatus(message) { status = message; const el = root()?.querySelector('[role="status"]'); if (el) el.textContent = message; const alert = root()?.querySelector('dialog[open] [data-ac-dialog-status]'); if (alert) alert.textContent = message; }
   win.document.addEventListener('close', event => { if (!event.target.matches?.('#accounting-root dialog')) return; const id = event.target.id; if (ui) ui.dialog = null; [...(root()?.querySelectorAll('[data-ac-dialog]') || [])].find(b => b.dataset.acDialog === id)?.focus(); }, true);
@@ -220,8 +235,7 @@ export function installAccountingRuntime(win = window) {
       const inferredMapping = { ...settings.inferredMapping };
       for (const key of Object.keys(mapping)) if (mapping[key] !== settings.mapping?.[key]) delete inferredMapping[key];
       const next = { ...settings, mapping, balances, inferredMapping, equityMode: form.get('equityMode') || settings.equityMode || 'calculated' };
-      try { saveSettings(win.localStorage, win.sbUser.id, win.state.activeTravelId, next); settings = next; ui.dialog = null; status = 'Paramétrage enregistré sur cet appareil. Les états ont été recalculés.'; draw(); }
-      catch { setStatus('Enregistrement local impossible. Les réglages précédents sont conservés.'); }
+      persist(next, 'Paramétrage enregistré sur cet appareil. Les états ont été recalculés.');
     }
   });
   win.addEventListener('tb:auth_scope_changed', reset);

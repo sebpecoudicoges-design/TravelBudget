@@ -32,12 +32,17 @@ export async function loadAccountingData({ client, userId, travelId }) {
 
 export const settingsKey = (userId, travelId) => `tb-accounting-v1:${encodeURIComponent(userId)}:${encodeURIComponent(travelId)}`;
 export function readSettings(storage, userId, travelId) {
-  try {
-    const value = JSON.parse(storage.getItem(settingsKey(userId, travelId)) || '{}');
-    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  } catch { return {}; }
+  const raw = storage.getItem(settingsKey(userId, travelId));
+  const settings = raw === null ? {} : JSON.parse(raw);
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) throw new Error('Paramétrage local illisible.');
+  return [settings, raw];
 }
-export function saveSettings(storage, userId, travelId, settings) {
+
+export function saveSettings(storage, userId, travelId, settings, previous) {
   if (!userId || !travelId) throw new Error('Compte ou voyage indisponible.');
-  storage.setItem(settingsKey(userId, travelId), JSON.stringify(settings));
+  const key = settingsKey(userId, travelId);
+  if (storage.getItem(key) !== previous) throw new Error('Réglages modifiés dans un autre onglet. Actualise la comptabilité avant de ressaisir ta modification.');
+  const raw = JSON.stringify(settings);
+  storage.setItem(key, raw);
+  return raw;
 }
