@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -52,7 +52,10 @@ try {
   const ports = await Promise.all([reservePort(), reservePort(), reservePort()]);
   const [api, db, shadow] = ports.map(server => server.address().port);
   await Promise.all(ports.map(server => new Promise(resolve => server.close(resolve))));
-  await mkdir(join(work, 'supabase'));
+  await mkdir(join(work, 'supabase/functions/write-personal-document'), { recursive: true });
+  await mkdir(join(work, 'supabase/functions/_shared'), { recursive: true });
+  await Promise.all(['write-personal-document/index.ts', 'write-personal-document/handler.ts', '_shared/account-data.ts']
+    .map(path => copyFile(local(`supabase/functions/${path}`), join(work, `supabase/functions/${path}`))));
   await writeFile(join(work, 'supabase', 'config.toml'), `project_id = "${project}"
 [api]
 enabled = true
@@ -75,17 +78,21 @@ enabled = false
 enabled = false
 [storage]
 enabled = true
+file_size_limit = "50MiB"
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:${api}"
 [edge_runtime]
-enabled = false
+enabled = true
+policy = "per_worker"
+[functions.write-personal-document]
+verify_jwt = false
 [analytics]
 enabled = false
 `);
   started = true; // Also clean up a partially started stack, by unique project only.
   console.log('Starting a fresh local-only Supabase project');
-  await service('start', '--exclude', 'realtime,studio,mailpit,imgproxy,edge-runtime,logflare,vector,supavisor');
+  await service('start', '--exclude', 'realtime,studio,mailpit,imgproxy,logflare,vector,supavisor');
   const status = JSON.parse(await service('status', '--output', 'json'));
   const endpoint = new URL(status.API_URL);
   assert.ok(['127.0.0.1', 'localhost'].includes(endpoint.hostname));

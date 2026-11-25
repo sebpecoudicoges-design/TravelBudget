@@ -286,3 +286,24 @@ assert.equal((await (await checked(admin.storage.from('personal-documents').down
   'real Storage through the guarded function');
 assert.equal((await syntheticForward(closingClient, crypto.randomUUID())).status, 409);
 console.log('PASS guarded document handler writes an ordinary synthetic upload to real Storage and does not admit a closed account');
+// Call the same Functions SDK boundary as the three app screens. Keep the
+// original maximum size covered through the real local Gateway and Edge runtime.
+const gatewayDoc = crypto.randomUUID();
+const gatewayFile = new Blob([new Uint8Array(50 * 1024 * 1024)], { type: 'application/pdf' });
+const gatewayUpload = await checked(survivorClient.functions.invoke('write-personal-document', {
+  headers: {
+    'Content-Type': gatewayFile.type,
+    'x-document-id': gatewayDoc,
+    'x-document-filename': 'fixture-max-size.pdf',
+  },
+  body: gatewayFile,
+}));
+assert.equal(gatewayUpload?.path, `${survivor}/${gatewayDoc}/fixture-max-size.pdf`);
+const gatewayFiles = await checked(admin.storage.from('personal-documents').list(`${survivor}/${gatewayDoc}`));
+assert.equal(gatewayFiles?.[0]?.metadata?.size, gatewayFile.size);
+const gatewayRejection = await closingClient.functions.invoke('write-personal-document', {
+  headers: { 'Content-Type': 'text/plain', 'x-document-id': crypto.randomUUID(), 'x-document-filename': 'closed.txt' },
+  body: new Blob(['ordinary test file'], { type: 'text/plain' }),
+});
+assert.equal(gatewayRejection.error?.context?.status, 409);
+console.log('PASS Functions SDK, actual Edge gateway and Storage preserve the existing 50 MiB upload limit and closure protection');
