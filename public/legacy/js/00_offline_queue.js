@@ -305,12 +305,16 @@
       return true;
     }
     if (item.kind === "trip.expense.create" || item.kind === "trip.expense.update") {
+      if (typeof window.tbTripReplayOfflineExpenseMutation !== "function" && typeof window.tbLoadLegacyDomain === "function") {
+        await window.tbLoadLegacyDomain("trip");
+      }
+      if (!mayReplay()) throw new Error("Synchronisation interrompue : action, compte ou verrou modifie.");
       if (typeof window.tbTripReplayOfflineExpenseMutation !== "function") {
         throw new Error("Trip indisponible pour rejouer l'action offline");
       }
       await window.tbTripReplayOfflineExpenseMutation(Object.assign({}, item.payload || {}, {
         mode: item.kind === "trip.expense.update" ? "update" : "create",
-      }));
+      }), mayReplay);
       return true;
     }
     throw new Error(`Type de queue inconnu: ${item.kind}`);
@@ -361,9 +365,12 @@
       if (!todo.length) return { ok: true, synced: 0 };
 
       const syncedKinds = [];
+      const isCurrentAttempt = (attempt) => queueStore.scope() === syncScope && renewLease()
+        && queueStore.read().some(item => item.id === attempt.id
+          && item.revision === attempt.revision && item.attemptToken === attempt.attemptToken);
       const result = await window.Data.flushMutationQueue({
         store: queueStore,
-        run: item => runItem(item, () => queueStore.scope() === syncScope && renewLease()),
+        run: item => runItem(item, () => isCurrentAttempt(item)),
         force,
         canContinue: renewLease,
         onSuccess: (item) => {
@@ -415,6 +422,13 @@
   window.tbOfflineQueueDiscardKind = discardKind;
   window.tbOfflineQueueDiscardTripConflicts = discardTripConflicts;
   window.tbOfflineQueueCleanupOptimistic = cleanupOptimisticRows;
+
+  window.addEventListener("storage", (event) => {
+    if (event.storageArea !== localStorage || event.key !== queueStore.scope()) return;
+    const items = safeRead();
+    try { window.Data?.appStore?.set("offlineMutations", items); } catch (_) {}
+    dispatchChanged({ source: "another-tab" });
+  });
 
   window.addEventListener("online", () => {
     setTimeout(() => { sync("online").catch((e) => console.warn("[OfflineQueue] sync failed", e?.message || e)); }, 1200);

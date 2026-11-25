@@ -19,6 +19,8 @@ on:
       - 'public/legacy/js/29_trip_v1.js'
       - 'scripts/fixtures/connectedStartup.mjs'
       - 'tests/e2e/financial-trip-budget.spec.js'
+      - 'tests/data/mutationQueue*.test.js'
+      - 'tests/e2e/offline-queue-*.spec.js'
       - 'tests/data/nutrition*.test.js'
       - 'tests/e2e/nutrition-edit-storage.spec.js'
       - 'tests/features/analysis/**'
@@ -54,3 +56,4 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e -- tests/e2e/nutrition-edit-storage.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/financial-trip-budget.spec.js --project=desktop-chromium
+      - run: npm run test:e2e -- tests/e2e/offline-queue-tabs.spec.js tests/e2e/offline-queue-revision.spec.js --project=desktop-chromium

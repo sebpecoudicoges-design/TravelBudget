@@ -3406,7 +3406,14 @@ async function _persistSettlementWithWallet(wallet) {
     }
   }
 
-  async function _tripReplayOfflineExpenseMutation(payload) {
+  async function _tripReplayOfflineExpenseMutation(payload, mayReplay = () => true) {
+    const accountId = String(sbUser?.id || "");
+    const ensureCurrent = () => {
+      if (String(sbUser?.id || "") !== accountId || !mayReplay()) {
+        throw new Error("Synchronisation Trip interrompue : compte ou action modifie.");
+      }
+    };
+    ensureCurrent();
     const tripId = String(payload?.tripId || "");
     if (!tripId) throw new Error("Trip manquant dans l'action offline.");
     if (tripState._offlineReplaySaving) throw new Error("Synchronisation Trip deja en cours.");
@@ -3417,6 +3424,7 @@ async function _persistSettlementWithWallet(wallet) {
         _setActiveTripId(tripId);
       }
       await _loadActiveData();
+      ensureCurrent();
       if (!(tripState.members || []).length && Array.isArray(payload?.members) && payload.members.length) {
         tripState.members = payload.members.map((m) => ({
           id: m.id,
@@ -3432,12 +3440,13 @@ async function _persistSettlementWithWallet(wallet) {
         await _updateExpense(Object.assign({ expenseId: payload.expenseId }, form));
       } else {
         const existingExpenseId = await _findExistingTripExpenseForReplay(tripId, form);
+        ensureCurrent();
         if (existingExpenseId) return existingExpenseId;
         await _addExpense(Object.assign({}, form, { skipDuplicateCheck: true }));
       }
     } finally {
       tripState._offlineReplaySaving = false;
-      if (previousTripId && previousTripId !== tripState.activeTripId) {
+      if (String(sbUser?.id || "") === accountId && previousTripId && previousTripId !== tripState.activeTripId) {
         try {
           _setActiveTripId(previousTripId);
           await _loadActiveData();

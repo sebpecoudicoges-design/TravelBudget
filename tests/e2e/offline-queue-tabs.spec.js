@@ -39,3 +39,29 @@ for (const failure of [false, true]) test(`browser lock prevents a second tab re
   expect(await second.evaluate(() => window.replayed)).toEqual(failure ? [10] : []);
   expect(await second.evaluate(() => window.tbOfflineQueueCount())).toBe(0);
 });
+
+test('another tab receives queue changes only for its active account', async ({ context }) => {
+  const writer = await context.newPage();
+  const reader = await context.newPage();
+  await prepare(writer);
+  await prepare(reader);
+  await reader.evaluate(() => {
+    window.peerUpdates = [];
+    window.addEventListener('tb:offline_queue_changed', ev => {
+      if (ev.detail.source === 'another-tab') window.peerUpdates.push(ev.detail.count);
+    });
+  });
+  const id = await writer.evaluate(() => window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 25 }, { entityId: 'x' }).id);
+  await expect.poll(() => reader.evaluate(() => window.peerUpdates.slice())).toEqual([1]);
+  await writer.evaluate(id => window.tbOfflineQueueRemove(id), id);
+  await expect.poll(() => reader.evaluate(() => window.peerUpdates.slice())).toEqual([1, 0]);
+  await writer.evaluate(() => {
+    window.sbUser = { id: 'another-synthetic-account' };
+    window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 50 }, { entityId: 'y' });
+    window.sbUser = { id: 'synthetic-tabs' };
+    window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 75 }, { entityId: 'z' });
+  });
+  await expect.poll(() => reader.evaluate(() => window.peerUpdates.slice())).toEqual([1, 0, 1]);
+  expect(await reader.evaluate(() => window.tbOfflineQueuePending().map(item => item.payload.amount))).toEqual([75]);
+  expect(await reader.evaluate(() => window.replayed)).toEqual([]);
+});
