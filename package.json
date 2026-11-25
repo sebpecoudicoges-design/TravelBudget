@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "test:sql:account-deletion": "node scripts/test-account-deletion-postgres.mjs",
     "test:rest:account-deletion": "node scripts/test-account-deletion-postgres.mjs --rest",
+    "test:supabase:account-deletion": "node scripts/test-account-deletion-supabase.mjs",
     "test:e2e": "node scripts/run-playwright.mjs",
     "atlas:generate": "node scripts/generate-project-atlas.mjs",
     "docs:check": "node scripts/check-project-docs.mjs",

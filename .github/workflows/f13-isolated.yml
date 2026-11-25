@@ -1,0 +1,41 @@
+name: F13 isolated integration
+
+on:
+  push:
+    branches: [codex/handoff-audit-2026-11-25-cloud]
+    paths:
+      - '.github/workflows/f13-isolated.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'config/edge-check.lock'
+      - 'scripts/*account-deletion*'
+      - 'supabase/functions/_shared/account-data.ts'
+      - 'supabase/functions/process-account-deletions/**'
+      - 'supabase/migrations/*account_deletion*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: f13-local-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  auth-storage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v3
+        with:
+          version: '3.4.0'
+      - name: Real Auth and Storage on a disposable local stack
+        run: npm run test:supabase:account-deletion

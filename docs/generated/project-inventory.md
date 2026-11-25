@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `bf5daa6fd7d212d388330a0ae53083194dadfb9e`
-> Empreinte du snapshot : `b998a13b89b19f69c26695e2e48c094ab2df768399544243904d5ee540186f28`
-> Généré le : `2026-11-25T05:36:11.596Z`
+> Commit analysé : `7b4b0299bc065b5a42a3a80057cf7255635d6b7c`
+> Empreinte du snapshot : `ea58b2df80e2705e6188bb524a11823c9d691f263b706ae824b12e2d6235e87e`
+> Généré le : `2026-11-25T06:43:38.958Z`
 
 # Inventaire du projet TravelBudget
 
@@ -36,6 +36,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `test:watch` | `vitest` |
 | `test:sql:account-deletion` | `node scripts/test-account-deletion-postgres.mjs` |
 | `test:rest:account-deletion` | `node scripts/test-account-deletion-postgres.mjs --rest` |
+| `test:supabase:account-deletion` | `node scripts/test-account-deletion-supabase.mjs` |
 | `test:e2e` | `node scripts/run-playwright.mjs` |
 | `atlas:generate` | `node scripts/generate-project-atlas.mjs` |
 | `docs:check` | `node scripts/check-project-docs.mjs` |
