@@ -525,6 +525,13 @@ export async function purgeAccount(admin: SupabaseClient, userId: string, before
   const deletedRows: Record<string, number> = {};
 
   for (const spec of DELETE_ORDER) {
+    if (spec.table === "transactions") {
+      const { data, error } = await admin.rpc("purge_account_wallet_transactions", { p_user_id: userId });
+      if (error) throw new Error(`transactions: ${error.message}`);
+      if (!Number.isSafeInteger(data) || data < 0) throw new Error("transactions: deletion count unavailable");
+      deletedRows.transactions = data;
+      continue;
+    }
     // Some owned tables use another primary key (e.g. quota.scope). Count
     // mutations without requesting an id column or a capped result payload.
     const { count, error } = await admin.from(spec.table)

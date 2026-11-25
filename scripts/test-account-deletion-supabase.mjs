@@ -113,6 +113,11 @@ enabled = false
     ALTER TABLE public.f13_fixture_guard ENABLE ROW LEVEL SECURITY;
     GRANT SELECT ON public.f13_fixture_guard TO service_role;
     INSERT INTO public.f13_fixture_guard VALUES ('${marker}');
+    ALTER TABLE public.trip_expenses
+      ADD CONSTRAINT f13_fixture_trip_payment_fk FOREIGN KEY (transaction_id) REFERENCES public.transactions(id)
+        ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED,
+      ADD CONSTRAINT f13_fixture_trip_payment_second_fk FOREIGN KEY (transaction_id) REFERENCES public.transactions(id)
+        ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
     CREATE POLICY f13_fixture_owner_upload ON storage.objects FOR INSERT TO authenticated
       WITH CHECK (bucket_id = 'personal-documents' AND (storage.foldername(name))[1] = (SELECT auth.uid())::text);
     GRANT USAGE ON SCHEMA storage TO service_role;

@@ -6,7 +6,7 @@ const emptyList = async () => ({ data: [], error: null });
 
 function client(failure, shared = false) {
   const deleteUser = vi.fn(async () => ({ error: null }));
-  return { auth: { admin: { deleteUser } }, storage: { from: () => ({ list: emptyList }) }, from: table => {
+  return { auth: { admin: { deleteUser } }, rpc: vi.fn(async () => ({ data: 0, error: null })), storage: { from: () => ({ list: emptyList }) }, from: table => {
     let operation = 'select'; let patch; let pageStart = 0; const filters = [];
     const query = {
       select: () => query, range: from => { pageStart = from; return query; }, order: () => query, limit: () => query,
@@ -201,4 +201,25 @@ it('counts deletes without assuming an id column on tables such as assistant_req
   expect(remove).toHaveBeenCalledWith({ count: 'exact' });
   expect(eq).toHaveBeenCalledWith('user_id', 'synthetic-user');
   expect(select).not.toHaveBeenCalled();
+});
+
+
+it('uses the atomic wallet cleanup before checkpoint and Auth deletion', async () => {
+  const admin = client(null);
+  admin.rpc.mockResolvedValue({ data: 2, error: null });
+  const checkpoint = vi.fn(async () => {
+    expect(admin.rpc).toHaveBeenCalledExactlyOnceWith('purge_account_wallet_transactions', { p_user_id: 'synthetic-user' });
+  });
+  const result = await purgeAccount(admin, 'synthetic-user', checkpoint);
+  expect(result.deletedRows.transactions).toBe(2);
+  expect(checkpoint).toHaveBeenCalledOnce();
+});
+
+it('does not reach the checkpoint or Auth when wallet cleanup fails', async () => {
+  const admin = client(null);
+  admin.rpc.mockResolvedValue({ error: new Error('fixture wallet cleanup unavailable') });
+  const checkpoint = vi.fn();
+  await expect(purgeAccount(admin, 'synthetic-user', checkpoint)).rejects.toThrow('fixture wallet cleanup unavailable');
+  expect(checkpoint).not.toHaveBeenCalled();
+  expect(admin.auth.admin.deleteUser).not.toHaveBeenCalled();
 });

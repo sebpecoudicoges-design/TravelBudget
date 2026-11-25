@@ -34,6 +34,13 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - name: Type-check the account lifecycle and fixture
+        run: >-
+          node node_modules/deno/bin.cjs check --no-config --lock=config/edge-check.lock --frozen=true
+          supabase/functions/process-account-deletions/index.ts
+          supabase/functions/request-account-deletion/index.ts
+          supabase/functions/export-account-data/index.ts
+          scripts/check-account-deletion-supabase.ts
       - uses: supabase/setup-cli@v3
         with:
           version: '3.4.0'
