@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `918b620c2cd56aaf88b5170be08a2f6744c3508a`
-> Empreinte du snapshot : `61b74d8d1ff06b0c8c3d22ca5db7e5fa0d84ae7f522dff118eb3576e5a5895d0`
-> Généré le : `2026-11-25T22:06:46.629Z`
+> Commit analysé : `421a36a9a6ffb22eab8f18c46251077c839373bc`
+> Empreinte du snapshot : `f3dc21c62bea7bdb003850ecf884ccdfc8d88b003e5882cede1dd69c063f35db`
+> Généré le : `2026-11-25T23:05:57.986Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 64 |
-| Fichiers de tests | 208 |
+| Fichiers de tests | 209 |
 | Migrations Supabase | 179 |
 | Fonctions Edge | 15 |
 | Projet Android présent | Oui |
@@ -318,6 +318,7 @@ Modules :
 
 ### Contrats de domaine et d'interface
 
+- `tests/features/accounting/accountingRestoreContract.test.js`
 - `tests/ui/accountingViewContract.test.js`
 - `tests/ui/analysisDrilldownViewContract.test.js`
 - `tests/ui/analysisFilterViewContract.test.js`
@@ -490,6 +491,7 @@ Modules :
 - `tests/features/accounting/accountingMapping.test.js`
 - `tests/features/accounting/accountingPositions.test.js`
 - `tests/features/accounting/accountingRecognition.test.js`
+- `tests/features/accounting/accountingRestoreContract.test.js`
 - `tests/features/accounting/accountingRules.test.js`
 - `tests/features/analysis/analysisCashBreakdown.test.js`
 - `tests/features/analysis/analysisChartOptions.test.js`
@@ -820,6 +822,7 @@ Modules :
 
 - `docs/ACCOUNTING_CHARGES_10_5_383.md`
 - `docs/ACCOUNTING_MODULE_BRIEF.md`
+- `docs/ACCOUNTING_RESTORE_F14.md`
 - `docs/ACCOUNT_DATA_LIFECYCLE.md`
 - `docs/ACCOUNT_DELETION_RECOVERY.md`
 - `docs/ADMIN_TEST_RETURNS.md`

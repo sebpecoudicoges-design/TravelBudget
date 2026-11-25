@@ -1,0 +1,27 @@
+# F14 : sauvegarde et restauration de la comptabilité personnelle
+
+**Décision proposée, pas une fonction livrée.** Priorité à une restauration locale volontaire, testée avant de concevoir la synchronisation entre appareils. Un rapport ne constitue pas une sauvegarde et un export de réglages ne remplace pas les transactions sources. La copie partagée au connecteur est destinée à ses lectures ; ce n’est ni une source de vérité ni une solution de restauration.
+
+## Ce qui doit être conservé
+
+| Famille de réglages actuels | Contenu à conserver | Dépendances à vérifier avant restauration |
+| --- | --- | --- |
+| Classement | `mapping`, `inferredMapping`, `classificationVersion`, `mappingBeforeDetailedChart`, `walletAccounts` | Anciens codes, distinction Auto/manuel, réaffectations bancaires et références de comptes |
+| Compléments | `balances`, `equityMode` | Devises, dates et montants déclarés ; les notes libres restent privées |
+| Dettes | `debts`, `archivedDebts` | Capital, mouvements, ajustements, détachements et historique ; contrôler les références aux opérations et biens |
+| Rattachements | `positions`, `assetLinks`, `positionAudit` | Identifiants stables, dates et devises, absence de double attribution ; distinguer les traces historiques des rattachements actifs |
+
+Un futur format descriptif inclura une version de sauvegarde distincte de `classificationVersion`, l’identité du compte et du voyage, la date de création et les familles validées ci-dessus. Il ne doit pas embarquer de transactions, soldes bancaires calculés, documents, taux ou rapports, ni de lien de téléchargement, secret ou jeton. Les notes comptables, montants déclarés et références restent des données privées même sans ces éléments. Pas de transfert silencieux vers un connecteur, une télémétrie ou un serveur.
+
+## Parcours proposé
+
+1. Export uniquement depuis le compte et voyage actifs, après que la personne a choisi de créer une copie privée. Aucun fichier ni partage automatique. Un fichier en clair ne doit pas être présenté comme sécurisé ; examiner les options de protection et annoncer le format avant de le rendre disponible.
+2. Ouvrir la sauvegarde en lecture seule. Limiter taille et profondeur ; valider version et champs imbriqués, sans écraser une copie locale illisible ni accepter un changement de compte/voyage. Ne pas repointer les identifiants par ressemblance. Recharger les données sources autorisées pour distinguer « source manquante » de « lecture indisponible », et empêcher une restauration confirmée sur une lecture incomplète.
+3. Montrer les familles qui seraient remplacées et les références manquantes ou incompatibles, sans inventer de zéro. Ne pas remplacer silencieusement une version locale : demander un choix explicite ou annuler, et garder l’ancienne version récupérable. Le premier parcours doit préserver les correspondances intactes et refuser le remplacement si des liens actifs ne peuvent pas être vérifiés.
+4. Vérifier de nouveau compte, voyage et version locale après la confirmation. Appliquer en une seule écriture locale, sans modifier les sources. En cas de conflit d’onglet, d’espace insuffisant ou de fermeture, la version précédente doit rester disponible. Le contrôle local actuel repère une modification déjà faite mais n’est pas transactionnel entre deux onglets simultanés ; ne pas annoncer cette garantie avant de la tester.
+
+## Porte de sortie avant synchronisation
+
+La restauration doit réussir entre deux contextes fictifs du même compte et voyage, et refuser autre compte, autre voyage, version inconnue, format partiel, références actives incompatibles, écriture obsolète et quota plein. La preuve de domaine ci-jointe vérifie le recalcul avec des sources identiques, l’indisponibilité après disparition d’un remboursement et l’isolation des clés locales. Elle n’implémente ni le fichier ni l’interface de restauration.
+
+Pour une synchronisation ultérieure, concevoir un stockage authentifié distinct, avec révision conditionnelle par compte/voyage, reprise idempotente et conflit explicite entre appareils. La version initiale du navigateur ne doit jamais gagner par défaut contre un état distant existant. Tester aussi suppression de compte, révocation, rétention, export des données et absence de partage MCP automatique avant toute activation distante.
