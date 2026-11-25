@@ -514,7 +514,9 @@
     throw error;
   }
   function showNutritionWriteError(root, error) {
-    CACHE.error = error?.message || String(error);
+    CACHE.error = error?.code === "NUTRITION_STORAGE_FAILED"
+      ? txt("Enregistrement impossible sur cet appareil. Conserve ta saisie et réessaie.", "Could not save on this device. Keep your input and try again.")
+      : error?.message || String(error);
     root?.querySelector("[data-nutrition-write-error]")?.remove();
     const message = document.createElement("p");
     message.setAttribute("data-nutrition-write-error", "");
