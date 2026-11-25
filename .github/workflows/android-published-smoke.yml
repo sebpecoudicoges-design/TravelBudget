@@ -39,7 +39,11 @@ jobs:
           sdk=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)
           image='system-images;android-35;google_apis;x86_64'
           "$sdk" --install platform-tools "$image"
-          echo no | "$(dirname "$sdk")/avdmanager" create avd --force -n tb-audit-device -k "$image"
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/tb-avd"
+          export ANDROID_USER_HOME="$RUNNER_TEMP/tb-android-user"
+          mkdir -p "$ANDROID_AVD_HOME" "$ANDROID_USER_HOME"
+          "$(dirname "$sdk")/avdmanager" create avd --force -n tb-audit-device -k "$image" -p "$ANDROID_AVD_HOME/tb-audit-device.avd" <<< no
+          "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx tb-audit-device
           "$ANDROID_HOME/emulator/emulator" -avd tb-audit-device -port 5554 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on >"$RUNNER_TEMP/android-audit-emulator.log" 2>&1 &
           timeout 240 "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 wait-for-device || { tail -80 "$RUNNER_TEMP/android-audit-emulator.log"; exit 1; }
           for retry in $(seq 1 100); do
