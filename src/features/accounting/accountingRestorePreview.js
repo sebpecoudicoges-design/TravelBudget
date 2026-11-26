@@ -96,6 +96,7 @@ function reviewActiveReferences(settings, scope, sources) {
   for (const link of settings.assetLinks) {
     add('asset', link.asset_id);
     add('transaction', link.transaction_id);
+    if (typed) transactionRules.set(link.transaction_id, { role: 'purchase', assetId: link.asset_id });
   }
   if (!valid) return { status: 'invalid-active-references' };
   if (conflictedTransactions.size > 0) {
@@ -120,10 +121,31 @@ function reviewActiveReferences(settings, scope, sources) {
       }
       byId.set(row.id, row);
     }
+    const assetById = new Map();
+    if (settings.assetLinks.length > 0) {
+      const assetIds = new Set(sourceLists.asset);
+      if (!Array.isArray(sources.assetMetadata)) return { status: 'sources-unavailable' };
+      for (const asset of sources.assetMetadata) {
+        if (!isRecord(asset) || !assetIds.has(asset.id) || assetById.has(asset.id)
+            || typeof asset.currency !== 'string' || !/^[A-Z]{3}$/.test(asset.currency)
+            || !Number.isFinite(asset.purchaseValue) || !validDay(asset.purchaseDate)) {
+          return { status: 'sources-unavailable' };
+        }
+        assetById.set(asset.id, asset);
+      }
+    }
     let incompatible = 0;
     for (const [id, rule] of transactionRules) {
       const row = byId.get(id);
       if (!row) return { status: 'sources-unavailable' };
+      if (rule.role === 'purchase') {
+        const asset = assetById.get(rule.assetId);
+        if (!asset) return { status: 'sources-unavailable' };
+        if (row.type !== 'expense' || !settledAt(row, asOfDay) || row.currency.toUpperCase() !== asset.currency
+            || !positiveAmount(row.amount) || !positiveAmount(asset.purchaseValue)
+            || cents(row.amount) !== cents(asset.purchaseValue) || asset.purchaseDate > asOfDay) incompatible++;
+        continue;
+      }
       if (!settledAt(row, asOfDay) || row.currency.toUpperCase() !== rule.currency || !positiveAmount(row.amount)
           || (row.type !== 'expense' && (rule.role === 'repayment' || row.type !== 'income'))
           || (rule.role === 'funding' && (row.amount !== rule.amount || row.cashDate > rule.openingDate))

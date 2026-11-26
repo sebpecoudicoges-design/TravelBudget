@@ -226,3 +226,41 @@ describe('typed debt and position source review', () => {
       .toEqual({ status: 'invalid-active-references' });
   });
 });
+
+describe('typed purchases in the accounting restore review', () => {
+  const settings = { ...candidate.settings,
+    assetLinks: [{ asset_id: 'synthetic-bike', transaction_id: 'synthetic-payment' }],
+  };
+  const txn = { id: 'synthetic-payment', type: 'expense', currency: 'EUR', amount: 400,
+    cashDate: '2026-01-15', payNow: true };
+  const asset = { id: 'synthetic-bike', currency: 'EUR', purchaseValue: 400, purchaseDate: '2026-01-16' };
+  const sources = { ...scope, complete: true, asOfDay: '2026-01-31',
+    transactionIds: [txn.id], assetIds: [asset.id], walletIds: [],
+    transactionMetadata: [txn], assetMetadata: [asset],
+  };
+  const review = (input = sources, data = settings) =>
+    previewAccountingRestore(raw({ settings: data }), scope, input);
+
+  it('accepts a paid expense whose native currency and rounded amount agree', () => {
+    expect(review({ ...sources, assetMetadata: [{ ...asset, purchaseValue: 399.999 }] }))
+      .toMatchObject({ status: 'references-present', requiresFurtherValidation: true });
+  });
+  it.each([
+    { currency: 'AUD' }, { purchaseValue: 399.99 }, { purchaseDate: '2026-02-01' },
+  ])('counts one incompatible purchase without revealing asset data: %j', changes => {
+    const result = review({ ...sources, assetMetadata: [{ ...asset, ...changes }] });
+    expect(result).toEqual({ status: 'incompatible-references', incompatible: { transaction: 1 } });
+  });
+  it.each([{ type: 'income' }, { payNow: false }])('rejects an ineligible payment: %j', changes => {
+    expect(review({ ...sources, transactionMetadata: [{ ...txn, ...changes }] }))
+      .toEqual({ status: 'incompatible-references', incompatible: { transaction: 1 } });
+  });
+  it('distinguishes incomplete asset metadata from a genuinely missing reference', () => {
+    expect(review({ ...sources, assetMetadata: [{ ...asset, purchaseDate: '2026-02-30' }] }))
+      .toEqual({ status: 'sources-unavailable' });
+    expect(review({ ...sources, assetMetadata: [] })).toEqual({ status: 'sources-unavailable' });
+    expect(review({ ...sources, assetMetadata: [asset, asset] })).toEqual({ status: 'sources-unavailable' });
+    expect(review({ ...sources, assetIds: [], assetMetadata: [] }))
+      .toEqual({ status: 'missing-references', missing: { transaction: 0, asset: 1, wallet: 0 } });
+  });
+});
