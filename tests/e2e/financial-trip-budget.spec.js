@@ -247,6 +247,15 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^50[,.]00/);
     await expect(chart).toBeVisible();
     await expect(summary.getByText('pas forcément le taux historique', { exact: false })).toBeVisible();
+    const sources = summary.locator('[data-analysis-fx-sources]');
+    const toggle = sources.locator('summary');
+    await expect(toggle).toHaveText('Sources des taux de change');
+    await toggle.focus();
+    await toggle.press('Enter');
+    await expect(sources.getByText('Période affichée')).toBeVisible();
+    await expect(sources.getByText('AUD : réglage fixe', { exact: true })).toBeVisible();
+    await expect(sources.getByText('Référence pays', { exact: true })).toHaveCount(0);
+    expect(await sources.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
     await page.locator('#analysis-comparison').selectOption('previous');
     await expect(comparison.getByRole('status')).toContainText('taux de change manquant');
     await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^50[,.]00/);
@@ -254,6 +263,7 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     await start.fill('2026-10-22');
     await expect(summary.getByRole('status')).toContainText('ZFX → EUR');
     await expect(summary.locator('[data-analysis-fx-note]')).toHaveCount(0);
+    await expect(sources).toHaveCount(0);
     await expect(summary.locator('.analysis-stat-value')).toHaveCount(0);
     await expect(comparison).toBeEmpty();
     await expect(chart).toBeHidden();

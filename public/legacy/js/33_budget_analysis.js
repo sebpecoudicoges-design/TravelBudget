@@ -1776,6 +1776,58 @@ function _openTxDrilldown(kind, key, model, opener){
     return true;
   }
 
+  function _renderFxSources(host, model, previous, isEn){
+    const tr = (fr, en) => isEn ? en : fr;
+    const scopes = [
+      [tr('Période affichée', 'Displayed period'), model.fxSources?.totals],
+      [tr('Période précédente', 'Previous period'), previous?.fxSources?.totals],
+      [tr('Référence pays', 'Country benchmark'), model.referenceStatus === 'available' && model.fxSources?.reference],
+    ];
+    const create = (tag, label) => {
+      const node = document.createElement(tag);
+      if (label) node.textContent = label;
+      return node;
+    };
+    const details = create('details');
+    details.dataset.analysisFxSources = '';
+    details.style.cssText = 'grid-column:1 / -1;min-width:0;overflow-wrap:anywhere';
+    const summary = create('summary', tr('Sources des taux de change', 'Exchange rate sources'));
+    summary.style.cursor = 'pointer';
+    details.appendChild(summary);
+    const labels = {
+      automatic: tr('taux automatique en cache', 'cached automatic rate'),
+      manual: tr('taux manuel', 'manual rate'),
+      fixed: tr('réglage fixe', 'fixed setting'),
+      period: tr('repli sur le taux de la période', 'period rate fallback'),
+    };
+    for (const [name, source] of scopes) {
+      if (!source?.legs?.length && !source?.hasUnattributed) continue;
+      const section = create('div');
+      section.style.marginTop = '0.65rem';
+      section.appendChild(create('strong', name));
+      const list = create('ul');
+      list.style.cssText = 'margin:0.25rem 0 0;padding-inline-start:1.4rem';
+      for (const { currency, kind, asOf } of source.legs.slice(0, 8)) {
+        let date = '';
+        if (kind === 'automatic' || kind === 'manual') {
+          date = asOf
+            ? ` (${kind === 'automatic' ? tr('date de valeur', 'value date') : tr('date associée au réglage', 'setting date')} : ${asOf})`
+            : ` (${tr('date non renseignée', 'date not available')})`;
+        }
+        list.appendChild(create('li', `${currency} : ${labels[kind]}${date}`));
+      }
+      if (source.legs.length > 8) {
+        list.appendChild(create('li', `+${source.legs.length - 8} ${tr('autres entrées', 'more entries')}`));
+      }
+      if (source.hasUnattributed) {
+        list.appendChild(create('li', tr('Origine non renseignée pour certains taux.', 'The source of some rates is not available.')));
+      }
+      section.appendChild(list);
+      details.appendChild(section);
+    }
+    if (details.children.length > 1) host.appendChild(details);
+  }
+
   function _renderAll(){
     if (!_el('view-analysis')) return;
     _saveFilters();
@@ -1798,7 +1850,7 @@ function _openTxDrilldown(kind, key, model, opener){
     const comparisonHost = _el('analysis-period-comparison');
     if (comparisonHost) comparisonHost.innerHTML = '';
     if (_showAnalysisFxState(model)) return;
-    let usesExchangeRates = model.usesExchangeRates;
+    let previous;
     if (comparisonHost && _el('analysis-comparison')?.value === 'previous') {
       const period = _el('analysis-period');
       const inputs = _rangeInputs();
@@ -1821,7 +1873,7 @@ function _openTxDrilldown(kind, key, model, opener){
         },
         formatCurrency: _fmtMoney, isEn: _analysisIsEnglish(),
       });
-      usesExchangeRates ||= comparison?.metrics && comparison.previous?.usesExchangeRates;
+      if (comparison?.metrics) previous = comparison.previous;
     }
 
     safe('overview-strip', _renderOverviewStrip);
@@ -1841,15 +1893,17 @@ function _openTxDrilldown(kind, key, model, opener){
     if (summaryHostPre && model && Array.isArray(model.txs) && model.txs.length === 0) {
       summaryHostPre.innerHTML = `<div class="muted">Aucune dépense visible pour ce scope, cette plage, ou ces filtres.</div>`;
     }
-    if (summaryHostPre && usesExchangeRates) {
+    if (summaryHostPre && (model.usesExchangeRates || previous?.usesExchangeRates)) {
+      const isEn = _analysisIsEnglish();
       const note = document.createElement('p');
       note.className = 'muted';
       note.dataset.analysisFxNote = '';
       note.style.gridColumn = '1 / -1';
-      note.textContent = _analysisIsEnglish()
+      note.textContent = isEn
         ? 'Currency conversion uses saved rates or your settings, not necessarily the historical rate for the transaction date.'
         : 'La conversion utilise des taux en cache ou tes réglages, pas forcément le taux historique à la date de l’opération.';
       summaryHostPre.appendChild(note);
+      _renderFxSources(summaryHostPre, model, previous, isEn);
     }
     if (!view) return;
 

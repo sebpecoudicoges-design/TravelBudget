@@ -244,3 +244,51 @@ it('keeps distinct rate dates and does not give an origin to failed FX', () => {
     { currency: 'AUD', kind: 'automatic', asOf: '2026-08-08' },
   ], hasUnattributed: false });
 });
+
+it.each(['fr', 'en'])('labels distinct rate dates and scopes in %s', lang => {
+  const element = tag => ({
+    tag, dataset: {}, style: {}, children: [], textContent: '',
+    appendChild(node) { this.children.push(node); },
+  });
+  const window = {};
+  const context = vm.createContext({
+    window, document: { createElement: element, addEventListener() {} },
+  });
+  vm.runInContext(legacy.replace('  function _renderFxSources(', '  window.renderFixture = _renderFxSources;\n  function _renderFxSources('), context);
+  const host = element('div');
+  const totals = {
+    legs: [
+      { currency: 'AUD', kind: 'automatic', asOf: '2026-08-10' },
+      { currency: 'AUD', kind: 'automatic', asOf: '2026-08-11' },
+      { currency: 'NZD', kind: 'manual', asOf: '2026-08-12' },
+    ],
+    hasUnattributed: true,
+  };
+  const reference = { legs: [{ currency: 'XPF', kind: 'period' }] };
+  const previous = { fxSources: { totals: { legs: [{ currency: 'CAD', kind: 'automatic' }] } } };
+  const model = { referenceStatus: 'available', fxSources: { totals, reference } };
+  window.renderFixture(host, model, previous, lang === 'en');
+  const [toggle, current, earlier, country] = host.children[0].children;
+  expect(toggle.tag).toBe('summary');
+  const lines = section => section.children[1].children.map(node => node.textContent);
+  expect(current.children[0].textContent).toBe(lang === 'en' ? 'Displayed period' : 'Période affichée');
+  expect(lines(current)).toEqual(lang === 'en' ? [
+    'AUD : cached automatic rate (value date : 2026-08-10)',
+    'AUD : cached automatic rate (value date : 2026-08-11)',
+    'NZD : manual rate (setting date : 2026-08-12)',
+    'The source of some rates is not available.',
+  ] : [
+    'AUD : taux automatique en cache (date de valeur : 2026-08-10)',
+    'AUD : taux automatique en cache (date de valeur : 2026-08-11)',
+    'NZD : taux manuel (date associée au réglage : 2026-08-12)',
+    'Origine non renseignée pour certains taux.',
+  ]);
+  expect(earlier.children[0].textContent).toBe(lang === 'en' ? 'Previous period' : 'Période précédente');
+  expect(lines(earlier)[0]).toContain(lang === 'en' ? 'date not available' : 'date non renseignée');
+  expect(country.children[0].textContent).toBe(lang === 'en' ? 'Country benchmark' : 'Référence pays');
+  expect(lines(country)[0]).toContain(lang === 'en' ? 'period rate fallback' : 'repli sur le taux de la période');
+
+  const unavailable = element('div');
+  window.renderFixture(unavailable, { ...model, referenceStatus: 'fx' }, undefined, lang === 'en');
+  expect(unavailable.children[0].children).toHaveLength(2);
+});
