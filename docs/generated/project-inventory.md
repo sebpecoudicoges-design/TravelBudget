@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `fe95673339e4f3011fdc97176b5b4db49ac060e3`
-> Empreinte du snapshot : `06162c13484e22b906b29766840bae5cf18794dc19ab165582c99c83a8b70a7b`
-> Généré le : `2026-11-26T05:58:20.421Z`
+> Commit analysé : `1b8169793df51efc849cb4fb490d4203691462b1`
+> Empreinte du snapshot : `762c88c32520f050dc8f14fd855fd9e2b74110bf7eb6f590f740047f91a86a52`
+> Généré le : `2026-11-26T09:48:03.985Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 65 |
-| Fichiers de tests | 211 |
+| Fichiers de tests | 212 |
 | Migrations Supabase | 179 |
 | Fonctions Edge | 15 |
 | Projet Android présent | Oui |
@@ -377,6 +377,7 @@ Modules :
 
 - `tests/e2e/accounting.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
+- `tests/e2e/analysis-chart-labels.spec.js`
 - `tests/e2e/android-ads.spec.js`
 - `tests/e2e/android-release.spec.js`
 - `tests/e2e/asset-budget-loading.spec.js`
@@ -466,6 +467,7 @@ Modules :
 - `tests/data/tripRepository.test.js`
 - `tests/e2e/accounting.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
+- `tests/e2e/analysis-chart-labels.spec.js`
 - `tests/e2e/android-ads.spec.js`
 - `tests/e2e/android-release.spec.js`
 - `tests/e2e/asset-budget-loading.spec.js`

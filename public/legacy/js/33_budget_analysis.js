@@ -1860,7 +1860,6 @@ function _openTxDrilldown(kind, key, model, opener){
       layout = document.createElement('div');
       layout.id = 'analysis-custom-layout';
       layout.style.display = 'grid';
-      layout.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
       layout.style.gap = '18px';
       layout.style.alignItems = 'stretch';
       layout.style.width = '100%';

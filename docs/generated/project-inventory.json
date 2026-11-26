@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "fe95673339e4f3011fdc97176b5b4db49ac060e3",
-  "snapshotFingerprint": "06162c13484e22b906b29766840bae5cf18794dc19ab165582c99c83a8b70a7b",
-  "generatedAt": "2026-11-26T05:58:20.421Z",
+  "commit": "1b8169793df51efc849cb4fb490d4203691462b1",
+  "snapshotFingerprint": "762c88c32520f050dc8f14fd855fd9e2b74110bf7eb6f590f740047f91a86a52",
+  "generatedAt": "2026-11-26T09:48:03.985Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
@@ -354,6 +354,7 @@
     "tests/data/tripRepository.test.js",
     "tests/e2e/accounting.spec.js",
     "tests/e2e/analysis-audit.spec.js",
+    "tests/e2e/analysis-chart-labels.spec.js",
     "tests/e2e/android-ads.spec.js",
     "tests/e2e/android-release.spec.js",
     "tests/e2e/asset-budget-loading.spec.js",
@@ -558,6 +559,7 @@
   "playwrightTests": [
     "tests/e2e/accounting.spec.js",
     "tests/e2e/analysis-audit.spec.js",
+    "tests/e2e/analysis-chart-labels.spec.js",
     "tests/e2e/android-ads.spec.js",
     "tests/e2e/android-release.spec.js",
     "tests/e2e/asset-budget-loading.spec.js",

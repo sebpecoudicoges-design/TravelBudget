@@ -1,3 +1,7 @@
+const ACCENT_COLOR = '#3b82f6';
+const TEXT_COLOR = '#e5e7eb';
+const GRID_COLOR = 'rgba(148,163,184,.18)';
+const MUTED_COLOR = '#94a3b8';
 const tooltipTheme = { backgroundColor: 'rgba(15,23,42,.92)', borderWidth: 0, textStyle: { color: '#fff' } };
 
 function safeNum(value, fallback = 0) {
@@ -24,7 +28,7 @@ function linearGradient(stops) {
 function dateAxisLabels(days, theme) {
   const compact = days.at(0)?.slice(0, 4) === days.at(-1)?.slice(0, 4);
   return {
-    color: themeValue(theme, 'muted', '#94a3b8'),
+    color: themeValue(theme, 'muted', MUTED_COLOR),
     hideOverlap: true,
     formatter: (date) => compact ? date.slice(5) : date,
   };
@@ -52,17 +56,17 @@ export function buildAnalysisTrajectoryOption({
   const days = Array.isArray(model.days) ? model.days : [];
   const cumTarget = Array.isArray(model.cumTarget) ? model.cumTarget : [];
   const cumSpent = Array.isArray(model.cumSpent) ? model.cumSpent : [];
-  const accent = themeValue(theme, 'accent', '#3b82f6');
-  const grid = themeValue(theme, 'grid', 'rgba(148,163,184,.18)');
+  const accent = themeValue(theme, 'accent', ACCENT_COLOR);
+  const grid = themeValue(theme, 'grid', GRID_COLOR);
 
   return {
     animationDuration: 900,
     animationEasing: 'cubicOut',
     tooltip: { trigger: 'axis', ...tooltipTheme },
-    legend: { top: 6, textStyle: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 11 }, itemWidth: 14, itemHeight: 8, data: [spent, target] },
+    legend: { top: 6, textStyle: { color: themeValue(theme, 'muted', MUTED_COLOR), fontSize: 11 }, itemWidth: 14, itemHeight: 8, data: [spent, target] },
     grid: { left: 24, right: 24, top: 52, bottom: 30, containLabel: true },
     xAxis: { type: 'category', boundaryGap: false, data: days, axisLine: { lineStyle: { color: grid } }, axisLabel: { ...dateAxisLabels(days, theme), fontSize: 10, margin: 8 } },
-    yAxis: { type: 'value', axisLabel: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 10, formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: grid } } },
+    yAxis: { type: 'value', axisLabel: { color: themeValue(theme, 'muted', MUTED_COLOR), fontSize: 10, formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: grid } } },
     series: [
       {
         id: 'target', name: target,
@@ -110,7 +114,7 @@ export function buildAnalysisCategoryPieOption({
     data.push({
       name: groupedLabel, grouped: true,
       value: positive.slice(8).reduce((sum, row) => sum + safeNum(row.actual), 0),
-      itemStyle: { color: themeValue(theme, 'muted', '#94a3b8') },
+      itemStyle: { color: themeValue(theme, 'muted', MUTED_COLOR) },
     });
   }
 
@@ -128,7 +132,7 @@ export function buildAnalysisCategoryPieOption({
       center: ['50%', '56%'],
       avoidLabelOverlap: true,
       itemStyle: { borderRadius: 10, borderColor: 'rgba(255,255,255,.06)', borderWidth: 2 },
-      label: { color: themeValue(theme, 'text', '#e5e7eb'), formatter: (p) => `${p.name}\n${p.percent}%`, fontWeight: 700 },
+      label: { color: themeValue(theme, 'text', TEXT_COLOR), formatter: (p) => `${p.name}\n${p.percent}%`, fontWeight: 700 },
       labelLine: { length: 10, length2: 8 },
       data,
     }],
@@ -142,8 +146,8 @@ export function buildAnalysisCategoryBarsOption({
 } = {}) {
   const fmt = moneyFormatter(formatCurrency);
   const rows = (Array.isArray(model.categorySeries) ? [...model.categorySeries] : []).reverse();
-  const muted = themeValue(theme, 'muted', '#94a3b8');
-  const grid = themeValue(theme, 'grid', 'rgba(148,163,184,.18)');
+  const muted = themeValue(theme, 'muted', MUTED_COLOR);
+  const grid = themeValue(theme, 'grid', GRID_COLOR);
 
   return {
     animationDuration: 900,
@@ -153,13 +157,13 @@ export function buildAnalysisCategoryBarsOption({
       ...tooltipTheme,
       formatter: (p) => `${p?.[0]?.axisValue || ''}<br>${fmt(p?.[0]?.value || 0, model.base)}`,
     },
-    grid: { left: 110, right: 20, top: 10, bottom: 20, containLabel: false },
-    xAxis: { type: 'value', axisLabel: { color: muted, formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: grid } } },
-    yAxis: { type: 'category', data: rows.map((r) => r.name), axisLabel: { color: themeValue(theme, 'text', '#e5e7eb'), interval: 0, width: 100, overflow: 'truncate' } },
+    grid: { left: 84, right: 42, top: 10, bottom: 22, containLabel: false },
+    xAxis: { type: 'value', axisLabel: { color: muted, hideOverlap: true, formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: grid } } },
+    yAxis: { type: 'category', data: rows.map((r) => r.name), axisLabel: { color: themeValue(theme, 'text', TEXT_COLOR), interval: 0, width: 74, overflow: 'truncate' } },
     series: [{
       name: 'Réel',
       type: 'bar',
-      data: rows.map((r) => ({ value: Number(safeNum(r.actual).toFixed(2)), itemStyle: { color: r.color || themeValue(theme, 'accent', '#3b82f6'), borderRadius: [0, 10, 10, 0] } })),
+      data: rows.map((r) => ({ value: Number(safeNum(r.actual).toFixed(2)), itemStyle: { color: r.color || themeValue(theme, 'accent', ACCENT_COLOR), borderRadius: [0, 10, 10, 0] } })),
       barMaxWidth: 18,
     }],
   };
@@ -179,12 +183,12 @@ export function buildAnalysisVelocityOption({
   return {
     animationDuration: 900,
     tooltip: { trigger: 'axis', ...tooltipTheme },
-    legend: { top: 6, textStyle: { color: themeValue(theme, 'muted', '#94a3b8'), fontSize: 11 }, data: [spent, target] },
+    legend: { top: 6, textStyle: { color: themeValue(theme, 'muted', MUTED_COLOR), fontSize: 11 }, data: [spent, target] },
     grid: { left: 18, right: 12, top: 54, bottom: 24, containLabel: true },
-    xAxis: { type: 'category', data: days, axisLabel: dateAxisLabels(days, theme), axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
-    yAxis: { type: 'value', axisLabel: { color: themeValue(theme, 'muted', '#94a3b8'), formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
+    xAxis: { type: 'category', data: days, axisLabel: dateAxisLabels(days, theme), axisLine: { lineStyle: { color: themeValue(theme, 'grid', GRID_COLOR) } } },
+    yAxis: { type: 'value', axisLabel: { color: themeValue(theme, 'muted', MUTED_COLOR), formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: themeValue(theme, 'grid', GRID_COLOR) } } },
     series: [
-      { id: 'spent', name: spent, type: 'bar', barMaxWidth: 22, data: velocity, itemStyle: { borderRadius: [8, 8, 0, 0], color: linearGradient([{ offset: 0, color: themeValue(theme, 'accent', '#3b82f6') }, { offset: 1, color: 'rgba(59,130,246,.25)' }]) } },
+      { id: 'spent', name: spent, type: 'bar', barMaxWidth: 22, data: velocity, itemStyle: { borderRadius: [8, 8, 0, 0], color: linearGradient([{ offset: 0, color: themeValue(theme, 'accent', ACCENT_COLOR) }, { offset: 1, color: 'rgba(59,130,246,.25)' }]) } },
       { id: 'target', name: target, type: 'line', smooth: true, symbol: 'none', data: days.map(() => Number(safeNum(model.budgetPerDay).toFixed(2))), lineStyle: { color: themeValue(theme, 'warn', '#f59e0b'), width: 2, type: 'dashed' } },
     ],
   };
@@ -208,8 +212,8 @@ export function buildAnalysisHeatmapOption({
     animationDuration: 950,
     tooltip: { position: 'top', ...tooltipTheme, formatter: (p) => `${days[p.data?.[0]]}<br>${fmt(p.data?.[2], model.base)}` },
     grid: { left: 8, right: 8, top: 10, bottom: 22, containLabel: true },
-    xAxis: { type: 'category', data: days, splitArea: { show: false }, axisLabel: { ...dateAxisLabels(days, theme), interval: Math.max(0, Math.floor(days.length / 10)) }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
-    yAxis: { type: 'category', data: ['Intensité'], axisLabel: { color: themeValue(theme, 'muted', '#94a3b8') }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
+    xAxis: { type: 'category', data: days, splitArea: { show: false }, axisLabel: { ...dateAxisLabels(days, theme), interval: Math.max(0, Math.floor(days.length / 10)) }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', GRID_COLOR) } } },
+    yAxis: { type: 'category', data: ['Intensité'], axisLabel: { color: themeValue(theme, 'muted', MUTED_COLOR) }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', GRID_COLOR) } } },
     visualMap: { min: min ? -max : 0, max, dimension: 2, show: false, inRange: { color: colors } },
     series: [{
       type: 'heatmap', data: heat,
