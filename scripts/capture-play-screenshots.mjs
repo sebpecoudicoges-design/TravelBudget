@@ -1,5 +1,3 @@
-import { _android } from 'playwright';
-import { expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -89,6 +87,77 @@ function renderFixtureBootstrap() {
         counts.blocked[printableKey]=(counts.blocked[printableKey]||0)+1;
         return new Response('{"message":"Not part of the read-only synthetic image fixture"}',{status:404,headers:{'Content-Type':'application/json'}});
       };
+
+      // The actual release UI, running in its Android WebView, exposes no
+      // debug connection to this capture task. These local-only test checks
+      // trigger the same views as normal navigation and report readiness
+      // through native debug logcat. They do not change rendered text/layout.
+      const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
+      const bodyView = () => document.body?.dataset.tbView;
+      const text = node => node?.innerText?.trim() || '';
+      const visible = node => !!node && node.getClientRects().length > 0;
+      const poll = async (check,stage,ms=22000) => {
+        for (let i=0; i<Math.ceil(ms/200);i++) {
+          const value=check();
+          if (value) return value;
+          await sleep(200);
+        }
+        throw Error(stage);
+      };
+      const ready = async (name, check) => {
+        const target=await poll(check,name);
+        target.scrollIntoView({block:'center',behavior:'instant'});
+        await sleep(900);
+        if (!check()) throw Error(name+'-after-scroll');
+        console.info('TB_PLAY_NATIVE_READY '+name);
+        await sleep(15000);
+        console.info('TB_PLAY_NATIVE_LEAVE '+name);
+      };
+      const navigate = async name => {
+        window.showView(name);
+        await poll(()=>bodyView()===name,'view-'+name);
+      };
+      void (async()=>{
+        try {
+          const day=fixtureTime.slice(0,10);
+          const walletId=tables.wallets[0].id;
+          await poll(()=>window.Capacitor?.getPlatform?.()==='android' &&
+            typeof window.showView==='function' &&
+            window.sbRole==='user' && counts.served['GET /rest/v1/wallets']>0 &&
+            document.body && !document.body.classList.contains('tb-auth-visible'),'native-standard-account',26000);
+          const tripTab=document.querySelector('#tab-trip');
+          if (visible(tripTab) && getComputedStyle(tripTab).visibility!=='hidden') throw Error('trip-tab-visible');
+          window.showView('trip');
+          await poll(()=>bodyView()==='validation'&&!visible(document.querySelector('#view-trip')),'trip-role-gate');
+          await navigate('dashboard');
+          await ready('screenshot-01-compte',()=>{
+            const wallet=document.querySelector('#wallets-container [data-wallet-id="'+walletId+'"]');
+            return visible(wallet) && text(wallet).includes('Carte voyage') && /240[,.]00/.test(text(wallet)) ? wallet : null;
+          });
+          await navigate('transactions');
+          await ready('screenshot-02-transactions',()=>{
+            const list=document.querySelector('#tx-list');
+            const row=Array.from(list?.querySelectorAll('*')||[]).find(e=>e.childNodes.length && text(e).includes('Déjeuner au lac') && !Array.from(e.children).some(c=>text(c).includes('Déjeuner au lac')));
+            return visible(row) && text(list).includes('Bus local') && text(list).includes('Sortie volcan') ? row : null;
+          });
+          await navigate('dashboard');
+          document.querySelector('#db-today')?.click();
+          await ready('screenshot-03-budget',()=>{
+            const target=Array.from(document.querySelectorAll('#daily-budget-container .day')).find(el=>text(el).includes(day));
+            return visible(target) && text(target).includes('120 NZD') && text(target.querySelector('.row b'))==='−30 NZD' ? target : null;
+          });
+          await navigate('analysis');
+          await ready('screenshot-04-analyse',()=>{
+            const total=document.querySelector('#analysis-summary .analysis-stat--glass-blue .analysis-stat-value');
+            const chart=document.querySelector('#analysis-category-bars-chart');
+            return /^60[,.]00/.test(text(total)) && visible(chart) && chart.querySelector('canvas,svg') ? chart : null;
+          });
+          console.info('TB_PLAY_NATIVE_DONE');
+        } catch(error) {
+          // Labels only, no account fields, URLs, request headers, or tokens.
+          console.info('TB_PLAY_NATIVE_FAIL '+String(error?.message||'unknown').replace(/[^a-z0-9-]/gi,'').slice(0,110));
+        }
+      })();
     })();`;
 }
 if (process.argv.includes('--prepare-fixture')) {
@@ -103,91 +172,45 @@ if (process.argv.includes('--prepare-fixture')) {
   console.log('Prepared test-only synthetic bootstrap in dist');
   process.exit(0);
 }
-async function bounded(operation, text, ms=25000) {
-  let timer;
-  try { return await Promise.race([operation,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(text)),ms);})]); }
-  finally { clearTimeout(timer); }
+function adb(args,options={}) {
+  return execFileSync('adb',['-s',serial,...args],{timeout:9000,maxBuffer:18*1024*1024,...options});
 }
-const devices = await _android.devices();
-if (devices.length !== 1 || devices[0].serial() !== serial) throw Error('Expected exactly one isolated emulator; no physical device is allowed');
-const [device] = devices;
-try {
-  const view = await device.webView({pkg},{timeout:30000});
-  const page = await bounded(view.page(),'Timed out connecting to the Android WebView');
-  console.log('Native WebView attached');
-  await expect.poll(()=>page.url()).toMatch(/^https:\/\/localhost(?:\/|$)/);
-  if (new URL(page.url()).origin!==origin) throw Error('Unexpected native WebView origin');
-  page.on('pageerror', error => console.log('fixture pageerror',String(error).slice(0,180)));
-  await expect.poll(()=>page.evaluate(()=>window.Capacitor?.getPlatform?.())).toBe('android');
-  console.log('Native platform verified; waiting for the synthetic view');
-  await expect.poll(async()=>page.evaluate(()=>!!window.__playSyntheticTransport)).toBe(true);
-  console.log('Synthetic transport installed',await page.evaluate(()=>({online:navigator.onLine,hasSyntheticSession:!!localStorage.getItem('sb-obznbrzarhvmlbprcfie-auth-token'),scriptCount:document.scripts.length})));
-  try {
-    await expect.poll(async()=>page.evaluate(()=>window.__playSyntheticTransport.served['GET /rest/v1/wallets']||0),{timeout:30000}).toBeGreaterThan(0);
-  } catch (error) {
-    console.log('fixture debugging',JSON.stringify(await page.evaluate(()=>({
-      platform:window.Capacitor?.getPlatform?.(), selected:document.body.dataset.tbView,
-      authVisible:document.body.classList.contains('tb-auth-visible'), role:window.sbRole,
-      offline:window.tbIsOfflineMode?.(), title:document.title,
-      bootText:document.querySelector('#auth-overlay')?.innerText?.slice(0,500),
-      synthetic:window.__playSyntheticTransport
-    }))));
-    throw error;
+const serials=execFileSync('adb',['devices'],{encoding:'utf8',timeout:5000})
+  .split(/\r?\n/).map(l=>l.trim().split(/\s+/)).filter(([,status])=>status==='device').map(([id])=>id);
+if (serials.length!==1 || serials[0]!==serial) throw Error('Exactly one isolated emulator is required');
+await mkdir(out,{recursive:true});
+const getState=()=>{
+  const log=adb(['logcat','-d','-v','brief'],{encoding:'utf8'});
+  const states=[...log.matchAll(/TB_PLAY_NATIVE_(READY|LEAVE|DONE|FAIL)(?: ([a-zA-Z0-9-]+))?/g)];
+  const last=states.at(-1);
+  return last ? {type:last[1],name:last[2]||''} : null;
+};
+const passed=new Set();
+const expected=new Set(['screenshot-01-compte','screenshot-02-transactions','screenshot-03-budget','screenshot-04-analyse']);
+const deadline=Date.now()+120000;
+while (Date.now()<deadline) {
+  const state=getState();
+  if (state?.type==='READY' && expected.has(state.name) && !passed.has(state.name)) {
+    const png=adb(['exec-out','screencap','-p']);
+    const after=getState();
+    // Never count a capture if the app left the verified screen during it.
+    if (after?.type==='READY' && after.name===state.name) {
+      if (png.subarray(0,8).toString('hex')!=='89504e470d0a1a0a' || png.readUInt32BE(16)!==1080 || png.readUInt32BE(20)!==1920) {
+        throw Error('Native PNG resolution mismatch');
+      }
+      await writeFile(join(out,state.name+'.png'),png);
+      passed.add(state.name);
+      console.log('Verified native capture',state.name);
+    }
   }
-  await mkdir(out,{recursive:true});
-
-  async function capture(name, target) {
-    await expect(target).toBeVisible();
-    await target.evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
-    await page.waitForTimeout(450);
-    const png = execFileSync('adb',['-s',serial,'exec-out','screencap','-p'],{maxBuffer:16*1024*1024});
-    if (png.subarray(0,8).toString('hex')!=='89504e470d0a1a0a' || png.readUInt32BE(16)!==1080 || png.readUInt32BE(20)!==1920) throw Error('Native PNG resolution mismatch');
-    await writeFile(join(out,name+'.png'),png);
-    console.log('Verified native RGB source',name);
-  }
-  async function nav(key) {
-    const menu = page.locator('#tb-mobile-nav-toggle');
-    if (await menu.isVisible() && await menu.getAttribute('aria-expanded')!=='true') await menu.click();
-    await page.locator('#tab-'+key).click();
-    await expect(page.locator('#view-'+key)).toBeVisible();
-  }
-  const wallet = page.locator(`#wallets-container [data-wallet-id="${walletId}"]`).first();
-  try { await expect(wallet).toContainText(/240[,.]00/,{timeout:30000}); }
-  catch (error) {
-    console.log('wallet debugging',JSON.stringify(await page.evaluate(()=>({
-      selected:document.body.dataset.tbView, role:window.sbRole,
-      offline:window.tbIsOfflineMode?.(), wallets:window.state?.wallets?.length,
-      nativeWalletText:document.querySelector('#wallets-container')?.innerText?.slice(0,500),
-      synthetic:window.__playSyntheticTransport
-    }))));
-    throw error;
-  }
-  await expect.poll(()=>page.evaluate(()=>window.sbRole)).toBe('user');
-  await expect(page.locator('#tab-trip')).toBeHidden();
-  await capture('screenshot-01-compte',wallet);
-  await page.evaluate(()=>window.showView('trip'));
-  await expect(page.locator('#view-validation')).toBeVisible();
-  await expect(page.locator('#view-trip')).toBeHidden();
-
-  await nav('transactions');
-  const transactions = page.locator('#tx-list');
-  const meal = transactions.getByText(/Déjeuner au lac/).first();
-  await expect(meal).toBeVisible();
-  await expect(transactions).toContainText('Bus local');
-  await capture('screenshot-02-transactions',meal);
-  await nav('dashboard');
-  await page.locator('#db-today').click();
-  const today=page.locator('#daily-budget-container .day').filter({hasText:day});
-  await expect(today).toContainText('120 NZD');
-  await expect(today.locator('.row b').first()).toHaveText('−30 NZD');
-  await capture('screenshot-03-budget',today);
-  await nav('analysis');
-  const summary = page.locator('#analysis-summary');
-  await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^60[,.]00/);
-  await capture('screenshot-04-analyse',page.locator('#analysis-category-bars-chart'));
-  await writeFile(join(out,'provenance.txt'),
-    'TravelBudget 10.5.397, exact released UI from 2a85d8941df4a18d780236ae49eccc323759f44f.\n'+
-    'Android emulator native ADB captures, 1080×1920.\n'+
-    'Unpublished debug capture build from released source, with synthetic read-only data bootstrap; no production account, secrets, or traffic.\n'+
-    'The Taupō data is fictional. Standard user: wallet 240 NZD, 3 transactions, budget remaining 120 NZD, analysis net 60 NZD. Trip redirects to validation (not depicted).\n');
-} finally { await device.close(); }
+  if (state?.type==='FAIL') throw Error('Native app fixture could not verify stage: '+state.name);
+  if (state?.type==='DONE' && passed.size!==expected.size) throw Error('App finished but not all native captures arrived: '+passed.size);
+  if (passed.size===expected.size) break;
+  await new Promise(resolve=>setTimeout(resolve,850));
+}
+if (passed.size!==expected.size) throw Error('Native capture timeout: '+passed.size+' of '+expected.size+' screenshots');
+await writeFile(join(out,'provenance.txt'),
+  'TravelBudget 10.5.397, exact UI source at 2a85d8941df4a18d780236ae49eccc323759f44f.\n'+
+  'Raw native ADB emulator captures, 1080×1920, standard app role.\n'+
+  'Unpublished debug capture build, synthetic read-only bootstrap, no external egress or account.\n'+
+  'Fictional Taupō data: wallet 240 NZD, 3 transactions, 120 NZD left for the day, 60 NZD in Analyse. Trip access refused to standard role (not pictured).\n');
