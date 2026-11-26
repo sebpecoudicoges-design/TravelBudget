@@ -76,7 +76,7 @@ test('project timeline leads with verified dates and keeps version as secondary 
 });
 
 for (const width of [1440, 390]) {
-  test(`project closed alpha information never offers unverified signup (${width} px)`, async ({ page }) => {
+  test(`project closed alpha points only to the official, restricted Play opt-in (${width} px)`, async ({ page }) => {
     await page.setViewportSize({ width, height: 850 });
     await page.emulateMedia({ colorScheme: width === 390 ? 'dark' : 'light', reducedMotion: 'reduce' });
     await page.goto('/projet.html');
@@ -85,13 +85,19 @@ for (const width of [1440, 390]) {
     const section = page.locator('#alpha-fermee');
     await expect(section.getByRole('heading', { name: 'Test Alpha fermé sur Google Play' })).toBeInViewport();
     await expect(section).toContainText('Le pays de ton compte Google Play doit être la France.');
-    await expect(section).toContainText('Inscriptions pas encore ouvertes');
-    await expect(section).toContainText('L’approbation de Google Play n’est pas encore définitive.');
-    await expect(section.locator('a, form, input, button')).toHaveCount(0);
+    await expect(section).toContainText('Test Alpha actif');
+    await expect(section).toContainText('un compte Google déjà autorisé');
+    await expect(section).toContainText('Le lien n’ajoute pas ton compte à la liste des testeurs.');
+    const optIn = 'https://play.google.com/apps/testing/fr.pecloud.travelbudget';
+    await expect(section.getByRole('link', { name: 'Rejoindre le test sur Google Play' })).toHaveAttribute('href', optIn);
+    await expect(section.getByRole('link')).toHaveCount(1);
+    await expect(section.locator('form, input, button')).toHaveCount(0);
     await page.locator('[data-lang="en"]:visible').click();
     await expect(section.getByRole('heading', { name: 'Google Play closed alpha test' })).toBeVisible();
     await expect(section).toContainText('Your Google Play account country must be set to France.');
-    await expect(section).toContainText('Sign-ups are not open yet');
+    await expect(section).toContainText('Alpha test active');
+    await expect(section).toContainText('a Google account that already has access');
+    await expect(section.getByRole('link', { name: 'Join the test on Google Play' })).toHaveAttribute('href', optIn);
     await expect(page.locator('#trust').getByRole('link', { name: 'Closed alpha test' })).toHaveAttribute('href', '#alpha-fermee');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
