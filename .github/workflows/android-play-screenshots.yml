@@ -1,0 +1,97 @@
+name: Capture synthetic Android store screenshots
+on:
+  push:
+    branches: ['codex/play-screenshots-10.5.397']
+    paths: ['.github/workflows/android-play-screenshots.yml', 'scripts/capture-play-screenshots.mjs']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play-screenshots-10.5.397
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Check workflow branch and source baseline
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/codex/play-screenshots-10.5.397
+          release=2a85d8941df4a18d780236ae49eccc323759f44f
+          test "$(git rev-parse HEAD^)" = "$release"
+          git diff --exit-code "$release" HEAD -- . ':!.github/workflows/android-play-screenshots.yml' ':!scripts/capture-play-screenshots.mjs'
+          test "$(node -p 'require("./package.json").version')" = 10.5.397
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build from exact release source
+        run: |
+          set -euo pipefail
+          sdk=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)
+          "$sdk" --install "platforms;android-36" "build-tools;36.0.0"
+          npm ci
+          npm run build
+          npx --no-install cap sync android
+          (cd android && bash ./gradlew --no-daemon :app:assembleDebug)
+          "$ANDROID_HOME"/build-tools/36.0.0/aapt dump badging android/app/build/outputs/apk/debug/app-debug.apk > "$RUNNER_TEMP/apk-badging.txt"
+          grep -F "package: name='com.travelbudget.app'" "$RUNNER_TEMP/apk-badging.txt"
+          grep -F "versionName='10.5.397'" "$RUNNER_TEMP/apk-badging.txt"
+      - name: Start a clean emulator, block egress, and capture
+        shell: bash
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          test -e /dev/kvm
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          sdk=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)
+          img='system-images;android-35;google_apis;x86_64'
+          "$sdk" --install emulator platform-tools "$img"
+          printf 'no\n' | "${sdk%/*}/avdmanager" create avd -n isolated_play -k "$img" --force
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+          emulator -avd isolated_play -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          emu=$!
+          trap 'adb -s emulator-5554 emu kill >/dev/null 2>&1 || kill "$emu" 2>/dev/null || true' EXIT
+          adb -s emulator-5554 wait-for-device
+          timeout 260 bash -c 'until adb -s emulator-5554 shell getprop sys.boot_completed | grep -q 1; do sleep 3; done'
+          test "$(adb devices | awk '$2 == "device" {print $1}')" = emulator-5554
+          adb -s emulator-5554 root
+          adb -s emulator-5554 wait-for-device
+          test "$(adb -s emulator-5554 shell id -u | tr -d '\r')" = 0
+          # Guest iptables affects only this ephemeral emulator. Preserve loopback and ADB.
+          adb -s emulator-5554 shell iptables -w -I OUTPUT 1 '!' -o lo -j REJECT
+          adb -s emulator-5554 shell ip6tables -w -I OUTPUT 1 '!' -o lo -j REJECT
+          adb -s emulator-5554 shell iptables -w -C OUTPUT '!' -o lo -j REJECT
+          adb -s emulator-5554 shell ip6tables -w -C OUTPUT '!' -o lo -j REJECT
+          adb -s emulator-5554 shell wm size 1080x1920
+          adb -s emulator-5554 shell wm density 420
+          adb -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
+          adb -s emulator-5554 shell wm dismiss-keyguard
+          adb -s emulator-5554 shell settings put system accelerometer_rotation 0
+          adb -s emulator-5554 shell settings put system user_rotation 0
+          adb -s emulator-5554 install android/app/build/outputs/apk/debug/app-debug.apk
+          adb -s emulator-5554 shell pm grant com.travelbudget.app android.permission.POST_NOTIFICATIONS
+          adb -s emulator-5554 shell am start -W -n com.travelbudget.app/com.travelbudget.app.MainActivity
+          node scripts/capture-play-screenshots.mjs
+          cd "$RUNNER_TEMP/travelbudget-play"
+          sha256sum screenshot-*.png > sha256.txt
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: TravelBudget-10.5.397-Android-synthetic-portrait
+          path: ${{ runner.temp }}/travelbudget-play/
+          if-no-files-found: error
+          retention-days: 14
