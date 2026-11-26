@@ -36,6 +36,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Ensure the Media Formatter is available
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+          command -v ffmpeg
+          command -v ffprobe
       - name: Build from exact release source
         run: |
           set -euo pipefail
@@ -112,7 +121,13 @@ jobs:
           cd "$out"
           shopt -s nullglob
           images=(screenshot-*.png)
+          echo "raw_count=${#images[@]}" >> "$GITHUB_OUTPUT"
           if (( ${#images[@]} )); then
+            raw="$RUNNER_TEMP/travelbudget-play-raw"
+            mkdir -p "$raw"
+            cp "${images[@]}" "$raw/"
+            (cd "$raw"; sha256sum screenshot-*.png > sha256.txt)
+            if test -f provenance.txt; then cp provenance.txt "$raw/"; fi
             for image in "${images[@]}"; do
               ffmpeg -nostdin -v error -i "$image" -frames:v 1 -pix_fmt rgb24 "rgb-$image"
               test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height,pix_fmt -of csv=p=0 "rgb-$image")" = 1080,1920,rgb24
@@ -135,6 +150,13 @@ jobs:
           path: ${{ runner.temp }}/travelbudget-play/
           if-no-files-found: error
           retention-days: 14
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        if: always() && steps.capture.outputs.raw_count != '' && steps.capture.outputs.raw_count != '0' && steps.capture.outputs.verified_count == ''
+        with:
+          name: Verified-Android-raw-captures-requires-format-check
+          path: ${{ runner.temp }}/travelbudget-play-raw/
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         if: failure() && steps.capture.outputs.verified_count == '0'
         with:
