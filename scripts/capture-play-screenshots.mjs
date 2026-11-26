@@ -287,8 +287,17 @@ while (Date.now()<deadline) {
         throw Error('Native PNG resolution mismatch');
       }
       await writeFile(candidate,png);
-      const rawText=execFileSync('tesseract',[candidate,'stdout','-l','fra+eng','--psm','11'],{encoding:'utf8',timeout:7500,maxBuffer:1024*1024,stdio:['ignore','pipe','ignore']});
-      await rm(candidate,{force:true});
+      let rawText='';
+      try {
+        rawText=execFileSync('tesseract',[candidate,'stdout','-l','fra+eng','--psm','11'],{
+          env:{...process.env,OMP_THREAD_LIMIT:'1'},encoding:'utf8',timeout:14000,
+          maxBuffer:1024*1024,stdio:['ignore','pipe','ignore'],
+        });
+      } catch(error) {
+        console.log('OCR frame skipped',state.name,error?.code||'unavailable');
+      } finally {
+        await rm(candidate,{force:true});
+      }
       const pixels=ocrNormalization(rawText);
       if (!/preparation de votre espace|preparation des donnees/.test(pixels) && criteria[state.name](pixels)) {
         await writeFile(join(out,state.name+'.png'),png);
