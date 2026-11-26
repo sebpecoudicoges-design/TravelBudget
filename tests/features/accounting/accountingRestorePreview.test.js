@@ -129,15 +129,15 @@ describe('active references for the same account and trip', () => {
 
 describe('typed debt and position source review', () => {
   const settings = { ...candidate.settings,
-    debts: [{ currency: 'EUR', openingAmount: 350, originTransactionId: 'funding', repayments: [{ transactionId: 'repayment', principal: 25 }] }],
+    debts: [{ currency: 'EUR', openingDate: '2026-01-15', openingAmount: 350, originTransactionId: 'funding', repayments: [{ transactionId: 'repayment', principal: 25 }] }],
     positions: [{ currency: 'NZD', transactionIds: ['deposit'] }],
   };
   const sources = { ...scope, complete: true,
-    transactionIds: ['funding', 'repayment', 'deposit'], assetIds: [], walletIds: [],
+    transactionIds: ['funding', 'repayment', 'deposit'], assetIds: [], walletIds: [], asOfDay: '2026-01-31',
     transactionMetadata: [
-      { id: 'funding', currency: 'eur', type: 'income', amount: 350 },
-      { id: 'repayment', currency: 'EUR', type: 'expense', amount: 30 },
-      { id: 'deposit', currency: 'NZD', type: 'expense', amount: 80 },
+      { id: 'funding', currency: 'eur', type: 'income', amount: 350, cashDate: '2026-01-15', payNow: true },
+      { id: 'repayment', currency: 'EUR', type: 'expense', amount: 30, cashDate: '2026-01-20', payNow: true },
+      { id: 'deposit', currency: 'NZD', type: 'expense', amount: 80, cashDate: '2026-01-31', payNow: true },
     ],
   };
   const review = (inventory = sources, data = settings) =>
@@ -180,6 +180,36 @@ describe('typed debt and position source review', () => {
     expect(review(sources, { ...settings, debts: [{ ...debt, repayments: [{ ...debt.repayments[0], principal: 0 }] }] }))
       .toEqual({ status: 'invalid-active-references' });
     const rows = sources.transactionMetadata.map((row, i) => i === 0 ? { ...row, amount: '350' } : row);
+    expect(review({ ...sources, transactionMetadata: rows })).toEqual({ status: 'sources-unavailable' });
+  });
+
+  it.each([
+    [0, { cashDate: '2026-01-16' }],
+    [1, { cashDate: '2026-01-14' }],
+    [1, { payNow: false }],
+    [2, { cashDate: '2026-02-01', budgetDate: '2026-01-31' }],
+  ])('reports active sources whose settlement or date is incompatible: %j', (index, change) => {
+    const rows = sources.transactionMetadata.map((row, i) => i === index ? { ...row, ...change } : row);
+    expect(review({ ...sources, transactionMetadata: rows }))
+      .toEqual({ status: 'incompatible-references', incompatible: { transaction: 1 } });
+  });
+
+  it('uses the cash date rather than the budget date, inclusive of the debt opening and review day', () => {
+    const rows = sources.transactionMetadata.map((row, i) => i === 1
+      ? { ...row, cashDate: '2026-01-15', budgetDate: '2026-02-01' } : row);
+    expect(review({ ...sources, transactionMetadata: rows }))
+      .toMatchObject({ status: 'references-present', requiresFurtherValidation: true });
+  });
+
+  it('distinguishes invalid opening dates from incomplete trusted source chronology', () => {
+    const [debt] = settings.debts;
+    for (const openingDate of ['2026-02-01', '2026-01-00']) {
+      expect(review(sources, { ...settings, debts: [{ ...debt, openingDate }] }))
+        .toEqual({ status: 'invalid-active-references' });
+    }
+    expect(review({ ...sources, asOfDay: '2026-02-30' })).toEqual({ status: 'sources-unavailable' });
+    const rows = sources.transactionMetadata.map((row, i) => i === 1
+      ? { ...row, payNow: undefined } : row);
     expect(review({ ...sources, transactionMetadata: rows })).toEqual({ status: 'sources-unavailable' });
   });
 

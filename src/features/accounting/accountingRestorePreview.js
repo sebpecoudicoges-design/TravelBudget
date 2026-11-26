@@ -1,3 +1,5 @@
+import { settledAt, validDay } from './accountingRecognition.js';
+
 // Internal prototype. The result is not a restore authorization and carries no settings.
 const MAX_BYTES = 500_000;
 const MAX_DEPTH = 16;
@@ -56,6 +58,8 @@ function reviewActiveReferences(settings, scope, sources) {
   const conflictedTransactions = new Set();
   const transactionRules = new Map();
   const typed = sources.transactionMetadata !== undefined;
+  const asOfDay = sources.asOfDay;
+  if (typed && !validDay(asOfDay)) return { status: 'sources-unavailable' };
   let valid = true;
   const add = (type, id, optional = false) => {
     if (optional && (id === undefined || id === '')) return;
@@ -65,22 +69,25 @@ function reviewActiveReferences(settings, scope, sources) {
     references[type].add(id);
   };
 
-  const addTyped = (id, currency, role, amount) => {
+  const addTyped = (id, currency, role, amount, openingDate) => {
     add('transaction', id);
     if (!typed) return;
     if (typeof currency !== 'string' || !/^[A-Z]{3}$/.test(currency)) { valid = false; return; }
-    if (role !== 'position' && !positiveAmount(amount)) { valid = false; return; }
-    transactionRules.set(id, { currency, role, amount });
+    if (role !== 'position' && (!positiveAmount(amount) || !validDay(openingDate) || openingDate > asOfDay)) {
+      valid = false;
+      return;
+    }
+    transactionRules.set(id, { currency, role, amount, openingDate });
   };
 
   for (const id of Object.keys(settings.walletAccounts)) add('wallet', id);
   for (const debt of settings.debts) {
     add('asset', debt.assetId, true);
     if (debt.originTransactionId !== undefined && debt.originTransactionId !== '') {
-      addTyped(debt.originTransactionId, debt.currency, 'funding', debt.openingAmount);
+      addTyped(debt.originTransactionId, debt.currency, 'funding', debt.openingAmount, debt.openingDate);
     }
     if (!isRecordList(debt.repayments)) { valid = false; continue; }
-    for (const repayment of debt.repayments) addTyped(repayment.transactionId, debt.currency, 'repayment', repayment.principal);
+    for (const repayment of debt.repayments) addTyped(repayment.transactionId, debt.currency, 'repayment', repayment.principal, debt.openingDate);
   }
   for (const position of settings.positions) {
     if (!Array.isArray(position.transactionIds)) { valid = false; continue; }
@@ -107,7 +114,8 @@ function reviewActiveReferences(settings, scope, sources) {
     const byId = new Map(), sourceIds = new Set(sourceLists.transaction);
     for (const row of rows) {
       if (!isRecord(row) || !sourceIds.has(row.id) || byId.has(row.id)
-          || typeof row.currency !== 'string' || !/^[A-Za-z]{3}$/.test(row.currency) || !isId(row.type) || !Number.isFinite(row.amount)) {
+          || typeof row.currency !== 'string' || !/^[A-Za-z]{3}$/.test(row.currency) || !isId(row.type) || !Number.isFinite(row.amount)
+          || typeof row.payNow !== 'boolean' || !validDay(row.cashDate)) {
         return { status: 'sources-unavailable' };
       }
       byId.set(row.id, row);
@@ -116,10 +124,10 @@ function reviewActiveReferences(settings, scope, sources) {
     for (const [id, rule] of transactionRules) {
       const row = byId.get(id);
       if (!row) return { status: 'sources-unavailable' };
-      if (row.currency.toUpperCase() !== rule.currency || !positiveAmount(row.amount)
+      if (!settledAt(row, asOfDay) || row.currency.toUpperCase() !== rule.currency || !positiveAmount(row.amount)
           || (row.type !== 'expense' && (rule.role === 'repayment' || row.type !== 'income'))
-          || (rule.role === 'funding' && row.amount !== rule.amount)
-          || (rule.role === 'repayment' && cents(rule.amount) > cents(row.amount))) incompatible++;
+          || (rule.role === 'funding' && (row.amount !== rule.amount || row.cashDate > rule.openingDate))
+          || (rule.role === 'repayment' && (cents(rule.amount) > cents(row.amount) || row.cashDate < rule.openingDate))) incompatible++;
     }
     if (incompatible > 0) return { status: 'incompatible-references', incompatible: { transaction: incompatible } };
   }
