@@ -3,50 +3,39 @@ import { expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fixtureTables, fixtureUser, fixtureTime, installConnectedFixture } from './fixtures/connectedStartup.mjs';
+import { fixtureTables, fixtureUser, fixtureTime, fixtureResponse, projectOrigin, installConnectedFixture } from './fixtures/connectedStartup.mjs';
 
 const pkg = 'com.travelbudget.app';
 const serial = 'emulator-5554';
 const origin = 'https://localhost';
 const day = fixtureTime.slice(0,10);
 const walletId = fixtureTables.wallets[0].id;
-const tripId = '88a55db7-ec9f-4c05-82f7-478a09e43001';
-const expenseId = '88a55db7-ec9f-4c05-82f7-478a09e43002';
-const me = '88a55db7-ec9f-4c05-82f7-478a09e43003';
-const friend = '88a55db7-ec9f-4c05-82f7-478a09e43004';
 const card = { ...fixtureTables.wallets[0], currency:'NZD', name:'Carte voyage', balance:300 };
-const row = (id, amount, extra) => ({
-  ...fixtureTables.transactions[0], id, amount, wallet_id:walletId, currency:'NZD',
-  date_start:day, date_end:day, budget_date_start:day, budget_date_end:day,
-  category:'Repas', created_at:fixtureTime, ...extra,
+const row = (id, amount, date, label, category) => ({
+  ...fixtureTables.transactions[0], id, amount, wallet_id:walletId, currency:'NZD', label, category,
+  date_start:date, date_end:date, budget_date_start:date, budget_date_end:date,
+  paid_at:date+'T12:00:00Z', created_at:date+'T09:00:00Z',
 });
-const tripRow = (id, fields) => ({ id, trip_id:tripId, ...fields });
+const categories = [
+  ['Repas','#ff8060'],
+  ['Transport','#3289a2'],
+  ['Activités','#776ed1'],
+];
 const tables = {
   ...structuredClone(fixtureTables),
-  profiles:[{ ...fixtureTables.profiles[0], role:'test' }],
+  profiles:[{ ...fixtureTables.profiles[0], role:'user' }],
   settings:[{ ...fixtureTables.settings[0], theme:'light', base_currency:'NZD', language:'fr', palette_preset:'Ocean' }],
   travels:[{ ...fixtureTables.travels[0], name:'Week-end à Taupō', base_currency:'NZD', start_date:'2026-10-23', end_date:'2026-10-25' }],
   periods:[{ ...fixtureTables.periods[0], name:'Taupō', base_currency:'NZD', eur_base_rate:1.95, daily_budget_base:150, start_date:'2026-10-23', end_date:'2026-10-25' }],
   budget_segments:[{ ...fixtureTables.budget_segments[0], base_currency:'NZD', eur_base_rate_fixed:1.95, daily_budget_base:150, start_date:'2026-10-23', end_date:'2026-10-25' }],
-  categories:[{ ...fixtureTables.categories[0], name:'Repas', color:'#e87954' }],
+  categories:categories.map(([name,color],i)=>({ ...fixtureTables.categories[0], id:'synth-cat-'+i,name,color,sort_order:i })),
   wallets:[card],
   transactions:[
-    row('demo-advance',60,{ label:'[Trip] Avance - Dîner à Taupō', affects_budget:false, out_of_budget:true, trip_expense_id:expenseId, paid_at:day+'T12:00:00Z' }),
-    row('demo-part',30,{ label:'[Trip] Dîner à Taupō', pay_now:false, paid_at:null, is_internal:true, trip_share_link_id:'demo-budget-link' }),
+    row('demo-meal',18.5,day,'Déjeuner au lac','Repas'),
+    row('demo-bus',11.5,day,'Bus local','Transport'),
+    row('demo-hike',30,'2026-10-23','Sortie volcan','Activités'),
   ],
-  trip_groups:[{ id:tripId, name:'Week-end à Taupō', base_currency:'NZD', user_id:fixtureUser }],
-  trip_participants:[tripRow('demo-participant',{auth_user_id:fixtureUser,role:'owner'})],
-  trip_members:[
-    tripRow(me,{ name:'Camille',auth_user_id:fixtureUser,user_id:fixtureUser,created_at:'2026-10-01' }),
-    tripRow(friend,{name:'Alex',created_at:'2026-10-02'}),
-  ],
-  trip_expenses:[tripRow(expenseId,{date:day,label:'Dîner à Taupō',kind:'expense',amount:60,currency:'NZD',category:'Repas',paid_by_member_id:me,transaction_id:'demo-advance',budget_date_start:day,budget_date_end:day})],
-  trip_expense_shares:[
-    tripRow('demo-share-a',{expense_id:expenseId,member_id:me,share_amount:30}),
-    tripRow('demo-share-b',{expense_id:expenseId,member_id:friend,share_amount:30}),
-  ],
-  trip_expense_budget_links:[tripRow('demo-budget-link',{expense_id:expenseId,member_id:me,transaction_id:'demo-part'})],
-  trip_settlement_events:[],trip_expense_documents:[],trip_settlements:[],trip_payer_approvals:[],
+  trip_invites:[], trip_groups:[], trip_participants:[],
   v_wallet_balances:[],budget_segment_budget_reference_override:[],v_country_budget_reference_latest:[],
   travel_budget_reference_profile:[],v_transaction_analytic_expenses:[],fx_rates:[],
 };
@@ -61,7 +50,45 @@ try {
   await expect.poll(()=>page.url()).toMatch(/^https:\/\/localhost(?:\/|$)/);
   const actual = new URL(page.url());
   if (actual.origin !== origin) throw Error('Unexpected app origin; refusing to use any network/server URL');
-  await installConnectedFixture(page,origin,{tables});
+  const playwrightFixture = await installConnectedFixture(page,origin,{tables});
+  // The native WebView may not pass cross-origin reads through the desktop
+  // CDP interception path. Supply the same fixture directly at init time in
+  // this one process, before any app module runs. The native build is unchanged.
+  const initConfig = JSON.stringify({ origin, projectOrigin, fixtureUser, fixtureTime, tables });
+  await page.addInitScript({content:`
+    (() => {
+      const { origin, projectOrigin, fixtureUser, fixtureTime, tables } = ${initConfig};
+      if (window.location.origin !== origin) return;
+      const localFetch = window.fetch.bind(window);
+      const fixtureResponse = (${fixtureResponse.toString()});
+      const counts = { served: {}, blocked: {} };
+      window.__playSyntheticTransport = counts;
+      // Test the connected UI with a synthetic service while keeping the
+      // actual guest's IPv4 and IPv6 egress physically blocked.
+      if (navigator.onLine === false) Object.defineProperty(navigator, 'onLine', {value:true});
+      window.fetch = async (input, options) => {
+        const raw = typeof input === 'string' || input instanceof URL ? String(input) : input.url;
+        const url = new URL(raw,window.location.href);
+        if (url.origin === origin) return localFetch(input,options);
+        const method = String(options?.method ?? input?.method ?? 'GET').toUpperCase();
+        const key = method+' '+url.pathname;
+        if (url.origin === projectOrigin) {
+          try {
+            const methodHeaders = Object.fromEntries(new Headers(options?.headers ?? input?.headers));
+            const value = url.pathname === '/functions/v1/fx-latest' && method === 'POST'
+              ? {base:'EUR',date:fixtureTime.slice(0,10),rates:{EUR:1,NZD:1.95}}
+              : fixtureResponse(url.href,method,methodHeaders,tables);
+            counts.served[key]=(counts.served[key]||0)+1;
+            return new Response(method==='HEAD'?null:JSON.stringify(value),{status:200,headers:{'Content-Type':'application/json'}});
+          } catch {}
+        }
+        const printableKey = url.origin === projectOrigin ? key : 'other-origin';
+        counts.blocked[printableKey]=(counts.blocked[printableKey]||0)+1;
+        return new Response('{"message":"Not part of the read-only synthetic image fixture"}',{status:404,headers:{'Content-Type':'application/json'}});
+      };
+    })();`});
+  page.on('pageerror', error => console.log('fixture pageerror',String(error).slice(0,180)));
+
   await page.addInitScript(user => {
     localStorage.setItem('travelbudget_guided_tour_done_v2_'+user,'1');
   },fixtureUser);
@@ -69,6 +96,20 @@ try {
   // an app worker or plugin bypasses WebView CDP (guest IPv4+IPv6 blocks it).
   await page.goto(origin+'/?freeze=1',{waitUntil:'domcontentloaded'});
   await expect.poll(()=>page.evaluate(()=>window.Capacitor?.getPlatform?.())).toBe('android');
+  await expect.poll(async()=>page.evaluate(()=>!!window.__playSyntheticTransport)).toBe(true);
+  try {
+    await expect.poll(async()=>page.evaluate(()=>window.__playSyntheticTransport.served['GET /rest/v1/wallets']||0),{timeout:30000}).toBeGreaterThan(0);
+  } catch (error) {
+    console.log('fixture debugging',JSON.stringify(await page.evaluate(()=>({
+      platform:window.Capacitor?.getPlatform?.(), selected:document.body.dataset.tbView,
+      authVisible:document.body.classList.contains('tb-auth-visible'), role:window.sbRole,
+      offline:window.tbIsOfflineMode?.(), title:document.title,
+      bootText:document.querySelector('#auth-overlay')?.innerText?.slice(0,500),
+      synthetic:window.__playSyntheticTransport
+    }))));
+    console.log('mocked CDP reads',JSON.stringify(playwrightFixture.calls.map(({path,method})=>({path,method}))));
+    throw error;
+  }
   await mkdir(out,{recursive:true});
 
   async function capture(name, target) {
@@ -86,12 +127,29 @@ try {
     await expect(page.locator('#view-'+key)).toBeVisible();
   }
   const wallet = page.locator(`#wallets-container [data-wallet-id="${walletId}"]`).first();
-  await expect(wallet).toContainText(/240[,.]00/,{timeout:30000});
+  try { await expect(wallet).toContainText(/240[,.]00/,{timeout:30000}); }
+  catch (error) {
+    console.log('wallet debugging',JSON.stringify(await page.evaluate(()=>({
+      selected:document.body.dataset.tbView, role:window.sbRole,
+      offline:window.tbIsOfflineMode?.(), wallets:window.state?.wallets?.length,
+      nativeWalletText:document.querySelector('#wallets-container')?.innerText?.slice(0,500),
+      synthetic:window.__playSyntheticTransport
+    }))));
+    throw error;
+  }
   await capture('screenshot-01-compte',wallet);
-  await nav('trip');
-  const trip = page.locator('.trip-analysis-summary');
-  await expect(trip).toContainText(/Alex doit 30(?:[,.]00)? NZD/);
-  await capture('screenshot-02-partage',trip);
+  await expect.poll(()=>page.evaluate(()=>window.sbRole)).toBe('user');
+  await expect(page.locator('#tab-trip')).toBeHidden();
+  await page.evaluate(()=>window.showView('trip'));
+  await expect(page.locator('#view-validation')).toBeVisible();
+  await expect(page.locator('#view-trip')).toBeHidden();
+
+  await nav('transactions');
+  const transactions = page.locator('#tx-list');
+  const meal = transactions.getByText('Déjeuner au lac',{exact:true}).first();
+  await expect(meal).toBeVisible();
+  await expect(transactions).toContainText('Bus local');
+  await capture('screenshot-02-transactions',meal);
   await nav('dashboard');
   await page.locator('#db-today').click();
   const today=page.locator('#daily-budget-container .day').filter({hasText:day});
@@ -100,11 +158,11 @@ try {
   await capture('screenshot-03-budget',today);
   await nav('analysis');
   const summary = page.locator('#analysis-summary');
-  await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^30[,.]00/);
+  await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^60[,.]00/);
   await capture('screenshot-04-analyse',page.locator('#analysis-category-bars-chart'));
   await writeFile(join(out,'provenance.txt'),
     'TravelBudget 10.5.397, exact released UI from 2a85d8941df4a18d780236ae49eccc323759f44f.\n'+
     'Android emulator native ADB captures, 1080×1920.\n'+
     'Build: debug package com.travelbudget.app; no production account, secrets, or network traffic.\n'+
-    'The Taupō data and participants are fictional. Pass: wallet 240 NZD, Trip 30 NZD due, budget remaining 120 NZD, analysis net 30 NZD.\n');
+    'The Taupō data is fictional. Standard user: wallet 240 NZD, 3 transactions, budget remaining 120 NZD, analysis net 60 NZD. Trip redirects to validation (not depicted).\n');
 } finally { await device.close(); }
