@@ -20,6 +20,17 @@ Un futur format descriptif inclura une version de sauvegarde distincte de `class
 3. Montrer les familles qui seraient remplacées et les références manquantes ou incompatibles, sans inventer de zéro. Ne pas remplacer silencieusement une version locale : demander un choix explicite ou annuler, et garder l’ancienne version récupérable. Le premier parcours doit préserver les correspondances intactes et refuser le remplacement si des liens actifs ne peuvent pas être vérifiés.
 4. Vérifier de nouveau compte, voyage et version locale après la confirmation. Appliquer en une seule écriture locale, sans modifier les sources. En cas de conflit d’onglet, d’espace insuffisant ou de fermeture, la version précédente doit rester disponible. Le contrôle local actuel repère une modification déjà faite mais n’est pas transactionnel entre deux onglets simultanés ; ne pas annoncer cette garantie avant de la tester.
 
+## Première validation, hors interface
+
+Le prototype interne `previewAccountingRestore` ne lit ni le stockage ni le réseau.
+Il refuse un JSON invalide ou trop volumineux (500 000 octets), un périmètre absent
+ou différent, une version inconnue, un horodatage invalide et un jeu de familles
+absent, incomplet ou de type inattendu. La profondeur des réglages est limitée.
+Le résultat indique uniquement la date et les familles examinées, sans valeurs
+comptables ni identifiants. « Périmètre contrôlé » ne signifie pas « restaurable » :
+les champs détaillés et leurs références actives, l’état local et les conflits
+ne sont pas encore évalués. Rien n’est écrit, importé, exporté ou publié.
+
 ## Porte de sortie avant synchronisation
 
 La restauration doit réussir entre deux contextes fictifs du même compte et voyage, et refuser autre compte, autre voyage, version inconnue, format partiel, références actives incompatibles, écriture obsolète et quota plein. La preuve de domaine ci-jointe vérifie le recalcul avec des sources identiques, l’indisponibilité après disparition d’un remboursement et l’isolation des clés locales. Elle n’implémente ni le fichier ni l’interface de restauration.
