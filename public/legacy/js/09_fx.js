@@ -316,20 +316,29 @@ function tbFxEnsureManualRateToday(cur, reason) {
 function tbFxGetManualRates() { return _fxGetManualRates(); }
 
 // Merge auto rates + manual rates (manual only fills missing currencies)
-function fxGetEurRatesMerged() {
-  const autoRates = _fxGetEurRates();
-  const manualObj = _fxGetManualRates();
+function fxGetEurRatesMerged(withOrigins = false) {
+  const cache = _fxReadEurCache();
+  const autoRates = _fxGetEurRates(cache);
   const manual = {};
+  const origins = withOrigins ? { EUR: { kind: "pivot" } } : null;
   try {
-    for (const [c, v] of Object.entries(manualObj || {})) {
-      const r = Number(v?.rate);
-      if (Number.isFinite(r) && r > 0) manual[String(c).toUpperCase()] = r;
+    for (const [code, entry] of Object.entries(_fxGetManualRates() || {})) {
+      const rate = Number(entry?.rate);
+      if (!Number.isFinite(rate) || rate <= 0) continue;
+      const cur = code.toUpperCase();
+      manual[cur] = rate;
+      if (origins) origins[cur] = { kind: "manual", asOf: _fxProviderDate(entry.asOf) };
     }
   } catch (_) {}
-  // manual first, auto overrides (so auto stays source of truth when available)
-  return Object.assign({}, manual || {}, autoRates || {});
+  // Automatic rates override manual entries, even when the numeric values match.
+  const rates = { ...manual, ...autoRates };
+  if (!origins) return rates;
+  for (const cur of Object.keys(autoRates)) {
+    if (cur !== "EUR") origins[cur] = { kind: "automatic", asOf: _fxProviderDate(cache._rateDates?.[cur]) };
+  }
+  return { rates, origins };
 }
-
+window.tbFxRateTable = () => fxGetEurRatesMerged(true);
 
 
 async function refreshFxRates() {

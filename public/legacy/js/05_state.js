@@ -703,14 +703,17 @@ window.amountToDisplayForDate = amountToDisplayForDate;
 
 
 // Build a EUR_RATES-like dict for a given segment (override EUR->base when fxMode=fixed)
-function fxRatesForSegment(seg) {
+function fxRatesForSegment(seg, withOrigins = false) {
   const base = String(seg?.baseCurrency || "").toUpperCase();
   const fxMode = String(seg?.fxMode || "fixed").toLowerCase();
-  const rates = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
+  const table = withOrigins && window.tbFxRateTable?.();
+  const rates = table?.rates || window.fxGetEurRates?.() || {};
+  const origins = table?.origins || {};
 
   // Only fixed segments should override EUR->BASE
   if (fxMode === "fixed") {
     let r = Number(seg?.eurBaseRateFixed);
+    let kind = "fixed";
 
     // HARD fallback for safety: if fixed segment rate is missing, fallback to period eurBaseRate / exchangeRates
     if (!(isFinite(r) && r > 0)) {
@@ -718,16 +721,18 @@ function fxRatesForSegment(seg) {
       if (base && periodBase && base === periodBase) {
         const pr = Number(window.state?.period?.eurBaseRate);
         const er = Number(window.state?.exchangeRates?.["EUR-BASE"]);
+        kind = "period";
         r = (isFinite(pr) && pr > 0) ? pr : ((isFinite(er) && er > 0) ? er : r);
       }
     }
 
     if (base && isFinite(r) && r > 0) {
-      return { ...(rates || {}), [base]: r };
+      const overridden = { ...rates, [base]: r };
+      return withOrigins ? { rates: overridden, origins: { ...origins, [base]: { kind: base === "EUR" ? "pivot" : kind } } } : overridden;
     }
   }
 
-  return rates || {};
+  return withOrigins ? { rates, origins } : rates;
 }
 
 // Convert an amount from any currency to the segment base currency for the given date.
