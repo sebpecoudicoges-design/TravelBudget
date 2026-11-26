@@ -42,12 +42,15 @@ if (!process.env.RUNNER_TEMP || !process.env.GITHUB_ACTIONS
   || process.env.GITHUB_REF !== 'refs/heads/codex/play-screenshots-10.5.397') {
   throw Error('Use only the isolated hosted emulator workflow branch');
 }
+// Produced using the released application's own saveOfflineSnapshot routine with this synthetic fixture.
+const offlineSnapshot={"version":2,"savedAt":"2026-10-24T02:00:05.443Z","reason":"play-synthetic-native-capture","state":{"travels":[{"id":"22222222-2222-4222-8222-222222222222","name":"Week-end à Taupō","start":"2026-10-23","end":"2026-10-25","baseCurrency":"NZD"}],"activeTravelId":"22222222-2222-4222-8222-222222222222","periods":[{"id":"33333333-3333-4333-8333-333333333333","travelId":"22222222-2222-4222-8222-222222222222","start":"2026-10-23","end":"2026-10-25","baseCurrency":"NZD"}],"activePeriodId":null,"period":{"id":"33333333-3333-4333-8333-333333333333","start":"2026-10-23","end":"2026-10-25","baseCurrency":"NZD","eurBaseRate":1.95,"dailyBudgetBase":150},"settings":[],"wallets":[{"id":"44444444-4444-4444-8444-444444444444","travelId":"22222222-2222-4222-8222-222222222222","name":"Carte voyage","currency":"NZD","balance":300,"type":"bank","archived":false,"archivedAt":null,"archived_at":null,"balance_snapshot_at":null,"balanceSnapshotAt":null}],"walletBalances":[{"walletId":"44444444-4444-4444-8444-444444444444","periodId":"33333333-3333-4333-8333-333333333333","walletCurrency":"NZD","baselineBalance":300,"balanceSnapshotAt":null,"transactionsDelta":-60,"effectiveBalance":240,"includedTxCount":3,"excludedInternalCount":0,"excludedUnpaidCount":0,"excludedPreSnapshotCount":0,"lastTxCreatedAt":"2026-10-24T12:00:00Z"}],"walletBalanceMap":{"44444444-4444-4444-8444-444444444444":{"walletId":"44444444-4444-4444-8444-444444444444","periodId":"33333333-3333-4333-8333-333333333333","walletCurrency":"NZD","baselineBalance":300,"balanceSnapshotAt":null,"transactionsDelta":-60,"effectiveBalance":240,"includedTxCount":3,"excludedInternalCount":0,"excludedUnpaidCount":0,"excludedPreSnapshotCount":0,"lastTxCreatedAt":"2026-10-24T12:00:00Z"}},"transactions":[{"id":"demo-hike","travelId":"22222222-2222-4222-8222-222222222222","travel_id":"22222222-2222-4222-8222-222222222222","periodId":"33333333-3333-4333-8333-333333333333","period_id":"33333333-3333-4333-8333-333333333333","walletId":"44444444-4444-4444-8444-444444444444","wallet_id":"44444444-4444-4444-8444-444444444444","type":"expense","amount":30,"currency":"NZD","category":"Activités","subcategory":null,"label":"Sortie volcan","detachedTripPayment":false,"tripExpenseId":null,"trip_expense_id":null,"tripShareLinkId":null,"trip_share_link_id":null,"internalTransferId":null,"internal_transfer_id":null,"isInternal":false,"is_internal":false,"affectsBudget":true,"affects_budget":true,"dateStart":"2026-10-23","date_start":"2026-10-23","dateEnd":"2026-10-23","date_end":"2026-10-23","budgetDateStart":"2026-10-23","budget_date_start":"2026-10-23","budgetDateEnd":"2026-10-23","budget_date_end":"2026-10-23","payNow":true,"pay_now":true,"paidAt":"2026-10-23T12:00:00Z","paid_at":"2026-10-23T12:00:00Z","outOfBudget":false,"out_of_budget":false,"nightCovered":false,"night_covered":false,"recurringRuleId":null,"recurring_rule_id":null,"occurrenceDate":null,"occurrence_date":null,"generatedByRule":false,"generated_by_rule":false,"recurringInstanceStatus":null,"recurring_instance_status":null,"createdAt":1792746000000,"created_at":"2026-10-23T09:00:00Z","date":1792713600000},{"id":"demo-meal","travelId":"22222222-2222-4222-8222-222222222222","travel_id":"22222222-2222-4222-8222-222222222222","periodId":"33333333-3333-4333-8333-333333333333","period_id":"33333333-3333-4333-8333-333333333333","walletId":"44444444-4444-4444-8444-444444444444","wallet_id":"44444444-4444-4444-8444-444444444444","type":"expense","amount":18,"currency":"NZD","category":"Repas","subcategory":null,"label":"Déjeuner au lac","detachedTripPayment":false,"tripExpenseId":null,"trip_expense_id":null,"tripShareLinkId":null,"trip_share_link_id":null,"internalTransferId":null,"internal_transfer_id":null,"isInternal":false,"is_internal":false,"affectsBudget":true,"affects_budget":true,"dateStart":"2026-10-24","date_start":"2026-10-24","dateEnd":"2026-10-24","date_end":"2026-10-24","budgetDateStart":"2026-10-24","budget_date_start":"2026-10-24","budgetDateEnd":"2026-10-24","budget_date_end":"2026-10-24","payNow":true,"pay_now":true,"paidAt":"2026-10-24T12:00:00Z","paid_at":"2026-10-24T12:00:00Z","outOfBudget":false,"out_of_budget":false,"nightCovered":false,"night_covered":false,"recurringRuleId":null,"recurring_rule_id":null,"occurrenceDate":null,"occurrence_date":null,"generatedByRule":false,"generated_by_rule":false,"recurringInstanceStatus":null,"recurring_instance_status":null,"createdAt":1792832400000,"created_at":"2026-10-24T09:00:00Z","date":1792800000000},{"id":"demo-bus","travelId":"22222222-2222-4222-8222-222222222222","travel_id":"22222222-2222-4222-8222-222222222222","periodId":"33333333-3333-4333-8333-333333333333","period_id":"33333333-3333-4333-8333-333333333333","walletId":"44444444-4444-4444-8444-444444444444","wallet_id":"44444444-4444-4444-8444-444444444444","type":"expense","amount":12,"currency":"NZD","category":"Transport","subcategory":null,"label":"Bus local","detachedTripPayment":false,"tripExpenseId":null,"trip_expense_id":null,"tripShareLinkId":null,"trip_share_link_id":null,"internalTransferId":null,"internal_transfer_id":null,"isInternal":false,"is_internal":false,"affectsBudget":true,"affects_budget":true,"dateStart":"2026-10-24","date_start":"2026-10-24","dateEnd":"2026-10-24","date_end":"2026-10-24","budgetDateStart":"2026-10-24","budget_date_start":"2026-10-24","budgetDateEnd":"2026-10-24","budget_date_end":"2026-10-24","payNow":true,"pay_now":true,"paidAt":"2026-10-24T12:00:00Z","paid_at":"2026-10-24T12:00:00Z","outOfBudget":false,"out_of_budget":false,"nightCovered":false,"night_covered":false,"recurringRuleId":null,"recurring_rule_id":null,"occurrenceDate":null,"occurrence_date":null,"generatedByRule":false,"generated_by_rule":false,"recurringInstanceStatus":null,"recurring_instance_status":null,"createdAt":1792832400000,"created_at":"2026-10-24T09:00:00Z","date":1792800000000}],"recurringRules":[],"categories":["Repas","Transport","Activités","Mouvement interne"],"categorySubcategories":[],"subcategories":[],"budgetSegments":[{"id":"synthetic-segment","periodId":"33333333-3333-4333-8333-333333333333","travelId":"22222222-2222-4222-8222-222222222222","start":"2026-10-23","end":"2026-10-25","baseCurrency":"NZD","dailyBudgetBase":150,"transportNightBudget":null,"transport_night_budget":null,"fxMode":"fixed","eurBaseRateFixed":1.95,"sortOrder":0}],"segments":[],"tripGroups":[],"tripExpenses":[],"tripExpenseShares":[],"tripParticipants":[],"tripMembers":[],"tripNetBalances":[],"tripBudgetLinks":[],"tripSettlementEvents":[],"documents":[],"documentFolders":[],"assetDocuments":[],"transactionDocuments":[],"tripExpenseDocuments":[],"assets":[],"assetOwners":[],"assetEvents":[],"sportSessions":[],"sportSessionItems":[],"sportSets":[],"workDays":[],"profile":{"id":"11111111-1111-4111-8111-111111111111","role":"user","email":"startup@example.invalid"},"user":{"baseCurrency":"NZD","uiMode":"advanced","email":"startup@example.invalid","whatsappPhone":"","notificationPrefs":{}},"hiddenCategories":[]}};
 function renderFixtureBootstrap() {
-  const initConfig = JSON.stringify({ origin, projectOrigin, fixtureUser, fixtureTime, tables });
+  const initConfig = JSON.stringify({ origin, projectOrigin, fixtureUser, fixtureTime, tables, offlineSnapshot });
   return `
     (() => {
-      const { origin, projectOrigin, fixtureUser, fixtureTime, tables } = ${initConfig};
+      const { origin, projectOrigin, fixtureUser, fixtureTime, tables, offlineSnapshot } = ${initConfig};
       if (window.location.origin !== origin) return;
+      history.replaceState(null,'','/?freeze=1');
       const NativeDate = Date;
       const offset = NativeDate.parse(fixtureTime) - NativeDate.now();
       window.Date = class extends NativeDate {
@@ -60,14 +63,15 @@ function renderFixtureBootstrap() {
       const token = encode({alg:'HS256',typ:'JWT'})+'.'+encode({sub:fixtureUser,aud:'authenticated',role:'authenticated',exp:expiry})+'.synthetic-signature';
       localStorage.setItem('sb-obznbrzarhvmlbprcfie-auth-token', JSON.stringify({access_token:token,refresh_token:'synthetic-refresh',token_type:'bearer',expires_at:expiry,user}));
       localStorage.setItem('travelbudget_guided_tour_done_v2_'+fixtureUser,'1');
+      localStorage.setItem('travelbudget_offline_snapshot_v2_'+fixtureUser,JSON.stringify(offlineSnapshot));
       const localFetch = window.fetch.bind(window);
       const fixtureResponse = (${fixtureResponse.toString()});
       const counts = { served: {}, blocked: {} };
       window.__playSyntheticTransport = counts;
       // Test the connected UI with a synthetic service while keeping the
       // actual guest's IPv4 and IPv6 egress physically blocked.
-      if (navigator.onLine === false) Object.defineProperty(navigator, 'onLine', {value:true});
-      window.fetch = async (input, options) => {
+      Object.defineProperty(navigator, 'onLine', {value:true});
+      const syntheticFetch = async (input, options) => {
         const raw = typeof input === 'string' || input instanceof URL ? String(input) : input.url;
         const url = new URL(raw,window.location.href);
         if (url.origin === origin) return localFetch(input,options);
@@ -87,6 +91,41 @@ function renderFixtureBootstrap() {
         counts.blocked[printableKey]=(counts.blocked[printableKey]||0)+1;
         return new Response('{"message":"Not part of the read-only synthetic image fixture"}',{status:404,headers:{'Content-Type':'application/json'}});
       };
+
+      Object.defineProperty(window,'fetch',{configurable:true,get:()=>syntheticFetch,set:()=>{}});
+      const record = (kind,value) => console.info('TB_PLAY_NATIVE_DIAG '+kind+' '+JSON.stringify(value));
+      const bootErrors=[];
+      window.addEventListener('error',event=>{
+        const error=String(event.message||event.target?.src||'resource').
+          replace(/https?:[^ ]+/g,'resource').slice(0,175);
+        if (bootErrors.length<10) bootErrors.push(error);
+      },true);
+      window.addEventListener('unhandledrejection',event=>{
+        const error=String(event.reason?.message||event.reason||'rejection').
+          replace(/https?:[^ ]+/g,'resource').slice(0,175);
+        if (bootErrors.length<10) bootErrors.push(error);
+      });
+      const diagnose = () => ({
+        platform:window.Capacitor?.getPlatform?.()||'none',
+        showView:typeof window.showView,
+        matchedSession:window.sbUser?.id===fixtureUser,
+        navigatorOnline:navigator.onLine,
+        snapshotRestored:!!window.__TB_OFFLINE_SNAPSHOT__?.restored,
+        localSession:!!localStorage.getItem('sb-obznbrzarhvmlbprcfie-auth-token'),
+        role:window.sbRole||'none',
+        view:document.body?.dataset?.tbView||'none',
+        authVisible:document.body?.classList.contains('tb-auth-visible'),
+        offline:window.tbIsOfflineMode?.(),
+        appBootReady:!!window.__tbBootReady,
+        bootComplete:!!window.__TB_BOOT_COMPLETED__,
+        health:counts.served['GET /auth/v1/health']||0,
+        profiles:counts.served['GET /rest/v1/profiles']||0,
+        wallets:counts.served['GET /rest/v1/wallets']||0,
+        tables:Object.keys(counts.served),
+        blocked:Object.keys(counts.blocked).slice(0,8),
+        errs:bootErrors,
+      });
+      record('seed-loaded',true);
 
       // The actual release UI, running in its Android WebView, exposes no
       // debug connection to this capture task. These local-only test checks
@@ -123,8 +162,9 @@ function renderFixtureBootstrap() {
           const walletId=tables.wallets[0].id;
           await poll(()=>window.Capacitor?.getPlatform?.()==='android' &&
             typeof window.showView==='function' &&
-            window.sbRole==='user' && counts.served['GET /rest/v1/wallets']>0 &&
-            document.body && !document.body.classList.contains('tb-auth-visible'),'native-standard-account',26000);
+            window.sbRole==='user' && window.sbUser?.id===fixtureUser &&
+            (counts.served['GET /rest/v1/wallets']>0 || window.__TB_OFFLINE_SNAPSHOT__?.restored) &&
+            document.body && !document.body.classList.contains('tb-auth-visible'),'native-standard-account',65000);
           const tripTab=document.querySelector('#tab-trip');
           if (visible(tripTab) && getComputedStyle(tripTab).visibility!=='hidden') throw Error('trip-tab-visible');
           window.showView('trip');
@@ -154,6 +194,7 @@ function renderFixtureBootstrap() {
           });
           console.info('TB_PLAY_NATIVE_DONE');
         } catch(error) {
+          record('bootstrap',diagnose());
           // Labels only, no account fields, URLs, request headers, or tokens.
           console.info('TB_PLAY_NATIVE_FAIL '+String(error?.message||'unknown').replace(/[^a-z0-9-]/gi,'').slice(0,110));
         }
@@ -187,7 +228,7 @@ const getState=()=>{
 };
 const passed=new Set();
 const expected=new Set(['screenshot-01-compte','screenshot-02-transactions','screenshot-03-budget','screenshot-04-analyse']);
-const deadline=Date.now()+120000;
+const deadline=Date.now()+175000;
 while (Date.now()<deadline) {
   const state=getState();
   if (state?.type==='READY' && expected.has(state.name) && !passed.has(state.name)) {
@@ -203,7 +244,19 @@ while (Date.now()<deadline) {
       console.log('Verified native capture',state.name);
     }
   }
-  if (state?.type==='FAIL') throw Error('Native app fixture could not verify stage: '+state.name);
+  if (state?.type==='FAIL') {
+    const log=adb(['logcat','-d','-v','brief'],{encoding:'utf8'});
+    for (const line of log.split(/\r?\n/)) {
+      if (line.includes('TB_PLAY_NATIVE_DIAG '))
+        console.log(line.slice(line.indexOf('TB_PLAY_NATIVE_DIAG ')).slice(0,2500));
+    }
+    if (passed.size===0) {
+      const diagnostic=join(process.env.RUNNER_TEMP,'travelbudget-emulator-diagnostic');
+      await mkdir(diagnostic,{recursive:true});
+      await writeFile(join(diagnostic,'diagnostic-DO-NOT-UPLOAD-TO-PLAY.png'),adb(['exec-out','screencap','-p']));
+    }
+    throw Error('Native app fixture could not verify stage: '+state.name);
+  }
   if (state?.type==='DONE' && passed.size!==expected.size) throw Error('App finished but not all native captures arrived: '+passed.size);
   if (passed.size===expected.size) break;
   await new Promise(resolve=>setTimeout(resolve,850));
