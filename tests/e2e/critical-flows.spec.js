@@ -295,7 +295,7 @@ test('keeps the public Project page premium and uncluttered at 1440px and 390px'
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await expect(page.getByRole('link', { name: 'Ouvrir la demo' })).toBeVisible();
+  await expect(page.getByRole('link', { name: "Ouvrir la démo" })).toBeVisible();
 });
 
 test('keeps the tester checklist usable at 390px in light and dark themes', async ({ page }) => {

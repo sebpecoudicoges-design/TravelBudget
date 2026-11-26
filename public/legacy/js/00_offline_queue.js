@@ -114,6 +114,24 @@
     }
   }
 
+  // The replay lock may span network I/O. This separate lock only covers
+  // synchronous localStorage read/modify/write critical sections.
+  function queueWrite(operation, scope = queueStore.scope(), stillAllowed) {
+    const apply = () => {
+      if (scope !== queueStore.scope()) {
+        if (stillAllowed) return null;
+        throw new Error("Le compte a change. Action hors ligne non enregistree.");
+      }
+      if (stillAllowed && !stillAllowed()) return null;
+      return operation();
+    };
+    return typeof navigator.locks?.request === "function"
+      ? navigator.locks.request(`tb:offline-write:${scope}`, apply)
+      : apply();
+  }
+
+  const protectQueueWrite = operation => (...args) => queueWrite(() => operation(...args));
+
   function enqueue(kind, payload, meta) {
     const normalizedKind = String(kind || "unknown");
     const result = queueStore.enqueue(normalizedKind, payload || {}, meta || {}, { singleton: singletonKind(normalizedKind) });
@@ -214,7 +232,8 @@
     return removed;
   }
 
-  function discardKind(filterKind) {
+  function discardKind(filterKind, stillEmpty) {
+    if (stillEmpty && !stillEmpty()) return [];
     const kind = String(filterKind || "").trim();
     if (!kind) return [];
     const before = queueStore.read();
@@ -369,11 +388,21 @@
         && queueStore.read().some(item => item.id === attempt.id
           && item.revision === attempt.revision && item.attemptToken === attempt.attemptToken);
       const result = await window.Data.flushMutationQueue({
-        store: queueStore,
-        run: item => runItem(item, () => isCurrentAttempt(item)),
+        store: {
+          ...queueStore,
+          beginAttempt: (...args) => queueWrite(() => queueStore.beginAttempt(...args), syncScope, renewLease),
+          markFailure: (...args) => queueWrite(() => queueStore.markFailure(...args), syncScope, () => true),
+          remove: (...args) => queueWrite(() => queueStore.remove(...args), syncScope, () => true),
+        },
+        run: item => {
+          const current = () => isCurrentAttempt(item);
+          if (!current()) throw new Error("Synchronisation interrompue : action, compte ou verrou modifie.");
+          return runItem(item, current);
+        },
         force,
         canContinue: renewLease,
         onSuccess: (item) => {
+          if (queueStore.scope() !== syncScope) return;
           syncedKinds.push(String(item?.kind || ""));
           if (String(item?.kind || "").startsWith("transaction.")) cleanupOptimisticRows(item.id);
           if (String(item?.kind || "").startsWith("trip.expense")) {
@@ -413,14 +442,14 @@
     }
   }
 
-  window.tbOfflineQueueEnqueue = enqueue;
+  window.tbOfflineQueueEnqueue = protectQueueWrite(enqueue);
   window.tbOfflineQueueSync = sync;
   window.tbOfflineQueueCount = count;
   window.tbOfflineQueuePending = pending;
-  window.tbOfflineQueueRemove = remove;
-  window.tbOfflineQueueDiscardFailed = discardFailed;
-  window.tbOfflineQueueDiscardKind = discardKind;
-  window.tbOfflineQueueDiscardTripConflicts = discardTripConflicts;
+  window.tbOfflineQueueRemove = protectQueueWrite(remove);
+  window.tbOfflineQueueDiscardFailed = protectQueueWrite(discardFailed);
+  window.tbOfflineQueueDiscardKind = protectQueueWrite(discardKind);
+  window.tbOfflineQueueDiscardTripConflicts = protectQueueWrite(discardTripConflicts);
   window.tbOfflineQueueCleanupOptimistic = cleanupOptimisticRows;
 
   window.addEventListener("storage", (event) => {

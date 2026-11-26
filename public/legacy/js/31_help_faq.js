@@ -35,6 +35,15 @@
       }
     },
     {
+      id: "personal_accounting",
+      tags: ["comptabilité", "accounting", "compte de résultat", "income statement", "bilan comptable", "balance sheet", "plan comptable", "chart of accounts"],
+      q: { fr: "Où consulter ma comptabilité personnelle ?", en: "Where can I see my personal accounting reports?" },
+      a: {
+        fr: "Si le module est accessible à ton compte, ouvre Finances → Comptabilité pour consulter la synthèse, le compte de résultat, le bilan et le plan de comptes. Le résultat distingue les charges des amortissements et ne correspond pas au solde de tes comptes. Les réglages manuels restent sur cet appareil : ils ne se synchronisent pas. Ce sont des états de gestion personnelle, pas des comptes réglementaires.",
+        en: "If the module is available to your account, go to Finances → Accounting for the summary, income statement, balance sheet and chart of accounts. The income statement shows expenses separately from depreciation; its result is not your wallet balance. Manual settings stay on this device and do not sync. These are personal management reports, not statutory accounts."
+      }
+    },
+    {
       id: "paid_pending",
       tags: ["payé", "à payer", "à recevoir", "cashflow", "wallet", "pending"],
       q: { fr: "“Payé maintenant” vs “À payer” : quelle différence ?", en: "“Paid now” vs “To pay”: what is the difference?" },
@@ -466,14 +475,16 @@
         }
         if (target.hasAttribute("data-diag-clear-failed")) {
           if (confirm(tx("Retirer les actions offline en erreur sur cet appareil ?", "Remove failed offline actions on this device?"))) {
-            try { if (typeof window.tbOfflineQueueDiscardFailed === "function") window.tbOfflineQueueDiscardFailed(); } catch (_) {}
+            try { if (typeof window.tbOfflineQueueDiscardFailed === "function") await window.tbOfflineQueueDiscardFailed(); } catch (_) {}
             renderDiagnostics(root);
           }
         }
         if (target.hasAttribute("data-diag-clear-trip")) {
           if (confirm(tx("Retirer les anciennes actions Trip bloquees sur cet appareil ?", "Remove old blocked Trip actions on this device?"))) {
-            try { if (typeof window.tbOfflineQueueDiscardTripConflicts === "function") window.tbOfflineQueueDiscardTripConflicts(); } catch (_) {}
-            try { if (typeof window.tbClearOfflineSnapshots === "function") window.tbClearOfflineSnapshots(); } catch (_) {}
+            try {
+              await window.tbOfflineQueueDiscardTripConflicts?.();
+              window.tbClearOfflineSnapshots?.();
+            } catch (_) {}
             renderDiagnostics(root);
           }
         }

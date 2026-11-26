@@ -30,6 +30,7 @@ it.each(['unavailable', 'rejected', 'account-change'])('does not bypass the brow
   const replay = vi.fn();
   const window = { Data: { createMutationQueueStore, flushMutationQueue }, sbUser: { id: 'a' }, addEventListener() {}, dispatchEvent() {}, toastOk() {}, tbTripReplayOfflineExpenseMutation: replay };
   const request = vi.fn(async (name, options, callback) => {
+    if (name.startsWith('tb:offline-write:')) return options();
     expect(name).toBe('tb:offline-sync:travelbudget_offline_queue_v2_a');
     expect(options).toEqual({ mode: 'exclusive', ifAvailable: true });
     if (outcome === 'rejected') throw new Error('Lock manager denied');
@@ -39,7 +40,7 @@ it.each(['unavailable', 'rejected', 'account-change'])('does not bypass the brow
   vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8'), {
     window, localStorage: storage, navigator: { language: 'fr', locks: { request } }, setTimeout() {}, setInterval, clearInterval, console,
   });
-  window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 10 }, {});
+  await window.tbOfflineQueueEnqueue('trip.expense.update', { amount: 10 }, {});
   const pending = window.tbOfflineQueueSync('manual');
   if (outcome === 'rejected') await expect(pending).rejects.toThrow('Lock manager denied');
   else expect(await pending).toMatchObject({ skipped: outcome === 'unavailable' ? 'locked' : 'account-change' });

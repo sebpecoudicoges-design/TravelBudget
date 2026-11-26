@@ -537,9 +537,10 @@
     const raw = String(row?.syncId || row?.meal?.sync_id || row?.meal?.id || row?.item?.id || "").trim();
     return raw || `idx_${Math.max(0, n(index, 0))}`;
   }
-  function discardNutritionQueue() {
-    try { if (typeof window.tbOfflineQueueDiscardKind === "function") window.tbOfflineQueueDiscardKind("nutrition.sync_local"); } catch (_) {}
-    try { if (typeof window.tbOfflineQueueDiscardFailed === "function") window.tbOfflineQueueDiscardFailed("nutrition.sync_local"); } catch (_) {}
+  async function discardNutritionQueue() {
+    try {
+      await window.tbOfflineQueueDiscardKind?.("nutrition.sync_local", () => loadLocalMeals(true).length === 0);
+    } catch (_) {}
   }
   function discardLocalNutritionRow(key) {
     const repo = repository();
@@ -594,10 +595,10 @@
     if (typeof repo.isOfflineSkipError === "function") return repo.isOfflineSkipError(err);
     return /offline mode|supabase request skipped|failed to fetch|network/i.test(String(err?.message || err || ""));
   }
-  function enqueueNutritionSync() {
+  async function enqueueNutritionSync() {
     try {
       if (typeof window.tbOfflineQueueEnqueue === "function") {
-        window.tbOfflineQueueEnqueue("nutrition.sync_local", {}, { label: "nutrition" });
+        await window.tbOfflineQueueEnqueue("nutrition.sync_local", {}, { label: "nutrition" });
       }
     } catch (_) {}
   }
@@ -709,8 +710,11 @@
       }
       const meal = Object.assign({}, row.meal, { localOnly: true, offlinePending: true });
       const item = row.item ? Object.assign({}, row.item, { localOnly: true, offlinePending: true }) : null;
-      CACHE.meals = Array.isArray(CACHE.meals) ? CACHE.meals.filter(existing => String(existing.id || "") !== String(meal.id || "")) : [];
-      CACHE.items = Array.isArray(CACHE.items) ? CACHE.items.filter(existing => String(existing.id || "") !== String(item?.id || "")) : [];
+      const syncId = nutritionSyncId(row);
+      const related = (CACHE.meals || []).find(existing => syncId && existing?.sync_id === syncId && !existing.localOnly);
+      if (row.syncConflict && related) return;
+      CACHE.meals = (CACHE.meals || []).filter(existing => existing.id !== meal.id && existing.id !== related?.id);
+      CACHE.items = (CACHE.items || []).filter(existing => existing.meal_id !== meal.id && existing.meal_id !== related?.id);
       CACHE.meals.unshift(meal);
       if (item) CACHE.items.unshift(item);
       CACHE.loaded = true;
@@ -837,6 +841,11 @@
     if (!c || !userId || CACHE.syncingLocal) return 0;
     const scope = localMealKey();
     const sameScope = () => uid() === userId && localMealKey() === scope;
+    const run = () => syncNutritionBatch(reason, options, userId, sameScope);
+    return navigator?.locks?.request ? navigator.locks.request(`travelbudget:nutrition-replay:${scope}`, run) : run();
+  }
+  async function syncNutritionBatch(reason, options, userId, sameScope) {
+    if (!sameScope() || CACHE.syncingLocal) return 0;
     const allRows = loadLocalMeals(true);
     if (!allRows.length) return 0;
     const rows = allRows.slice(0, 25);
@@ -861,21 +870,26 @@
       for (const row of rows) {
         if (!sameScope()) return synced;
         const snapshot = JSON.stringify(row);
-        if (!loadLocalMeals(true).some(current => JSON.stringify(current) === snapshot)) continue;
+        const isCurrent = () => sameScope() && loadLocalMeals(true).some(current => JSON.stringify(current) === snapshot);
+        if (!isCurrent()) continue;
         try {
           const meal = row.meal || {};
           const mealDate = localDateISO(meal.meal_date) || selectedDateISO();
           const result = await repository().syncLocalRow({
             tables: { meals: table("nutrition_meals"), items: table("nutrition_meal_items") },
-            row, userId, travelId: activeTravelId(), fallbackDate: mealDate,
+            row, userId, travelId: activeTravelId(), fallbackDate: mealDate, isCurrent,
           });
-          if (result?.skippedItem) throw new Error(txt("Repas distant different : modification locale conservee.", "Remote meal differs: local change retained."));
+          if (result?.skippedItem) {
+            const error = new Error(txt("Repas distant different : modification locale conservee.", "Remote meal differs: local change retained."));
+            error.code = "NUTRITION_MEAL_CONFLICT";
+            throw error;
+          }
           outcomes.set(snapshot, []);
-          synced += 1;
         } catch (e) {
           const msg = e?.message || String(e);
           outcomes.set(snapshot, [Object.assign({}, row, {
             syncError: msg,
+            syncConflict: row.syncConflict === true || e?.code === "NUTRITION_MEAL_CONFLICT",
             syncAttempts: Math.max(0, n(row.syncAttempts, 0)) + 1,
             syncUpdatedAt: new Date().toISOString(),
           })]);
@@ -883,7 +897,12 @@
         }
       }
       if (!sameScope()) return synced;
-      const remaining = loadLocalMeals(true).flatMap(row => outcomes.get(JSON.stringify(row)) || [row]);
+      const remaining = loadLocalMeals(true).flatMap(row => {
+        const result = outcomes.get(JSON.stringify(row));
+        if (!result) return [row];
+        if (!result.length) synced += 1;
+        return result;
+      });
       saveLocalMeals(remaining);
       CACHE.syncStatus = remaining.length
         ? txt(`${synced} synchronise(s), ${remaining.length} encore en attente.`, `${synced} synced, ${remaining.length} still pending.`)
@@ -991,7 +1010,12 @@
     const rows = loadSleepRows(true);
     const recorded = rows[nightDay] || rows[targetDay];
     const row = recorded?.deleted ? {} : (recorded || {});
-    return { hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updatedAt || "", nightDay };
+    return {
+      hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updatedAt || "", nightDay,
+      pending: rows[nightDay]?.pending === true,
+      conflict: rows[nightDay]?.conflict,
+      writeId: rows[nightDay]?.writeId,
+    };
   }
   function ensureNutritionShell() {
     const tabs = document.querySelector(".tabs") || document.querySelector(".app-tabs");
@@ -1134,7 +1158,7 @@
           const sleepAccount = uid();
           const currentSleepKey = sleepKey();
           try { await flushPendingSleep(c, sleepAccount, currentSleepKey); }
-          catch (err) { CACHE.error = err?.message || String(err); }
+          catch (err) { if (err?.code !== "NUTRITION_SLEEP_CONFLICT") CACHE.error = err?.message || String(err); }
           const sameSleepScope = () => uid() === sleepAccount && sleepKey() === currentSleepKey;
           if (!sameSleepScope()) return false;
           const sleepSince = offsetDateISO(selectedDateISO(), -21);
@@ -1164,7 +1188,7 @@
           const selectedSince = offsetDateISO(selectedDateISO(), -1);
           const since = selectedSince < recentSince ? selectedSince : recentSince;
           const meals = await c.from(table("nutrition_meals"))
-            .select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,consumed_time,created_at")
+            .select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,consumed_time,created_at,sync_id")
             .eq("user_id", uid())
             .gte("meal_date", since)
             .order("meal_date", { ascending: false })
@@ -2101,8 +2125,7 @@
     if (cancel) cancel.onclick = () => { CACHE.editingItemId = ""; renderNutrition("edit-cancel"); };
     const waterOnly = root.querySelector("#nutrition-water-only");
     if (waterOnly) waterOnly.onclick = () => saveWaterOnly(root);
-    const sleepSave = root.querySelector("#nutrition-sleep-save");
-    if (sleepSave) sleepSave.onclick = () => saveSleep(root);
+    bindSleepControls(root);
     root.querySelectorAll("[data-nutrition-water-quick]").forEach(btn => {
       btn.onclick = () => {
         const input = root.querySelector("#nutrition-water-ml");
@@ -2486,6 +2509,39 @@
       renderNutrition("water-delete-error");
     }
   }
+  function bindSleepControls(root) {
+    const sleepSave = root.querySelector("#nutrition-sleep-save");
+    if (sleepSave) sleepSave.onclick = () => saveSleep(root);
+    root.querySelectorAll("[data-sleep-conflict-choice]").forEach(button => {
+      button.onclick = () => resolveSleepChoice(root, button.dataset.sleepDay, button.dataset.sleepWriteId, button.dataset.sleepConflictChoice);
+    });
+  }
+  async function resolveSleepChoice(root, day, writeId, choice) {
+    const accountId = uid();
+    const key = sleepKey();
+    const sameScope = () => uid() === accountId && sleepKey() === key;
+    try {
+      const repo = await repository().sleepWrites();
+      const applied = await repo.resolveSleepConflict({
+        storage: localStorage, key, day, writeId, choice, isCurrent: sameScope,
+      });
+      if (!sameScope()) return;
+      CACHE.error = "";
+      if (applied && choice === "local") await flushPendingSleep(client(), accountId, key);
+    } catch (error) {
+      if (!sameScope()) return;
+      if (error?.code === "NUTRITION_STORAGE_FAILED") { showNutritionWriteError(root, error); return; }
+      if (error?.code !== "NUTRITION_SLEEP_CONFLICT") CACHE.error = error?.message || String(error);
+    }
+    if (!sameScope()) return;
+    publishSleep("sleep-conflict");
+  }
+  function publishSleep(reason) {
+    publishNutrition(reason);
+    try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+    try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
+    renderNutrition(reason);
+  }
   async function saveSleep(root) {
     const hours = Math.max(0, Math.min(14, n(root.querySelector("#nutrition-sleep-hours")?.value, 0)));
     const quality = String(root.querySelector("#nutrition-sleep-quality")?.value || "ok");
@@ -2509,10 +2565,7 @@
         : e?.message || String(e);
     }
     if (!sameScope()) return;
-    publishNutrition("sleep");
-    try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
-    try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
-    renderNutrition("sleep");
+    publishSleep("sleep");
   }
   async function deleteNutritionItem(id) {
     const key = String(id || "");

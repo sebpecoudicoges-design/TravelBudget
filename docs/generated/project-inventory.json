@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "689fb21243544cc5f893497e6b9edbac6e685ac5",
-  "snapshotFingerprint": "763b6036b14194b5650f7e84f2f9a97bfb3edd81b21036842dcf585b40b13671",
-  "generatedAt": "2026-11-25T09:11:05.686Z",
+  "commit": "300c35cc7fa81ee0f8da2461dd90ae9f288e2e0b",
+  "snapshotFingerprint": "33888f8b2c6f6789ed97685e23229feaea1e987d32b2c5b14492f1a5380b9eb2",
+  "generatedAt": "2026-11-26T05:22:48.317Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.396"
+    "version": "10.5.397"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -190,6 +190,7 @@
     "src/data/mcpHealthCatalog.js",
     "src/data/mcpReadCatalog.js",
     "src/data/mutationQueueStore.js",
+    "src/data/nutritionMealReplayRepository.js",
     "src/data/nutritionRepository.js",
     "src/data/nutritionSleepRepository.js",
     "src/data/sportRepository.js",
@@ -226,6 +227,7 @@
     "src/features/accounting/accountingMapping.js",
     "src/features/accounting/accountingPositions.js",
     "src/features/accounting/accountingRecognition.js",
+    "src/features/accounting/accountingRestorePreview.js",
     "src/features/accounting/accountingRules.js",
     "src/features/accounting/accountingView.js",
     "src/features/analysis/analysisCashBreakdown.js",
@@ -362,7 +364,9 @@
     "tests/e2e/nutrition-storage-recovery.spec.js",
     "tests/e2e/offline-queue-revision.spec.js",
     "tests/e2e/offline-queue-tabs.spec.js",
+    "tests/e2e/project-demo.spec.js",
     "tests/e2e/trip-analysis.spec.js",
+    "tests/e2e/trip-expense-entry.spec.js",
     "tests/e2e/wallet-journal.spec.js",
     "tests/e2e/wallet-layout.spec.js",
     "tests/features/accounting/accountingChargeRegression.test.js",
@@ -373,6 +377,8 @@
     "tests/features/accounting/accountingMapping.test.js",
     "tests/features/accounting/accountingPositions.test.js",
     "tests/features/accounting/accountingRecognition.test.js",
+    "tests/features/accounting/accountingRestoreContract.test.js",
+    "tests/features/accounting/accountingRestorePreview.test.js",
     "tests/features/accounting/accountingRules.test.js",
     "tests/features/analysis/analysisCashBreakdown.test.js",
     "tests/features/analysis/analysisChartOptions.test.js",
@@ -490,6 +496,7 @@
     "tests/ui/workDomainContract.test.js"
   ],
   "domainContractTests": [
+    "tests/features/accounting/accountingRestoreContract.test.js",
     "tests/ui/accountingViewContract.test.js",
     "tests/ui/analysisDrilldownViewContract.test.js",
     "tests/ui/analysisFilterViewContract.test.js",
@@ -562,7 +569,9 @@
     "tests/e2e/nutrition-storage-recovery.spec.js",
     "tests/e2e/offline-queue-revision.spec.js",
     "tests/e2e/offline-queue-tabs.spec.js",
+    "tests/e2e/project-demo.spec.js",
     "tests/e2e/trip-analysis.spec.js",
+    "tests/e2e/trip-expense-entry.spec.js",
     "tests/e2e/wallet-journal.spec.js",
     "tests/e2e/wallet-layout.spec.js"
   ],
@@ -772,6 +781,7 @@
   "architectureDocuments": [
     "docs/ACCOUNTING_CHARGES_10_5_383.md",
     "docs/ACCOUNTING_MODULE_BRIEF.md",
+    "docs/ACCOUNTING_RESTORE_F14.md",
     "docs/ACCOUNT_DATA_LIFECYCLE.md",
     "docs/ADMIN_TEST_RETURNS.md",
     "docs/ADMOB_ANDROID.md",

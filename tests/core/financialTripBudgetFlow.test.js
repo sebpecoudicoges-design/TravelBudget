@@ -54,7 +54,7 @@ function runLegacy(finances, rangeStart = first, rangeEnd = last) {
     'function buildSeries() {', 'window.fixtureCurve = buildSeries;\nfunction buildSeries() {',
   ), context);
   vm.runInContext(readLegacy('33_budget_analysis').replace(
-    'function _computeModel(){', 'window.fixtureAnalysis = _computeModel;\nfunction _computeModel(){',
+    'function _computeModel(forcedBase){', 'window.fixtureAnalysis = _computeModel;\nfunction _computeModel(forcedBase){',
   ), context);
   context.recomputeAllocations();
   return { context, curve: context.fixtureCurve(), analysis: context.fixtureAnalysis() };

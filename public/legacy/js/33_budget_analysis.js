@@ -43,7 +43,7 @@
     return ((c - t) / t) * 100;
   }
   function _analysisNotificationSummaryFromModel(model){
-    if (!model) return null;
+    if (!model || model.missingFx?.length) return null;
     const today = _iso(new Date());
     const addDays = (iso, days) => {
       const d = _parse(iso) || new Date();
@@ -66,8 +66,9 @@
     }, 0);
     const deltaBudgetAmount = _safeNum(model.spentToToday) - _safeNum(model.targetToToday);
     const deltaBudgetPct = _signedPct(model.spentToToday, model.targetToToday);
-    const deltaReferenceAmount = _safeNum(model.spentToToday) - _safeNum(model.referenceToToday);
-    const deltaReferencePct = _signedPct(model.spentToToday, model.referenceToToday);
+    const referenceAtDate = model.referenceStatus === 'available' && model.referenceToToday > 0;
+    const deltaReferenceAmount = referenceAtDate ? model.spentToToday - model.referenceToToday : null;
+    const deltaReferencePct = referenceAtDate ? _signedPct(model.spentToToday, model.referenceToToday) : null;
     const elapsedDays = Math.max(1, _safeNum(model.elapsedDays) || 1);
     const outAmount = _safeNum(model.outAmount);
     const spentToToday = _safeNum(model.spentToToday);
@@ -83,11 +84,11 @@
       deltaReferencePct,
       spentToToday,
       targetToToday: _safeNum(model.targetToToday),
-      referenceToToday: _safeNum(model.referenceToToday),
+      referenceToToday: referenceAtDate ? model.referenceToToday : null,
       projection: _safeNum(model.projection),
       totalBudget: _safeNum(model.totalBudget),
       paceAppPct: _safeNum(model.targetToToday) > 0 ? (spentToToday / _safeNum(model.targetToToday)) * 100 : 0,
-      paceReferencePct: _safeNum(model.referenceToToday) > 0 ? (spentToToday / _safeNum(model.referenceToToday)) * 100 : 0,
+      paceReferencePct: referenceAtDate ? (spentToToday / model.referenceToToday) * 100 : null,
       avgBudgetPerDay: spentToToday / elapsedDays,
       avgOutPerDay: outAmount / elapsedDays,
       avgAllPerDay: (spentToToday + outAmount) / elapsedDays,
@@ -95,7 +96,7 @@
       excludedPerDay: _safeNum(model.excludedPerDay),
       unmappedPerDay: _safeNum(model.unmappedPerDay),
       comparablePerDay: _safeNum(model.comparablePerDay),
-      referencePerDay: _safeNum(model.referencePerDay),
+      referencePerDay: model.referenceStatus === 'available' ? model.referencePerDay : null,
       budgetPerDay: _safeNum(model.budgetPerDay),
       pendingJ1Amount: pendingSum('future', addDays(today, 1)),
       pendingJ1Count: pendingCount('future', addDays(today, 1)),
@@ -643,53 +644,28 @@ function _analysisBucketOrder(){
     _updateCategoryExcludeSummary();
   }
 
-  function _convert(amount, cur, dateISO, forcedBase){
-  const base = _upper(forcedBase || _currency());
-  const a = _safeNum(amount);
-  const from = _upper(cur || base);
-
-  if (!a) return 0;
-  if (from === base) return a;
-
-  const seg = (typeof getBudgetSegmentForDate === 'function')
-    ? getBudgetSegmentForDate(dateISO)
-    : null;
-
-  try {
-    if (typeof window.amountToBudgetBaseForDate === 'function' && seg) {
-      const inSegBase = window.amountToBudgetBaseForDate(a, from, dateISO);
-      const segBase = _upper(seg.baseCurrency || seg.base_currency || state?.period?.baseCurrency || 'EUR');
-
-      if (segBase === base) return _safeNum(inSegBase);
-
-      if (typeof window.tbFxConvertForDateCached === 'function') {
-        const out = window.tbFxConvertForDateCached(inSegBase, segBase, base, dateISO);
-        if (out !== null && Number.isFinite(Number(out))) return Number(out);
-      }
-    }
-  } catch (_) {}
-
-  try {
-    if (typeof window.tbFxConvertForDateCached === 'function') {
-      const out = window.tbFxConvertForDateCached(a, from, base, dateISO);
-      if (out !== null && Number.isFinite(Number(out))) return Number(out);
-    }
-  } catch (_) {}
-
-  try {
-    if (typeof _toBaseForDate === 'function' && base === _upper(state?.user?.baseCurrency || 'EUR')) {
-      return _safeNum(_toBaseForDate(a, from, dateISO));
-    }
-  } catch (_) {}
-
-  return 0;
-}
-  function _dailyBudgetForDate(dateISO, analysisBase){
-    const base = _upper(analysisBase || _currency());
+  function _convertAnalysisAmount(amount, cur, dateISO, base){
+    const value = _safeNum(amount);
+    if (!value || cur === base) return value;
+    // Legacy budget helpers can silently return the original amount or zero when FX is absent.
+    // The date selects a budget segment; these helpers do not fetch historical rates.
+    try {
+      const out = Number(window.tbFxConvertForDateCached?.(value, cur, base, dateISO));
+      if (Number.isFinite(out) && out !== 0) return out;
+    } catch (_) {}
+    try {
+      const seg = window.getBudgetSegmentForDate?.(dateISO);
+      const rates = seg && window.fxRatesForSegment?.(seg);
+      const out = Number(window.fxConvert?.(value, cur, base, rates || undefined));
+      if (Number.isFinite(out) && out !== 0) return out;
+    } catch (_) {}
+    return null;
+  }
+  function _dailyBudgetForDate(dateISO, base, convert){
     const seg = _segmentForDate(dateISO);
     const segCur = _upper(seg?.baseCurrency || seg?.base_currency || state?.period?.baseCurrency || 'EUR');
     const dailyNominal = _safeNum(seg?.dailyBudgetBase ?? seg?.daily_budget_base ?? state?.period?.dailyBudgetBase ?? 0);
-    return _convert(dailyNominal, segCur, dateISO, base);
+    return convert(dailyNominal, segCur, dateISO);
   }
   function _baseExpenseTransactions(){
     const travelId = _getSelectedTravelId();
@@ -716,10 +692,10 @@ function _analysisBucketOrder(){
     rowType: _txType, rowTravelId: (tx) => tx?.travel_id || tx?.travelId, budgetStart: _txBudgetStart, budgetEnd: _txBudgetEnd,
   }) || [];
 }
-function _sumTxArray(txs, base){
+function _sumTxArray(txs, base, convert){
   return txs.reduce((sum, tx) => {
     const cashDate = _txCashDate(tx);
-    return sum + _convert(tx.amount, tx.currency || base, cashDate, base);
+    return sum + convert(tx.amount, tx.currency || base, cashDate);
   }, 0);
 }
   function _filteredIncomeTransactions(){
@@ -804,11 +780,25 @@ function _sumTxArray(txs, base){
     });
   }
 
-  function _computeModel(){
+  function _computeModel(forcedBase){
     const txs = _filteredTransactions();
     const { start, end } = _analysisRange();
     const cutoffEnd = _analysisCutoffEnd();
-    const base = _resolveAnalysisCurrency(start, end);
+    const base = forcedBase || _resolveAnalysisCurrency(start, end);
+    const missingFx = new Set();
+    let usesExchangeRates = false;
+    const missingReferenceFx = new Set();
+    const convert = (amount, source, dateISO, failures = missingFx) => {
+      const from = _upper(source || base);
+      const value = _convertAnalysisAmount(amount, from, dateISO, base);
+      if (value !== null) {
+        if (value && from !== base) usesExchangeRates = true;
+        return value;
+      }
+      failures.add(`${from} → ${base}`);
+      return 0; // Partial accumulators need their corresponding unavailable state.
+    };
+    const convertReference = (amount, source, dateISO) => convert(amount, source, dateISO, missingReferenceFx);
     const incomeTxs = _filteredIncomeTransactions();
     // Posted cash uses the operation date; budget rows below still use allocation dates.
     const cashFlows = window.TBAnalysisCashBreakdown?.selectCashFlows?.({
@@ -824,9 +814,9 @@ function _sumTxArray(txs, base){
     const expenseCats = [...new Set(txs.map(_txCategory).filter(Boolean))];
     const expenseOffsets = incomeTxs.filter((tx) => window.TBAnalysisCashBreakdown?.isExpenseOffsetIncome?.(tx, expenseCats));
 
-    const incomeRealAmount = _sumTxArray(cashIncomeReal, base);
-    const cashExpenseRealAmount = _sumTxArray(cashExpenseReal, base);
-    const incomePlannedAmount = _sumTxArray(incomePlanned, base);
+    const incomeRealAmount = _sumTxArray(cashIncomeReal, base, convert);
+    const cashExpenseRealAmount = _sumTxArray(cashExpenseReal, base, convert);
+    const incomePlannedAmount = _sumTxArray(incomePlanned, base, convert);
     const days = _daysInclusive(start, end);
     const daySet = new Set(days);
     const dailyMap = Object.fromEntries(days.map(d => [d, 0]));
@@ -858,7 +848,7 @@ const visibleBudgetDays = fullBudgetDays
         return { amount: 0, fullBudgetDays, visibleBudgetDays: [], perDay: 0, cashDate, budgetStart, budgetEnd };
       }
 
-      const fullAmount = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const fullAmount = convert(tx?.amount, tx?.currency || base, cashDate || budgetStart);
       const perDay = fullAmount / fullBudgetDays.length;
       const visibleAmount = perDay * visibleBudgetDays.length;
 
@@ -927,14 +917,14 @@ if (sub) {
       isReal: (tx) => _txPaid(tx) || !!window.TBAnalysisCashBreakdown?.isTripBudgetIncomeShare?.(tx),
     }) || 0;
 
-    const targetDaily = days.map(d => _dailyBudgetForDate(d, base));
+    const targetDaily = days.map(d => _dailyBudgetForDate(d, base, convert));
     const coveredDays = [];
     const referenceDaily = days.map((d) => {
       const row = _referenceRowForDate(d);
       const cur = _upper(row?.currency_code || '');
       const hasRef = !!(_safeNum(row?.recommended_daily_amount) > 0 && cur);
       if (hasRef) coveredDays.push(d);
-      return _safeNum(_convert(row?.recommended_daily_amount || 0, cur || base, d, base));
+      return _safeNum(convertReference(row?.recommended_daily_amount || 0, cur || base, d));
     });
 
     const analysisBuckets = _analysisBucketOrder();
@@ -1049,13 +1039,13 @@ if (sub) {
         const cur = _upper(row?.currency_code || '');
         if (!row || !cur) return;
 
-        refSums.daily += _safeNum(_convert(row?.recommended_daily_amount || 0, cur, d, base));
-        refSums.misc += _safeNum(_convert(row?.recommended_misc_daily_amount || 0, cur, d, base));
-        refSums.Logement += _safeNum(_convert(row?.recommended_accommodation_daily_amount || 0, cur, d, base));
-        refSums.Repas += _safeNum(_convert(row?.recommended_food_daily_amount || 0, cur, d, base));
-        refSums.Transport += _safeNum(_convert(row?.recommended_transport_daily_amount || 0, cur, d, base));
-        refSums.Activités += _safeNum(_convert(row?.recommended_activities_daily_amount || 0, cur, d, base));
-        refSums.Autre += _safeNum(_convert(row?.recommended_misc_daily_amount || 0, cur, d, base));
+        refSums.daily += _safeNum(convertReference(row?.recommended_daily_amount || 0, cur, d));
+        refSums.misc += _safeNum(convertReference(row?.recommended_misc_daily_amount || 0, cur, d));
+        refSums.Logement += _safeNum(convertReference(row?.recommended_accommodation_daily_amount || 0, cur, d));
+        refSums.Repas += _safeNum(convertReference(row?.recommended_food_daily_amount || 0, cur, d));
+        refSums.Transport += _safeNum(convertReference(row?.recommended_transport_daily_amount || 0, cur, d));
+        refSums.Activités += _safeNum(convertReference(row?.recommended_activities_daily_amount || 0, cur, d));
+        refSums.Autre += _safeNum(convertReference(row?.recommended_misc_daily_amount || 0, cur, d));
       });
 
       referencePerDay = refSums.daily / referenceCoverageDays;
@@ -1108,7 +1098,7 @@ const visibleBudgetDays = fullBudgetDays
 
       if (!visibleBudgetDays.length) return sum;
 
-      const fullAmount = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const fullAmount = convert(tx?.amount, tx?.currency || base, cashDate || budgetStart);
       const perDay = fullAmount / fullBudgetDays.length;
       return sum + (perDay * visibleBudgetDays.length);
     }, 0);
@@ -1132,7 +1122,7 @@ const visibleBudgetDays = fullBudgetDays
         : null;
       const bs = _txBudgetStart(tx);
       const budgetDate = _txBudgetStart(tx) || _txCashDate(tx);
-      const spentAmt = _convert(tx?.amount, tx?.currency || base, _txCashDate(tx) || budgetDate, base);
+      const spentAmt = convert(tx?.amount, tx?.currency || base, _txCashDate(tx) || budgetDate);
       nightCoveredCount += 1;
       nightCoveredTransportSpent += spentAmt;
       if (insight && Number.isFinite(insight.amount)) {
@@ -1173,7 +1163,7 @@ const todayBudgetConsumed = todayIdx >= 0
 
       if (!fullBudgetDays.length) return sum;
 
-      const fullAmount = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const fullAmount = convert(tx?.amount, tx?.currency || base, cashDate || budgetStart);
       const perDay = fullAmount / fullBudgetDays.length;
 
       return sum + perDay;
@@ -1201,7 +1191,7 @@ const deltaProjectedWithBudget =
 const cashBreakdown = window.TBAnalysisCashBreakdown?.buildCashBreakdown?.({
   income: cashIncomeReal,
   expenses: cashExpenseReal,
-  convert: (tx) => _convert(tx?.amount, tx?.currency || base, _txCashDate(tx), base),
+  convert: (tx) => convert(tx?.amount, tx?.currency || base, _txCashDate(tx)),
   category: _txCategory,
   subcategory: _txSubcategory,
   isPaid: () => true,
@@ -1209,7 +1199,7 @@ const cashBreakdown = window.TBAnalysisCashBreakdown?.buildCashBreakdown?.({
 }) || {};
 
 return {
-  base, start, end, days, txs, spent, paidSpent,
+  base, start, end, days, mode: cashflowMode, txs, spent, paidSpent, usesExchangeRates, missingFx: Array.from(missingFx).sort(),
 
   incomeReal: incomeRealAmount,
   incomeToDate: incomeRealAmount,
@@ -1232,6 +1222,8 @@ deltaProjectedWithBudget,
   referenceComparisonSeries, unmappedCategorySeries, outAmount,
   spentToToday, targetToToday, referenceToToday, referenceGap,
   referenceCoverageDays, referenceContext, comparableDays,
+  referenceStatus: missingReferenceFx.size ? 'fx' : (referenceCoverageDays ? 'available' : 'none'),
+  missingReferenceFx: Array.from(missingReferenceFx).sort(),
   elapsedDays, periodDays,
   comparableIncludedSpent, comparableExcludedSpent, unmappedComparableSpent,
   nightCoveredCount, nightCoveredPotentialSavings, nightCoveredAverageSaving,
@@ -1283,6 +1275,7 @@ categoryTxMap, subcategoryTxMap
       scope,
       mode,
       currencyMode,
+      isEn: _analysisIsEnglish(),
       t: _t,
     }) || '';
   }
@@ -1333,11 +1326,12 @@ categoryTxMap, subcategoryTxMap
     };
     const ratioText = (current, total) => `${_fmtMoney(current, model.base)} / ${_fmtMoney(total, model.base)}`;
     const deltaBudgetPct = signedPct(model.projection, model.totalBudget);
-    const deltaReferencePct = signedPct(model.projection, model.totalReferencePeriod);
+    const referenceAvailable = model.referenceStatus === 'available';
+    const deltaReferencePct = referenceAvailable ? signedPct(model.projection, model.totalReferencePeriod) : null;
     const deltaBudgetTone = deltaBudgetPct > 0 ? _theme('bad') : (deltaBudgetPct < 0 ? _theme('good') : _theme('muted'));
     const deltaReferenceTone = deltaReferencePct > 0 ? _theme('bad') : (deltaReferencePct < 0 ? _theme('good') : _theme('muted'));
     const deltaBudgetAmount = _safeNum(model.projection) - _safeNum(model.totalBudget);
-    const deltaReferenceAmount = _safeNum(model.projection) - _safeNum(model.totalReferencePeriod);
+    const deltaReferenceAmount = referenceAvailable ? _safeNum(model.projection) - _safeNum(model.totalReferencePeriod) : null;
     const isEn = _analysisIsEnglish();
     const trA = (fr, en) => isEn ? en : fr;
     const dayWord = trA('jours', 'days');
@@ -1356,7 +1350,7 @@ categoryTxMap, subcategoryTxMap
         shell:'rgba(251,207,232,.72)',
         haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.42))'
       },
-      {
+      ...(referenceAvailable ? [{
         label: trA('Rythme référence pays', 'Country reference pace'),
         title: trA('Référence à date', 'Reference to date'),
         value: ratioText(model.totalReferenceElapsed, model.totalReferencePeriod),
@@ -1368,7 +1362,7 @@ categoryTxMap, subcategoryTxMap
         glow:'rgba(74,222,128,.20)',
         shell:'rgba(187,247,208,.78)',
         haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(236,253,245,.40))'
-      },
+      }] : []),
       {
         label: trA('Budget net vs projection', 'Net budget vs projection'),
         title: trA('Net vs final', 'Net vs final'),
@@ -1414,6 +1408,7 @@ categoryTxMap, subcategoryTxMap
 host.innerHTML = progressView?.renderAnalysisProgressPanels?.({
   progressCards,
   delta: {
+    referenceAvailable,
     atDateAmount: _safeNum(model.spentToToday) - _safeNum(model.targetToToday),
     deltaBudgetTone,
     deltaBudgetPct,
@@ -1457,7 +1452,7 @@ function _ensureTxDrilldownStyles(){
   document.head.appendChild(style);
 }
 
-function _openTxDrilldown(kind, key, model){
+function _openTxDrilldown(kind, key, model, opener){
   _ensureTxDrilldownStyles();
 
   const sourceModel = model || lastAnalysisModel || {};
@@ -1514,17 +1509,17 @@ function _openTxDrilldown(kind, key, model){
     end: sourceModel.end,
   }) || '';
 
-  const close = () => { overlay.remove(); };
-  overlay.querySelector('[data-close]')?.addEventListener('click', close);
-  overlay.addEventListener('click', (ev) => { if (ev.target === overlay) close(); });
-
-  const onKey = (ev) => {
-    if (ev.key === 'Escape') {
-      close();
-      window.removeEventListener('keydown', onKey);
-    }
+  const close = () => {
+    overlay.remove();
+    window.removeEventListener('keydown', onKey);
+    opener?.focus();
   };
+  const onKey = (ev) => { if (ev.key === 'Escape') close(); };
+  const closeButton = overlay.querySelector('[data-close]');
+  closeButton?.addEventListener('click', close);
+  overlay.addEventListener('click', (ev) => { if (ev.target === overlay) close(); });
   window.addEventListener('keydown', onKey);
+  if (opener) closeButton?.focus();
 }
   const THEME_FALLBACKS = { text:'#e5e7eb', muted:'#94a3b8', grid:'rgba(148,163,184,.18)', accent:'#3b82f6', good:'#22c55e', warn:'#f59e0b', bad:'#ef4444' };
   function _theme(name){ return getComputedStyle(document.body).getPropertyValue(`--${name === 'grid' ? 'gridline' : name}`).trim() || THEME_FALLBACKS[name] || '#94a3b8'; }
@@ -1550,7 +1545,11 @@ function _openTxDrilldown(kind, key, model){
     if (!chart) return;
     chart.setOption(window.TBAnalysisCharts?.buildAnalysisTrajectoryOption?.({
       model,
-      todayLabel: _iso(new Date()).slice(5),
+      labels: {
+        spent: _t(model.mode === 'planned' ? 'analysis.chart.cumulative_planned' : 'analysis.chart.cumulative_spent'),
+        target: _t('analysis.chart.cumulative_target'),
+      },
+      todayDate: _iso(new Date()),
       theme: _analysisChartTheme(),
       formatCurrency: _fmtMoney,
     }) || {});
@@ -1567,26 +1566,64 @@ function _openTxDrilldown(kind, key, model){
   function _renderCategory(model){
   const chart = _ensureChart('category','analysis-category-chart');
   if (!chart) return;
-
-  chart.setOption(window.TBAnalysisCharts?.buildAnalysisCategoryPieOption?.({
+  const option = window.TBAnalysisCharts?.buildAnalysisCategoryPieOption?.({
     model,
-    categoryColor: _categoryColor,
+    groupedLabel: _t('analysis.category.grouped'),
     theme: _analysisChartTheme(),
     formatCurrency: _fmtMoney,
-  }) || {});
+  });
+  if (!option) return;
+  chart.setOption(option);
+
+  let note = _el('analysis-category-pie-note');
+  if (!note) {
+    note = document.createElement('p');
+    note.id = 'analysis-category-pie-note';
+    note.className = 'muted';
+    chart.getDom().insertAdjacentElement('beforebegin', note);
+  }
+  note.textContent = _t(option.series[0].data.length ? 'analysis.category.pie_basis' : 'analysis.category.pie_empty');
 
   try {
     chart.off('click');
     chart.on('click', (params) => {
+      if (params?.data?.grouped) {
+        _el('analysis-category-drilldown')?.focus();
+        return;
+      }
       const name = _norm(params?.name || '');
-      if (!name || name === 'Aucune dépense') return;
-      _openTxDrilldown('category', name, model);
+      if (name) _openTxDrilldown('category', name, model);
     });
   } catch (_) {}
 }
   function _renderCategoryBars(model){
+  const host = _el('analysis-category-bars-chart');
+  if (!host) return;
+  const rows = model.categorySeries || [];
+  const detail = _el('analysis-category-detail');
+  const picker = _el('analysis-category-drilldown');
+  const open = _el('analysis-category-open');
+  if (detail && picker && open) {
+    const previous = picker.value;
+    const label = _t('analysis.category.detail');
+    picker.setAttribute('aria-label', label);
+    picker.options[0].text = label;
+    picker.options.length = 1;
+    for (const { name, actual } of rows) {
+      picker.add(new Option(`${name} · ${_fmtMoney(actual, model.base)}`, name));
+    }
+    picker.value = rows.some(({ name }) => name === previous) ? previous : '';
+    detail.hidden = !rows.length;
+    open.disabled = !picker.value;
+    picker.onchange = () => { open.disabled = !picker.value; };
+    open.onclick = () => {
+      if (picker.value) _openTxDrilldown('category', picker.value, model, open);
+    };
+  }
+  host.style.height = `${Math.max(280, 30 + rows.length * 24)}px`;
   const chart = _ensureChart('categoryBars','analysis-category-bars-chart');
   if (!chart) return;
+  chart.resize();
 
   chart.setOption(window.TBAnalysisCharts?.buildAnalysisCategoryBarsOption?.({
     model,
@@ -1630,6 +1667,10 @@ function _openTxDrilldown(kind, key, model){
     if (!chart) return;
     chart.setOption(window.TBAnalysisCharts?.buildAnalysisVelocityOption?.({
       model,
+      labels: {
+        spent: _t(model.mode === 'planned' ? 'analysis.chart.daily_planned' : 'analysis.chart.daily_spent'),
+        target: _t('analysis.chart.daily_target'),
+      },
       theme: _analysisChartTheme(),
       formatCurrency: _fmtMoney,
     }) || {});
@@ -1648,9 +1689,10 @@ function _openTxDrilldown(kind, key, model){
     const chartEl = _el('analysis-reference-mix-chart');
     const chart = charts.referenceMix;
     const analysisView = window.TBAnalysisView;
+    const isEn = _analysisIsEnglish();
     if (summary) {
       summary.innerHTML = analysisView?.renderAnalysisReferenceSummary?.({
-        model,
+        model, isEn,
         formatCurrency: _fmtMoney,
       }) || '';
     }
@@ -1688,6 +1730,28 @@ function _openTxDrilldown(kind, key, model){
     }
   }
 
+  function _showAnalysisFxState(model){
+    const missing = model.missingFx?.length > 0;
+    const view = _el('view-analysis');
+    const blocked = [view.querySelector('.analysis-main-grid'), _el('analysis-custom-layout'), _el('analysis-overview-strip')];
+    for (const node of blocked) node?.classList.toggle('hidden', missing);
+    if (!missing) return false;
+
+    const isEn = _analysisIsEnglish();
+    const label = isEn ? 'Exchange rate unavailable' : 'Taux de change indisponible';
+    const summary = _el('analysis-summary');
+    const notice = document.createElement('div');
+    notice.className = 'analysis-stat';
+    notice.setAttribute('role', 'status');
+    notice.textContent = isEn
+      ? `${label}: ${model.missingFx.join(', ')}. Totals and charts are hidden rather than showing incomplete amounts. Change the currency or date range, or refresh.`
+      : `${label} : ${model.missingFx.join(', ')}. Les totaux et graphiques sont masqués pour ne pas afficher de montants incomplets. Change la devise ou la période, ou actualise.`;
+    summary?.replaceChildren(notice);
+    const pill = _el('analysis-live-pill');
+    if (pill) pill.textContent = label;
+    return true;
+  }
+
   function _renderAll(){
     if (!_el('view-analysis')) return;
     _saveFilters();
@@ -1709,11 +1773,13 @@ function _openTxDrilldown(kind, key, model){
 
     const comparisonHost = _el('analysis-period-comparison');
     if (comparisonHost) comparisonHost.innerHTML = '';
+    if (_showAnalysisFxState(model)) return;
+    let usesExchangeRates = model.usesExchangeRates;
     if (comparisonHost && _el('analysis-comparison')?.value === 'previous') {
       const period = _el('analysis-period');
       const inputs = _rangeInputs();
       const travel = _getSelectedTravel();
-      window.TBAnalysisPeriodComparison.renderPreviousPeriodComparison({
+      const comparison = window.TBAnalysisPeriodComparison.renderPreviousPeriodComparison({
         host: comparisonHost, current: model, periodPreset: period?.value || 'range',
         travelBounds: { start: _norm(travel?.start_date || travel?.start), end: _norm(travel?.end_date || travel?.end) },
         computeForRange(range) {
@@ -1722,7 +1788,7 @@ function _openTxDrilldown(kind, key, model){
             if (period) period.value = 'range';
             if (inputs.start) inputs.start.value = range.start;
             if (inputs.end) inputs.end.value = range.end;
-            return _computeModel();
+            return _computeModel(model.base);
           } finally {
             if (period) period.value = saved.period;
             if (inputs.start) inputs.start.value = saved.start;
@@ -1731,6 +1797,7 @@ function _openTxDrilldown(kind, key, model){
         },
         formatCurrency: _fmtMoney, isEn: _analysisIsEnglish(),
       });
+      usesExchangeRates ||= comparison?.metrics && comparison.previous?.usesExchangeRates;
     }
 
     safe('overview-strip', _renderOverviewStrip);
@@ -1749,6 +1816,16 @@ function _openTxDrilldown(kind, key, model){
     const summaryHostPre = _el('analysis-summary');
     if (summaryHostPre && model && Array.isArray(model.txs) && model.txs.length === 0) {
       summaryHostPre.innerHTML = `<div class="muted">Aucune dépense visible pour ce scope, cette plage, ou ces filtres.</div>`;
+    }
+    if (summaryHostPre && usesExchangeRates) {
+      const note = document.createElement('p');
+      note.className = 'muted';
+      note.dataset.analysisFxNote = '';
+      note.style.gridColumn = '1 / -1';
+      note.textContent = _analysisIsEnglish()
+        ? 'Currency conversion uses saved rates or your settings, not necessarily the historical rate for the transaction date.'
+        : 'La conversion utilise des taux en cache ou tes réglages, pas forcément le taux historique à la date de l’opération.';
+      summaryHostPre.appendChild(note);
     }
     if (!view) return;
 

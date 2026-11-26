@@ -1,0 +1,24 @@
+.project-video { margin: 0; min-width: 0; display: grid; gap: 9px; align-self: center; }
+.project-video video { width: 100%; height: auto; aspect-ratio: 1440 / 1000; display: block; border-radius: 14px; background: #0d1e24; }
+.project-video figcaption, .project-video-link { font-size: .84rem; }
+.project-video-link { text-decoration: underline; width: fit-content; }
+.trip-demo { display: grid; grid-template-columns: .98fr 1.02fr; gap: 16px; align-items: stretch; }
+.trip-demo > div { min-width: 0; padding: clamp(16px, 3vw, 30px); border: 1px solid var(--tb-line, #aabfc5); border-radius: 20px; }
+.trip-demo-play { display: grid; align-content: start; gap: 15px; }
+.trip-demo h3, .trip-demo p { margin: 0; }
+.trip-demo [hidden] { display: none !important; }
+.demo-steps { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 0; margin: 0; list-style: none; font-size: .86rem; }
+.demo-steps li { padding: 3px 0; }
+.demo-steps [aria-current] { font-weight: 750; border-bottom: 2px solid var(--tb-coral); }
+.trip-demo form, .trip-demo #demo-share, .trip-demo #demo-review { display: grid; gap: 10px; }
+.demo-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.demo-fields input { min-width: 85px; width: 7ch; padding: 8px 10px; min-height: 42px; border: 1px solid var(--tb-line, #aabfc5); border-radius: 8px; background: var(--tb-canvas, #fff); color: inherit; font: inherit; }
+.trip-demo button { width: fit-content; font: inherit; }
+.demo-reset { justify-self: start; }
+.demo-note { font-size: .88rem; margin: 12px 0 0; }
+.trip-demo-results { display: grid; gap: 12px; }
+.demo-result-group + .demo-result-group { border-top: 1px solid var(--tb-line, #aabfc5); padding-top: 12px; }
+:is(.demo-result-group dl, .demo-split-preview) { margin: 6px 0 0; display: grid; gap: 4px; }
+:is(.demo-result-group dl, .demo-split-preview) div { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+:is(.demo-result-group, .demo-split-preview) dd { margin: 0; white-space: nowrap; font-weight: 750; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) { .trip-demo { grid-template-columns: 1fr; } }

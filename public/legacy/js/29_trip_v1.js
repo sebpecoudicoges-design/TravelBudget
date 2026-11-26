@@ -2085,10 +2085,7 @@ async function _uploadTripExpenseDocumentFile(expenseId, file, relationType = "r
   const path = `${uid}/${docId}/${safe}`;
   const baseName = String(file.name || "Document").replace(/\.[a-z0-9]{1,8}$/i, "");
 
-  const up = await sb.storage.from(bucket).upload(path, file, {
-    upsert: false,
-    contentType: file.type || undefined
-  });
+  const up = await window.tbWritePersonalDocument(sb, path, file);
   if(up.error) throw up.error;
 
   const ins = await sb.from(_tripDocumentsTable()).insert({
@@ -3346,7 +3343,7 @@ async function _persistSettlementWithWallet(wallet) {
     }
     const kind = mode === "update" ? "trip.expense.update" : "trip.expense.create";
     if (typeof window.tbOfflineQueueEnqueue !== "function") throw new Error("File offline indisponible.");
-    const queueItem = window.tbOfflineQueueEnqueue(kind, {
+    const queueItem = await window.tbOfflineQueueEnqueue(kind, {
       tripId: tripState.activeTripId,
       mode,
       expenseId: expenseId || null,

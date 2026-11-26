@@ -10,7 +10,7 @@ export function unwrap(result) {
   return [];
 }
 
-function safeNumber(value, fallback = 0) {
+export function safeNumber(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
 }
@@ -224,107 +224,9 @@ export function createNutritionRepository(getClient) {
     visibleSleepRows,
     sleepWrites: () => import("./nutritionSleepRepository.js"),
 
-    async findMealBySyncId({ table, userId, syncId }) {
-      if (!syncId) return null;
-      const client = requireClient(getClient);
-      const row = unwrap(await client
-        .from(table)
-        .select('id,label')
-        .eq('user_id', userId)
-        .eq('sync_id', syncId)
-        .maybeSingle());
-      return row || null;
-    },
-
-    async upsertMeal({ table, meal, userId, travelId, mealDate, syncId }) {
-      const client = requireClient(getClient);
-      const payload = {
-        user_id: userId,
-        travel_id: meal.travel_id || travelId,
-        meal_date: mealDate || meal.meal_date,
-        meal_type: meal.meal_type || 'meal',
-        label: meal.label || 'Repas',
-        notes: notesWithNutritionSyncId(meal.notes, syncId),
-        water_ml: safeNumber(meal.water_ml, 0),
-        consumed_time: meal.consumed_time || null,
-      };
-      if (syncId) payload.sync_id = syncId;
-      const query = syncId
-        ? client.from(table).upsert(payload, { onConflict: 'user_id,sync_id' })
-        : client.from(table).insert(payload);
-      const inserted = unwrap(await query.select('id').single());
-      return inserted?.id;
-    },
-
-    async hasDuplicateItem({ table, userId, mealId, item }) {
-      const client = requireClient(getClient);
-      const rows = unwrap(await client
-        .from(table)
-        .select('id')
-        .eq('user_id', userId)
-        .eq('meal_id', mealId)
-        .eq('label', item.label || 'Aliment')
-        .eq('grams', safeNumber(item.grams, 0))
-        .eq('kcal', safeNumber(item.kcal, 0))
-        .limit(1));
-      return Array.isArray(rows) && rows.length > 0;
-    },
-
-    async insertMealItem({ table, userId, mealId, item }) {
-      const client = requireClient(getClient);
-      const payload = {
-        user_id: userId,
-        meal_id: mealId,
-        food_key: item.food_key || null,
-        label: item.label || 'Aliment',
-        grams: safeNumber(item.grams, 0),
-        kcal: safeNumber(item.kcal, 0),
-        protein_g: safeNumber(item.protein_g, 0),
-        carbs_g: safeNumber(item.carbs_g, 0),
-        fat_g: safeNumber(item.fat_g, 0),
-        fiber_g: safeNumber(item.fiber_g, 0),
-      };
-      return unwrap(await client.from(table).upsert(payload, { ignoreDuplicates: true }));
-    },
-
-    async syncLocalRow({ tables, row, userId, travelId, fallbackDate }) {
-      const meal = row?.meal || {};
-      const item = row?.item || null;
-      const syncId = nutritionSyncId(row);
-      const mealDate = meal.meal_date || fallbackDate;
-      let mealId = '';
-      let existingMealLabel = '';
-      const existingMeal = await this.findMealBySyncId({ table: tables.meals, userId, syncId });
-      if (existingMeal) {
-        mealId = existingMeal.id;
-        existingMealLabel = existingMeal.label || '';
-      }
-      if (!mealId) {
-        mealId = await this.upsertMeal({ table: tables.meals, meal, userId, travelId, mealDate, syncId });
-      }
-      if (item) {
-        const itemLabel = item.label || meal.label || 'Aliment';
-        if (existingMealLabel && itemLabel && existingMealLabel !== itemLabel) return { mealId, skippedItem: true };
-        const duplicate = await this.hasDuplicateItem({
-          table: tables.items,
-          userId,
-          mealId,
-          item: { ...item, label: itemLabel },
-        });
-        if (!duplicate) {
-          try {
-            await this.insertMealItem({
-              table: tables.items,
-              userId,
-              mealId,
-              item: { ...item, label: itemLabel },
-            });
-          } catch (error) {
-            if (!isDuplicateNutritionError(error)) throw error;
-          }
-        }
-      }
-      return { mealId, syncedItem: Boolean(item) };
+    async syncLocalRow(args) {
+      const { syncNutritionLocalMeal } = await import('./nutritionMealReplayRepository.js');
+      return syncNutritionLocalMeal({ ...args, client: requireClient(getClient) });
     },
 
     async loadCookingWorkspace({ tables, userId, limit = 8 }) {

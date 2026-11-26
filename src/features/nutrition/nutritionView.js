@@ -256,6 +256,13 @@ export function renderSleepPanel({
   t,
 } = {}) {
   const dateLabel = shortNutritionDate(day);
+  const conflict = sleep.conflict;
+  const remote = conflict?.remote;
+  const noNight = langText('Aucune saisie', 'No entry', t);
+  const sleepValue = row => row?.hours > 0
+    ? `${row.hours} h · ${({ bad: langText('Mauvaise', 'Bad', t), ok: langText('Correcte', 'Ok', t), good: langText('Bonne', 'Good', t) })[row.quality] || ''}`
+    : noNight;
+  const choiceButton = (choice, text) => `<button class="btn small" type="button" data-sleep-conflict-choice="${choice}" data-sleep-day="${esc(sleep.nightDay)}" data-sleep-write-id="${esc(sleep.writeId)}">${esc(text)}</button>`;
   return `<section class="tb-nutrition-subcard">
     <div class="tb-nutrition-subcard-heading">
       <div><h3>${esc(langText('Sommeil', 'Sleep', t))}</h3><p>${esc(langText('La nuit précédente alimente la récupération du jour sélectionné.', 'The previous night feeds the selected day recovery.', t))}</p></div>
@@ -263,10 +270,14 @@ export function renderSleepPanel({
     </div>
     <div class="muted" style="font-size:12px;margin:-4px 0 8px;">${esc(langText('Nuit du', 'Night of', t))} ${esc(sleepNightLabel)} → ${esc(dateLabel)}</div>
     <div class="row tb-nutrition-form-row" style="gap:10px;">
-      <div class="field" style="flex:1;"><label>${esc(langText('Heures dormies', 'Hours slept', t))}</label><input id="nutrition-sleep-hours" type="number" min="0" max="14" step="0.25" value="${esc(String(sleep.hours || ''))}" placeholder="7.5"></div>
-      <div class="field" style="flex:1;"><label>${esc(langText('Qualite', 'Quality', t))}</label><select id="nutrition-sleep-quality"><option value="bad" ${sleep.quality === 'bad' ? 'selected' : ''}>${esc(langText('Mauvaise', 'Bad', t))}</option><option value="ok" ${sleep.quality === 'ok' ? 'selected' : ''}>${esc(langText('Correcte', 'Ok', t))}</option><option value="good" ${sleep.quality === 'good' ? 'selected' : ''}>${esc(langText('Bonne', 'Good', t))}</option></select></div>
+      <div class="field" style="flex:1;"><label>${esc(langText('Heures dormies', 'Hours slept', t))}</label><input id="nutrition-sleep-hours" ${conflict ? 'disabled' : ''} type="number" min="0" max="14" step="0.25" value="${esc(String(sleep.hours || ''))}" placeholder="7.5"></div>
+      <div class="field" style="flex:1;"><label>${esc(langText('Qualite', 'Quality', t))}</label><select id="nutrition-sleep-quality" ${conflict ? 'disabled' : ''}><option value="bad" ${sleep.quality === 'bad' ? 'selected' : ''}>${esc(langText('Mauvaise', 'Bad', t))}</option><option value="ok" ${sleep.quality === 'ok' ? 'selected' : ''}>${esc(langText('Correcte', 'Ok', t))}</option><option value="good" ${sleep.quality === 'good' ? 'selected' : ''}>${esc(langText('Bonne', 'Good', t))}</option></select></div>
     </div>
-    <button class="btn" id="nutrition-sleep-save" type="button" style="width:100%;margin-top:8px;">${esc(langText('Enregistrer sommeil', 'Save sleep', t))}</button>
+    ${conflict ? `<div role="status" style="margin-top:8px;">
+      <p>${esc(langText('Cette nuit a changé sur un autre appareil. Choisis la version à conserver.', 'This night changed on another device. Choose which version to keep.', t))}</p>
+      <p>${esc(langText('Sur cet appareil', 'On this device', t))} : ${esc(sleepValue(sleep))}<br>${esc(langText('Synchronisée', 'Synced', t))} : ${esc(sleepValue(remote))}</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;">${choiceButton('local', langText('Garder ma saisie', 'Keep my entry', t))}${choiceButton('remote', langText('Garder la version synchronisée', 'Keep the synced version', t))}</div>
+    </div>` : `<button class="btn" id="nutrition-sleep-save" type="button" style="width:100%;margin-top:8px;">${esc(langText('Enregistrer sommeil', 'Save sleep', t))}</button>${sleep.pending ? `<p role="status">${esc(langText('En attente de synchronisation', 'Waiting to sync', t))}</p>` : ''}`}
     <div class="tb-nutrition-week-grid" style="margin-top:10px;margin-bottom:0;">
       ${(Array.isArray(sleepWeek) ? sleepWeek : []).map(row => {
         const sleepPct = Math.max(0, Math.min(100, (num(row.hours, 0) / 7.5) * 100));
