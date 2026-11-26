@@ -678,16 +678,18 @@ function fxRate(from, to, ratesOpt) {
   return eurToTo / eurToFrom;
 }
 
-function fxConvert(amount, from, to, ratesOpt) {
+function fxConvert(amount, from, to, ratesOpt, legs, origins) {
   const a = _fxNum(amount) ?? 0;
   if (window.Core?.fxRules?.fxConvert) {
-    const rates = ratesOpt || fxGetEurRatesMerged();
+    const table = legs && !ratesOpt && window.tbFxRateTable?.();
+    const rates = ratesOpt || table?.rates || fxGetEurRatesMerged();
     const base = String(window.state?.period?.baseCurrency || "").toUpperCase();
     const fallback = _fxNum(window.state?.period?.eurBaseRate) || _fxNum(window.state?.exchangeRates?.["EUR-BASE"]);
     const out = window.Core.fxRules.fxConvert(a, from, to, rates, {
       pivotCurrency: "EUR",
       fallbackCurrency: base,
       fallbackPivotToCurrencyRate: fallback,
+      legs, origins: origins || table?.origins,
     });
     if (out !== null && Number.isFinite(out)) return out;
   }
@@ -699,8 +701,8 @@ function fxConvert(amount, from, to, ratesOpt) {
 }
 
 // Never returns NaN. If conversion fails, returns fallback (default 0).
-function safeFxConvert(amount, from, to, fallback) {
-  const v = fxConvert(amount, from, to);
+function safeFxConvert(amount, from, to, fallback, legs) {
+  const v = fxConvert(amount, from, to, undefined, legs);
   if (v === null || !Number.isFinite(v)) {
     const fb = Number(fallback);
     return Number.isFinite(fb) ? fb : 0;

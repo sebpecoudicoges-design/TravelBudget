@@ -25,15 +25,22 @@ export function getPivotToCurrencyRate(currency, rates = {}, options = {}) {
   const pivot = normalizeCurrency(options.pivotCurrency || 'EUR') || 'EUR';
   const target = normalizeCurrency(currency);
   if (!target) return null;
-  if (target === pivot) return 1;
+  if (target === pivot) {
+    options.legs?.push({ currency: target, kind: 'pivot' });
+    return 1;
+  }
 
   const normalized = normalizePivotRates(rates, pivot);
   const direct = Number(normalized[target]);
-  if (Number.isFinite(direct) && direct > 0) return direct;
+  if (Number.isFinite(direct) && direct > 0) {
+    options.legs?.push({ kind: 'unknown', ...options.origins?.[target], currency: target });
+    return direct;
+  }
 
   const fallbackCurrency = normalizeCurrency(options.fallbackCurrency);
   const fallbackRate = Number(options.fallbackPivotToCurrencyRate);
   if (fallbackCurrency && target === fallbackCurrency && Number.isFinite(fallbackRate) && fallbackRate > 0) {
+    options.legs?.push({ currency: target, kind: 'period' });
     return fallbackRate;
   }
 
@@ -46,17 +53,8 @@ export function fxRate(fromCurrency, toCurrency, rates = {}, options = {}) {
   if (!from || !to) return null;
   if (from === to) return 1;
 
-  const pivot = normalizeCurrency(options.pivotCurrency || 'EUR') || 'EUR';
-  const fromRate = getPivotToCurrencyRate(from, rates, {
-    pivotCurrency: pivot,
-    fallbackCurrency: options.fallbackCurrency,
-    fallbackPivotToCurrencyRate: options.fallbackPivotToCurrencyRate,
-  });
-  const toRate = getPivotToCurrencyRate(to, rates, {
-    pivotCurrency: pivot,
-    fallbackCurrency: options.fallbackCurrency,
-    fallbackPivotToCurrencyRate: options.fallbackPivotToCurrencyRate,
-  });
+  const fromRate = getPivotToCurrencyRate(from, rates, options);
+  const toRate = getPivotToCurrencyRate(to, rates, options);
 
   if (!fromRate || !toRate) return null;
   return toRate / fromRate;
@@ -65,10 +63,13 @@ export function fxRate(fromCurrency, toCurrency, rates = {}, options = {}) {
 export function fxConvert(amount, fromCurrency, toCurrency, rates = {}, options = {}) {
   const n = Number(amount);
   const a = Number.isFinite(n) ? n : 0;
-  const rate = fxRate(fromCurrency, toCurrency, rates, options);
+  const legs = options.legs ? [] : null;
+  const rate = fxRate(fromCurrency, toCurrency, rates, legs ? { ...options, legs } : options);
   if (!rate || !Number.isFinite(rate) || rate <= 0) return null;
   const out = a * rate;
-  return Number.isFinite(out) ? out : null;
+  if (!Number.isFinite(out)) return null;
+  if (legs) options.legs.push(...legs);
+  return out;
 }
 
 export function buildTxFxSnapshot(input = {}) {

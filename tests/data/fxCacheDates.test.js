@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import * as fxRules from '../../src/core/fxRules.js';
 import vm from 'node:vm';
 import { expect, it } from 'vitest';
 
@@ -71,4 +72,41 @@ it('tracks the selected table origin even when manual, provider and fixed rates 
   expect(read("fxRatesForSegment({ baseCurrency: 'AUD', fxMode: 'live_ecb', eurBaseRateFixed: 1.7 }, true).origins.AUD")).toEqual({ kind: 'automatic', asOf: '2026-11-24' });
   context.state.period = { baseCurrency: 'AUD', eurBaseRate: 1.7 };
   expect(read("fxRatesForSegment({ baseCurrency: 'AUD' }, true).origins.AUD")).toEqual({ kind: 'period' });
+});
+
+it('attributes the actual dated conversion legs, never a coincidentally equal rate', () => {
+  const { storage, context } = setup();
+  const stateSource = fs.readFileSync('public/legacy/js/05_state.js', 'utf8');
+  vm.runInContext(stateSource.slice(stateSource.indexOf('function fxRatesForSegment('), stateSource.indexOf('const __tbBudgetBaseCache')), context);
+  const helpers = fs.readFileSync('public/legacy/js/01_helpers.js', 'utf8');
+  vm.runInContext(helpers.slice(helpers.indexOf('const __tbFxCache'), helpers.indexOf('window.tbIsTripBudgetShare =')), context);
+  context.tbNormalizeDateISO = value => value;
+  Object.assign(context.window, {
+    Core: { fxRules },
+    fxRatesForSegment: context.fxRatesForSegment,
+    getBudgetSegmentForDate: date => date === '2026-11-17' ? { baseCurrency: 'AUD', fxMode: 'live_ecb' } : null,
+  });
+  storage.set('eur_rates', JSON.stringify({ EUR: 1, AUD: 1.6, _rateDates: { AUD: '2026-11-24' } }));
+  context.state.fx = { manualRates: { AUD: { rate: 1.6, asOf: '2026-11-23' }, NZD: { rate: 2, asOf: '2026-11-25' } } };
+  const read = code => vm.runInContext(code, context);
+  const dated = (from, to, date = '2026-11-17') =>
+    read(`(() => { const legs = []; return { amount: tbFxConvertForDateCached(40, '${from}', '${to}', '${date}', legs), legs }; })()`);
+  expect(read("tbFxConvertForDateCached(40, 'AUD', 'NZD', '2026-11-17')")).toBe(50);
+  expect(dated('AUD', 'NZD')).toEqual({ amount: 50, legs: [
+    { currency: 'AUD', kind: 'automatic', asOf: '2026-11-24' },
+    { currency: 'NZD', kind: 'manual', asOf: '2026-11-25' },
+  ] });
+  expect(dated('AUD', 'NZD', '2026-11-18').legs).toEqual(dated('AUD', 'NZD').legs);
+  // Refresh metadata without changing the number; a warm numeric cache must not relabel old provenance.
+  storage.set('eur_rates', JSON.stringify({ EUR: 1, AUD: 1.6, _rateDates: { AUD: '2026-11-26' } }));
+  expect(dated('AUD', 'NZD').legs[0].asOf).toBe('2026-11-26');
+  context.window.getBudgetSegmentForDate = () => ({ baseCurrency: 'AUD', eurBaseRateFixed: 1.6 });
+  expect(dated('AUD', 'NZD').legs[0]).toEqual({ currency: 'AUD', kind: 'fixed' });
+  context.state.period = { baseCurrency: 'XPF', eurBaseRate: 120 };
+  expect(dated('EUR', 'XPF')).toEqual({ amount: 4800, legs: [
+    { currency: 'EUR', kind: 'pivot' }, { currency: 'XPF', kind: 'period' },
+  ] });
+  expect(dated('AUD', 'CAD')).toEqual({ amount: 0, legs: [] });
+  delete context.window.Core;
+  expect(dated('EUR', 'XPF')).toEqual({ amount: 4800, legs: [] });
 });

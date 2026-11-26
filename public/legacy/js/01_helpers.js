@@ -273,7 +273,8 @@ function tbClearFxConvertCache() {
   try { __tbFxCache.clear(); } catch (_) {}
 }
 
-function tbFxConvertForDateCached(amount, from, to, dateStr) {
+// An optional trace records only legs used by a successful Core conversion.
+function tbFxConvertForDateCached(amount, from, to, dateStr, legs) {
   const a = Number(amount || 0);
   const source = String(from || to || '').toUpperCase();
   const target = String(to || from || '').toUpperCase();
@@ -283,9 +284,10 @@ function tbFxConvertForDateCached(amount, from, to, dateStr) {
   try {
     const seg = (typeof window.getBudgetSegmentForDate === 'function') ? window.getBudgetSegmentForDate(iso) : null;
     if (seg && typeof window.fxConvert === 'function') {
-      const rates = (typeof window.fxRatesForSegment === 'function')
+      const table = legs && window.fxRatesForSegment?.(seg, true);
+      const rates = table?.rates || ((typeof window.fxRatesForSegment === 'function')
         ? window.fxRatesForSegment(seg)
-        : (typeof window.fxGetEurRates === 'function' ? window.fxGetEurRates() : {});
+        : (typeof window.fxGetEurRates === 'function' ? window.fxGetEurRates() : {}));
       const rFrom = Number(rates?.[source]);
       const rTo = Number(rates?.[target]);
       const { period, exchangeRates } = window.state || {};
@@ -293,11 +295,11 @@ function tbFxConvertForDateCached(amount, from, to, dateStr) {
       const segMode = String(seg?.fxMode || seg?.fx_mode || '');
       const segRate = Number(seg?.eurBaseRateFixed ?? seg?.eur_base_rate_fixed ?? rates?.[segBase] ?? 0);
       const key = [iso, source, target, a, segBase, segMode, segRate, rFrom, rTo, period?.baseCurrency, Number(period?.eurBaseRate), Number(exchangeRates?.['EUR-BASE'])].join('|');
-      if (__tbFxCache.has(key)) return __tbFxCache.get(key);
-      const out = window.fxConvert(a, source, target, rates);
+      if (!legs && __tbFxCache.has(key)) return __tbFxCache.get(key);
+      const out = window.fxConvert(a, source, target, rates, legs, table?.origins);
       if (out !== null && Number.isFinite(Number(out))) {
         const n = Number(out);
-        __tbFxCache.set(key, n);
+        if (!legs) __tbFxCache.set(key, n);
         return n;
       }
     }
@@ -305,13 +307,13 @@ function tbFxConvertForDateCached(amount, from, to, dateStr) {
   // Global fallback uses the current rate table (including newly available rates).
   try {
     if (typeof window.safeFxConvert === 'function') {
-      const out = window.safeFxConvert(a, source, target, null);
+      const out = window.safeFxConvert(a, source, target, null, legs);
       if (out !== null && Number.isFinite(Number(out))) return Number(out);
     }
   } catch (_) {}
   try {
     if (typeof window.fxConvert === 'function') {
-      const out = window.fxConvert(a, source, target);
+      const out = window.fxConvert(a, source, target, undefined, legs);
       if (out !== null && Number.isFinite(Number(out))) return Number(out);
     }
   } catch (_) {}
