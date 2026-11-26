@@ -1,0 +1,70 @@
+name: Android unsigned DEX baseline
+
+on:
+  push:
+    branches: [codex/handoff-audit-2026-11-25-cloud]
+    paths:
+      - '.github/workflows/android-dex-audit.yml'
+      - 'scripts/android/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dex-baseline:
+    if: github.ref == 'refs/heads/codex/handoff-audit-2026-11-25-cloud'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Check the inventory tool
+        run: python3 -B -m unittest discover -s scripts/android -v
+      - name: Build an unsigned 10.5.397 release from its source
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_sha=6a66c81aaa50317cb8b6b5be0b37f772ac08cd8d
+          checkout="$RUNNER_TEMP/tb-dex-baseline"
+          git worktree add --detach "$checkout" "$source_sha"
+          cd "$checkout"
+          test "$(git rev-parse HEAD)" = "$source_sha"
+          test "$(node -p "require('./package.json').version")" = 10.5.397
+          test ! -e android/app/google-services.json
+          export JAVA_HOME="${JAVA_HOME_21_X64:?JDK 21 missing}"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          test -f "${ANDROID_HOME:?Android SDK missing}/platforms/android-36/android.jar"
+          npm ci
+          npm run build
+          ./node_modules/.bin/cap sync android
+          (
+            cd android
+            env -u TB_ANDROID_KEYSTORE_PATH -u TB_ANDROID_KEYSTORE_PASSWORD \
+              -u TB_ANDROID_KEY_ALIAS -u TB_ANDROID_KEY_PASSWORD \
+              bash gradlew --no-daemon :app:bundleRelease
+          )
+          bundle=$(find android/app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' -type f)
+          test -f "$bundle"
+          cp "$bundle" "$RUNNER_TEMP/tb-10.5.397-unsigned.aab"
+      - name: Measure uncompressed DEX without uploading the bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle="$RUNNER_TEMP/tb-10.5.397-unsigned.aab"
+          python3 scripts/android/dex_inventory.py "$bundle" | tee "$RUNNER_TEMP/tb-dex-inventory.json"
+          if command -v android >/dev/null && android analyze --help >/dev/null 2>&1; then
+            android analyze "$bundle"
+          fi
+          {
+            echo '### TravelBudget 10.5.397 unsigned source rebuild (not Play binary)'
+            echo 'No Firebase configuration or production signing. ZIP inventory does not compute Play optimization scores.'
+            echo '```json'
+            cat "$RUNNER_TEMP/tb-dex-inventory.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

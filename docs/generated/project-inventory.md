@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `8312e2d8b4030630c831e0ece46ff1e2eca882e3`
-> Empreinte du snapshot : `e9fd066229bb1ecdcead4bcfdc6fe06d8720c8b6bf357312d8cf26aebd6e012e`
-> Généré le : `2026-11-26T21:07:07.259Z`
+> Commit analysé : `40dfa58b82b0e94d770382fe81eaf891879a7acf`
+> Empreinte du snapshot : `3219c2f32ee4739ff453bac686c2a2aaae9ba8373d0e3564f107223dcf2a58a9`
+> Généré le : `2026-11-26T22:08:16.783Z`
 
 # Inventaire du projet TravelBudget
 
@@ -843,6 +843,7 @@ Modules :
 - `docs/ANDROID_10_5_392.md`
 - `docs/ANDROID_10_5_394.md`
 - `docs/ANDROID_10_5_395.md`
+- `docs/ANDROID_DEX_AUDIT.md`
 - `docs/ANDROID_FINANCIAL_AUDIT_2026_11_25.md`
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
