@@ -102,4 +102,27 @@ describe('active references for the same account and trip', () => {
     expect(review(sources, { ...settings, positions: [{ transactionIds: [null] }] }))
       .toEqual({ status: 'invalid-active-references' });
   });
+
+  it.each([
+    ['debt origin and repayment', { debts: [{ originTransactionId: 'funding', repayments: [{ transactionId: 'funding' }] }] }],
+    ['multiple positions', { positions: [{ transactionIds: ['deposit'] }, { transactionIds: ['deposit'] }] }],
+    ['position and asset purchase', { positions: [{ transactionIds: ['deposit', 'car-purchase'] }] }],
+    ['two links for one purchase', { assetLinks: [
+      { asset_id: 'linked-car', transaction_id: 'car-purchase' },
+      { asset_id: 'linked-house', transaction_id: 'car-purchase' },
+    ] }],
+  ])('reports a transaction reused by %s without exposing its ID', (_case, changes) => {
+    expect(review(sources, { ...settings, ...changes }))
+      .toEqual({ status: 'conflicting-references', conflicts: { transaction: 1 } });
+  });
+
+  it('does not count archived links or references to the same asset as active transaction conflicts', () => {
+    const debts = [...settings.debts, { assetId: 'linked-house', repayments: [] }];
+    expect(review(sources, {
+      ...settings, debts,
+      archivedDebts: [{ originTransactionId: 'funding' }],
+      positionAudit: [{ transactionId: 'deposit' }],
+    })).toMatchObject({ status: 'references-present', requiresFurtherValidation: true });
+  });
+
 });

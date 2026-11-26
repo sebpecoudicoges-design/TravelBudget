@@ -51,11 +51,14 @@ function reviewActiveReferences(settings, scope, sources) {
   }
 
   const references = { transaction: new Set(), asset: new Set(), wallet: new Set() };
+  const conflictedTransactions = new Set();
   let valid = true;
   const add = (type, id, optional = false) => {
     if (optional && (id === undefined || id === '')) return;
-    if (isId(id)) references[type].add(id);
-    else valid = false;
+    if (!isId(id)) { valid = false; return; }
+    // An operation can finance, repay, or support one active attribution only.
+    if (type === 'transaction' && references.transaction.has(id)) conflictedTransactions.add(id);
+    references[type].add(id);
   };
 
   for (const id of Object.keys(settings.walletAccounts)) add('wallet', id);
@@ -74,6 +77,9 @@ function reviewActiveReferences(settings, scope, sources) {
     add('transaction', link.transaction_id);
   }
   if (!valid) return { status: 'invalid-active-references' };
+  if (conflictedTransactions.size > 0) {
+    return { status: 'conflicting-references', conflicts: { transaction: conflictedTransactions.size } };
+  }
 
   const missing = {};
   for (const [type, ids] of Object.entries(sourceLists)) {
