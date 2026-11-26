@@ -103,7 +103,7 @@
       "cashflow.series.actual": "Actual balance",
       "cashflow.series.forecast": "Forecast",
       "cashflow.series.spent_per_day": "Spent/day",
-      "cashflow.series.budget_spent_per_day": "Budget spent/day",
+      "cashflow.series.budget_spent_per_day": "Budget spending before refunds/day",
 
       // Wallet empty state
       "wallet.empty.title": "No wallets yet.",

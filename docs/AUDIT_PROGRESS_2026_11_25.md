@@ -10,4 +10,6 @@
 
 - **F15, aide locale** : la FAQ français/anglais décrit les vues de Comptabilité, les distingue de la trésorerie et précise que les réglages manuels restent sur l’appareil. L’assistant hors ligne utilise la même fiche pour une question explicitement comptable avant la règle générique Patrimoine, même quand la question parle d’un actif ou d’amortissements. Deux parcours Chromium ont reproduit la mauvaise orientation puis vérifié la réponse et la recherche sans appel externe. Aucun changement des droits d’accès ni de l’aide IA côté serveur.
 
+- **Parcours financiers** : la légende du tableau de bord précise que la série journalière ne déduit pas les avoirs. Le scénario fictif montre 15 EUR/j bruts au tableau de bord et 10 EUR/j nets dans Budget et Analyse. Calculs inchangés, aucun test sur appareil.
+
 Aucune modification de F13, de la production ou du Play Store.

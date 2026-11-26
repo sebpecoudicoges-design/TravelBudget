@@ -113,7 +113,7 @@
       "cashflow.series.actual": "Solde reel",
       "cashflow.series.forecast": "Prevision",
       "cashflow.series.spent_per_day": "Depense/jour",
-      "cashflow.series.budget_spent_per_day": "Budget depense/jour",
+      "cashflow.series.budget_spent_per_day": "Dépenses avant avoirs/jour",
 
       // Wallet empty state
       "wallet.empty.title": "Aucun wallet.",

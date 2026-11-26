@@ -80,6 +80,13 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await expect(account.locator('.tb-wallet-card-main p strong').first()).toHaveText(/^395[,.]00(?:\s*(?:EUR|€))?$/);
     await expect(page.locator('body')).toHaveClass(new RegExp(`theme-${theme}`));
 
+    // This dashboard series is gross, unlike the net amounts below and in Analyse.
+    await expect(page.locator('#cashflowCurve .apexcharts-legend-text')
+      .filter({ hasText: 'Dépenses avant avoirs/jour (EUR)' })).toBeVisible();
+    const grossDays = await page.evaluate(({ from, to }) => window.__cashflowChart.w.config.series[3].data
+      .filter(point => point.x >= from && point.x <= to).map(point => point.y), { from: expenseStart, to: expenseEnd });
+    expect(grossDays).toEqual([15, 15, 15]);
+
     const budget = page.locator('#daily-budget-container');
     await budget.locator('#db-today').click();
     for (const date of ['2026-10-21', '2026-10-22', '2026-10-23']) {

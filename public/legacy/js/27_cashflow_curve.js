@@ -526,7 +526,7 @@ function getKpiScope() {
 
   function buildMaps(periodStart, periodEnd, renderCurrency) {
   const paidSpentAll = {};         // paid expense only (positive), ALL expenses (for "Dépensé/jour")
-  const paidSpentBudget = {};      // paid expense only (positive), affects budget and not out_of_budget (for "Budget dépensé/jour")
+  const paidSpentBudget = {};      // paid expense only (positive), affects budget and not out_of_budget (gross budget series, before refunds)
   const pendingNetExp = {};        // pending expense only (negative already)
   const pendingNetInc = {};        // pending income only (positive)
 
@@ -861,7 +861,7 @@ function buildSeries() {
         "cashflow.series.actual": "Solde reel",
         "cashflow.series.forecast": "Prevision",
         "cashflow.series.spent_per_day": "Depense/jour",
-        "cashflow.series.budget_spent_per_day": "Budget depense/jour",
+        "cashflow.series.budget_spent_per_day": "Dépenses avant avoirs/jour",
         "common.today": "Aujourd'hui"
       };
       let s = map[k] || k;
