@@ -644,15 +644,16 @@ function _analysisBucketOrder(){
     _updateCategoryExcludeSummary();
   }
 
-  function _convertAnalysisAmount(amount, cur, dateISO, base){
+  function _convertAnalysisAmount(amount, cur, dateISO, base, legs){
     const value = _safeNum(amount);
     if (!value || cur === base) return value;
     // Legacy budget helpers can silently return the original amount or zero when FX is absent.
     // The date selects a budget segment; these helpers do not fetch historical rates.
     try {
-      const out = Number(window.tbFxConvertForDateCached?.(value, cur, base, dateISO));
+      const out = Number(window.tbFxConvertForDateCached?.(value, cur, base, dateISO, legs));
       if (Number.isFinite(out) && out !== 0) return out;
     } catch (_) {}
+    legs.length = 0;
     try {
       const seg = window.getBudgetSegmentForDate?.(dateISO);
       const rates = seg && window.fxRatesForSegment?.(seg);
@@ -788,17 +789,39 @@ function _sumTxArray(txs, base, convert){
     const missingFx = new Set();
     let usesExchangeRates = false;
     const missingReferenceFx = new Set();
-    const convert = (amount, source, dateISO, failures = missingFx) => {
+    // A model is computed synchronously; repeated cash/budget calculations can reuse the exact result and trace.
+    const conversions = new Map();
+    const originBucket = () => ({ legs: new Map(), hasUnattributed: false });
+    const totalOrigins = originBucket();
+    const referenceOrigins = originBucket();
+    const convert = (amount, source, dateISO, failures = missingFx, origins = totalOrigins) => {
       const from = _upper(source || base);
-      const value = _convertAnalysisAmount(amount, from, dateISO, base);
+      const input = _safeNum(amount);
+      if (!input || from === base) return input;
+      const key = JSON.stringify([from, dateISO, input]);
+      if (!conversions.has(key)) {
+        const legs = [];
+        conversions.set(key, { value: _convertAnalysisAmount(input, from, dateISO, base, legs), legs });
+      }
+      const { value, legs } = conversions.get(key);
       if (value !== null) {
-        if (value && from !== base) usesExchangeRates = true;
+        usesExchangeRates = true;
+        if (!legs.length || legs.some(leg => leg.kind === 'unknown')) origins.hasUnattributed = true;
+        for (const leg of legs) {
+          if (leg.kind !== 'pivot' && leg.kind !== 'unknown') {
+            origins.legs.set([leg.currency, leg.kind, leg.asOf].join('|'), leg);
+          }
+        }
         return value;
       }
       failures.add(`${from} → ${base}`);
       return 0; // Partial accumulators need their corresponding unavailable state.
     };
-    const convertReference = (amount, source, dateISO) => convert(amount, source, dateISO, missingReferenceFx);
+    const convertReference = (amount, source, dateISO) => convert(amount, source, dateISO, missingReferenceFx, referenceOrigins);
+    const formatOrigins = bucket => ({
+      legs: [...bucket.legs.keys()].sort().map(key => bucket.legs.get(key)),
+      hasUnattributed: bucket.hasUnattributed,
+    });
     const incomeTxs = _filteredIncomeTransactions();
     // Posted cash uses the operation date; budget rows below still use allocation dates.
     const cashFlows = window.TBAnalysisCashBreakdown?.selectCashFlows?.({
@@ -1200,6 +1223,7 @@ const cashBreakdown = window.TBAnalysisCashBreakdown?.buildCashBreakdown?.({
 
 return {
   base, start, end, days, mode: cashflowMode, txs, spent, paidSpent, usesExchangeRates, missingFx: Array.from(missingFx).sort(),
+  fxSources: { totals: formatOrigins(totalOrigins), reference: formatOrigins(referenceOrigins) },
 
   incomeReal: incomeRealAmount,
   incomeToDate: incomeRealAmount,

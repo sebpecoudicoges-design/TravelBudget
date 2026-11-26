@@ -197,3 +197,50 @@ it('distinguishes no reference from a real zero gap against an available referen
   expect(none.model.referenceStatus).toBe('none');
   expect(none.notification).toMatchObject({ spentToToday: 35, deltaReferenceAmount: null, paceReferencePct: null });
 });
+
+it('separates proven exchange-rate origins for app totals and country references', () => {
+  const traceHits = [];
+  const { model } = computeAnalysis({
+    withSummary: true, referenceCurrency: 'CAD', mode: 'expenses',
+    transactions: [
+      transaction({ amount: 60, currency: 'AUD' }),
+      transaction({ amount: 60, currency: 'AUD' }),
+      transaction({ amount: 20, currency: 'NZD' }),
+      transaction({ amount: 40, currency: 'JPY', pay_now: false }),
+      transaction({ amount: 0, currency: 'XPF' }),
+    ],
+    convert(amount, from, to, date, legs) {
+      traceHits.push([amount, from, to, date]);
+      if (from === 'AUD') legs?.push({ currency: 'AUD', kind: 'automatic', asOf: '2026-08-07' }, { currency: 'EUR', kind: 'pivot' });
+      if (from === 'CAD') legs?.push({ currency: 'CAD', kind: 'manual', asOf: '2026-08-09' }, { currency: 'EUR', kind: 'pivot' });
+      return amount / 2;
+    },
+  });
+  expect(model.spent).toBe(70);
+  expect(model.fxSources).toEqual({
+    totals: { legs: [{ currency: 'AUD', kind: 'automatic', asOf: '2026-08-07' }], hasUnattributed: true },
+    reference: { legs: [{ currency: 'CAD', kind: 'manual', asOf: '2026-08-09' }], hasUnattributed: false },
+  });
+  expect(traceHits.filter(([, from]) => from === 'AUD')).toHaveLength(1);
+  expect(traceHits.some(([, from]) => from === 'XPF' || from === 'JPY')).toBe(false);
+});
+
+it('keeps distinct rate dates and does not give an origin to failed FX', () => {
+  const model = computeAnalysis({
+    transactions: [
+      transaction({ amount: 60, currency: 'AUD' }),
+      transaction({ amount: 60, currency: 'AUD', date: '2026-08-11' }),
+      transaction({ amount: 10, currency: 'NZD' }),
+    ],
+    convert(amount, from, _to, date, legs) {
+      if (from === 'NZD') return 0;
+      legs?.push({ currency: 'AUD', kind: 'automatic', asOf: date === '2026-08-10' ? '2026-08-07' : '2026-08-08' });
+      return amount / 2;
+    },
+  });
+  expect(model.missingFx).toEqual(['NZD → EUR']);
+  expect(model.fxSources.totals).toEqual({ legs: [
+    { currency: 'AUD', kind: 'automatic', asOf: '2026-08-07' },
+    { currency: 'AUD', kind: 'automatic', asOf: '2026-08-08' },
+  ], hasUnattributed: false });
+});
