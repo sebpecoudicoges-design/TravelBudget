@@ -94,9 +94,12 @@ try {
   },fixtureUser);
   // The fixture covers all GET/HEAD reads; no remote traffic succeeds even if
   // an app worker or plugin bypasses WebView CDP (guest IPv4+IPv6 blocks it).
-  await page.goto(origin+'/?freeze=1',{waitUntil:'domcontentloaded'});
+  console.log('Native Debug WebView connected; loading controlled local route');
+  await page.goto(origin+'/?freeze=1',{waitUntil:'domcontentloaded',timeout:20000});
   await expect.poll(()=>page.evaluate(()=>window.Capacitor?.getPlatform?.())).toBe('android');
+  console.log('Native platform verified; waiting for the synthetic view');
   await expect.poll(async()=>page.evaluate(()=>!!window.__playSyntheticTransport)).toBe(true);
+  console.log('Synthetic transport installed',await page.evaluate(()=>({online:navigator.onLine,hasSyntheticSession:!!localStorage.getItem('sb-obznbrzarhvmlbprcfie-auth-token'),scriptCount:document.scripts.length})));
   try {
     await expect.poll(async()=>page.evaluate(()=>window.__playSyntheticTransport.served['GET /rest/v1/wallets']||0),{timeout:30000}).toBeGreaterThan(0);
   } catch (error) {
