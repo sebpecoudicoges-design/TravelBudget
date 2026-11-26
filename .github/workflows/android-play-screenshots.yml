@@ -9,7 +9,7 @@ permissions:
 
 concurrency:
   group: play-screenshots-10.5.397
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   screenshots:
@@ -19,13 +19,13 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Check workflow branch and source baseline
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = refs/heads/codex/play-screenshots-10.5.397
           release=2a85d8941df4a18d780236ae49eccc323759f44f
-          test "$(git rev-parse HEAD^)" = "$release"
+          git merge-base --is-ancestor "$release" HEAD
           git diff --exit-code "$release" HEAD -- . ':!.github/workflows/android-play-screenshots.yml' ':!scripts/capture-play-screenshots.mjs'
           test "$(node -p 'require("./package.json").version')" = 10.5.397
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -54,19 +54,21 @@ jobs:
         run: |
           set -euo pipefail
           test -e /dev/kvm
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
+          sudo chmod a+rw /dev/kvm
           test -r /dev/kvm && test -w /dev/kvm
           sdk=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)
           img='system-images;android-35;google_apis;x86_64'
           "$sdk" --install emulator platform-tools "$img"
-          printf 'no\n' | "${sdk%/*}/avdmanager" create avd -n isolated_play -k "$img" --force
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/tb-play-avd"
+          export ANDROID_USER_HOME="$RUNNER_TEMP/tb-play-android-user"
+          mkdir -p "$ANDROID_AVD_HOME" "$ANDROID_USER_HOME"
+          "${sdk%/*}/avdmanager" create avd --force -n isolated_play -k "$img" -p "$ANDROID_AVD_HOME/isolated_play.avd" <<< no
           export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
-          emulator -avd isolated_play -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          emulator -list-avds | grep -Fx isolated_play
+          emulator -avd isolated_play -port 5554 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on > "$RUNNER_TEMP/emulator.log" 2>&1 &
           emu=$!
           trap 'adb -s emulator-5554 emu kill >/dev/null 2>&1 || kill "$emu" 2>/dev/null || true' EXIT
-          adb -s emulator-5554 wait-for-device
+          timeout 240 adb -s emulator-5554 wait-for-device || { tail -80 "$RUNNER_TEMP/emulator.log"; exit 1; }
           timeout 260 bash -c 'until adb -s emulator-5554 shell getprop sys.boot_completed | grep -q 1; do sleep 3; done'
           test "$(adb devices | awk '$2 == "device" {print $1}')" = emulator-5554
           adb -s emulator-5554 root
@@ -88,6 +90,13 @@ jobs:
           adb -s emulator-5554 shell am start -W -n com.travelbudget.app/com.travelbudget.app.MainActivity
           node scripts/capture-play-screenshots.mjs
           cd "$RUNNER_TEMP/travelbudget-play"
+          for image in screenshot-*.png; do
+            ffmpeg -nostdin -v error -i "$image" -frames:v 1 -pix_fmt rgb24 "rgb-$image"
+            mv "rgb-$image" "$image"
+          done
+          shopt -s nullglob
+          images=(screenshot-*.png)
+          test "${#images[@]}" = 4
           sha256sum screenshot-*.png > sha256.txt
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
