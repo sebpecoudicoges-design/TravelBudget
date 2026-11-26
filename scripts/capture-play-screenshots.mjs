@@ -1,9 +1,9 @@
 import { _android } from 'playwright';
 import { expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fixtureTables, fixtureUser, fixtureTime, fixtureResponse, projectOrigin, installConnectedFixture } from './fixtures/connectedStartup.mjs';
+import { fixtureTables, fixtureUser, fixtureTime, fixtureResponse, projectOrigin } from './fixtures/connectedStartup.mjs';
 
 const pkg = 'com.travelbudget.app';
 const serial = 'emulator-5554';
@@ -31,8 +31,8 @@ const tables = {
   categories:categories.map(([name,color],i)=>({ ...fixtureTables.categories[0], id:'synth-cat-'+i,name,color,sort_order:i })),
   wallets:[card],
   transactions:[
-    row('demo-meal',18.5,day,'Déjeuner au lac','Repas'),
-    row('demo-bus',11.5,day,'Bus local','Transport'),
+    row('demo-meal',18,day,'Déjeuner au lac','Repas'),
+    row('demo-bus',12,day,'Bus local','Transport'),
     row('demo-hike',30,'2026-10-23','Sortie volcan','Activités'),
   ],
   trip_invites:[], trip_groups:[], trip_participants:[],
@@ -40,25 +40,28 @@ const tables = {
   travel_budget_reference_profile:[],v_transaction_analytic_expenses:[],fx_rates:[],
 };
 const out = join(process.env.RUNNER_TEMP ?? '', 'travelbudget-play');
-if (!process.env.RUNNER_TEMP || !process.env.GITHUB_ACTIONS) throw Error('Use only the isolated hosted emulator workflow');
-const devices = await _android.devices();
-if (devices.length !== 1 || devices[0].serial() !== serial) throw Error('Expected exactly one isolated emulator; no physical device is allowed');
-const [device] = devices;
-try {
-  const view = await device.webView({pkg},{timeout:30000});
-  const page = await view.page();
-  await expect.poll(()=>page.url()).toMatch(/^https:\/\/localhost(?:\/|$)/);
-  const actual = new URL(page.url());
-  if (actual.origin !== origin) throw Error('Unexpected app origin; refusing to use any network/server URL');
-  const playwrightFixture = await installConnectedFixture(page,origin,{tables});
-  // The native WebView may not pass cross-origin reads through the desktop
-  // CDP interception path. Supply the same fixture directly at init time in
-  // this one process, before any app module runs. The native build is unchanged.
+if (!process.env.RUNNER_TEMP || !process.env.GITHUB_ACTIONS
+  || process.env.GITHUB_REF !== 'refs/heads/codex/play-screenshots-10.5.397') {
+  throw Error('Use only the isolated hosted emulator workflow branch');
+}
+function renderFixtureBootstrap() {
   const initConfig = JSON.stringify({ origin, projectOrigin, fixtureUser, fixtureTime, tables });
-  await page.addInitScript({content:`
+  return `
     (() => {
       const { origin, projectOrigin, fixtureUser, fixtureTime, tables } = ${initConfig};
       if (window.location.origin !== origin) return;
+      const NativeDate = Date;
+      const offset = NativeDate.parse(fixtureTime) - NativeDate.now();
+      window.Date = class extends NativeDate {
+        constructor(...args) { super(...(args.length ? args : [NativeDate.now()+offset])); }
+        static now() { return NativeDate.now()+offset; }
+      };
+      const encode = value => btoa(JSON.stringify(value)).replaceAll('=','').replaceAll('+','-').replaceAll('/','_');
+      const user = { id: fixtureUser, email: 'voyage-demo@example.invalid', aud: 'authenticated', role: 'authenticated' };
+      const expiry = 4070908800;
+      const token = encode({alg:'HS256',typ:'JWT'})+'.'+encode({sub:fixtureUser,aud:'authenticated',role:'authenticated',exp:expiry})+'.synthetic-signature';
+      localStorage.setItem('sb-obznbrzarhvmlbprcfie-auth-token', JSON.stringify({access_token:token,refresh_token:'synthetic-refresh',token_type:'bearer',expires_at:expiry,user}));
+      localStorage.setItem('travelbudget_guided_tour_done_v2_'+fixtureUser,'1');
       const localFetch = window.fetch.bind(window);
       const fixtureResponse = (${fixtureResponse.toString()});
       const counts = { served: {}, blocked: {} };
@@ -86,16 +89,35 @@ try {
         counts.blocked[printableKey]=(counts.blocked[printableKey]||0)+1;
         return new Response('{"message":"Not part of the read-only synthetic image fixture"}',{status:404,headers:{'Content-Type':'application/json'}});
       };
-    })();`});
+    })();`;
+}
+if (process.argv.includes('--prepare-fixture')) {
+  // Modify only Vite build output in this ephemeral debug-capture job. Never
+  // write the fixture into released source or upload/distribute this APK.
+  const dist = join(process.cwd(),'dist');
+  const htmlPath = join(dist,'index.html');
+  const html = await readFile(htmlPath,'utf8');
+  if (!html.includes('<head>') || html.includes('play-store-synthetic-fixture.js')) throw Error('Unexpected screenshot build HTML');
+  await writeFile(join(dist,'play-store-synthetic-fixture.js'),renderFixtureBootstrap());
+  await writeFile(htmlPath,html.replace('<head>','<head><script src="./play-store-synthetic-fixture.js"></script>'));
+  console.log('Prepared test-only synthetic bootstrap in dist');
+  process.exit(0);
+}
+async function bounded(operation, text, ms=25000) {
+  let timer;
+  try { return await Promise.race([operation,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(text)),ms);})]); }
+  finally { clearTimeout(timer); }
+}
+const devices = await _android.devices();
+if (devices.length !== 1 || devices[0].serial() !== serial) throw Error('Expected exactly one isolated emulator; no physical device is allowed');
+const [device] = devices;
+try {
+  const view = await device.webView({pkg},{timeout:30000});
+  const page = await bounded(view.page(),'Timed out connecting to the Android WebView');
+  console.log('Native WebView attached');
+  await expect.poll(()=>page.url()).toMatch(/^https:\/\/localhost(?:\/|$)/);
+  if (new URL(page.url()).origin!==origin) throw Error('Unexpected native WebView origin');
   page.on('pageerror', error => console.log('fixture pageerror',String(error).slice(0,180)));
-
-  await page.addInitScript(user => {
-    localStorage.setItem('travelbudget_guided_tour_done_v2_'+user,'1');
-  },fixtureUser);
-  // The fixture covers all GET/HEAD reads; no remote traffic succeeds even if
-  // an app worker or plugin bypasses WebView CDP (guest IPv4+IPv6 blocks it).
-  console.log('Native Debug WebView connected; loading controlled local route');
-  await page.goto(origin+'/?freeze=1',{waitUntil:'domcontentloaded',timeout:20000});
   await expect.poll(()=>page.evaluate(()=>window.Capacitor?.getPlatform?.())).toBe('android');
   console.log('Native platform verified; waiting for the synthetic view');
   await expect.poll(async()=>page.evaluate(()=>!!window.__playSyntheticTransport)).toBe(true);
@@ -110,7 +132,6 @@ try {
       bootText:document.querySelector('#auth-overlay')?.innerText?.slice(0,500),
       synthetic:window.__playSyntheticTransport
     }))));
-    console.log('mocked CDP reads',JSON.stringify(playwrightFixture.calls.map(({path,method})=>({path,method}))));
     throw error;
   }
   await mkdir(out,{recursive:true});
@@ -122,6 +143,7 @@ try {
     const png = execFileSync('adb',['-s',serial,'exec-out','screencap','-p'],{maxBuffer:16*1024*1024});
     if (png.subarray(0,8).toString('hex')!=='89504e470d0a1a0a' || png.readUInt32BE(16)!==1080 || png.readUInt32BE(20)!==1920) throw Error('Native PNG resolution mismatch');
     await writeFile(join(out,name+'.png'),png);
+    console.log('Verified native RGB source',name);
   }
   async function nav(key) {
     const menu = page.locator('#tb-mobile-nav-toggle');
@@ -140,16 +162,16 @@ try {
     }))));
     throw error;
   }
-  await capture('screenshot-01-compte',wallet);
   await expect.poll(()=>page.evaluate(()=>window.sbRole)).toBe('user');
   await expect(page.locator('#tab-trip')).toBeHidden();
+  await capture('screenshot-01-compte',wallet);
   await page.evaluate(()=>window.showView('trip'));
   await expect(page.locator('#view-validation')).toBeVisible();
   await expect(page.locator('#view-trip')).toBeHidden();
 
   await nav('transactions');
   const transactions = page.locator('#tx-list');
-  const meal = transactions.getByText('Déjeuner au lac',{exact:true}).first();
+  const meal = transactions.getByText(/Déjeuner au lac/).first();
   await expect(meal).toBeVisible();
   await expect(transactions).toContainText('Bus local');
   await capture('screenshot-02-transactions',meal);
@@ -166,6 +188,6 @@ try {
   await writeFile(join(out,'provenance.txt'),
     'TravelBudget 10.5.397, exact released UI from 2a85d8941df4a18d780236ae49eccc323759f44f.\n'+
     'Android emulator native ADB captures, 1080×1920.\n'+
-    'Build: debug package com.travelbudget.app; no production account, secrets, or network traffic.\n'+
+    'Unpublished debug capture build from released source, with synthetic read-only data bootstrap; no production account, secrets, or traffic.\n'+
     'The Taupō data is fictional. Standard user: wallet 240 NZD, 3 transactions, budget remaining 120 NZD, analysis net 60 NZD. Trip redirects to validation (not depicted).\n');
 } finally { await device.close(); }
