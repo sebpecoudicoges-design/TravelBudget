@@ -52,6 +52,8 @@ function reviewActiveReferences(settings, scope, sources) {
 
   const references = { transaction: new Set(), asset: new Set(), wallet: new Set() };
   const conflictedTransactions = new Set();
+  const transactionRules = new Map();
+  const typed = sources.transactionMetadata !== undefined;
   let valid = true;
   const add = (type, id, optional = false) => {
     if (optional && (id === undefined || id === '')) return;
@@ -61,16 +63,25 @@ function reviewActiveReferences(settings, scope, sources) {
     references[type].add(id);
   };
 
+  const addTyped = (id, currency, repayment = false) => {
+    add('transaction', id);
+    if (!typed) return;
+    if (typeof currency !== 'string' || !/^[A-Z]{3}$/.test(currency)) { valid = false; return; }
+    transactionRules.set(id, { currency, repayment });
+  };
+
   for (const id of Object.keys(settings.walletAccounts)) add('wallet', id);
   for (const debt of settings.debts) {
     add('asset', debt.assetId, true);
-    add('transaction', debt.originTransactionId, true);
+    if (debt.originTransactionId !== undefined && debt.originTransactionId !== '') {
+      addTyped(debt.originTransactionId, debt.currency);
+    }
     if (!isRecordList(debt.repayments)) { valid = false; continue; }
-    for (const repayment of debt.repayments) add('transaction', repayment.transactionId);
+    for (const repayment of debt.repayments) addTyped(repayment.transactionId, debt.currency, true);
   }
   for (const position of settings.positions) {
     if (!Array.isArray(position.transactionIds)) { valid = false; continue; }
-    for (const id of position.transactionIds) add('transaction', id);
+    for (const id of position.transactionIds) addTyped(id, position.currency);
   }
   for (const link of settings.assetLinks) {
     add('asset', link.asset_id);
@@ -86,9 +97,28 @@ function reviewActiveReferences(settings, scope, sources) {
     const existing = new Set(ids);
     missing[type] = [...references[type]].filter(id => !existing.has(id)).length;
   }
-  return Object.values(missing).some(count => count > 0)
-    ? { status: 'missing-references', missing }
-    : { status: 'references-present' };
+  if (Object.values(missing).some(count => count > 0)) return { status: 'missing-references', missing };
+  if (typed) {
+    const rows = sources.transactionMetadata;
+    if (!Array.isArray(rows)) return { status: 'sources-unavailable' };
+    const byId = new Map(), sourceIds = new Set(sourceLists.transaction);
+    for (const row of rows) {
+      if (!isRecord(row) || !sourceIds.has(row.id) || byId.has(row.id)
+          || typeof row.currency !== 'string' || !/^[A-Za-z]{3}$/.test(row.currency) || !isId(row.type)) {
+        return { status: 'sources-unavailable' };
+      }
+      byId.set(row.id, row);
+    }
+    let incompatible = 0;
+    for (const [id, rule] of transactionRules) {
+      const row = byId.get(id);
+      if (!row) return { status: 'sources-unavailable' };
+      if (row.currency.toUpperCase() !== rule.currency
+          || (row.type !== 'expense' && (rule.repayment || row.type !== 'income'))) incompatible++;
+    }
+    if (incompatible > 0) return { status: 'incompatible-references', incompatible: { transaction: incompatible } };
+  }
+  return { status: 'references-present' };
 }
 
 // The scope must come from the active session, never from the input contents.

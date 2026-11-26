@@ -126,3 +126,47 @@ describe('active references for the same account and trip', () => {
   });
 
 });
+
+describe('typed debt and position source review', () => {
+  const settings = { ...candidate.settings,
+    debts: [{ currency: 'EUR', originTransactionId: 'funding', repayments: [{ transactionId: 'repayment' }] }],
+    positions: [{ currency: 'NZD', transactionIds: ['deposit'] }],
+  };
+  const sources = { ...scope, complete: true,
+    transactionIds: ['funding', 'repayment', 'deposit'], assetIds: [], walletIds: [],
+    transactionMetadata: [
+      { id: 'funding', currency: 'eur', type: 'income' },
+      { id: 'repayment', currency: 'EUR', type: 'expense' },
+      { id: 'deposit', currency: 'NZD', type: 'expense' },
+    ],
+  };
+  const review = (inventory = sources, data = settings) =>
+    previewAccountingRestore(raw({ settings: data }), scope, inventory);
+
+  it('returns a limited match and still does not authorize a restore', () => {
+    expect(review()).toMatchObject({ status: 'references-present', requiresFurtherValidation: true });
+  });
+
+  it.each([
+    [0, { currency: 'AUD' }],
+    [1, { type: 'income' }],
+    [2, { type: 'transfer', currency: 'USD' }],
+  ])('reports one incompatible transaction without returning details: %j', (index, change) => {
+    const rows = sources.transactionMetadata.map((row, i) => i === index ? { ...row, ...change } : row);
+    expect(review({ ...sources, transactionMetadata: rows }))
+      .toEqual({ status: 'incompatible-references', incompatible: { transaction: 1 } });
+  });
+
+  it('cannot claim compatibility if metadata is missing or ambiguous', () => {
+    for (const rows of [
+      sources.transactionMetadata.slice(0, 2),
+      [...sources.transactionMetadata, { id: 'deposit', currency: 'AUD', type: 'expense' }],
+      sources.transactionMetadata.map(row => ({ ...row, currency: null })),
+    ]) expect(review({ ...sources, transactionMetadata: rows })).toEqual({ status: 'sources-unavailable' });
+  });
+
+  it('rejects a missing denomination in a candidate with an active position', () => {
+    expect(review(sources, { ...settings, positions: [{ transactionIds: ['deposit'] }] }))
+      .toEqual({ status: 'invalid-active-references' });
+  });
+});
