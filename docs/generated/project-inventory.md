@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `ed28d2fa340f71287f2fba93258b299a396cb9e9`
-> Empreinte du snapshot : `2921492a97a393d590a93342b1ba4511e07424c94a3ec9e062e7478c2c98cd59`
-> Généré le : `2026-11-26T16:05:59.814Z`
+> Commit analysé : `f3c09dd4dc14da36df354d7a8e03c4ff54f65598`
+> Empreinte du snapshot : `01a39341487a7b4799dd7c1f979e6d59bed533c3fa27bed4abcfd37810e169e4`
+> Généré le : `2026-11-26T16:57:42.233Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 65 |
-| Fichiers de tests | 213 |
+| Fichiers de tests | 214 |
 | Migrations Supabase | 179 |
 | Fonctions Edge | 15 |
 | Projet Android présent | Oui |
@@ -502,6 +502,7 @@ Modules :
 - `tests/features/accounting/accountingRules.test.js`
 - `tests/features/analysis/analysisCashBreakdown.test.js`
 - `tests/features/analysis/analysisChartOptions.test.js`
+- `tests/features/analysis/analysisFxConversionCache.test.js`
 - `tests/features/analysis/analysisModelCharts.test.js`
 - `tests/features/analysis/analysisPeriodRules.test.js`
 - `tests/features/analysis/analysisView.test.js`

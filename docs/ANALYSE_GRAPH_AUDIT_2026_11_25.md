@@ -26,3 +26,5 @@ L’encart « transport de nuit » est une estimation d’économie d’héberge
 ## Vérification de cette passe
 
 Le nouveau test exécute le modèle legacy réel avec un état et une source synthétiques. Avant la correction, deux tests échouent (60 au lieu de 20 pour la référence, 40 au lieu de 70 pour la heatmap avec prévisions). Les contrôles ne valident ni les libellés par inspection visuelle, ni les données d’un utilisateur ou d’un APK.
+
+Le cache de conversion par date distingue désormais un taux égal à 1 d’une devise absente et dépend du repli de la période. Hors segment, le repli relit les taux actuels plutôt que de mémoriser un montant (ou zéro) périmé. Cela évite d’attribuer au prochain affichage des valeurs qui ne correspondent plus au cache de taux.
