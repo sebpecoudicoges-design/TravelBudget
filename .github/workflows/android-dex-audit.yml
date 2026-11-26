@@ -1,4 +1,4 @@
-name: Android unsigned DEX baseline
+name: Android unsigned DEX comparison
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
   dex-baseline:
     if: github.ref == 'refs/heads/codex/handoff-audit-2026-11-25-cloud'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -26,7 +26,7 @@ jobs:
           node-version: '24'
       - name: Check the inventory tool
         run: python3 -B -m unittest discover -s scripts/android -v
-      - name: Build an unsigned 10.5.397 release from its source
+      - name: Build the same unsigned release with and without R8
         shell: bash
         run: |
           set -euo pipefail
@@ -43,28 +43,44 @@ jobs:
           npm ci
           npm run build
           ./node_modules/.bin/cap sync android
-          (
-            cd android
-            env -u TB_ANDROID_KEYSTORE_PATH -u TB_ANDROID_KEYSTORE_PASSWORD \
-              -u TB_ANDROID_KEY_ALIAS -u TB_ANDROID_KEY_PASSWORD \
-              bash gradlew --no-daemon :app:bundleRelease
-          )
-          bundle=$(find android/app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' -type f)
-          test -f "$bundle"
-          cp "$bundle" "$RUNNER_TEMP/tb-10.5.397-unsigned.aab"
-      - name: Measure uncompressed DEX without uploading the bundle
+
+          build_bundle() {
+            (
+              cd android
+              env -u TB_ANDROID_KEYSTORE_PATH -u TB_ANDROID_KEYSTORE_PASSWORD \
+                -u TB_ANDROID_KEY_ALIAS -u TB_ANDROID_KEY_PASSWORD \
+                bash gradlew --no-daemon :app:bundleRelease
+            )
+            local bundle
+            bundle=$(find android/app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' -type f)
+            test -f "$bundle"
+            mv "$bundle" "$1"
+          }
+
+          build_bundle "$RUNNER_TEMP/tb-10.5.397-unsigned.aab"
+          python3 -B "$GITHUB_WORKSPACE/scripts/android/r8_experiment.py" configure android/app/build.gradle
+          git diff --check -- android/app/build.gradle
+          git diff -- android/app/build.gradle
+          build_bundle "$RUNNER_TEMP/tb-10.5.397-r8-unsigned.aab"
+          mapping=android/app/build/outputs/mapping/release/mapping.txt
+          test -s "$mapping"
+          sha256sum "$mapping"
+      - name: Compare uncompressed DEX and check mapping without uploading packages
         shell: bash
         run: |
           set -euo pipefail
-          bundle="$RUNNER_TEMP/tb-10.5.397-unsigned.aab"
-          python3 scripts/android/dex_inventory.py "$bundle" | tee "$RUNNER_TEMP/tb-dex-inventory.json"
+          baseline="$RUNNER_TEMP/tb-10.5.397-unsigned.aab"
+          candidate="$RUNNER_TEMP/tb-10.5.397-r8-unsigned.aab"
+          python3 -B scripts/android/dex_inventory.py "$baseline"
+          python3 -B scripts/android/dex_inventory.py "$candidate"
+          python3 -B scripts/android/r8_experiment.py compare "$baseline" "$candidate" | tee "$RUNNER_TEMP/tb-dex-comparison.json"
           if command -v android >/dev/null && android analyze --help >/dev/null 2>&1; then
-            android analyze "$bundle"
+            android analyze "$baseline" "$candidate"
           fi
           {
-            echo '### TravelBudget 10.5.397 unsigned source rebuild (not Play binary)'
-            echo 'No Firebase configuration or production signing. ZIP inventory does not compute Play optimization scores.'
+            echo '### TravelBudget 10.5.397 unsigned R8 experiment (not Play binary)'
+            echo 'DEX byte reduction is not a Play optimization score.'
             echo '```json'
-            cat "$RUNNER_TEMP/tb-dex-inventory.json"
+            cat "$RUNNER_TEMP/tb-dex-comparison.json"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

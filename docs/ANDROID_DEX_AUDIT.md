@@ -48,3 +48,21 @@ Contrôle séparé sur l’APK de téléchargement direct 10.5.397
 transposable à l’AAB Play ; il vérifie l’inventaire sur un vrai APK
 et justifie de mesurer le vrai bundle au lieu de déduire sa taille
 depuis celle du ZIP.
+
+## Référence contrôlée et expérience R8
+
+Le [run de référence 45902982660](https://github.com/sebpecoudicoges-design/TravelBudget/actions/runs/45902982660)
+a reconstruit la release non signée : **18 734 444 octets de DEX**
+non compressés, sans mapping, `r8.json` ni symboles natifs détectés.
+SHA-256 du témoin :
+`07046a778445b6bb6b78df11a7ab9f55fbadea82ecaaad83e5094e7d91ad40fd`.
+
+Le workflow compare maintenant, sur le même runner et le même checkout
+jetable, ce témoin avec une compilation R8 qui ne modifie que les lignes
+`minifyEnabled` et `getDefaultProguardFile`. Pas de réduction des ressources
+dans cette expérience, afin d’isoler le changement. La vérification exige
+un mapping non vide et embarqué, une baisse des octets DEX et un inventaire
+natif de taille inchangé. Le workflow n’envoie ni les bundles ni le mapping ;
+il affiche les empreintes et, si disponible, les scores via `android analyze`.
+Les vérifications sur émulateur et l’AAB exact de Play restent distincts de
+cette expérience ; la release du dépôt et l’Alpha ne sont pas modifiés.
