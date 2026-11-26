@@ -1,4 +1,17 @@
 const QUEUE_VERSION = 4;
+const unreadableQueue = () => new Error('File hors ligne illisible. Donnees conservees, aucune action enregistree.');
+
+function assertQueueItems(items) {
+  if (!Array.isArray(items)) throw unreadableQueue();
+  const seen = new Set();
+  for (const item of items) {
+    const id = item?.id;
+    if ((typeof id !== 'string' || !id.trim()) && !(Number.isSafeInteger(id) && id > 0)) throw unreadableQueue();
+    const identity = String(id);
+    if (seen.has(identity)) throw unreadableQueue();
+    seen.add(identity);
+  }
+}
 const RETRY_DELAYS_MS = [0, 5_000, 30_000, 120_000, 600_000];
 
 function asTimestamp(value, fallback = 0) {
@@ -63,9 +76,11 @@ export function createMutationQueueStore(options = {}) {
     const scope = queueKey();
     const raw = storage.getItem(scope);
     const parsed = raw === null ? { items: [] } : JSON.parse(raw);
-    if (!Array.isArray(parsed?.items) || parsed.items.some(item => !item || typeof item !== 'object' || !item.id)) {
-      throw new Error('File hors ligne illisible. Donnees conservees, aucune action enregistree.');
+    const version = parsed?.version;
+    if (version !== undefined && (!Number.isSafeInteger(version) || version < 1 || version > QUEUE_VERSION)) {
+      throw unreadableQueue();
     }
+    assertQueueItems(parsed?.items);
     const items = parsed.items.map(normalize);
     snapshots.set(items, { scope, raw });
     return items;
@@ -74,7 +89,8 @@ export function createMutationQueueStore(options = {}) {
   function write(items, detail = {}, baseline = items) {
     const expected = snapshots.get(baseline);
     const current = snapshots.get(read()); // Also refuse unreadable persisted contents.
-    const clean = (Array.isArray(items) ? items : []).map(normalize).filter(Boolean);
+    assertQueueItems(items);
+    const clean = items.map(normalize);
     if (expected && (expected.scope !== current.scope || expected.raw !== current.raw)) {
       throw new Error('File hors ligne modifiee depuis sa lecture. Rechargez puis reessayez.');
     }

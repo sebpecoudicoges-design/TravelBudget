@@ -201,3 +201,43 @@ describe('mutation queue store', () => {
     expect(queue.read()[0].error).toBe('network');
   });
 });
+
+describe('mutation queue format and entry identity', () => {
+  it.each([
+    { version: 5, items: [{ id: 'held', kind: 'future' }] },
+    { version: 'four', items: [{ id: 'held' }] },
+    { version: 4, items: [{ id: 'held' }, { id: 'held' }] },
+    { version: 4, items: [{ id: 14 }, { id: '14' }] },
+  ])('keeps unsupported or ambiguous snapshots byte for byte: %j', snapshot => {
+    const storage = memoryStorage();
+    const raw = JSON.stringify(snapshot);
+    storage.setItem('q', raw);
+    const queue = createMutationQueueStore({ storage, queueKey: 'q' });
+    for (const change of [() => queue.enqueue('new'), () => queue.remove('held'), () => queue.write([])]) {
+      expect(change).toThrow('File hors ligne illisible');
+      expect(storage.getItem('q')).toBe(raw);
+    }
+  });
+
+  it('still accepts valid legacy snapshots without a version and with version 3', () => {
+    for (const version of [undefined, 3]) {
+      const storage = memoryStorage();
+      storage.setItem('q', JSON.stringify({ version, items: [{ id: 'held', kind: 'legacy' }] }));
+      const queue = createMutationQueueStore({ storage, queueKey: 'q' });
+      queue.enqueue('new');
+      expect(queue.read().map(x => x.kind)).toEqual(['legacy', 'new']);
+    }
+  });
+
+  it('does not persist a colliding generated ID or emit a false change', () => {
+    const storage = memoryStorage();
+    const seen = [];
+    const queue = createMutationQueueStore({ storage, queueKey: 'q', idFactory: () => 'same-id',
+      onChange: (_, detail) => seen.push(detail.type) });
+    queue.enqueue('first');
+    const before = storage.getItem('q');
+    expect(() => queue.enqueue('second')).toThrow('File hors ligne illisible');
+    expect(seen).toEqual(['enqueued']);
+    expect(storage.getItem('q')).toBe(before);
+  });
+});
