@@ -2,6 +2,8 @@
 const MAX_BYTES = 500_000;
 const MAX_DEPTH = 16;
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+const positiveAmount = value => Number.isFinite(value) && value > 0;
+const cents = value => Math.round(value * 100);
 const isId = value => typeof value === 'string' && value.length > 0 && value.trim() === value;
 const isStringMap = value => isRecord(value) && Object.values(value).every(item => typeof item === 'string');
 const isRecordList = value => Array.isArray(value) && value.every(isRecord);
@@ -63,25 +65,26 @@ function reviewActiveReferences(settings, scope, sources) {
     references[type].add(id);
   };
 
-  const addTyped = (id, currency, repayment = false) => {
+  const addTyped = (id, currency, role, amount) => {
     add('transaction', id);
     if (!typed) return;
     if (typeof currency !== 'string' || !/^[A-Z]{3}$/.test(currency)) { valid = false; return; }
-    transactionRules.set(id, { currency, repayment });
+    if (role !== 'position' && !positiveAmount(amount)) { valid = false; return; }
+    transactionRules.set(id, { currency, role, amount });
   };
 
   for (const id of Object.keys(settings.walletAccounts)) add('wallet', id);
   for (const debt of settings.debts) {
     add('asset', debt.assetId, true);
     if (debt.originTransactionId !== undefined && debt.originTransactionId !== '') {
-      addTyped(debt.originTransactionId, debt.currency);
+      addTyped(debt.originTransactionId, debt.currency, 'funding', debt.openingAmount);
     }
     if (!isRecordList(debt.repayments)) { valid = false; continue; }
-    for (const repayment of debt.repayments) addTyped(repayment.transactionId, debt.currency, true);
+    for (const repayment of debt.repayments) addTyped(repayment.transactionId, debt.currency, 'repayment', repayment.principal);
   }
   for (const position of settings.positions) {
     if (!Array.isArray(position.transactionIds)) { valid = false; continue; }
-    for (const id of position.transactionIds) addTyped(id, position.currency);
+    for (const id of position.transactionIds) addTyped(id, position.currency, 'position');
   }
   for (const link of settings.assetLinks) {
     add('asset', link.asset_id);
@@ -104,7 +107,7 @@ function reviewActiveReferences(settings, scope, sources) {
     const byId = new Map(), sourceIds = new Set(sourceLists.transaction);
     for (const row of rows) {
       if (!isRecord(row) || !sourceIds.has(row.id) || byId.has(row.id)
-          || typeof row.currency !== 'string' || !/^[A-Za-z]{3}$/.test(row.currency) || !isId(row.type)) {
+          || typeof row.currency !== 'string' || !/^[A-Za-z]{3}$/.test(row.currency) || !isId(row.type) || !Number.isFinite(row.amount)) {
         return { status: 'sources-unavailable' };
       }
       byId.set(row.id, row);
@@ -113,8 +116,10 @@ function reviewActiveReferences(settings, scope, sources) {
     for (const [id, rule] of transactionRules) {
       const row = byId.get(id);
       if (!row) return { status: 'sources-unavailable' };
-      if (row.currency.toUpperCase() !== rule.currency
-          || (row.type !== 'expense' && (rule.repayment || row.type !== 'income'))) incompatible++;
+      if (row.currency.toUpperCase() !== rule.currency || !positiveAmount(row.amount)
+          || (row.type !== 'expense' && (rule.role === 'repayment' || row.type !== 'income'))
+          || (rule.role === 'funding' && row.amount !== rule.amount)
+          || (rule.role === 'repayment' && cents(rule.amount) > cents(row.amount))) incompatible++;
     }
     if (incompatible > 0) return { status: 'incompatible-references', incompatible: { transaction: incompatible } };
   }

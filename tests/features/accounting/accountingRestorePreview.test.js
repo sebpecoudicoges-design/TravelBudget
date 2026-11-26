@@ -129,15 +129,15 @@ describe('active references for the same account and trip', () => {
 
 describe('typed debt and position source review', () => {
   const settings = { ...candidate.settings,
-    debts: [{ currency: 'EUR', originTransactionId: 'funding', repayments: [{ transactionId: 'repayment' }] }],
+    debts: [{ currency: 'EUR', openingAmount: 350, originTransactionId: 'funding', repayments: [{ transactionId: 'repayment', principal: 25 }] }],
     positions: [{ currency: 'NZD', transactionIds: ['deposit'] }],
   };
   const sources = { ...scope, complete: true,
     transactionIds: ['funding', 'repayment', 'deposit'], assetIds: [], walletIds: [],
     transactionMetadata: [
-      { id: 'funding', currency: 'eur', type: 'income' },
-      { id: 'repayment', currency: 'EUR', type: 'expense' },
-      { id: 'deposit', currency: 'NZD', type: 'expense' },
+      { id: 'funding', currency: 'eur', type: 'income', amount: 350 },
+      { id: 'repayment', currency: 'EUR', type: 'expense', amount: 30 },
+      { id: 'deposit', currency: 'NZD', type: 'expense', amount: 80 },
     ],
   };
   const review = (inventory = sources, data = settings) =>
@@ -155,6 +155,32 @@ describe('typed debt and position source review', () => {
     const rows = sources.transactionMetadata.map((row, i) => i === index ? { ...row, ...change } : row);
     expect(review({ ...sources, transactionMetadata: rows }))
       .toEqual({ status: 'incompatible-references', incompatible: { transaction: 1 } });
+  });
+
+  it.each([
+    [0, 349.99],
+    [1, 24.99],
+    [2, 0],
+  ])('reports a source amount incompatible with the active attribution: %j', (index, amount) => {
+    const rows = sources.transactionMetadata.map((row, i) => i === index ? { ...row, amount } : row);
+    expect(review({ ...sources, transactionMetadata: rows }))
+      .toEqual({ status: 'incompatible-references', incompatible: { transaction: 1 } });
+  });
+
+  it('accepts only the principal as repayment, using the same cents check as the ledger', () => {
+    const rows = sources.transactionMetadata.map((row, i) => i === 1 ? { ...row, amount: 24.999 } : row);
+    expect(review({ ...sources, transactionMetadata: rows }))
+      .toMatchObject({ status: 'references-present', requiresFurtherValidation: true });
+  });
+
+  it('distinguishes invalid candidate amounts from unavailable source amount metadata', () => {
+    const [debt] = settings.debts;
+    expect(review(sources, { ...settings, debts: [{ ...debt, openingAmount: null }] }))
+      .toEqual({ status: 'invalid-active-references' });
+    expect(review(sources, { ...settings, debts: [{ ...debt, repayments: [{ ...debt.repayments[0], principal: 0 }] }] }))
+      .toEqual({ status: 'invalid-active-references' });
+    const rows = sources.transactionMetadata.map((row, i) => i === 0 ? { ...row, amount: '350' } : row);
+    expect(review({ ...sources, transactionMetadata: rows })).toEqual({ status: 'sources-unavailable' });
   });
 
   it('cannot claim compatibility if metadata is missing or ambiguous', () => {
