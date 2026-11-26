@@ -5,12 +5,16 @@
    - Pas de prompt: si une devise manque, on garde le cache existant / les taux fixes des segments
    ========================= */
 
-function _fxSetEurRates(rates) {
-  try { localStorage.setItem(TB_CONST.LS_KEYS.eur_rates, JSON.stringify(rates || {})); } catch (_) {}
+function _fxReadEurCache() {
+  try { return JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates) || "{}") || {}; } catch (_) { return {}; }
 }
-function _fxGetEurRates() {
+function _fxProviderDate(day) {
+  if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const date = new Date(day);
+  return Number.isFinite(+date) && date.toISOString().slice(0, 10) === day ? day : null;
+}
+function _fxGetEurRates(rates = _fxReadEurCache()) {
   try {
-    const rates = JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates) || "{}") || {};
     // Sanitize only (do not depend on eur_rates_keys which can be incomplete and wrongly exclude currencies like THB)
     const out = { EUR: 1 };
     for (const [k, vv] of Object.entries(rates || {})) {
@@ -24,6 +28,28 @@ function _fxGetEurRates() {
   } catch (_) {
     return { EUR: 1 };
   }
+}
+
+function _fxMergeProviderRates(data) {
+  const cache = _fxReadEurCache();
+  const previous = _fxGetEurRates(cache);
+  const merged = { ...previous, ...data.rates, EUR: 1 };
+  const rateDates = {};
+  for (const code of Object.keys(previous)) {
+    const day = _fxProviderDate(cache._rateDates?.[code]);
+    if (code !== "EUR" && day) rateDates[code] = day;
+  }
+  for (const [key, value] of Object.entries(data.rates)) {
+    const code = key.trim().toUpperCase();
+    if (code === "EUR" || !/^[A-Z]{3}$/.test(code)) continue;
+    const rate = Number(value);
+    const day = data.source === "frankfurter_v2" && _fxProviderDate(data.rate_dates?.[code]);
+    delete rateDates[code];
+    if (day && Number.isFinite(rate) && rate > 0) rateDates[code] = day;
+  }
+  // Rate and its date must survive or fail the same write. Older cache entries stay undated.
+  try { localStorage.setItem(TB_CONST.LS_KEYS.eur_rates, JSON.stringify({ ...merged, _rateDates: rateDates })); } catch (_) {}
+  return merged;
 }
 
 // Manual EUR->XXX rates (fallback when Auto FX provider doesn't provide the currency)
@@ -104,7 +130,7 @@ function tbFxAutoStatus() {
       if (Array.isArray(arr)) count = arr.length;
     }
   } catch (_) {}
-  return { asOf, count };
+  return { asOf, count, rateDates: _fxReadEurCache()._rateDates || {} };
 }
 
 
@@ -329,16 +355,13 @@ async function refreshFxRates() {
   const base = state.period.baseCurrency;
 
   // 1) Merge provider rates with previous cache (non-destructive)
-  const previous = _fxGetEurRates();
-  const allRates = { ...previous, ...data.rates, EUR: 1 };
+  const allRates = _fxMergeProviderRates(data);
 
   // 2) No segment-fixed injection: Auto is source of truth; manual fallback is global-only (Option A)
 
 
   // 3) No prompt here: Auto refresh never triggers manual capture.
 
-  // 4) Stockage local (utilisé par le plugin cross-rate)
-  _fxSetEurRates(allRates);
   try { _fxSetLastDaily(_fxTodayKey()); } catch (_) {}
 
   // 5) On continue à alimenter ton moteur actuel EUR<->BASE
@@ -407,11 +430,8 @@ async function tbFxEnsureDaily(opts) {
       if (error) throw error;
       if (!data?.rates) throw new Error("Réponse taux invalide.");
 
-      // Merge: keep previous manual rates when provider doesn't give them
-      const previous = _fxGetEurRates();
-      const merged = { ...previous, ...data.rates, EUR: 1 };
-
-      _fxSetEurRates(merged);
+      // Keep previous cached rates when the provider omits a currency.
+      _fxMergeProviderRates(data);
       _fxSetLastDaily(today);
 
       // Apply to state immediately (no DB write)
