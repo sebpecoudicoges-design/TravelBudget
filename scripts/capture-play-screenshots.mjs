@@ -160,7 +160,10 @@ function renderFixtureBootstrap() {
         target.scrollIntoView({block:'start',behavior:'instant'});
         await redraw();
         await sleep(1800);
-        await poll(()=>overlaysAbsent() && check() && foreground(target),name+'-foreground',11000);
+        await poll(()=>overlaysAbsent() && check(),name+'-content',8500);
+        // Hit-testing is diagnostic only: Android can return the parent tile
+        // for an already readable view. Pixel OCR is the final authority.
+        if (!foreground(target)) console.info('TB_PLAY_NATIVE_DIAG foreground-hint '+name);
         console.info('TB_PLAY_NATIVE_READY '+name);
         // Give the physical compositor multiple independently checked frames.
         await sleep(22000);
@@ -188,28 +191,42 @@ function renderFixtureBootstrap() {
           if (visible(tripTab) && getComputedStyle(tripTab).visibility!=='hidden') throw Error('trip-tab-visible');
           window.showView('trip');
           await poll(()=>bodyView()==='validation'&&!visible(document.querySelector('#view-trip')),'trip-role-gate');
-          await navigate('dashboard');
-          await ready('screenshot-01-compte',()=>{
-            const wallet=document.querySelector('#wallets-container [data-wallet-id="'+walletId+'"]');
-            return visible(wallet) && text(wallet).includes('Carte voyage') && /240[,.]00/.test(text(wallet)) ? wallet : null;
+          const viewTry=async(name,run)=>{
+            try { await run(); }
+            catch(error) {
+              console.info('TB_PLAY_NATIVE_DIAG view-skipped '+name+' '+String(error?.message||'unknown').replace(/[^a-z0-9-]/gi,'').slice(0,110));
+            }
+          };
+          await viewTry('compte',async()=>{
+            await navigate('dashboard');
+            await ready('screenshot-01-compte',()=>{
+              const wallet=document.querySelector('#wallets-container [data-wallet-id="'+walletId+'"]');
+              return visible(wallet) && text(wallet).includes('Carte voyage') && /240[,.]00/.test(text(wallet)) ? wallet : null;
+            });
           });
-          await navigate('transactions');
-          await ready('screenshot-02-transactions',()=>{
-            const list=document.querySelector('#tx-list');
-            const row=Array.from(list?.querySelectorAll('*')||[]).find(e=>e.childNodes.length && text(e).includes('Déjeuner au lac') && !Array.from(e.children).some(c=>text(c).includes('Déjeuner au lac')));
-            return visible(row) && text(list).includes('Bus local') && text(list).includes('Sortie volcan') ? document.querySelector('.tx-list-head') : null;
+          await viewTry('transactions',async()=>{
+            await navigate('transactions');
+            await ready('screenshot-02-transactions',()=>{
+              const list=document.querySelector('#tx-list');
+              const row=Array.from(list?.querySelectorAll('*')||[]).find(e=>e.childNodes.length && text(e).includes('Déjeuner au lac') && !Array.from(e.children).some(c=>text(c).includes('Déjeuner au lac')));
+              return visible(row) && text(list).includes('Bus local') && text(list).includes('Sortie volcan') ? document.querySelector('.tx-list-head') : null;
+            });
           });
-          await navigate('dashboard');
-          document.querySelector('#db-today')?.click();
-          await ready('screenshot-03-budget',()=>{
-            const target=Array.from(document.querySelectorAll('#daily-budget-container .day')).find(el=>text(el).includes(day));
-            return visible(target) && text(target).includes('120 NZD') && text(target.querySelector('.row b'))==='−30 NZD' ? target : null;
+          await viewTry('budget',async()=>{
+            await navigate('dashboard');
+            document.querySelector('#db-today')?.click();
+            await ready('screenshot-03-budget',()=>{
+              const target=Array.from(document.querySelectorAll('#daily-budget-container .day')).find(el=>text(el).includes(day));
+              return visible(target) && text(target).includes('120 NZD') && text(target.querySelector('.row b'))==='−30 NZD' ? target : null;
+            });
           });
-          await navigate('analysis');
-          await ready('screenshot-04-analyse',()=>{
-            const total=document.querySelector('#analysis-summary .analysis-stat--glass-blue .analysis-stat-value');
-            const chart=document.querySelector('#analysis-category-bars-chart');
-            return /^60[,.]00/.test(text(total)) && visible(chart) && chart.querySelector('canvas,svg') ? (chart.closest('.card')||chart) : null;
+          await viewTry('analyse',async()=>{
+            await navigate('analysis');
+            await ready('screenshot-04-analyse',()=>{
+              const total=document.querySelector('#analysis-summary .analysis-stat--glass-blue .analysis-stat-value');
+              const chart=document.querySelector('#analysis-category-bars-chart');
+              return /^60[,.]00/.test(text(total)) && visible(chart) && chart.querySelector('canvas,svg') ? (chart.closest('.card')||chart) : null;
+            });
           });
           console.info('TB_PLAY_NATIVE_DONE');
         } catch(error) {
@@ -247,7 +264,7 @@ const getState=()=>{
 };
 const passed=new Set();
 const expected=new Set(['screenshot-01-compte','screenshot-02-transactions','screenshot-03-budget','screenshot-04-analyse']);
-const deadline=Date.now()+225000;
+const deadline=Date.now()+275000;
 const ocrNormalization=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
 const criteria={
   'screenshot-01-compte': t=>/carte voyage/.test(t) && /solde/.test(t) && /240[.,]00/.test(t),

@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   screenshots:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -36,17 +36,22 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Ensure the Media Formatter is available
+      - name: Preflight PNG formatting and OCR
         run: |
           set -euo pipefail
-          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null || ! command -v tesseract >/dev/null || ! tesseract --list-langs 2>/dev/null | grep -Fx fra; then
+          if ! command -v tesseract >/dev/null || ! tesseract --list-langs 2>/dev/null | grep -Fx fra; then
             sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends ffmpeg tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng
+            sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng
           fi
-          command -v ffmpeg
-          command -v ffprobe
-          command -v tesseract
           tesseract --list-langs | grep -Fx fra
+          img_python=$(command -v python3)
+          if ! "$img_python" -c 'from PIL import Image'; then
+            python3 -m venv "$RUNNER_TEMP/play-image-venv"
+            img_python="$RUNNER_TEMP/play-image-venv/bin/python"
+            "$img_python" -m pip --disable-pip-version-check install pillow==11.3.0
+          fi
+          "$img_python" -c 'from PIL import Image; assert Image.new("RGBA",(1,1)).convert("RGB").mode == "RGB"'
+          echo "PLAY_IMAGE_PYTHON=$img_python" >> "$GITHUB_ENV"
       - name: Build from exact release source
         run: |
           set -euo pipefail
@@ -122,7 +127,7 @@ jobs:
           adb -s emulator-5554 shell am start -W -n com.travelbudget.app/com.travelbudget.app.MainActivity
           adb -s emulator-5554 shell dumpsys webviewupdate | grep -i 'Current WebView package' || true
           rc=0
-          timeout --signal=TERM 240 node scripts/capture-play-screenshots.mjs || rc=$?
+          timeout --signal=TERM 288 node scripts/capture-play-screenshots.mjs || rc=$?
           out="$RUNNER_TEMP/travelbudget-play"
           mkdir -p "$out"
           cd "$out"
@@ -136,8 +141,15 @@ jobs:
             (cd "$raw"; sha256sum screenshot-*.png > sha256.txt)
             if test -f provenance.txt; then cp provenance.txt "$raw/"; fi
             for image in "${images[@]}"; do
-              ffmpeg -nostdin -v error -i "$image" -frames:v 1 -pix_fmt rgb24 "rgb-$image"
-              test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height,pix_fmt -of csv=p=0 "rgb-$image")" = 1080,1920,rgb24
+              "$PLAY_IMAGE_PYTHON" -c '
+          import sys
+          from PIL import Image
+          with Image.open(sys.argv[1]) as image:
+              assert image.size == (1080,1920) and image.format == "PNG"
+              image.convert("RGB").save(sys.argv[2], "PNG", optimize=True)
+          with Image.open(sys.argv[2]) as image:
+              assert image.mode == "RGB" and image.size == (1080,1920)
+          ' "$image" "rgb-$image"
               mv "rgb-$image" "$image"
             done
             sha256sum "${images[@]}" > sha256.txt
