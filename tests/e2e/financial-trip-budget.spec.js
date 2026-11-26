@@ -80,6 +80,13 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await expect(account.locator('.tb-wallet-card-main p strong').first()).toHaveText(/^395[,.]00(?:\s*(?:EUR|€))?$/);
     await expect(page.locator('body')).toHaveClass(new RegExp(`theme-${theme}`));
 
+    // This dashboard series is gross, unlike the net amounts below and in Analyse.
+    await expect(page.locator('#cashflowCurve .apexcharts-legend-text')
+      .filter({ hasText: 'Dépenses avant avoirs/jour (EUR)' })).toBeVisible();
+    const grossDays = await page.evaluate(({ from, to }) => window.__cashflowChart.w.config.series[3].data
+      .filter(point => point.x >= from && point.x <= to).map(point => point.y), { from: expenseStart, to: expenseEnd });
+    expect(grossDays).toEqual([15, 15, 15]);
+
     const budget = page.locator('#daily-budget-container');
     await budget.locator('#db-today').click();
     for (const date of ['2026-10-21', '2026-10-22', '2026-10-23']) {
@@ -197,5 +204,267 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark']) {
     await expect(page.locator('[data-cancel-settle]')).toHaveCount(0);
     await navigate(page, 'dashboard');
     await expect(account).toHaveText(/^500[,.]00/);
+  });
+}
+
+for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
+  test(`Analyse masks incomplete totals and the previous comparison only when needed (${width}px, ${theme})`, async ({ page, baseURL }) => {
+    test.setTimeout(60000);
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: theme });
+    const expense = (id, amount, date, currency) => row(id, amount, date, {
+      currency, label: id, budget_date_start: date, budget_date_end: date,
+    });
+    const fxTables = {
+      ...fixtureTables,
+      profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+      settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
+      budget_segments: [
+        { ...fixtureTables.budget_segments[0], end_date: '2026-10-22' },
+        { ...fixtureTables.budget_segments[0], id: 'later-aud', sort_order: 1, start_date: '2026-10-23', base_currency: 'AUD', eur_base_rate_fixed: 1.65 },
+      ],
+      transactions: [
+        expense('Known EUR', 30, '2026-10-23', 'EUR'),
+        expense('Known AUD', 33, '2026-10-24', 'AUD'),
+        expense('Missing conversion fixture', 100, '2026-10-22', 'ZFX'),
+      ],
+    };
+    await installConnectedFixture(page, baseURL, { tables: fxTables });
+    await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+    await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+    await page.goto('/?freeze=1');
+    await navigate(page, 'analysis');
+    await page.locator('#analysis-scope').selectOption('all');
+    await page.locator('#analysis-currency').selectOption('account');
+    await page.locator('#analysis-period').selectOption('range');
+    const start = page.locator('#analysis-range-start');
+    const end = page.locator('#analysis-range-end');
+    const summary = page.locator('#analysis-summary');
+    const comparison = page.locator('#analysis-period-comparison');
+    const chart = page.locator('#analysis-trajectory-chart');
+    await start.fill('2026-10-23');
+    await end.fill('2026-10-24');
+    await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^50[,.]00/);
+    await expect(chart).toBeVisible();
+    await expect(summary.getByText('pas forcément le taux historique', { exact: false })).toBeVisible();
+    await page.locator('#analysis-comparison').selectOption('previous');
+    await expect(comparison.getByRole('status')).toContainText('taux de change manquant');
+    await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^50[,.]00/);
+
+    await start.fill('2026-10-22');
+    await expect(summary.getByRole('status')).toContainText('ZFX → EUR');
+    await expect(summary.locator('[data-analysis-fx-note]')).toHaveCount(0);
+    await expect(summary.locator('.analysis-stat-value')).toHaveCount(0);
+    await expect(comparison).toBeEmpty();
+    await expect(chart).toBeHidden();
+    await expect(start).toBeVisible();
+
+    await start.fill('2026-10-23');
+    await expect(summary.getByRole('status')).toHaveCount(0);
+    await expect(chart).toBeVisible();
+    await expect(comparison.getByRole('status')).toContainText('taux de change manquant');
+  });
+}
+
+for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
+  test(`Analyse isolates a missing rate for the optional country reference (${width}px, ${theme})`, async ({ page, baseURL }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: theme });
+    const referenceTables = {
+      ...fixtureTables,
+      profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+      settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
+      budget_segments: [{ ...fixtureTables.budget_segments[0], id: '55555555-5555-4555-8555-555555555555' }],
+      transactions: [['previous', 60, '2026-10-22'], ['current', 50, '2026-10-23']].map(([id, amount, date]) =>
+        row(id, amount, date, { budget_date_start: date, budget_date_end: date })),
+    };
+    await installConnectedFixture(page, baseURL, { tables: referenceTables });
+    await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+    let referenceCurrency = 'ZFX';
+    await page.route('**/rest/v1/rpc/rpc_budget_reference_resolve_for_budget_segment', route => route.fulfill({
+      json: [{ currency_code: referenceCurrency, recommended_daily_amount: 35, recommended_food_daily_amount: 35 }],
+    }));
+    await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+    // The synthetic HTTP fixture intercepts all Supabase requests; freeze blocks even read-only RPCs.
+    await page.goto('/');
+    await navigate(page, 'analysis');
+    await page.locator('#analysis-period').selectOption('range');
+    await page.locator('#analysis-range-start').fill('2026-10-23');
+    await page.locator('#analysis-range-end').fill('2026-10-24');
+    await page.locator('#analysis-comparison').selectOption('previous');
+
+    const summary = page.locator('#analysis-summary');
+    const reference = page.locator('#analysis-reference-summary');
+    const insights = page.locator('#analysis-insights');
+    await expect(reference.getByRole('status')).toContainText('ZFX → EUR');
+    await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^50[,.]00/);
+    await expect(summary).not.toContainText(/Rythme référence pays|Vs référence pays/);
+    await expect(insights).not.toContainText(/comparable sourcé|Réel au-dessus du sourcé|Réel sous le sourcé/);
+    await expect(page.locator('#analysis-trajectory-chart')).toBeVisible();
+    await expect(page.locator('#analysis-period-comparison')).toContainText('COMPARAISON DE RYTHME');
+    expect(await page.evaluate(() => window.tbGetBudgetAnalysisNotificationSummary())).toMatchObject({
+      spentToToday: 50, deltaReferenceAmount: null, paceReferencePct: null,
+    });
+
+    referenceCurrency = 'EUR';
+    await page.locator('#analysis-refresh').click();
+    await expect(reference.getByRole('status')).toHaveCount(0);
+    await expect(reference.getByText('Sourcé / jour')).toBeVisible();
+    await expect(summary).toContainText('Vs référence pays');
+    expect(await page.evaluate(() => window.tbGetBudgetAnalysisNotificationSummary())).toMatchObject({ referencePerDay: 35 });
+  });
+}
+
+for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
+  test(`Analyse exposes every category and its transactions (${width}px, ${theme})`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: theme });
+    const date = '2026-10-23';
+    const category = 'Remboursements fictifs';
+    const label = 'Avoir catégorie 14';
+    const categoryTables = {
+      ...fixtureTables,
+      profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+      settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
+      transactions: [
+        ...Array.from({ length: 13 }, (_, idx) => row(`cat-${idx}`, idx + 1, date, {
+          category: `Poste fictif ${idx + 1}`, budget_date_start: date, budget_date_end: date,
+        })),
+        row('cat-before-refund', 1, date, { category, budget_date_start: date, budget_date_end: date }),
+        row('cat-refund', 8, date, {
+          type: 'income', category, label, budget_date_start: date, budget_date_end: date,
+        }),
+      ],
+    };
+    await installConnectedFixture(page, baseURL, { tables: categoryTables });
+    await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+    await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+    await page.goto('/?freeze=1');
+    await navigate(page, 'analysis');
+    await page.locator('#analysis-period').selectOption('range');
+    await page.locator('#analysis-scope').selectOption('all');
+    await page.locator('#analysis-range-start').fill(date);
+    await page.locator('#analysis-range-end').fill(date);
+
+    const host = page.locator('#analysis-category-bars-chart');
+    await expect.poll(() => host.evaluate(el =>
+      window.echarts?.getInstanceByDom(el)?.getOption()?.yAxis?.[0]?.data?.length,
+    )).toBe(14);
+    expect(await host.evaluate(el => window.echarts.getInstanceByDom(el).getOption().series[0].data[0].value)).toBe(-7);
+    const pie = page.locator('#analysis-category-chart');
+    await expect(page.locator('#analysis-category-pie-note')).toContainText('dépense nette positive');
+    const pieState = await pie.evaluate(el => {
+      const chart = window.echarts.getInstanceByDom(el);
+      const [series] = chart.getOption().series;
+      return { data: series.data, largestShare: chart.getModel().getSeriesByIndex(0).getDataParams(0).percent };
+    });
+    expect(pieState.data).toHaveLength(9);
+    expect(pieState.data.reduce((sum, row) => sum + row.value, 0)).toBe(91);
+    expect(pieState.data.at(-1)).toMatchObject({ value: 15, grouped: true });
+    expect(pieState.largestShare).toBeCloseTo(100 * 13 / 91, 1);
+    const region = host.locator('..');
+    await region.focus();
+    await page.keyboard.press('End');
+    await expect.poll(() => region.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+
+    const picker = page.locator('#analysis-category-drilldown');
+    await expect(picker.locator('option')).toHaveCount(15);
+    await expect(picker.locator('option').last()).toContainText(/Remboursements fictifs.*-7/);
+    await picker.selectOption(category);
+    const open = page.locator('#analysis-category-open');
+    await open.focus();
+    await page.keyboard.press('Enter');
+    const drilldown = page.locator('#tb-analysis-tx-drilldown');
+    await expect(drilldown).toContainText(label);
+    await expect(drilldown.locator('[data-close]')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(drilldown).toHaveCount(0);
+    await expect(open).toBeFocused();
+    await page.locator('#analysis-category-filter').selectOption(category);
+    await expect(page.locator('#analysis-category-pie-note')).toContainText('Aucune catégorie à dépense nette positive');
+    expect(await pie.evaluate(el => window.echarts.getInstanceByDom(el).getOption().series[0].data)).toEqual([]);
+    await expect(picker.locator('option').last()).toContainText(/Remboursements fictifs.*-7/);
+
+    const heatmap = page.locator('#analysis-heatmap-chart');
+    const signedHeat = await heatmap.evaluate(el => {
+      const chart = window.echarts.getInstanceByDom(el);
+      const { visualMap: [scale], series: [cells], tooltip: [tooltip] } = chart.getOption();
+      const [data] = cells.data;
+      const zero = chart.getModel().getComponent('visualMap').targetVisuals.inRange.color.mapValueToVisual(0);
+      const negative = chart.getModel().getComponent('visualMap').targetVisuals.inRange.color.mapValueToVisual(data[2]);
+      return { min: scale.min, max: scale.max, value: data[2], label: cells.label.formatter({ data }), hover: tooltip.formatter({ data }), hasDistinctColor: zero !== negative };
+    });
+    expect(signedHeat).toMatchObject({ min: -7, max: 7, value: -7, label: '−', hasDistinctColor: true });
+    expect(signedHeat.hover).toMatch(/2026-10-23.*-7/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  });
+}
+
+for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
+  test(`Analyse labels average budget and planned spending separately (${width}px, ${theme})`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: theme });
+    const start = '2025-12-31';
+    const end = '2026-01-01';
+    const segment = fixtureTables.budget_segments[0];
+    const graphTables = {
+      ...fixtureTables,
+      travels: [{ ...fixtureTables.travels[0], start_date: start, end_date: end }],
+      periods: [{ ...fixtureTables.periods[0], start_date: start, end_date: end }],
+      profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+      settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
+      budget_segments: [
+        { ...segment, start_date: start, end_date: start, daily_budget_base: 20 },
+        { ...segment, id: 'later-budget', sort_order: 1, start_date: end, end_date: end, daily_budget_base: 30 },
+      ],
+      transactions: [
+        row('paid-day', 12, start, { budget_date_start: start, budget_date_end: start }),
+        row('planned-day', 8, end, { budget_date_start: end, budget_date_end: end, pay_now: false, paid_at: null }),
+      ],
+    };
+    await installConnectedFixture(page, baseURL, { tables: graphTables });
+    await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+    await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+    await page.goto('/?freeze=1');
+    await navigate(page, 'analysis');
+    await page.locator('#analysis-period').selectOption('range');
+    await page.locator('#analysis-range-start').fill(start);
+    await page.locator('#analysis-range-end').fill(end);
+    const mode = page.locator('#analysis-mode');
+    const series = (id) => page.locator(id).evaluate(el =>
+      window.echarts?.getInstanceByDom(el)?.getOption()?.series.map(({ name, data }) => ({ name, data })),
+    );
+    const trajectory = '#analysis-trajectory-chart';
+    const pace = '#analysis-velocity-chart';
+    await mode.selectOption('expenses');
+    await expect.poll(() => series(trajectory)).toEqual([
+      { name: 'Cible cumulée', data: [20, 50] },
+      { name: 'Dépenses cumulées', data: [12, 12] },
+    ]);
+    await expect.poll(() => series(pace)).toEqual([
+      { name: 'Dépenses du jour', data: [12, 0] },
+      { name: 'Budget moyen/jour', data: [25, 25] },
+    ]);
+    await mode.selectOption('planned');
+    await expect.poll(() => series(trajectory)).toEqual([
+      { name: 'Cible cumulée', data: [20, 50] },
+      { name: 'Cumul avec prévisions', data: [12, 20] },
+    ]);
+    await expect.poll(() => series(pace)).toEqual([
+      { name: 'Avec prévisions', data: [12, 8] },
+      { name: 'Budget moyen/jour', data: [25, 25] },
+    ]);
+    for (const id of [trajectory, pace, '#analysis-heatmap-chart']) {
+      const dates = await page.locator(id).evaluate(el => {
+        const [axis] = window.echarts.getInstanceByDom(el).getOption().xAxis;
+        return { values: axis.data, labels: axis.data.map(axis.axisLabel.formatter) };
+      });
+      expect(dates).toEqual({ values: [start, end], labels: [start, end] });
+    }
+    expect(await page.locator(trajectory).evaluate(el =>
+      window.echarts.getInstanceByDom(el).getOption().series[0].markLine.data,
+    )).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }

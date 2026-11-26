@@ -321,7 +321,7 @@ async function applyBulkTxDelete() {
       : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
     if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
       for (const tx of selectedRows) {
-        window.tbOfflineQueueEnqueue("transaction.delete", {
+        await window.tbOfflineQueueEnqueue("transaction.delete", {
           txId: tx.id,
           rpcName: TB_CONST?.RPCS?.delete_transaction || "delete_transaction",
         }, {
@@ -1047,7 +1047,7 @@ async function _txDocUploadAndLink(txId, files, txFallback){
     const docId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const safe = _txDocCleanFilename(file.name || 'facture');
     const path = `${uid}/${docId}/${safe}`;
-    const up = await c.storage.from(TB_TX_DOC_BUCKET).upload(path, file, { upsert: false, contentType: file.type || undefined });
+    const up = await window.tbWritePersonalDocument(c, path, file);
     if (up.error) throw up.error;
 
     const baseName = String(file.name || _txDocT('documents.relation.invoice')).replace(/\.[a-z0-9]{1,8}$/i, '');

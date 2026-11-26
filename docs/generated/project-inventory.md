@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `689fb21243544cc5f893497e6b9edbac6e685ac5`
-> Empreinte du snapshot : `763b6036b14194b5650f7e84f2f9a97bfb3edd81b21036842dcf585b40b13671`
-> Généré le : `2026-11-25T09:11:05.686Z`
+> Commit analysé : `6a66c81aaa50317cb8b6b5be0b37f772ac08cd8d`
+> Empreinte du snapshot : `33888f8b2c6f6789ed97685e23229feaea1e987d32b2c5b14492f1a5380b9eb2`
+> Généré le : `2026-11-26T05:43:37.331Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.396` |
+| Version | `10.5.397` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 28 |
-| Modules data | 13 |
-| Modules features | 64 |
-| Fichiers de tests | 205 |
+| Modules data | 14 |
+| Modules features | 65 |
+| Fichiers de tests | 209 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -214,6 +214,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `src/data/mcpHealthCatalog.js`
 - `src/data/mcpReadCatalog.js`
 - `src/data/mutationQueueStore.js`
+- `src/data/nutritionMealReplayRepository.js`
 - `src/data/nutritionRepository.js`
 - `src/data/nutritionSleepRepository.js`
 - `src/data/sportRepository.js`
@@ -254,6 +255,7 @@ Modules :
 - `src/features/accounting/accountingMapping.js`
 - `src/features/accounting/accountingPositions.js`
 - `src/features/accounting/accountingRecognition.js`
+- `src/features/accounting/accountingRestorePreview.js`
 - `src/features/accounting/accountingRules.js`
 - `src/features/accounting/accountingView.js`
 - `src/features/analysis/analysisCashBreakdown.js`
@@ -314,6 +316,7 @@ Modules :
 
 ### Contrats de domaine et d'interface
 
+- `tests/features/accounting/accountingRestoreContract.test.js`
 - `tests/ui/accountingViewContract.test.js`
 - `tests/ui/analysisDrilldownViewContract.test.js`
 - `tests/ui/analysisFilterViewContract.test.js`
@@ -387,7 +390,9 @@ Modules :
 - `tests/e2e/nutrition-storage-recovery.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`
 - `tests/e2e/offline-queue-tabs.spec.js`
+- `tests/e2e/project-demo.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
+- `tests/e2e/trip-expense-entry.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 
@@ -472,7 +477,9 @@ Modules :
 - `tests/e2e/nutrition-storage-recovery.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`
 - `tests/e2e/offline-queue-tabs.spec.js`
+- `tests/e2e/project-demo.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
+- `tests/e2e/trip-expense-entry.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 - `tests/features/accounting/accountingChargeRegression.test.js`
@@ -483,6 +490,8 @@ Modules :
 - `tests/features/accounting/accountingMapping.test.js`
 - `tests/features/accounting/accountingPositions.test.js`
 - `tests/features/accounting/accountingRecognition.test.js`
+- `tests/features/accounting/accountingRestoreContract.test.js`
+- `tests/features/accounting/accountingRestorePreview.test.js`
 - `tests/features/accounting/accountingRules.test.js`
 - `tests/features/analysis/analysisCashBreakdown.test.js`
 - `tests/features/analysis/analysisChartOptions.test.js`
@@ -809,6 +818,7 @@ Modules :
 
 - `docs/ACCOUNTING_CHARGES_10_5_383.md`
 - `docs/ACCOUNTING_MODULE_BRIEF.md`
+- `docs/ACCOUNTING_RESTORE_F14.md`
 - `docs/ACCOUNT_DATA_LIFECYCLE.md`
 - `docs/ADMIN_TEST_RETURNS.md`
 - `docs/ADMOB_ANDROID.md`

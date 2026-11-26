@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BudgetPacker - Pilotage budget, objectifs et documents</title>
-  <meta name="description" content="Demo publique interactive de BudgetPacker : pilotage budget, analyse des taux, conversions, documents, patrimoine, sport, alimentation et objectifs." />
+  <title>TravelBudget · Budget, dépenses partagées et documents</title>
+  <meta name="description" content="Découvre TravelBudget : suis ton budget de voyage et partage les dépenses avec tes amis. Essaie la simulation et regarde le parcours dans l’application." />
   <script>
     (() => {
       const key = "budgetpacker_project_theme_v1";
@@ -1319,19 +1319,19 @@
     }
   </style>
   <link rel="stylesheet" href="/project-enhancements.css" />
+  <link rel="stylesheet" href="/project-demo.css" />
 </head>
 <body>
   <header>
     <div class="shell nav">
       <a class="brand" href="#top">
-        <span class="brand-mark">BP</span>
-        <span>BudgetPacker</span>
+        <span class="brand-mark">TB</span>
+        <span>TravelBudget</span>
       </a>
       <nav class="nav-links" aria-label="Sections">
         <a href="#demo" data-i18n="nav.demo">Demo</a>
         <a href="#modules" data-i18n="nav.modules">Modules</a>
         <a href="#workflow" data-i18n="nav.workflow">Parcours</a>
-        <a href="#lab" data-i18n="nav.lab">Lab</a>
         <a href="#atlas" data-i18n="nav.atlas">Atlas</a>
         <a href="#app" data-i18n="nav.app">App</a>
         <a href="/privacy.html" data-i18n="nav.privacy">Confidentialite</a>
@@ -1359,13 +1359,14 @@
   <main>
     <section class="shell hero" id="top">
       <div>
-        <span class="eyebrow" data-i18n="hero.eyebrow">BudgetPacker V2 - demo publique, donnees fictives</span>
+        <span class="eyebrow" data-i18n="hero.eyebrow">TravelBudget · Démo publique, données fictives</span>
         <h1 data-i18n="hero.title">Ton budget, tes documents et tes objectifs. Un seul cockpit.</h1>
         <p class="lead" data-i18n="hero.lead">
           Une app modulaire pour relier cashflow, transactions, taux de change, documents, patrimoine, sport, alimentation, sommeil et charge de travail dans une lecture simple.
         </p>
         <div class="hero-actions">
-          <a class="btn primary" href="#demo" data-i18n="hero.primary">Ouvrir la demo</a>
+          <a class="btn primary" href="#demo" data-i18n="hero.primary">Ouvrir la démo</a>
+          <a class="btn" href="#video-demo" data-i18n="demo.video.cta">Voir la vidéo</a>
           <a class="btn" href="#app" data-i18n="hero.secondary">Telecharger l'APK</a>
         </div>
         <p class="hero-note" data-i18n="hero.note">La page ci-dessous ne charge aucune donnee personnelle : elle montre le produit, les modules et la logique technique.</p>
@@ -1380,108 +1381,80 @@
           </div>
         </div>
         <div class="hero-status" aria-label="Statut du projet">
-          <div class="hero-status-item"><small data-i18n="status.release">Version actuelle</small><strong>10.5.396</strong></div>
+          <div class="hero-status-item"><small data-i18n="status.release">Version web</small><strong>10.5.397</strong></div>
           <div class="hero-status-item"><small data-i18n="status.mobile">Android</small><strong data-i18n="status.mobile.value">APK de test</strong></div>
           <a class="hero-status-item owner" href="https://pecloud.fr/" target="_blank" rel="noopener noreferrer"><small data-i18n="status.owner">Projet par</small><strong>Pecloud ↗</strong></a>
         </div>
       </div>
 
-      <div class="product-frame" aria-label="Apercu interactif du produit">
-        <div class="mock-app">
-          <div class="mock-bar">
-            <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
-            <span id="mockTitle">Dashboard</span>
-          </div>
-          <div class="mock-screen">
-            <aside class="mock-side">
-              <strong>BudgetPacker</strong>
-              <button class="active" type="button" data-mock-module="dashboard">Dashboard</button>
-              <button type="button" data-mock-module="transactions">Transactions</button>
-              <button type="button" data-mock-module="analysis">Analysis</button>
-              <button type="button" data-mock-module="assets">Assets</button>
-              <button type="button" data-mock-module="documents">Documents</button>
-              <button type="button" data-mock-module="sport">Sport</button>
-              <button type="button" data-mock-module="split">Split</button>
-            </aside>
-            <div class="mock-main" id="mockMain">
-              <div class="mock-grid">
-                <div class="panel">
-                  <small data-i18n="mock.cashflow">Cashflow estime</small>
-                  <h3 id="mockCash">3 470 EUR</h3>
-                  <div class="bars">
-                    <div class="bar"><i id="mockBarA" style="width:70%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
-                    <div class="bar"><i id="mockBarB" style="width:44%;background:linear-gradient(90deg,var(--amber),var(--pink));"></i></div>
-                    <div class="bar"><i id="mockBarC" style="width:60%;background:linear-gradient(90deg,var(--blue),var(--violet));"></i></div>
-                  </div>
-                </div>
-                <div class="panel">
-                  <small data-i18n="mock.signal">Signal du jour</small>
-                  <h3 id="mockSignal">Surveiller taux</h3>
-                </div>
-              </div>
-              <div class="panel">
-                <small data-i18n="mock.projection">Projection</small>
-                <div class="chart" aria-hidden="true">
-                  <i style="height:70%"></i><i style="height:78%"></i><i style="height:68%"></i><i style="height:42%;background:linear-gradient(180deg,var(--amber),var(--pink));"></i><i style="height:54%"></i><i style="height:66%"></i><i style="height:82%"></i>
-                </div>
-              </div>
-              <div class="panel">
-                <small data-i18n="mock.feed">Flux recent</small>
-                <div class="feed" id="mockFeed"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <figure class="product-frame project-video" id="video-demo">
+        <video controls playsinline preload="none" width="1440" height="1000" poster="./demo-media/taupo-poster.jpg" aria-label="Vidéo de démonstration TravelBudget">
+          <source src="./demo-media/travelbudget-taupo-demo.mp4" type="video/mp4" />
+        </video>
+        <figcaption data-i18n="demo.video.caption">Capture continue de l’application web sur ordinateur, en thème clair. Données fictives, repères en français et fond musical.</figcaption>
+        <a class="project-video-link" href="./demo-media/travelbudget-taupo-demo.mp4" data-i18n="demo.video.open">Ouvrir la vidéo séparément</a>
+      </figure>
     </section>
 
-    <section id="demo" class="band">
+    <section id="demo" class="band" aria-labelledby="demo-title">
       <div class="shell">
         <div class="section-head">
-          <h2 data-i18n="demo.title">Analyse taux & conversions, sans le limiter a un pays.</h2>
-          <p data-i18n="demo.lead">Les valeurs sont fictives. Change le scenario, ajuste le montant source, la reserve et le taux cible : la lecture se met a jour comme une mini-version du moteur d'analyse.</p>
+          <h2 id="demo-title" data-i18n="demo.title">Un dîner à Taupō, deux budgets.</h2>
+          <p data-i18n="demo.lead">Saisis un dîner pour deux dans Partage (Trip), vérifie le partage, puis retrouve le paiement dans Compte et ta part dans Budget et Analyse.</p>
         </div>
-
-        <div class="interactive">
-          <div class="control-card">
-            <div class="scenario-switch" role="tablist" aria-label="Scenarios">
-              <button class="scenario-btn active" type="button" data-scenario="pvt" data-i18n="scenario.pvt">Analyse FX</button>
-              <button class="scenario-btn" type="button" data-scenario="trip" data-i18n="scenario.trip">Voyage partage</button>
-              <button class="scenario-btn" type="button" data-scenario="docs" data-i18n="scenario.docs">Documents</button>
+        <div class="trip-demo" data-trip-demo>
+          <div class="trip-demo-play">
+            <span class="eyebrow" data-i18n="demo.badge">Simulation guidée · Données fictives</span>
+            <ol class="demo-steps" aria-label="Étapes">
+              <li data-demo-stage="0" aria-current="step" data-i18n="demo.stage.expense">Dépense Trip</li>
+              <li data-demo-stage="1" data-i18n="demo.stage.split">Parts</li>
+              <li data-demo-stage="2" data-i18n="demo.stage.review">Compte, Budget et Analyse</li>
+            </ol>
+            <form id="demo-expense">
+              <h3 data-i18n="demo.dinner">Dîner à Taupō</h3>
+              <label for="demo-amount" data-i18n="demo.amount">Montant payé (NZD)</label>
+              <div class="demo-fields">
+                <input id="demo-amount" type="number" min="2" max="300" step="1" inputmode="numeric" value="60" required aria-describedby="demo-hint" />
+                <button type="submit" class="btn primary" data-i18n="demo.record">Vérifier les parts</button>
+              </div>
+              <p class="demo-note" id="demo-hint" data-i18n="demo.range">Entre 2 et 300 NZD, en dollars entiers dans cette démo.</p>
+            </form>
+            <div id="demo-share" hidden>
+              <h3 id="demo-share-title" tabindex="-1" data-i18n="demo.share.title">Partager la dépense</h3>
+              <p data-i18n="demo.share.text">Tu règles avec ta carte voyage. Avec Alex, chacun paie la moitié du dîner.</p>
+              <dl class="demo-split-preview"><div><dt data-i18n="demo.preview.personal">Ta part</dt><dd id="demo-preview-personal">—</dd></div><div><dt data-i18n="demo.preview.alex">Part d’Alex</dt><dd id="demo-preview-alex">—</dd></div></dl>
+              <button type="button" class="btn primary" id="demo-split" data-i18n="demo.share.action">Enregistrer la dépense</button>
             </div>
-            <div class="range-grid">
-              <div class="range-line">
-                <label><span id="controlLabelA" data-i18n="demo.salary">Montant source</span><output id="salaryOut">1200 EUR</output></label>
-                <input id="salaryRange" type="range" min="700" max="2200" step="50" value="1200" />
-              </div>
-              <div class="range-line">
-                <label><span id="controlLabelB" data-i18n="demo.keep">Reserve a garder</span><output id="keepOut">500 EUR</output></label>
-                <input id="keepRange" type="range" min="0" max="2200" step="50" value="500" />
-              </div>
-              <div class="range-line">
-                <label><span id="controlLabelC" data-i18n="demo.rate">Taux cible simule</span><output id="rateOut">1.085 USD</output></label>
-                <input id="rateRange" type="range" min="0.56" max="0.68" step="0.005" value="0.615" />
-              </div>
+            <div id="demo-review" hidden>
+              <h3 id="demo-review-title" tabindex="-1" data-i18n="demo.review.title">Le paiement n’est pas ta dépense finale</h3>
+              <p data-i18n="demo.review.text">Ton compte a été débité du total. Trip suit ce qu’Alex te doit. Budget et Analyse retiennent ta part personnelle, sans compter deux fois le paiement.</p>
+            </div>
+            <button type="button" class="btn demo-reset" id="demo-reset" hidden data-i18n="demo.reset">Recommencer</button>
+          </div>
+          <div class="trip-demo-results" aria-live="polite">
+            <div class="demo-result-group">
+              <h3 data-i18n="demo.step.account">Compte</h3>
+              <dl>
+                <div><dt data-i18n="demo.balance">Solde du compte</dt><dd id="demo-balance">300 NZD</dd></div>
+                <div><dt data-i18n="demo.paid">Montant débité</dt><dd id="demo-paid">—</dd></div>
+              </dl>
+            </div>
+            <div class="demo-result-group">
+              <h3>Trip</h3>
+              <dl><div><dt data-i18n="demo.owed">Alex te doit</dt><dd id="demo-owed">—</dd></div></dl>
+            </div>
+            <div class="demo-result-group">
+              <h3 data-i18n="demo.step.budget">Budget et Analyse</h3>
+              <dl>
+                <div><dt data-i18n="demo.daily">Budget du jour</dt><dd>150 NZD</dd></div>
+                <div><dt data-i18n="demo.category">Ta part · Repas</dt><dd id="demo-personal">—</dd></div>
+                <div><dt data-i18n="demo.left">Reste à dépenser</dt><dd id="demo-left">150 NZD</dd></div>
+              </dl>
             </div>
           </div>
-
-          <div class="result-card">
-            <div class="result-top">
-              <div>
-                <h3 id="scenarioTitle">Analyse FX</h3>
-                <p id="scenarioText">Tu suis un taux, gardes une reserve et identifies le montant pertinent a convertir.</p>
-              </div>
-              <span class="decision-pill" id="decisionPill">Surveiller taux</span>
-            </div>
-            <div class="result-kpis">
-              <div class="kpi"><small id="resultLabelA" data-i18n="demo.convert">A convertir</small><strong id="convertAud">700 EUR</strong></div>
-              <div class="kpi"><small id="resultLabelB" data-i18n="demo.eur">Equivalent cible</small><strong id="convertEur">760 USD</strong></div>
-              <div class="kpi"><small id="resultLabelC" data-i18n="demo.buffer">Reserve</small><strong id="bufferAud">500 EUR</strong></div>
-            </div>
-            <div class="demo-table" id="scenarioFeed"></div>
-            <div class="bar" style="margin-top:14px;"><i id="confidenceBar" style="width:68%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
-          </div>
         </div>
+        <noscript><p class="demo-note">La partie interactive a besoin de JavaScript. La vidéo reste disponible.</p></noscript>
+        <p class="demo-note" data-i18n="demo.local">La démo de cette page ne se connecte pas à l’app et ne sauvegarde aucune donnée. Elle reproduit ce parcours précis, pas toutes les options de Trip.</p>
       </div>
     </section>
 
@@ -1507,7 +1480,7 @@
             <button class="tab-btn" type="button" data-module="sleep">Sommeil</button>
             <button class="tab-btn" type="button" data-module="work">Travail</button>
             <button class="tab-btn" type="button" data-module="assets">Patrimoine</button>
-            <button class="tab-btn" type="button" data-module="split">Split</button>
+            <button class="tab-btn" type="button" data-module="split">Trip</button>
             <button class="tab-btn" type="button" data-module="assistant">Assistant</button>
           </div>
           <article class="module-card">
@@ -1529,29 +1502,6 @@
           <article class="workflow-card"><b>1</b><h3 data-i18n="workflow.one.title">Capturer</h3><p data-i18n="workflow.one.body">Transaction, recu WhatsApp, facture PDF, depense Trip ou mouvement interne.</p></article>
           <article class="workflow-card"><b>2</b><h3 data-i18n="workflow.two.title">Relier</h3><p data-i18n="workflow.two.body">Les preuves peuvent etre liees aux transactions, assets ou depenses partagees.</p></article>
           <article class="workflow-card"><b>3</b><h3 data-i18n="workflow.three.title">Piloter</h3><p data-i18n="workflow.three.body">Analyse, cashflow, conversion FX et documents importants restent lisibles.</p></article>
-        </div>
-        <div class="journey-lab">
-          <div class="journey-tabs" id="journeyTabs" role="tablist" aria-label="Parcours utilisateur"></div>
-          <div class="journey-stage">
-            <div class="journey-steps" id="journeySteps"></div>
-            <article class="journey-preview" id="journeyPreview" aria-live="polite"></article>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="lab" class="band">
-      <div class="shell">
-        <div class="section-head">
-          <h2 data-i18n="lab.title">Un laboratoire produit a manipuler.</h2>
-          <p data-i18n="lab.lead">Teste quatre gestes reels de BudgetPacker avec des donnees fictives : transaction, partage, entrainement et nutrition.</p>
-        </div>
-        <div class="product-lab">
-          <div class="lab-head">
-            <div><h3 data-i18n="lab.panel.title">Simulateur de modules</h3><p data-i18n="lab.panel.body">Chaque calcul reste local a cette page et ne sauvegarde aucune donnee.</p></div>
-          </div>
-          <div class="lab-tabs" id="productLabTabs" role="tablist" aria-label="Mini demonstrations"></div>
-          <div class="lab-stage" id="productLabStage"></div>
         </div>
       </div>
     </section>
@@ -1600,7 +1550,7 @@
           <p data-i18n="app.lead">La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.</p>
         </div>
         <div class="app-grid">
-          <article class="app-card app-card-primary"><strong>10.5.395</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105395">Précache Android corrigé, dates d’analyse cohérentes en Nouvelle-Zélande et protection contre les écritures hors ligne périmées.</p></article>
+          <article class="app-card app-card-primary"><strong>10.5.397</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105397">APK Android 10.5.397 signé avec la même clé que la version 10.5.395.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.</p></article>
           <article class="app-card"><strong>Projet vivant</strong><h3 data-i18n="app.project.title">Atlas et fresque synchronises</h3><p data-i18n="app.project.body">La version, l inventaire du depot, les preuves de validation et l APK restent lisibles au meme endroit.</p></article>
         </div>
@@ -1613,20 +1563,21 @@
         <div class="changelog">
           <div class="release-command">
             <div>
-              <h3 data-i18n="release.title">Fresque chronologique des APK</h3>
-              <p data-i18n="release.lead">Chaque version garde son contexte : domaine touche, travail realise, resultat attendu et trace de verification.</p>
+              <h3 data-i18n="release.title">Fresque des évolutions par date</h3>
+              <p data-i18n="release.lead">Les évolutions sont classées par date, de la plus récente à la plus ancienne. La version est indiquée en complément lorsqu’elle est connue.</p>
             </div>
-            <div class="release-filters" id="releaseFilters" aria-label="Filtres versions"></div>
+            <div class="release-filters" id="releaseFilters" aria-label="Filtres des évolutions"></div>
           </div>
           <div class="release-spotlight" id="releaseSpotlight"></div>
           <p data-i18n="audit.connected.startup">Audit du 25 octobre : le démarrage connecté est désormais mesuré avec 1 200 transactions synthétiques sur ordinateur et mobile simulé. Validation sur compte réel et téléphone restante.</p>
           <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
           <div class="release-list" id="releaseSource" hidden>
-            <div class="release-row" data-family="docs"><strong>10.5.396 · Audit</strong><span data-i18n="release.audit.20261125">Audit du 25/11 : le sommeil protège l’historique illisible, la suppression de compte peut reprendre après un échec et l’aide comptable a été corrigée. APK 10.5.396 de test partagé en privé ; APK public : 10.5.395. La validation Supabase Auth et Storage reste à faire.</span></div>
-          <div class="release-row"><strong>10.5.396</strong><span data-i18n="release.105396">Nutrition : les saisies modifiées pendant une synchronisation sont conservées ; les écritures sont refusées si la réserve locale est illisible. Correctif web, APK disponible : 10.5.395.</span></div>
-          <div class="release-row"><strong>10.5.395</strong><span data-i18n="release.105395">Précache Android corrigé, dates d’analyse cohérentes en Nouvelle-Zélande et protection contre les écritures hors ligne périmées.</span></div>
-          <div class="release-row"><strong>10.5.394</strong><span data-i18n="release.105394">Les actions hors ligne en erreur sont conservées au redémarrage et la synchronisation est protégée entre onglets compatibles. Le correctif des quotes-parts Trip nommées « Avance » est inclus dans cet APK.</span></div>
-          <div class="release-row"><strong>10.5.393 web</strong><span data-i18n="release.105393">Les quotes-parts Trip restent dans le budget même si leur nom contient « Avance ». La synchronisation protège mieux les actions en attente sur réseau lent ou en cas d’échec du stockage. APK disponible : 10.5.392.</span></div>
+            <div class="release-row" data-release-date="2026-11-26" data-family="docs"><strong>10.5.397</strong><span data-i18n="release.105397">Démo TravelBudget : parcours interactif et vidéo sur ordinateur. Analyse : catégories, dates et taux plus lisibles. Hors ligne : protections renforcées pour les repas et le sommeil. Comptabilité : réglages locaux protégés, aide plus claire. F13 n’est pas inclus.</span></div>
+            <div class="release-row" data-release-date="2026-11-25" data-family="docs"><strong>10.5.396 · Audit</strong><span data-i18n="release.audit.20261125">Audit : vérifications des parcours financiers, du sommeil et de l’aide. Un APK de test a été préparé séparément. La suppression de compte reste exclue de cette livraison.</span></div>
+          <div class="release-row" data-release-date="2026-11-23"><strong>10.5.396</strong><span data-i18n="release.105396">Nutrition : les saisies modifiées pendant une synchronisation sont conservées ; les écritures sont refusées si la réserve locale est illisible. Correctif web, APK disponible : 10.5.395.</span></div>
+          <div class="release-row" data-release-date="2026-11-23"><strong>10.5.395</strong><span data-i18n="release.105395">Précache Android corrigé, dates d’analyse cohérentes en Nouvelle-Zélande et protection contre les écritures hors ligne périmées.</span></div>
+          <div class="release-row" data-release-date="2026-11-22"><strong>10.5.394</strong><span data-i18n="release.105394">Les actions hors ligne en erreur sont conservées au redémarrage et la synchronisation est protégée entre onglets compatibles. Le correctif des quotes-parts Trip nommées « Avance » est inclus dans cet APK.</span></div>
+          <div class="release-row" data-release-date="2026-11-20"><strong>10.5.393 web</strong><span data-i18n="release.105393">Les quotes-parts Trip restent dans le budget même si leur nom contient « Avance ». La synchronisation protège mieux les actions en attente sur réseau lent ou en cas d’échec du stockage. APK disponible : 10.5.392.</span></div>
 <div class="release-row"><strong>01/11/2026</strong><span data-i18n="release.mcpPilot">Connexion ChatGPT : analyses budgétaires, Trip détaillé, comptabilité et patrimoine disponibles sur activation. Documents choisis explicitement, lecture seule. Depuis le 02/11 : tous les documents sur autorisation explicite, Sport et Nutrition avec consentements séparés.</span><a href="/connect-chatgpt.html" data-i18n="release.mcpManage">Gérer mes accès</a></div>
 <div class="release-row"><strong>01/11/2026</strong><span data-i18n="release.mcpAuth">Connexion ChatGPT : cycle serveur des autorisations et registre privé testés. Consentement web et connexion effective encore à réaliser ; aucun accès activé.</span></div>
 <div class="release-row"><strong>01/11/2026</strong><span data-i18n="release.mcpFoundation">Connexion ChatGPT : préparation des outils finance en lecture seule et de leur isolation. Authentification et connexion effective encore à réaliser.</span></div>
@@ -2055,9 +2006,9 @@
         <div class="cta">
           <div>
             <h2 data-i18n="app.cta.title">App Android en test interne.</h2>
-            <p data-i18n="app.cta.body.105395">Installe l’APK 10.5.395 pour tester la nouvelle compilation.</p>
+            <p data-i18n="app.cta.body.105397">Installe l’APK 10.5.397 pour tester la nouvelle compilation.</p>
           </div>
-          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.395-20261123-090000-debug.apk" download data-latest-apk data-i18n="app.cta.button.105395">Télécharger l'APK 10.5.395</a>
+          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.397-20261126-053351-debug.apk" download data-latest-apk data-i18n="app.cta.button.105397">Télécharger l'APK 10.5.397</a>
         </div>
       </div>
     </section>
@@ -2130,7 +2081,7 @@
   </main>
 
   <footer>
-    <div class="shell"><span data-i18n="footer">BudgetPacker - demo publique interactive</span> · <a href="/privacy.html" data-i18n="footer.privacy">Confidentialite</a> · <span data-i18n="footer.owner">Projet de</span> <a href="https://pecloud.fr/" target="_blank" rel="noopener noreferrer">Pecloud</a></div>
+    <div class="shell"><span data-i18n="footer">TravelBudget · Démo publique interactive</span> · <a href="/privacy.html" data-i18n="footer.privacy">Confidentialite</a> · <span data-i18n="footer.owner">Projet de</span> <a href="https://pecloud.fr/" target="_blank" rel="noopener noreferrer">Pecloud</a></div>
   </footer>
 
   <script>
@@ -2138,19 +2089,45 @@
       const copy = {
         fr: {
           "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.lab": "Lab", "nav.atlas": "Atlas", "nav.app": "App", "nav.privacy": "Confidentialite", "nav.tech": "Technique", "nav.cta": "Tester la demo",
-          "hero.eyebrow": "BudgetPacker V2 - demo publique, donnees fictives",
+          "hero.eyebrow": "TravelBudget · Démo publique, données fictives",
           "hero.title": "Ton budget, tes documents et tes objectifs. Un seul cockpit.",
           "hero.lead": "Une app modulaire pour relier cashflow, transactions, taux de change, documents, patrimoine, sport, alimentation, sommeil et charge de travail dans une lecture simple.",
-          "hero.primary": "Ouvrir la demo", "hero.secondary": "Telecharger l'APK", "hero.apk": "App Android",
+          "hero.primary": "Ouvrir la démo", "hero.secondary": "Telecharger l'APK", "hero.apk": "App Android",
           "hero.note": "La page ci-dessous ne charge aucune donnee personnelle : elle montre le produit, les modules et la logique technique.",
           "auth.title": "Acceder a l'app complete", "auth.body": "La demo est publique. Pour synchroniser tes donnees, cree un compte ou connecte-toi.", "auth.signup": "Creer un compte", "auth.login": "Se connecter",
-          "status.release": "Version actuelle", "status.mobile": "Android", "status.mobile.value": "APK de test", "status.owner": "Projet par",
+          "status.release": "Version web", "status.mobile": "Android", "status.mobile.value": "APK de test", "status.owner": "Projet par",
           "mock.cashflow": "Cashflow estime", "mock.signal": "Signal du jour", "mock.projection": "Projection", "mock.feed": "Flux recent",
-          "demo.title": "Analyse taux & conversions, sans le limiter a un pays.",
-          "demo.lead": "Les valeurs sont fictives. Change le scenario, ajuste le montant source, la reserve et le taux cible : la lecture se met a jour comme une mini-version du moteur d'analyse.",
-          "scenario.pvt": "Analyse FX", "scenario.trip": "Depense partagee", "scenario.docs": "Documents",
-          "demo.salary": "Montant source", "demo.keep": "Reserve a garder", "demo.rate": "Taux cible simule",
-          "demo.convert": "A convertir", "demo.eur": "Equivalent cible", "demo.buffer": "Reserve",
+          "demo.title": "Un dîner à Taupō, deux budgets.",
+          "demo.lead": "Saisis un dîner pour deux dans Partage (Trip), vérifie le partage, puis retrouve le paiement dans Compte et ta part dans Budget et Analyse.",
+          "demo.video.caption": "Capture continue de l’application web sur ordinateur, en thème clair. Données fictives, repères en français et fond musical.",
+          "demo.video.cta": "Voir la vidéo",
+          "demo.video.open": "Ouvrir la vidéo séparément",
+          "demo.badge": "Simulation guidée · Données fictives",
+          "demo.stage.expense": "Dépense Trip",
+          "demo.stage.split": "Parts",
+          "demo.stage.review": "Compte, Budget et Analyse",
+          "demo.preview.personal": "Ta part",
+          "demo.preview.alex": "Part d’Alex",
+          "demo.step.account": "Compte",
+          "demo.step.trip": "Trip",
+          "demo.step.budget": "Budget et Analyse",
+          "demo.dinner": "Dîner à Taupō",
+          "demo.amount": "Montant payé (NZD)",
+          "demo.record": "Vérifier les parts",
+          "demo.range": "Entre 2 et 300 NZD, en dollars entiers dans cette démo.",
+          "demo.share.title": "Partager la dépense",
+          "demo.share.text": "Tu règles avec ta carte voyage. Avec Alex, chacun paie la moitié du dîner.",
+          "demo.share.action": "Enregistrer la dépense",
+          "demo.review.title": "Le paiement n’est pas ta dépense finale",
+          "demo.review.text": "Ton compte a été débité du total. Trip suit ce qu’Alex te doit. Budget et Analyse retiennent ta part personnelle, sans compter deux fois le paiement.",
+          "demo.reset": "Recommencer",
+          "demo.balance": "Solde du compte",
+          "demo.paid": "Montant débité",
+          "demo.owed": "Alex te doit",
+          "demo.daily": "Budget du jour",
+          "demo.category": "Ta part · Repas",
+          "demo.left": "Reste à dépenser",
+          "demo.local": "La démo de cette page ne se connecte pas à l’app et ne sauvegarde aucune donnée. Elle reproduit ce parcours précis, pas toutes les options de Trip.",
           "modules.title": "Les modules couvrent le pilotage personnel complet.",
           "modules.lead": "Budget, conversions, documents, patrimoine, sport, alimentation, sommeil et notifications : chaque brique nourrit les autres au lieu de rester isolee.",
           "case.one.kicker": "Cashflow", "case.one.title": "Savoir ce qu'il reste vraiment", "case.one.body": "Wallets, transactions, budget journalier et projections donnent une lecture rapide de la tresorerie.",
@@ -2167,7 +2144,8 @@
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
           "release.105393": "Les quotes-parts Trip restent dans le budget même si leur nom contient « Avance ». La synchronisation protège mieux les actions en attente sur réseau lent ou en cas d’échec du stockage. APK disponible : 10.5.392.",
           "release.105394": "Les actions hors ligne en erreur sont conservées au redémarrage et la synchronisation est protégée entre onglets compatibles. Le correctif des quotes-parts Trip nommées « Avance » est inclus dans cet APK.",
-          "release.audit.20261125": "Audit du 25/11 : le sommeil protège l’historique illisible, la suppression de compte peut reprendre après un échec et l’aide comptable a été corrigée. APK 10.5.396 de test partagé en privé ; APK public : 10.5.395. La validation Supabase Auth et Storage reste à faire.",
+          "release.105397": "Démo TravelBudget : parcours interactif et vidéo sur ordinateur. Analyse : catégories, dates et taux plus lisibles. Hors ligne : protections renforcées pour les repas et le sommeil. Comptabilité : réglages locaux protégés, aide plus claire. F13 n’est pas inclus.",
+          "release.audit.20261125": "Audit : vérifications des parcours financiers, du sommeil et de l’aide. Un APK de test a été préparé séparément. La suppression de compte reste exclue de cette livraison.",
           "release.105396": "Nutrition : les saisies modifiées pendant une synchronisation sont conservées ; les écritures sont refusées si la réserve locale est illisible. Correctif web, APK disponible : 10.5.395.",
           "release.105395": "Précache Android corrigé, dates d’analyse cohérentes en Nouvelle-Zélande et protection contre les écritures hors ligne périmées.",
           "app.apk.body.105395": "Précache Android corrigé, dates d’analyse cohérentes en Nouvelle-Zélande et protection contre les écritures hors ligne périmées.",
@@ -2229,7 +2207,8 @@
           "release.105319": "Stabilisation : choix clair/sombre/systeme sur la page Projet, premier rendu Dashboard fiabilise, Cautions retire de l interface et retours traites archives avec leurs dates.",
           "release.105318": "Interface generale : la page Projet adopte la palette corail/lagon, retire ses panneaux de suivi internes et l ecran de chargement devient plus clair, rassurant et compatible theme sombre.",
           "release.105317": "Stabilisation Dashboard : le Hero premium respecte maintenant le theme sombre, la courbe se recree au changement de theme et les mutations wallet reverifient la connexion avant Supabase.",
-          "app.cta.body.105395": "Installe l’APK 10.5.395 pour tester la nouvelle compilation.", "app.cta.button.105395": "Télécharger l'APK 10.5.395",
+          "app.apk.body.105397": "APK Android 10.5.397 signé avec la même clé que la version 10.5.395.",
+          "app.cta.body.105397": "Installe l’APK 10.5.397 pour tester la nouvelle compilation.", "app.cta.button.105397": "Télécharger l'APK 10.5.397",
           "app.apk.body.105316": "APK debug 10.5.316 prete pour la campagne de tests modules.",
           "app.version.title.105316": "Stabilisation", "app.version.body.105316": "Campagne module par module ouverte.",
           "release.105316": "Stabilisation : les modules sont figes pour les utilisateurs standards. Le nouveau role test donne acces aux modules et a une campagne integree de 45 scenarios avec resultat OK, Pas OK, notes et cloture par module.",
@@ -2352,7 +2331,7 @@
           "release.105296": "Dashboard : les actions onboarding quittent les onclick inline. Guide, Masquer, Reglages, Aide, Creation wallet et Ajout transaction passent par des hooks data-* et un routeur delegue teste.",
           "release.10563": "Alimentation ajoute Melange de fruits rouges comme aliment unique avec une portion de 150 g, et remplace les trois fruits separes du petit-dejeuner du 28/06.",
           "release.10562": "Trip mobile supprime l'ambiguite RPC qui bloquait l'ajout de depenses, reverifie la connexion avant de basculer hors ligne et remplace l'alerte plein ecran. Alimentation ajoute le muesli Tinaberries macadamia et le grand cornet glace fraise.",
-          "release.title": "Fresque chronologique des APK", "release.lead": "Chaque version garde son contexte : domaine touche, travail realise, resultat attendu et trace de verification.", "release.105229": "Nutrition : le panneau Synchro alimentation en attente quitte 48_nutrition_ui.js vers nutritionView.js, avec actions synchroniser, vider et supprimer conservees. Nutrition legacy descend a 126,2 KiB.", "release.105228": "Refactor : les barres Analyse Trip categories/participants quittent 29_trip_v1.js et les options du builder Sport quittent 45_sport_ui.js. Trip legacy descend a 223,6 KiB et Sport a 228,9 KiB.", "release.105227": "Settings : la suppression d'un voyage ne loggue plus d'erreur budget-reference sur un segment supprime. Performance : A traiter quitte le boot, avec boot legacy 979 -> 877,1 KiB.", "release.105226": "Settings : le voyage selectionne manuellement reste prioritaire apres refresh, meme si un autre voyage couvre aujourd'hui. Test utilisateur a refaire sur Reglages voyages/periodes.", "release.105139": "Chantier Analyse : le panneau Référence pays quitte 33_budget_analysis.js vers analysisView.js. Résumé, contexte, grille comparative et état vide sont rendus par un module testé.", "release.105138": "Patrimoine permet maintenant de modifier les liens transaction/Trip d’un asset, leur nature et leur inclusion budget. Analyse extrait aussi la liste Sous-categories vers analysisView.js avec tests.", "release.105137": "Chantier Analyse : le panneau Transports de nuit quitte 33_budget_analysis.js vers analysisView.js. Les economies potentielles, moyennes et lignes detaillees sont rendues par un module teste.", "release.105136": "Chantier Analyse : les insights de tendance, reference, categorie dominante, projection et hors budget quittent 33_budget_analysis.js vers analysisView.js avec tests et contrat anti-retour legacy.", "release.105135": "Chantier Analyse : l'overview de lecture quitte 33_budget_analysis.js vers analysisView.js. Le rendu est teste, expose au legacy par TBAnalysisView et compte dans le budget de taille V11.", "release.105134": "Bootstrap corrige l'ordre de chargement : les scripts Offline, Trip et Sport attendent le bridge Vite avant de lire les stores et catalogues. Le chantier ajoute un contrat anti-regression sur le loader legacy.", "release.105133": "Patrimoine corrige les mouvements lies : les transactions liees s ouvrent en modification, les depenses Trip utilisent le vrai trip actif et les anciens liens sont recharges par ID. Le chantier ajoute un contrat anti-regression Patrimoine-Trip.",
+          "release.title": "Fresque des évolutions par date", "release.lead": "Les évolutions sont classées par date, de la plus récente à la plus ancienne. La version est indiquée en complément lorsqu’elle est connue.", "release.105229": "Nutrition : le panneau Synchro alimentation en attente quitte 48_nutrition_ui.js vers nutritionView.js, avec actions synchroniser, vider et supprimer conservees. Nutrition legacy descend a 126,2 KiB.", "release.105228": "Refactor : les barres Analyse Trip categories/participants quittent 29_trip_v1.js et les options du builder Sport quittent 45_sport_ui.js. Trip legacy descend a 223,6 KiB et Sport a 228,9 KiB.", "release.105227": "Settings : la suppression d'un voyage ne loggue plus d'erreur budget-reference sur un segment supprime. Performance : A traiter quitte le boot, avec boot legacy 979 -> 877,1 KiB.", "release.105226": "Settings : le voyage selectionne manuellement reste prioritaire apres refresh, meme si un autre voyage couvre aujourd'hui. Test utilisateur a refaire sur Reglages voyages/periodes.", "release.105139": "Chantier Analyse : le panneau Référence pays quitte 33_budget_analysis.js vers analysisView.js. Résumé, contexte, grille comparative et état vide sont rendus par un module testé.", "release.105138": "Patrimoine permet maintenant de modifier les liens transaction/Trip d’un asset, leur nature et leur inclusion budget. Analyse extrait aussi la liste Sous-categories vers analysisView.js avec tests.", "release.105137": "Chantier Analyse : le panneau Transports de nuit quitte 33_budget_analysis.js vers analysisView.js. Les economies potentielles, moyennes et lignes detaillees sont rendues par un module teste.", "release.105136": "Chantier Analyse : les insights de tendance, reference, categorie dominante, projection et hors budget quittent 33_budget_analysis.js vers analysisView.js avec tests et contrat anti-retour legacy.", "release.105135": "Chantier Analyse : l'overview de lecture quitte 33_budget_analysis.js vers analysisView.js. Le rendu est teste, expose au legacy par TBAnalysisView et compte dans le budget de taille V11.", "release.105134": "Bootstrap corrige l'ordre de chargement : les scripts Offline, Trip et Sport attendent le bridge Vite avant de lire les stores et catalogues. Le chantier ajoute un contrat anti-regression sur le loader legacy.", "release.105133": "Patrimoine corrige les mouvements lies : les transactions liees s ouvrent en modification, les depenses Trip utilisent le vrai trip actif et les anciens liens sont recharges par ID. Le chantier ajoute un contrat anti-regression Patrimoine-Trip.",
           "release.105132": "Patrimoine rend les actions visibles : Budget / amortissement, Achats lies, Depenses annexes et bandeau Patrimoine V2. Le chantier qualite ajoute un contrat anti-nouvelles-regles-metier dans legacy.",
           "release.105131": "Correctif Patrimoine et Settings : les documents d'asset chargent Documents a la demande, les actions Budget et Docs & mouvements sont visibles, les periodes affichent Modifier la periode, et un lint syntaxe initial verrouille le code modulaire.",
           "release.105130": "Chantier qualite et Patrimoine : Playwright ajoute les parcours critiques desktop/mobile/tablette. Les assets peuvent lier transactions et depenses Trip, exclure un achat du budget et garder l'amortissement mensuel au prorata des parts.", "release.105129": "Chantier performance : budgets par module, mesure source/dist/gzip, commande npm run perf:budget et documentation de suivi sont ajoutes.", "release.105128": "Chantier documentation : architecture V11, couches, domaines verrouilles, lazy-load, procedure de migration et regles de garde sont formalises et testes.", "release.105127": "Chantier performance : le contrat de boot verrouille Dashboard/Settings au demarrage et Trip, Sport, Nutrition, Travail en chargement a l'ouverture.", "release.105126": "Chantier Sport : le domaine est verrouille par contrat avec bibliotheque, programme, timer, historique, sandbox, profil et calculs separes.", "release.105125": "Chantier Trip : le domaine est verrouille par contrat avec regles, repository, store, hydratation offline/SQL, formulaire depense et invitations extraits.", "release.105124": "Chantier domaines : Nutrition est fermee avec repository, store et vues; Travail et Patrimoine sont completes cote separation domaine, avec contrats de delegation.", "release.105123": "Chantier Settings + Dashboard : l overview Voyage migre vers settingsView.js et le rendu onboarding Dashboard demarre dans dashboardView.js, avec contrats et tests dedies.", "release.105122": "Chantier Settings : le rendu Reference de periode migre vers settingsView.js. Pays, recommandation, prevu, ecart, postes et boutons modifier/heriter sont testes.", "release.105121": "Chantier Settings : l'ancien renderManualFxBox et ses helpers globaux sont supprimes. Le panneau FX manuel extrait reste la source unique et le fichier legacy descend encore.", "release.105120": "Chantier Settings : les cartes de periodes migrent vers settingsView.js. Entete, recap, edition budget/devise, reference pays, actions enregistrer/supprimer et etat anglais/francais sont testes.", "release.105119": "Chantier Settings : le rendu FX manuel migre vers settingsView.js. Normalisation des taux, badges, tableau, actions modifier/supprimer et etat vide sont testes.", "release.105118": "Chantier Settings : les handlers du panneau Compte migrent vers settingsAccountController.js. Hydratation profil, WhatsApp, sante, devise, mode UI, reset mot de passe, notifications et seuil cashflow sont testes.", "release.105117": "Chantier Settings : le panneau Compte sort du template inline legacy vers settingsView.js. Les champs profil, sante, devise, mode UI, cashflow et notifications gardent leurs hooks stables.", "release.105116": "Chantier Settings : le shell visuel des reglages sort de 14_settings_periods_ui.js vers settingsView.js. Hero, resumes de cartes, accordéons et etat ouvert/ferme sont testes.", "release.105115": "Sport corrige le plein ecran du timer avec un verrou CSS global, fallback Android/WebKit et nettoyage a la fin. Performance : 31_help_faq.js sort du boot et charge a l'ouverture de l'Aide.", "release.105114": "Chantier performance : Documents et Cautions sortent du demarrage. 43_documents_ui.js et 46_cautions_ui.js chargent seulement a l'ouverture, avec liens Patrimoine et Inbox compatibles lazy.", "release.105113": "Chantier performance : l'ecran Notifications sort du demarrage. 49_notifications_ui.js charge seulement a l'ouverture de l'onglet, pendant que le centre de notifications global reste porte par Inbox.", "release.105112": "Chantier performance : Sport sort du demarrage. 45_sport_ui.js se charge a l'ouverture de l'onglet Sport, et le replay offline charge le domaine avant de synchroniser les seances locales.", "release.105111": "Chantier performance : Trip sort du demarrage. Partage et Membres restent disponibles au boot, puis 29_trip_v1.js et 30_members_admin.js se chargent seulement a l'ouverture avec rendu lazy teste.", "release.105110": "Chantier performance : Travail sort du demarrage. L'onglet Travail reste disponible au boot, puis 47_work_ui.js et 50_work_career_ui.js se chargent seulement a l'ouverture avec rendu lazy teste.", "release.105109": "Chantier performance : Nutrition sort du demarrage. L'onglet Alimentation reste disponible au boot, puis 48_nutrition_ui.js se charge seulement a l'ouverture avec rendu lazy teste.",
@@ -2366,23 +2345,49 @@
           "tech.data.title": "Donnees et securite", "tech.auth": "Supabase Auth gere email, mot de passe, Google OAuth et redirections mobile/web.", "tech.rls": "Les tables exposees restent filtrees par utilisateur ou membership Trip.", "tech.rpc": "Les actions sensibles passent par des fonctions controlees : invitations, acceptations, validations.", "tech.storage": "Documents, preuves et APK versionnees sont stockes dans des buckets dedies.",
           "tech.delivery.title": "Build, mobile et fiabilite", "tech.vite": "Build statique rapide, page projet autonome et assets synchronises vers Android.", "tech.apkflow": "Le script nettoie les APK locaux avant sync, verifie les assets puis upload la release.", "tech.offline": "Lecture locale et actions en attente reduisent les blocages terrain.", "tech.tests": "Vitest couvre les regles metier : transactions, documents, Trip, FX, inbox et wallet.",
           "cta.title": "Pret a montrer le projet.", "cta.body": "Cette page explique BudgetPacker sans compte, sans connexion et sans exposer tes donnees.", "cta.button": "Rejouer la demo",
-          "footer": "BudgetPacker - demo publique interactive", "footer.privacy": "Confidentialite", "footer.owner": "Projet de"
+          "footer": "TravelBudget · Démo publique interactive", "footer.privacy": "Confidentialite", "footer.owner": "Projet de"
         },
         en: {
           "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Journeys", "nav.lab": "Lab", "nav.atlas": "Atlas", "nav.app": "App", "nav.privacy": "Privacy", "nav.tech": "Tech", "nav.cta": "Try the demo",
-          "hero.eyebrow": "BudgetPacker V2 - public demo, fictional data",
+          "hero.eyebrow": "TravelBudget · Public demo, fictional data",
           "hero.title": "Your budget, documents and goals. One cockpit.",
           "hero.lead": "A modular app connecting cashflow, transactions, exchange-rate analysis, conversions, documents, assets, sport, nutrition, sleep and work load.",
           "hero.primary": "Open the demo", "hero.secondary": "Download APK", "hero.apk": "Android app",
           "hero.note": "This page loads no personal data: it presents the product, modules and technical logic.",
           "auth.title": "Open the full app", "auth.body": "The demo is public. To sync your own data, create an account or sign in.", "auth.signup": "Create account", "auth.login": "Sign in",
-          "status.release": "Current version", "status.mobile": "Android", "status.mobile.value": "Test APK", "status.owner": "A project by",
+          "status.release": "Web version", "status.mobile": "Android", "status.mobile.value": "Test APK", "status.owner": "A project by",
           "mock.cashflow": "Estimated cashflow", "mock.signal": "Today's signal", "mock.projection": "Projection", "mock.feed": "Recent feed",
-          "demo.title": "FX and conversion analysis, without tying it to one country.",
-          "demo.lead": "Values are fictional. Switch scenario, adjust the source amount, reserve and target rate: the page updates like a mini version of the analysis engine.",
-          "scenario.pvt": "FX analysis", "scenario.trip": "Shared expense", "scenario.docs": "Documents",
-          "demo.salary": "Source amount", "demo.keep": "Reserve to keep", "demo.rate": "Simulated target rate",
-          "demo.convert": "To convert", "demo.eur": "Target equivalent", "demo.buffer": "Reserve",
+          "demo.title": "Dinner in Taupō, two budgets.",
+          "demo.lead": "Enter a dinner for two in Trip, check the split, then find the payment in Account and your share in Budget and Analysis.",
+          "demo.video.caption": "A continuous recording of the light-theme desktop web app with fictional data, French on-screen text and background music.",
+          "demo.video.cta": "Watch the video",
+          "demo.video.open": "Open the video separately",
+          "demo.badge": "Guided simulation · Fictional data",
+          "demo.stage.expense": "Trip expense",
+          "demo.stage.split": "Shares",
+          "demo.stage.review": "Account, Budget and Analysis",
+          "demo.preview.personal": "Your share",
+          "demo.preview.alex": "Alex’s share",
+          "demo.step.account": "Account",
+          "demo.step.trip": "Trip",
+          "demo.step.budget": "Budget and Analysis",
+          "demo.dinner": "Dinner in Taupō",
+          "demo.amount": "Amount paid (NZD)",
+          "demo.record": "Check shares",
+          "demo.range": "Between 2 and 300 NZD, in whole dollars for this demo.",
+          "demo.share.title": "Split the expense",
+          "demo.share.text": "You pay with your travel card. You and Alex each cover half the dinner.",
+          "demo.share.action": "Save expense",
+          "demo.review.title": "The payment is not your final cost",
+          "demo.review.text": "Your account was debited the full amount. Trip tracks what Alex owes you. Budget and Analysis count only your share, without counting the payment twice.",
+          "demo.reset": "Start over",
+          "demo.balance": "Account balance",
+          "demo.paid": "Amount debited",
+          "demo.owed": "Alex owes you",
+          "demo.daily": "Daily budget",
+          "demo.category": "Your share · Meals",
+          "demo.left": "Left to spend",
+          "demo.local": "This page does not connect to the app or save demo data. It simulates this specific journey, not all Trip features.",
           "modules.title": "Modules cover full personal steering.",
           "modules.lead": "Budget, conversions, documents, assets, sport, nutrition, sleep and notifications: each block feeds the others instead of staying isolated.",
           "case.one.kicker": "Cashflow", "case.one.title": "Know what is really left", "case.one.body": "Wallets, transactions, daily budget and projections give a fast read of cashflow.",
@@ -2399,7 +2404,8 @@
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
           "release.105393": "Trip personal shares stay in the budget even when their name contains Avance. Synchronization better protects pending actions on slow networks or when local storage fails. Available APK: 10.5.392.",
           "release.105394": "Failed offline actions survive restart and synchronization is protected across compatible tabs. This APK also includes the fix for Trip shares named Avance.",
-          "release.audit.20261125": "25 Nov audit: sleep history is protected if unreadable, account deletion can resume after a failure, and accounting help has been corrected. Test APK 10.5.396 was shared privately; public APK: 10.5.395. Supabase Auth and Storage validation is still pending.",
+          "release.105397": "TravelBudget demo: guided walkthrough and desktop video. Analysis: clearer categories, dates, and exchange rates. Offline: stronger meal and sleep protections. Accounting: safer local settings and clearer help. F13 is not included.",
+          "release.audit.20261125": "Audit: checks on financial workflows, sleep and Help. A test APK was prepared separately. Account deletion changes are not part of this release.",
           "release.105396": "Nutrition: edits made during synchronization are retained; writes are refused when pending local data cannot be read. Web fix; available APK: 10.5.395.",
           "release.105395": "Fixed Android precaching, consistent analysis dates in New Zealand, and protection against stale offline writes.",
           "app.apk.body.105395": "Fixed Android precaching, consistent analysis dates in New Zealand, and protection against stale offline writes.",
@@ -2458,7 +2464,8 @@
           "release.105319": "Stabilization: light, dark and system choices on the Project page, reliable first Dashboard render, Cautions removed from the interface, and treated feedback archived with its dates.",
           "release.105318": "General interface: the Project page adopts the coral and lagoon palette, removes internal tracking panels, and the loading screen becomes clearer, reassuring and dark-mode compatible.",
           "release.105317": "Dashboard stabilization: the premium Hero now follows dark mode, the cashflow chart is recreated when the theme changes, and wallet mutations recheck connectivity before Supabase.",
-          "app.cta.body.105395": "Install APK 10.5.395 to test the upgraded build.", "app.cta.button.105395": "Download APK 10.5.395",
+          "app.apk.body.105397": "Android APK 10.5.397 signed with the same key as 10.5.395.",
+          "app.cta.body.105397": "Install APK 10.5.397 to test the upgraded build.", "app.cta.button.105397": "Download APK 10.5.397",
           "app.apk.body.105316": "Debug APK 10.5.316 is ready for the module testing campaign.",
           "app.version.title.105316": "Stabilization", "app.version.body.105316": "The module-by-module campaign is open.",
           "release.105316": "Stabilization: modules are frozen for standard users. The new test role can access modules and an integrated 45-scenario campaign with OK, Not OK, notes and per-module completion.",
@@ -2569,7 +2576,7 @@
           "release.10563": "Nutrition adds Mixed red berries as one food with a 150 g serving and replaces the three separate fruits in the June 28 breakfast.",
           "release.10562": "Mobile Trip removes the ambiguous RPC that blocked expense creation, rechecks connectivity before switching offline and replaces the full-screen alert. Nutrition adds Tinaberries macadamia muesli and a large strawberry soft-serve cone.",
           "release.10538": "Sport removes June 19 duplicates, blocks repeated saves, stabilizes the timer without flicker, enables native big screen and adds Nutrition offline sync.",
-          "release.title": "APK chronological timeline", "release.lead": "Each version keeps its context: touched domain, work done, expected result and verification trace.", "release.105283": "Documents: Share, generated links, Move and Add tag batch modals leave legacy for documentView.js. 43_documents_ui.js drops from 80.5 to 77.2 KiB with render tests and an anti-return contract.", "release.105282": "Documents: shell, folders/subfolders, filters, dropzone and main panel leave legacy for documentView.js. 43_documents_ui.js drops from 87.2 to 80.5 KiB with render tests and an anti-return contract.", "release.105281": "Documents: transaction, Trip expense and Asset link modals leave legacy for documentView.js. 43_documents_ui.js drops from 93.6 to 87.2 KiB with render tests and an anti-return contract.", "release.105280": "Trip: the inline Recap/History tabs fallback is removed. Legacy now calls only tripView.renderTripTabs, with an anti-return contract; Trip drops from 309.4 to 309.1 KiB.", "release.105279": "Boot performance: the initial loader fallback no longer duplicates the futuristic CSS. The normal render stays in index.html, the fallback keeps version, percent and bar, and boot legacy drops from 878.5 to 875.8 KiB.", "release.105278": "Mobile/PWA boot: the initial loading screen becomes progressive, shows the TB version, advances through phases to 100% and disappears only when Dashboard is ready.", "release.105277": "Play Store: the AAB workflow is added. android:bundle-check creates a local sanity bundle, android:bundle-release requires a local keystore and verifies the signature with jarsigner before submission.", "release.105276": "Play Store: npm run links:check now verifies project, privacy and APK links. The check covers 7 local links, 23 anchors, 1 Supabase APK URL and 5 mailto links before submission.", "release.105275": "Nutrition: unused global exports tbSaveHealthGoal and tbHealthGoalTargets are removed. tbLoadHealthGoal stays available for KPIs, and Nutrition drops to 187.0 / 235 KiB.", "release.105274": "Nutrition: the obsolete renderHealth compatibility alias is removed. The health route still redirects to Nutrition, and Nutrition drops to 187.2 / 235 KiB.", "release.105273": "Performance: obsolete Dashboard hero/KPI remount helpers with no remaining calls are removed. Dashboard + Settings drops to 354.7 / 360 KiB and boot legacy to 874.2 / 1500 KiB.", "release.105272": "Performance: an unreachable Dashboard contextual help panel is removed while keeping tbUxDismiss helpers for Transactions and Trip. Dashboard + Settings drops to 356.5 / 360 KiB and total JS to 618.9 / 620 KiB.", "release.105271": "Performance: old Documents batch actions overwritten by the current share, move and tag modals are removed. Documents drops to 107.8 / 115 KiB with an anti-return contract.", "release.105270": "Performance: dead legacy fallbacks are removed from Inbox and Nutrition. Old local Inbox budget helpers and unused Nutrition panels disappear; Inbox drops to 110.5 / 112 KiB and Nutrition to 187.5 / 235 KiB.", "release.105229": "Nutrition: the pending nutrition sync panel leaves 48_nutrition_ui.js for nutritionView.js, keeping sync, clear and delete actions. Nutrition legacy drops to 126.2 KiB.", "release.105228": "Refactor: Trip category/participant analysis bars leave 29_trip_v1.js and Sport builder options leave 45_sport_ui.js. Trip legacy drops to 223.6 KiB and Sport to 228.9 KiB.", "release.105227": "Settings: deleting a trip no longer logs a budget-reference error for a removed segment. Performance: Inbox leaves boot, with boot legacy 979 -> 877.1 KiB.", "release.105226": "Settings: the manually selected trip remains the priority after refresh, even when another trip covers today. User test to rerun on Settings trips/periods.", "release.105139": "Analysis phase: the Country reference panel leaves 33_budget_analysis.js for analysisView.js. Summary, context, comparison grid and empty state are rendered by a tested module.", "release.105138": "Assets can now edit transaction/Trip links, their relation type and budget inclusion. Analysis also extracts the Subcategories list to analysisView.js with tests.", "release.105137": "Analysis phase: the Night transports panel leaves 33_budget_analysis.js for analysisView.js. Potential savings, averages and detailed rows are rendered by a tested module.", "release.105136": "Analysis phase: trend, reference, dominant category, projection and out-of-budget insights leave 33_budget_analysis.js for analysisView.js with tests and a legacy anti-return contract.", "release.105135": "Analysis phase: the reading overview leaves 33_budget_analysis.js for analysisView.js. Rendering is tested, exposed to legacy through TBAnalysisView and counted in the V11 size budget.", "release.105134": "Bootstrap fixes loading order: Offline, Trip and Sport scripts now wait for the Vite bridge before reading stores and catalogs. The phase adds a legacy loader regression contract.", "release.105133": "Assets fix linked movements: linked transactions open in edit mode, Trip expenses use the real active trip and old links are reloaded by ID. The phase adds an Assets-Trip regression contract.",
+          "release.title": "Project changes by date", "release.lead": "Changes are ordered from newest to oldest. The version is shown separately when known.", "release.105283": "Documents: Share, generated links, Move and Add tag batch modals leave legacy for documentView.js. 43_documents_ui.js drops from 80.5 to 77.2 KiB with render tests and an anti-return contract.", "release.105282": "Documents: shell, folders/subfolders, filters, dropzone and main panel leave legacy for documentView.js. 43_documents_ui.js drops from 87.2 to 80.5 KiB with render tests and an anti-return contract.", "release.105281": "Documents: transaction, Trip expense and Asset link modals leave legacy for documentView.js. 43_documents_ui.js drops from 93.6 to 87.2 KiB with render tests and an anti-return contract.", "release.105280": "Trip: the inline Recap/History tabs fallback is removed. Legacy now calls only tripView.renderTripTabs, with an anti-return contract; Trip drops from 309.4 to 309.1 KiB.", "release.105279": "Boot performance: the initial loader fallback no longer duplicates the futuristic CSS. The normal render stays in index.html, the fallback keeps version, percent and bar, and boot legacy drops from 878.5 to 875.8 KiB.", "release.105278": "Mobile/PWA boot: the initial loading screen becomes progressive, shows the TB version, advances through phases to 100% and disappears only when Dashboard is ready.", "release.105277": "Play Store: the AAB workflow is added. android:bundle-check creates a local sanity bundle, android:bundle-release requires a local keystore and verifies the signature with jarsigner before submission.", "release.105276": "Play Store: npm run links:check now verifies project, privacy and APK links. The check covers 7 local links, 23 anchors, 1 Supabase APK URL and 5 mailto links before submission.", "release.105275": "Nutrition: unused global exports tbSaveHealthGoal and tbHealthGoalTargets are removed. tbLoadHealthGoal stays available for KPIs, and Nutrition drops to 187.0 / 235 KiB.", "release.105274": "Nutrition: the obsolete renderHealth compatibility alias is removed. The health route still redirects to Nutrition, and Nutrition drops to 187.2 / 235 KiB.", "release.105273": "Performance: obsolete Dashboard hero/KPI remount helpers with no remaining calls are removed. Dashboard + Settings drops to 354.7 / 360 KiB and boot legacy to 874.2 / 1500 KiB.", "release.105272": "Performance: an unreachable Dashboard contextual help panel is removed while keeping tbUxDismiss helpers for Transactions and Trip. Dashboard + Settings drops to 356.5 / 360 KiB and total JS to 618.9 / 620 KiB.", "release.105271": "Performance: old Documents batch actions overwritten by the current share, move and tag modals are removed. Documents drops to 107.8 / 115 KiB with an anti-return contract.", "release.105270": "Performance: dead legacy fallbacks are removed from Inbox and Nutrition. Old local Inbox budget helpers and unused Nutrition panels disappear; Inbox drops to 110.5 / 112 KiB and Nutrition to 187.5 / 235 KiB.", "release.105229": "Nutrition: the pending nutrition sync panel leaves 48_nutrition_ui.js for nutritionView.js, keeping sync, clear and delete actions. Nutrition legacy drops to 126.2 KiB.", "release.105228": "Refactor: Trip category/participant analysis bars leave 29_trip_v1.js and Sport builder options leave 45_sport_ui.js. Trip legacy drops to 223.6 KiB and Sport to 228.9 KiB.", "release.105227": "Settings: deleting a trip no longer logs a budget-reference error for a removed segment. Performance: Inbox leaves boot, with boot legacy 979 -> 877.1 KiB.", "release.105226": "Settings: the manually selected trip remains the priority after refresh, even when another trip covers today. User test to rerun on Settings trips/periods.", "release.105139": "Analysis phase: the Country reference panel leaves 33_budget_analysis.js for analysisView.js. Summary, context, comparison grid and empty state are rendered by a tested module.", "release.105138": "Assets can now edit transaction/Trip links, their relation type and budget inclusion. Analysis also extracts the Subcategories list to analysisView.js with tests.", "release.105137": "Analysis phase: the Night transports panel leaves 33_budget_analysis.js for analysisView.js. Potential savings, averages and detailed rows are rendered by a tested module.", "release.105136": "Analysis phase: trend, reference, dominant category, projection and out-of-budget insights leave 33_budget_analysis.js for analysisView.js with tests and a legacy anti-return contract.", "release.105135": "Analysis phase: the reading overview leaves 33_budget_analysis.js for analysisView.js. Rendering is tested, exposed to legacy through TBAnalysisView and counted in the V11 size budget.", "release.105134": "Bootstrap fixes loading order: Offline, Trip and Sport scripts now wait for the Vite bridge before reading stores and catalogs. The phase adds a legacy loader regression contract.", "release.105133": "Assets fix linked movements: linked transactions open in edit mode, Trip expenses use the real active trip and old links are reloaded by ID. The phase adds an Assets-Trip regression contract.",
           "release.105132": "Patrimoine rend les actions visibles : Budget / amortissement, Achats lies, Depenses annexes et bandeau Patrimoine V2. Le chantier qualite ajoute un contrat anti-nouvelles-regles-metier dans legacy.",
           "release.105131": "Assets and Settings fix: asset documents lazy-load Documents, Budget and Docs & movements actions are visible, periods show Edit period, and an initial syntax lint protects modular code.", "release.105130": "Quality and Assets phase: Playwright adds critical desktop/mobile/tablet paths. Assets can link wallet transactions and Trip expenses, exclude a purchase from budget and keep monthly depreciation prorated by ownership share.", "release.105129": "Performance phase: module budgets, source/dist/gzip measurement, npm run perf:budget and tracking documentation are added.", "release.105128": "Documentation phase: V11 architecture, layers, locked domains, lazy loading, migration procedure and guard rules are formalized and tested.", "release.105127": "Performance phase: the boot contract locks Dashboard/Settings at startup and Trip, Sport, Nutrition, Work as open-on-demand domains.", "release.105126": "Sport phase: the domain is locked by contract with library, program, timer, history, sandbox, profile and calculations separated.", "release.105125": "Trip phase: the domain is locked by contract with rules, repository, store, offline/SQL hydration, expense form and invitations extracted.", "release.105124": "Domain phase: Nutrition is closed with repository, store and views; Work and Assets are completed on domain separation, with delegation contracts.", "release.105123": "Settings + Dashboard phase: Trip overview moves to settingsView.js and Dashboard onboarding rendering starts in dashboardView.js, with dedicated contracts and tests.", "release.105122": "Settings phase: period reference rendering moves to settingsView.js. Country, recommendation, planned amount, gap, posts and edit/inherit buttons are tested.", "release.105121": "Settings phase: the old renderManualFxBox and global helpers are removed. The extracted manual FX panel remains the single source and the legacy file gets smaller again.", "release.105120": "Settings phase: period cards move to settingsView.js. Header, summary, budget/currency editing, country reference, save/delete actions and French/English states are tested.", "release.105119": "Settings phase: manual FX rendering moves to settingsView.js. Rate normalization, badges, table, edit/delete actions and empty state are tested.", "release.105118": "Settings phase: Account panel handlers move to settingsAccountController.js. Profile hydration, WhatsApp, health, currency, UI mode, password reset, notifications and cashflow threshold are tested.", "release.105117": "Settings phase: the Account panel leaves the inline legacy template for settingsView.js. Profile, health, currency, UI mode, cashflow and notification fields keep stable hooks.", "release.105116": "Settings phase: the visual settings shell leaves 14_settings_periods_ui.js for settingsView.js. Hero, card summaries, accordions and open/closed state are tested.", "release.105115": "Sport fixes timer fullscreen with a global CSS lock, Android/WebKit fallback and cleanup at completion. Performance: 31_help_faq.js leaves startup and loads when Help opens.", "release.105114": "Performance phase: Documents and Deposits leave startup. 43_documents_ui.js and 46_cautions_ui.js load only when opened, with lazy-safe links from Assets and Inbox.", "release.105113": "Performance phase: the Notifications screen leaves startup. 49_notifications_ui.js loads only when the tab opens, while the global notification center remains handled by Inbox.", "release.105112": "Performance phase: Sport leaves startup. 45_sport_ui.js loads when the Sport tab opens, and offline replay loads the domain before syncing local workouts.", "release.105111": "Performance phase: Trip leaves startup. Trip and Members remain available at boot, then 29_trip_v1.js and 30_members_admin.js load only when opened with a tested lazy render.", "release.105110": "Performance phase: Work leaves startup. The Work tab remains available at boot, then 47_work_ui.js and 50_work_career_ui.js load only when the tab opens with a tested lazy render.", "release.105109": "Performance phase: Nutrition leaves startup. The Nutrition tab remains available at boot, then 48_nutrition_ui.js loads only when the tab opens with a tested lazy render.", "release.105108": "Assets phase: transfer, sale and documents join assetView. All five Assets windows now render as tested pure views while preserving transaction, Trip and document links.", "release.105107": "Mixed phase: Asset and owner forms extracted to assetView, and pilot lazy loading loads the Assets domain only when its tab opens.", "release.105106": "Assets phase: the asset card extracts value, depreciation, monthly budget cost, owners, events, documents, actions and realized P&L into a tested pure view.", "release.105105": "Work phase: the career panel extracts its timeline, KPIs, jobs, income, periods and linked folders into a tested pure view.", "release.105104": "Standalone Health removed from runtime: no dedicated tab or view, old calls redirect to Nutrition, and 315 legacy lines are removed.", "release.105103": "Domain phase: Nutrition extracts the active week, Work extracts the weekly load visual, Assets extracts the portfolio summary and Health leaves the standalone roadmap.", "release.105102": "Nutrition phase: goal cockpit, 7-day average and weekly alcohol panel move to nutritionView, with dedicated tests.", "release.105101": "Nutrition phase: quick add, hydration, sleep and weekly history views move to nutritionView with dedicated rendering tests.", "release.105100": "Nutrition phase: view components extracted for progress bars, favorite/recent chips, meal suggestions, week window and meal timeline with dedicated tests.", "release.10599": "Nutrition phase: dedicated store extracted for food cache, meals, items, sleep, selected date, local rows and KPI publishing through entityStore.", "release.10598": "Nutrition phase: local/offline repository foundation extracted for food cache, local rows, sync_id, deduplication, sleep and sync errors, with tests.", "release.10597": "Sport fix: sequence crash fixed, timer state is saved/restored, wake lock and local background notification are wired. Trip forces expense creation back into a mobile-sized sheet.", "release.10596": "Nutrition phase: pure rules extracted for the daily journal, meal-type totals, meal-moment targets, filtered catalog and kcal/macro goals.", "release.10595": "Sport Athletic Profile: the radar becomes a percentile diagnostic with bodyweight ratios, balance, potential, archetypes and automatic priority.", "release.10594": "Sport phase 4: timer handlers leave legacy with tests for start, sets, rests, pause, added set, rope/boxing circuit rounds and early stop.", "release.10593": "Sport phase 4: the strength/weakness profile rendering, per-axis notes and body-composition modal leave legacy with dedicated tests.", "release.10592": "Sport phase 4: the strength/weakness radar leaves legacy, fixes Push by prioritizing bench/incline/overhead press before triceps, and displays stricter bodyweight benchmarks.", "release.10591": "Sport phase 4: pure Adjust-window rules leave legacy. Renumbering, deletion and adding sets to the right exercise are centralized and tested.", "release.10561": "Nutrition fix: the selected meal moment from the timeline or select, such as Lunch, Afternoon snack or Dinner, is preserved during search, add, water and edit instead of falling back to Breakfast.", "release.10560": "Nutrition adds smoother optimistic display, sync status, favorite meals, instant deletion and a lean-bulk goal cockpit with target weight, pace, macros and 7-day alert. Sport moves to radar V2: legs, push, pull, core, cardio and recovery with per-axis explanation.", "release.10559": "Sport fixes the lower-body radar so squat/deadlift count correctly while estimated sets are ignored. Nutrition hardens offline sync, deduplicates server items and fixes June 25 with HiPRO snack and rice, zucchini, onion, creme fraiche and salmon dinner.", "release.10558": "Sport bases the strengths/weaknesses radar on best observed capacities, switches A2 to a 100 kg deadlift, fixes today's workout and Nutrition confirms new entries immediately with a rice, carrot, broccoli, onion and lamb dish.", "release.10557": "Sport fixes the body-composition window: it is rendered outside the module, attached to the body and opens at the top of the screen without scrolling.", "release.10556": "Sport stabilizes the SQL-driven Tuesday-Thursday-Saturday A/B program, avoids configured-workout duplicates, adds a strengths/weaknesses radar and dated body-composition SQL entry.", "release.10555": "Sport adds a real configured-workout editor: editable exercises, library add, ordering, deletion, saving and loading into the current workout.", "release.10554": "Sport Program V3: A/B cockpit, today's workout, catch-up, loads to prepare, exercise-level progression and clearer planning.", "release.10549": "Notifications V2: create, edit and delete templates, slash variables like /budgetdujour and /budgetrestant, upcoming sends, sent history and server-side template rendering.", "release.10548": "Health becomes the goal module: lean bulk, maintenance/recomposition or gentle fat loss, kcal/macro targets, adapted next meal, active Sport/Nutrition/Sleep/Load week and aligned Health KPIs.", "release.10547": "Sport no longer shows the local fallback when the SQL program is loaded, adds a planned week with rest/A-B workouts, and makes Nutrition offline sync idempotent to avoid duplicate foods or water.", "release.10546": "Sport moves the A/B lean-bulk program to SQL: program/session/exercise tables, 6 sessions and 36 exercises for the account, reference loads in sport_exercises and Supabase reads in the app.", "release.10545": "Sport pre-fills the A/B program reference loads: squat 60 kg, bench 50 kg, RDL 80 kg, dumbbells as 2 x kg, explicit bodyweight, builder and timer display.", "release.10544": "Sport adds A/B lean-bulk favorite workouts, Monday-Wednesday-Friday planning and automatic progression on each rep range: 6-10, 8-12, 10-15 or 12-20.", "release.10543": "Nutrition adds lean bulk mode (+300 to +500 kcal) with adapted macros, aligned Health KPI and automatic Sport 8-12 double progression.", "release.10542": "Sport fixes the timer big screen: mobile/Capacitor focus styles are no longer overridden and native fullscreen is requested after render.", "release.10541": "Nutrition adds sourced alcohol tracking: 1 standard drink = 10 g, 7-day chart, daily/weekly judgement, linked alcoholic foods and direct impact on Health/KPI scoring.", "release.10540": "Detailed Sport history, Adjust sandbox with reps/duration/load, add/delete sets, and June 19 strength/plank set backfill with one-arm dumbbell row at 30 kg.", "release.10539": "Removes the snack assistant, adds daily Sport/Work visuals, Work rhythm with weekend rest or rest today, and SQL-merges the 3 June 19 workouts.", "release.10538": "Sport removes June 19 duplicates, blocks repeated saves, stabilizes the timer without flicker, enables native big screen and adds Nutrition offline sync.", "release.10537": "Sport fixes kcal for time-based exercises, applies rest after an added set, repairs June 18 data and adds the Belvita snack.", "release.10536": "Sport timer big screen: focus mode during workouts, much larger clock, adjustable beep volume and sound test button.", "release.10535": "Sport V2: clearer timer timeline, Push/Pull/Legs/Core/Cardio/Boxing filters, richer library and actionable Health KPI cards.", "release.10534": "Stabilized live Sport: add sets in the right position, edit reps, add barbell/dumbbell/plate exercises, align Supabase and repair workout kcal.", "release.10533": "Supabase CLI 2.106.0, local/remote migrations aligned, db push verified, Health V2, smarter Nutrition assistant and live Sport load controls.", "release.10532": "Nutrition removes the duplicate Health recap and adapts upcoming meal kcal targets from meals already logged.", "release.10531": "Snack notifications V2, dedicated Health page, add sets during or after Sport workouts, plus plank and stretch at workout end.", "release.10530": "Snack assistant focused on fromage blanc, muesli, biscuits and fruit, more professional weekly Health recap and Settings WhatsApp loading fix.", "release.10529": "Nutrition/Sport favorites and recents, what to eat now assistant, weekly Health recap and new sourced foods/exercises without duplicate keys.", "release.10528": "Sport and Nutrition libraries enriched with realistic servings, source tags from USDA/FoodData Central and Compendium METs, without duplicate keys.", "release.10527": "Daily Health recap in Nutrition, SQL-persisted sleep, 2L water history and shared Dashboard Health KPI scoring.", "release.10526": "Centralized Health profile: 59 kg, 162 cm and birth date in SQL Settings, then shared reads across Sport, Nutrition, Work, notifications and Health KPI.", "release.10525": "Work recalculated with net MET kcal, birth date saved for BMR, SQL work days recomputed and Health KPI hydrates Nutrition/Sleep on startup.", "release.10524": "Health Score fixed: energy now better tolerates normal time-based gaps and sleep correctly rewards a 7h to 9h night.", "release.10523": "Global Sport library enriched by family: dumbbells, bands, bodyweight, machines, cardio, boxing, barbell, kettlebell and mobility. The June 12 Jump rope workout has its sets back.", "release.10522": "Sport library enriched with dumbbell row and dumbbell exercises, automatic reuse of the last entered load per exercise and resistance bands locked to 0 kg.", "release.10521": "Sport can enter load during the workout, adjust completed sets in a sandbox, correctly recalculate heavy bag calories and the project page better highlights Nutrition, Sleep, Health and Work.", "release.10520": "Nutrition/Health notifications across 5 key day moments, sleep read from the right night, KPI nutrition refresh after entry and heavy bag MET moved to 12.8 with session recalculation.", "release.10519": "Sleep now belongs to the previous night, Health KPI details score points and project page highlights Work, Nutrition and Health.", "release.10518": "Explainable Health KPI, kcal need proportional to current time, Nutrition hover bar history, sleep vs target and catalog removed.", "release.10517": "Sleep entry in Nutrition, visually aligned Health KPI and recovery included in the score.", "release.10516": "Mobile responsive Nutrition, French toast in SQL library, separated drunk-water hydration and Dashboard Health KPI across sport/work/nutrition.", "release.10515": "Nutrition catalog enriched with 101 public dishes, tag-powered filters and a fuller mobile fallback.", "release.10514": "Visual Nutrition V2: kcal ring, meal timeline, simple assistant, filtered catalog and analytical mini week.", "release.10513": "More app-like Nutrition UX, editable meals, needs by meal moment and realistic portions.", "release.10512": "Default date is today, categorized Nutrition history and clearer needs/consumed visual comparison.", "release.10511": "Separate hydration, 307 Nutrition foods, burgers/beers and kcal balance from base + sport + work.", "release.10510": "Stable Nutrition search, servings and richer food library.", "release.1059": "Nutrition loading fix and local-date same-day Sport merge.", "release.1058": "First Nutrition screen and same-day Sport session merge.", "release.1057": "SQL-backed Sport library with offline cache, boxing exercises and Nutrition food/meal/macro foundation.", "release.1056": "Updated Android APK, stronger Sport delete flow, reps/circuit/AMRAP estimates and safer offline Mark as paid.", "release.1055": "Forecast cashflow, simpler notification test and clearer offline queue behavior.", "release.1054": "Richer Sport library: jump rope, table tennis, abs/core and more direct input.", "release.1053": "Analysis compares budget used with projection and hardens KPI/Analysis data refresh.", "release.1052": "Analysis excludes estimated internal-transfer fees and compares paid actual spend with the projection.", "release.1051": "Analysis treats Trip shares paid by someone else as paid, not unpaid.", "release.1050": "More human notifications, emoji/reminder preferences, and unpaid-expense details in Analysis.", "release.1049": "Period-currency notifications, server budget segment calculation, Trip/Immo analysis and table tennis in Sport.", "release.1048": "Dashboard/Analysis budget refresh and Android test APK 10.4.8.", "release.1047": "Fixes Trip Immo analysis, daily budget when returning to Dashboard and editable Work history.", "release.1046": "Fixes Work loading and sport/work KPI recalculation after sync.", "release.1045": "Physical Work module, MET/BMR estimates, sport/work KPIs and server morning/evening notifications.", "release.1044": "Varied budget notifications, auto refresh when returning to the app and cleaner Trip linking.", "release.1043": "Trip fix: reliable wallet ownership validation for expenses paid by me.", "release.1042": "Trip stabilization: core rules, analysis, history filters and transaction RPC payloads.", "release.1041": "Unified Sport creation, default rest, conditional reps/time fields and fixed Android local notifications.", "release.1040": "FCM mobile notifications testable from Admin, morning budget message and Trip validation push.", "release.1039": "Fixed paid recurring occurrences, repair migration, and configured server FCM secrets.", "release.1038": "FCM HTTP v1 push Edge Function and finalized Firebase Android configuration.", "release.1037": "Android mobile push base, token storage, read-on-click notifications and sign-out cleanup.", "release.1036": "More reliable mobile Google auth, cleaner errors, password reset and user notification preferences.", "release.1035": "Clearer project page, detailed technical section and updated APK.", "release.1034": "Secured APK workflow: cleanup before sync, clean build and Storage upload.", "release.1033": "Targeted deposits, document/transaction search and corrected differences.",
           "app.cta.title": "Android app in internal testing.", "app.cta.body": "Download the versioned 10.5.335 APK from Supabase Storage to test the latest Android build.", "app.cta.button": "Download APK 10.5.335",
@@ -2582,38 +2589,7 @@
           "tech.data.title": "Data and security", "tech.auth": "Supabase Auth handles email, password, Google OAuth and mobile/web redirects.", "tech.rls": "Exposed tables remain filtered by user or Trip membership.", "tech.rpc": "Sensitive actions go through controlled functions: invitations, acceptances, validations.", "tech.storage": "Documents, proofs and versioned APKs are stored in dedicated buckets.",
           "tech.delivery.title": "Build, mobile and reliability", "tech.vite": "Fast static build, autonomous project page and assets synced to Android.", "tech.apkflow": "The script cleans local APKs before sync, checks assets, then uploads the release.", "tech.offline": "Local reading and queued actions reduce field blockers.", "tech.tests": "Vitest covers business rules: transactions, documents, Trip, FX, inbox and wallet.",
           "cta.title": "Ready to share the project.", "cta.body": "This page explains BudgetPacker without account, login or personal data exposure.", "cta.button": "Replay the demo",
-          "footer": "BudgetPacker - interactive public demo", "footer.privacy": "Privacy", "footer.owner": "A project by"
-        }
-      };
-
-      const scenarios = {
-        fr: {
-          pvt: {
-            title: "Analyse FX", text: "Tu suis un taux, gardes une reserve et identifies le montant pertinent a convertir.", decision: "Surveiller taux",
-            feed: [["Signal FX", "Taux cible approche"], ["Analyse", "Reserve conservee"], ["Conversion", "Montant propose"]]
-          },
-          trip: {
-            title: "Depense partagee", text: "Une depense de groupe reste pilotee par Split, avec une transaction wallet matchee si besoin.", decision: "Equilibrer le split",
-            feed: [["Depense", "Restaurant - 112 EUR"], ["Participant", "Dimitri doit 56 EUR"], ["Preuve", "Recu restaurant lie"]]
-          },
-          docs: {
-            title: "Documents", text: "Un document peut etre range, tagge, partage et relie a une transaction ou un asset.", decision: "Classer et relier",
-            feed: [["Dossier", "Factures / Voiture"], ["Tags", "Facture, Asset, Toyota"], ["Lien", "Transaction + Asset"]]
-          }
-        },
-        en: {
-          pvt: {
-            title: "FX analysis", text: "Track a rate, keep a reserve and identify the right amount to convert.", decision: "Watch rate",
-            feed: [["FX signal", "Target rate is close"], ["Analysis", "Reserve preserved"], ["Conversion", "Suggested amount"]]
-          },
-          trip: {
-            title: "Shared expense", text: "A group expense stays managed by Split, with a matched wallet transaction when needed.", decision: "Balance split",
-            feed: [["Expense", "Restaurant - 112 EUR"], ["Participant", "Dimitri owes 56 EUR"], ["Proof", "Receipt linked"]]
-          },
-          docs: {
-            title: "Documents", text: "A document can be filed, tagged, shared and linked to a transaction or an asset.", decision: "Classify and link",
-            feed: [["Folder", "Invoices / Car"], ["Tags", "Invoice, Asset, Toyota"], ["Link", "Transaction + Asset"]]
-          }
+          "footer": "TravelBudget · Interactive public demo", "footer.privacy": "Privacy", "footer.owner": "A project by"
         }
       };
 
@@ -2628,7 +2604,7 @@
           sleep: ["Sommeil", "Saisie simple rattachee a la nuit precedente, objectif visible et historique en barres.", ["Nuit precedente", "Objectif 7h30", "Historique"]],
           work: ["Travail", "Fresque professionnelle reliant missions, journees physiques, revenus recus, taux net reel, chomage et dossiers.", ["Parcours", "Taux net", "Dossiers lies"]],
           assets: ["Patrimoine", "Valeur, coproprietaires et cout mensuel estime inclus dans Budget et Analyse sans modifier la tresorerie.", ["Valeur actuelle", "Cout budget", "Documents"]],
-          split: ["Split", "Depenses partagees, participants, matching transaction et recap des remboursements.", ["Parts", "Avances", "Solde par personne"]],
+          split: ["Trip", "Depenses partagees, participants, matching transaction et recap des remboursements.", ["Parts", "Avances", "Solde par personne"]],
           assistant: ["Assistant", "Aide locale contextuelle : signaux rapides, navigation et reponses simples sans appeler d'API externe.", ["Contexte vue", "Signaux", "Guidage"]]
         },
         en: {
@@ -2641,183 +2617,20 @@
           sleep: ["Sleep", "Simple entry attached to the previous night, visible target and bar history.", ["Previous night", "7.5h target", "History"]],
           work: ["Work", "Career timeline linking jobs, physical days, received income, actual net rate, unemployment and folders.", ["Career", "Net rate", "Linked folders"]],
           assets: ["Assets", "Value, co-owners and estimated monthly cost included in Budget and Analysis without changing cashflow.", ["Current value", "Budget cost", "Documents"]],
-          split: ["Split", "Shared expenses, participants, transaction matching and reimbursement recap.", ["Shares", "Advances", "Balance by person"]],
+          split: ["Trip", "Shared expenses, participants, transaction matching and reimbursement recap.", ["Shares", "Advances", "Balance by person"]],
           assistant: ["Assistant", "Local contextual help: quick signals, navigation and simple answers without external API calls.", ["View context", "Signals", "Guidance"]]
         }
       };
 
-      const moduleFigures = {
-        fr: {
-          dashboard: [["Cash net", "3 470 EUR"], ["Budget/jour", "100 EUR"], ["A payer", "280 EUR"], ["La courbe combine solde reel, sorties futures et revenus attendus."]],
-          transactions: [["Transactions", "1 045"], ["A classer", "25"], ["Factures liees", "128"], ["Les lignes Trip et mouvements internes restent protegees dans leur module source."]],
-          subscriptions: [["Regles actives", "8"], ["Echeances", "24"], ["Retards", "1"], ["Chaque devise garde son propre prevu, reel et ecart sans conversion implicite."]],
-          documents: [["Documents", "91"], ["Factures", "6"], ["Liens actifs", "34"], ["Chaque fichier peut etre tagge, range et relie a une transaction ou un asset."]],
-          sport: [["Circuit", "4 tours"], ["Exercices", "12+"], ["Kcal", "est."], ["Reps, repos, abdos/core et AMRAP gardent une estimation de temps et kcal."]],
-          nutrition: [["Besoin", "a l'heure"], ["Eau", "2 000 ml"], ["Repas", "5 moments"], ["Les repas, macros et eau bue alimentent le KPI Sante sans recharger la page."]],
-          sleep: [["Objectif", "7h30"], ["Nuit", "J-1"], ["Historique", "barres"], ["Le sommeil est rattache a la nuit precedente pour expliquer correctement le jour courant."]],
-          work: [["Net recu", "AUD"], ["Heures", "nettes"], ["Taux", "AUD/h"], ["La fresque relie chaque journee, paiement et periode de transition a la bonne mission."]],
-          assets: [["Valeur totale", "7 500 EUR"], ["Documents", "2"], ["Budget", "-62 EUR/mois"], ["Le cout estime nourrit uniquement Budget et Analyse, jamais le solde du portefeuille."]],
-          split: [["Depense", "112 EUR"], ["Participants", "2"], ["A recevoir", "56 EUR"], ["Le matching garde le budget et les remboursements coherents."]],
-          assistant: [["Signaux", "6"], ["Modules lus", "5"], ["Reponses", "Locales"], ["L'assistant guide sans envoyer tes donnees vers une API externe."]]
-        },
-        en: {
-          dashboard: [["Net cash", "3,470 EUR"], ["Daily budget", "100 EUR"], ["To pay", "280 EUR"], ["The curve combines current balance, future outflows and expected income."]],
-          transactions: [["Transactions", "1,045"], ["To classify", "25"], ["Linked invoices", "128"], ["Trip and internal transfer rows stay protected in their source module."]],
-          subscriptions: [["Active rules", "8"], ["Occurrences", "24"], ["Overdue", "1"], ["Each currency keeps its own forecast, actual and variance without implicit conversion."]],
-          documents: [["Documents", "91"], ["Invoices", "6"], ["Active links", "34"], ["Each file can be tagged, filed and linked to a transaction or asset."]],
-          sport: [["Circuit", "4 rounds"], ["Exercises", "12+"], ["Kcal", "est."], ["Reps, rest, abs/core and AMRAP keep estimated time and kcal."]],
-          nutrition: [["Need", "by time"], ["Water", "2,000 ml"], ["Meals", "5 moments"], ["Meals, macros and drunk water feed the Health KPI without page reload."]],
-          sleep: [["Target", "7.5h"], ["Night", "D-1"], ["History", "bars"], ["Sleep is attached to the previous night to explain the current day correctly."]],
-          work: [["Net received", "AUD"], ["Hours", "net"], ["Rate", "AUD/h"], ["The timeline links each work day, payment and transition period to the right job."]],
-          assets: [["Total value", "7,500 EUR"], ["Documents", "2"], ["Budget", "-62 EUR/month"], ["Estimated cost feeds Budget and Analysis only, never wallet balances."]],
-          split: [["Expense", "112 EUR"], ["Participants", "2"], ["To receive", "56 EUR"], ["Matching keeps budget and reimbursements consistent."]],
-          assistant: [["Signals", "6"], ["Modules read", "5"], ["Answers", "Local"], ["The assistant guides without sending your data to an external API."]]
-        }
-      };
-
-      const mockModules = {
-        fr: {
-          dashboard: {
-            title: "Dashboard",
-            cash: "3 470 EUR",
-            signal: "Surveiller taux",
-            rows: [["Cash disponible", "3 470 EUR"], ["A payer", "280 EUR"], ["Revenus attendus", "1 200 EUR"]],
-            chips: ["Projection", "Budget/jour", "Wallets"]
-          },
-          transactions: {
-            title: "Transactions",
-            cash: "Liste filtree",
-            signal: "25 a classer",
-            rows: [["Revenu semaine", "+1 200 EUR"], ["Restaurant groupe", "-112 EUR"], ["Mouvement interne", "EUR -> USD"]],
-            chips: ["Filtres", "Factures", "Verrouillages"]
-          },
-          analysis: {
-            title: "Analyse",
-            cash: "Rythme reel",
-            signal: "+8% vs cible",
-            rows: [["Signal conversion", "EUR/USD"], ["Taux cible", "1.085"], ["Ecart tendance", "+8%"]],
-            chips: ["Categories", "Projection", "Mapping"]
-          },
-          assets: {
-            title: "Assets",
-            cash: "7 500 EUR",
-            signal: "2 documents",
-            rows: [["Voiture", "7 500 EUR"], ["Amortissement", "-62 EUR/mois"], ["Garantie", "Expire dans 72 j"]],
-            chips: ["Valeur", "Coproprietaires", "Garanties"]
-          },
-          documents: {
-            title: "Documents",
-            cash: "91 fichiers",
-            signal: "6 factures",
-            rows: [["Facture voiture.pdf", "Asset lie"], ["Bulletin de paie.pdf", "Tag propose"], ["Contrat travail.pdf", "Partageable"]],
-            chips: ["Tags", "Dossiers", "Liens"]
-          },
-          sport: {
-            title: "Sport",
-            cash: "4 tours",
-            signal: "AMRAP pret",
-            rows: [["Crunch + dips", "Circuit"], ["Repos tours", "60 sec"], ["Ressenti", "OK - kcal estimees"]],
-            chips: ["AMRAP", "Abdos", "Kcal"]
-          },
-          split: {
-            title: "Split",
-            cash: "112 EUR",
-            signal: "56 EUR a recevoir",
-            rows: [["Restaurant", "2 parts"], ["Moi", "+56 EUR"], ["Dimitri", "-56 EUR"]],
-            chips: ["Participants", "Matching", "Remboursements"]
-          }
-        },
-        en: {
-          dashboard: {
-            title: "Dashboard",
-            cash: "3,470 EUR",
-            signal: "Watch rate",
-            rows: [["Available cash", "3,470 EUR"], ["To pay", "280 EUR"], ["Expected income", "1,200 EUR"]],
-            chips: ["Projection", "Daily budget", "Wallets"]
-          },
-          transactions: {
-            title: "Transactions",
-            cash: "Filtered list",
-            signal: "25 to classify",
-            rows: [["Weekly income", "+1,200 EUR"], ["Group restaurant", "-112 EUR"], ["Internal transfer", "EUR -> USD"]],
-            chips: ["Filters", "Invoices", "Locks"]
-          },
-          analysis: {
-            title: "Analysis",
-            cash: "Actual pace",
-            signal: "+8% vs target",
-            rows: [["Conversion signal", "EUR/USD"], ["Target rate", "1.085"], ["Trend delta", "+8%"]],
-            chips: ["Categories", "Projection", "Mapping"]
-          },
-          assets: {
-            title: "Assets",
-            cash: "7,500 EUR",
-            signal: "2 documents",
-            rows: [["Car", "7,500 EUR"], ["Depreciation", "-62 EUR/month"], ["Warranty", "Expires in 72 d"]],
-            chips: ["Value", "Co-owners", "Warranties"]
-          },
-          documents: {
-            title: "Documents",
-            cash: "91 files",
-            signal: "6 invoices",
-            rows: [["Car invoice.pdf", "Asset linked"], ["Payslip.pdf", "Suggested tag"], ["Work contract.pdf", "Shareable"]],
-            chips: ["Tags", "Folders", "Links"]
-          },
-          sport: {
-            title: "Sport",
-            cash: "4 rounds",
-            signal: "AMRAP ready",
-            rows: [["Crunch + dips", "Circuit"], ["Round rest", "60 sec"], ["Feeling", "OK - estimated kcal"]],
-            chips: ["AMRAP", "Abs", "Kcal"]
-          },
-          split: {
-            title: "Split",
-            cash: "112 EUR",
-            signal: "56 EUR to receive",
-            rows: [["Restaurant", "2 shares"], ["Me", "+56 EUR"], ["Dimitri", "-56 EUR"]],
-            chips: ["Participants", "Matching", "Reimbursements"]
-          }
-        }
-      };
-
-      const state = { lang: "fr", scenario: "pvt", module: "dashboard", mockModule: "dashboard", cashRange: "30d", atlasGroup: "all", atlasSelected: "budget.transaction", atlasMeta: null, releaseFilter: "all", activeRelease: "" };
-      let cashVisual = null;
+      const state = { lang: "fr", module: "dashboard", atlasGroup: "all", atlasSelected: "budget.transaction", atlasMeta: null, releaseFilter: "all", activeRelease: "" };
       let atlasVisual = null;
       const $ = (id) => document.getElementById(id);
       const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
-      const fmt = (n, cur) => `${Math.round(n).toLocaleString(state.lang === "fr" ? "fr-FR" : "en-US")} ${cur}`;
       const t = (key) => copy[state.lang][key] || key;
       const releaseFallbacks = new WeakMap();
       const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
       }[char]));
-
-      function setRange(el, min, max, step, value) {
-        el.min = String(min);
-        el.max = String(max);
-        el.step = String(step);
-        if (value !== undefined) el.value = String(value);
-      }
-
-      function configureScenarioControls(reset = false) {
-        const a = $("salaryRange");
-        const b = $("keepRange");
-        const c = $("rateRange");
-        if (!a || !b || !c) return;
-        if (state.scenario === "pvt") {
-          setRange(a, 700, 2200, 50, reset ? 1200 : a.value);
-          setRange(b, 0, Number(a.value), 50, reset ? 500 : Math.min(Number(b.value), Number(a.value)));
-          setRange(c, 0.95, 1.18, 0.005, reset ? 1.085 : c.value);
-        } else if (state.scenario === "trip") {
-          setRange(a, 40, 800, 10, reset ? 112 : a.value);
-          setRange(b, 0, Number(a.value), 10, reset ? 112 : Math.min(Number(b.value), Number(a.value)));
-          setRange(c, 2, 6, 1, reset ? 2 : Math.max(2, Math.round(Number(c.value) || 2)));
-        } else {
-          setRange(a, 10, 180, 5, reset ? 91 : a.value);
-          setRange(b, 0, 100, 5, reset ? 68 : Math.min(100, Number(b.value)));
-          setRange(c, 0, 30, 1, reset ? 6 : Math.round(Number(c.value) || 0));
-        }
-      }
 
       function applyLang(lang) {
         state.lang = lang;
@@ -2832,8 +2645,6 @@
           }
         });
         document.querySelectorAll("[data-lang]").forEach((btn) => btn.classList.toggle("active", btn.dataset.lang === lang));
-        renderMockModule();
-        renderScenario();
         renderModule();
         renderAtlas();
         renderReleaseTimeline();
@@ -2888,6 +2699,12 @@
       function buildReleaseEntries() {
         return Array.from(document.querySelectorAll("#releaseSource .release-row")).map((row, index) => {
           const version = row.querySelector("strong")?.textContent?.trim() || "";
+          const oldDate = version.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+          const date = row.dataset.releaseDate || (oldDate ? `${oldDate[3]}-${oldDate[2]}-${oldDate[1]}` : "");
+          const displayDate = date ? new Intl.DateTimeFormat(state.lang === "fr" ? "fr-FR" : "en-GB", {
+            day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC"
+          }).format(new Date(`${date}T00:00:00Z`)) : "";
+          const displayVersion = oldDate ? "" : version;
           const text = row.querySelector("span")?.textContent?.trim() || "";
           const family = row.dataset.family || detectReleaseFamily(text);
           const title = text.includes(":") ? text.split(":")[0].trim() : text.split(".")[0].trim();
@@ -2895,8 +2712,8 @@
             .split(/(?<=[.!?])\s+/)
             .map((part) => part.trim())
             .filter(Boolean);
-          return { id: String(index), version, text, title: title || version, family, detailParts };
-        }).filter((entry) => entry.version && entry.text);
+          return { id: String(index), date, displayDate, displayVersion, version, text, title: title || version, family, detailParts };
+        }).filter((entry) => entry.version && entry.text).sort((a, b) => b.date.localeCompare(a.date));
       }
 
       function releaseWorkDetails(entry) {
@@ -2906,14 +2723,14 @@
               impact: "Impact utilisateur",
               check: "Verification",
               impactText: "Le module concerne gagne en lisibilite, fiabilite ou vitesse sans casser le parcours existant.",
-              checkText: "Version referencee dans la page projet, build verifiable et regression couverte quand le chantier touche une regle."
+              checkText: "Consulter le détail de la livraison pour connaître les contrôles réalisés."
             }
           : {
               work: "Work done",
               impact: "User impact",
               check: "Verification",
               impactText: "The related module gets clearer, safer or faster without breaking the existing flow.",
-              checkText: "Version listed on the project page, build is traceable and regressions are covered when rules changed."
+              checkText: "See the release details for what was verified."
             };
         const details = entry.detailParts.length ? entry.detailParts : [entry.text];
         return `
@@ -2958,7 +2775,8 @@
         spotlight.innerHTML = `
           <div class="release-spotlight-version">
             <small>${state.lang === "fr" ? "Entrée sélectionnée" : "Selected entry"}</small>
-            <strong>${escapeHtml(active.version)}</strong>
+            <strong>${escapeHtml(active.displayDate || active.version)}</strong>
+            ${active.displayDate && active.displayVersion ? `<span>${escapeHtml(active.displayVersion)}</span>` : ""}
             <span>${escapeHtml(releaseFamilyLabel(active.family))}</span>
           </div>
           <div class="release-spotlight-body">
@@ -2967,17 +2785,17 @@
             <div class="release-meta">
               <span>${escapeHtml(countLabel)}</span>
               <span>${escapeHtml(filterLabel)}</span>
-              <span>${state.lang === "fr" ? "Historique depuis" : "History since"} ${escapeHtml(entries[entries.length - 1].version)}</span>
+              <span>${state.lang === "fr" ? "Historique depuis" : "History since"} ${escapeHtml(entries.filter((entry) => entry.date).at(-1)?.displayDate || entries.at(-1).version)}</span>
             </div>
           </div>
         `;
         timeline.innerHTML = filtered.length
           ? filtered.map((entry) => `
-              <article class="release-card${entry.id === active.id ? " active" : ""}" tabindex="0" data-release-version="${escapeHtml(entry.version)}" data-release-entry="${entry.id}">
+              <article class="release-card${entry.id === active.id ? " active" : ""}" tabindex="0" data-release-version="${escapeHtml(entry.version)}" data-release-date="${escapeHtml(entry.date)}" data-release-entry="${entry.id}">
                 <div class="release-card-head">
-                  <strong class="release-version">${escapeHtml(entry.version)}</strong>
+                  <strong class="release-version">${escapeHtml(entry.displayDate || entry.version)}</strong>
                   <div>
-                    <small>${escapeHtml(releaseFamilyLabel(entry.family))}</small>
+                    <small>${escapeHtml(releaseFamilyLabel(entry.family))}${entry.displayDate && entry.displayVersion ? ` · ${escapeHtml(entry.displayVersion)}` : ""}</small>
                     <h4>${escapeHtml(entry.title)}</h4>
                     <p>${escapeHtml(entry.text)}</p>
                   </div>
@@ -3000,301 +2818,6 @@
             }
           });
         });
-      }
-
-      function renderMockModule() {
-        const data = mockModules[state.lang][state.mockModule] || mockModules[state.lang].dashboard;
-        $("mockTitle").textContent = data.title;
-        if (cashVisual) {
-          cashVisual.destroy();
-          cashVisual = null;
-        }
-        if (state.mockModule === "dashboard") {
-          const labels = state.lang === "fr"
-            ? {
-                live: "Cash pulse actif", available: "Cash disponible", inflow: "Entrees prevues",
-                outflow: "Sorties prevues", signal: "Signal temps reel", confidence: "Confiance",
-                delta: "+8,4% ce mois", inspect: "Survole la courbe"
-              }
-            : {
-                live: "Cash pulse live", available: "Available cash", inflow: "Expected inflow",
-                outflow: "Expected outflow", signal: "Live signal", confidence: "Confidence",
-                delta: "+8.4% this month", inspect: "Hover over the curve"
-              };
-          $("mockMain").innerHTML = `
-            <div class="cash-dashboard">
-              <div class="cash-topline">
-                <span class="cash-live"><i aria-hidden="true"></i>${labels.live}</span>
-                <span class="cash-ai">FORECAST ENGINE // 03</span>
-              </div>
-              <div class="cash-heading">
-                <div>
-                  <small>${labels.available}</small>
-                  <h3 id="mockCash">${data.cash}</h3>
-                </div>
-                <span class="cash-delta" id="cashDelta">${labels.delta}</span>
-              </div>
-              <div class="cash-periods" role="group" aria-label="${state.lang === "fr" ? "Periode de projection" : "Forecast period"}">
-                <button class="cash-period" type="button" data-cash-range="7d">7J</button>
-                <button class="cash-period active" type="button" data-cash-range="30d">30J</button>
-                <button class="cash-period" type="button" data-cash-range="90d">90J</button>
-              </div>
-              <div class="cash-canvas-wrap" id="cashCanvasWrap" aria-label="${labels.inspect}">
-                <canvas id="cashCanvas"></canvas>
-                <div class="cash-tooltip" id="cashTooltip" role="status"></div>
-              </div>
-              <div class="cash-stats">
-                <div class="cash-stat"><span>${labels.available}</span><strong id="cashAvailable">${data.rows[0][1]}</strong></div>
-                <div class="cash-stat"><span>${labels.inflow}</span><strong id="cashInflow">${data.rows[2][1]}</strong></div>
-                <div class="cash-stat"><span>${labels.outflow}</span><strong id="cashOutflow">${data.rows[1][1]}</strong></div>
-              </div>
-              <div class="cash-bottom">
-                <div class="cash-signal">${labels.signal}<strong id="mockSignal">${data.signal}</strong></div>
-                <div class="cash-confidence">${labels.confidence}<i id="cashConfidence" aria-hidden="true"></i><span id="cashConfidenceLabel">74%</span></div>
-              </div>
-              <div class="feed" id="mockFeed" hidden></div>
-            </div>
-          `;
-          document.querySelectorAll("[data-cash-range]").forEach((button) => {
-            button.classList.toggle("active", button.dataset.cashRange === state.cashRange);
-            button.addEventListener("click", () => {
-              state.cashRange = button.dataset.cashRange;
-              document.querySelectorAll("[data-cash-range]").forEach((item) => item.classList.toggle("active", item === button));
-              if (cashVisual) cashVisual.setRange(state.cashRange);
-            });
-          });
-          cashVisual = createCashVisual();
-          updateCashVisual();
-          document.querySelectorAll("[data-mock-module]").forEach((btn) => {
-            btn.classList.toggle("active", btn.dataset.mockModule === state.mockModule);
-          });
-          return;
-        }
-        $("mockMain").innerHTML = `
-          <div class="mock-grid">
-            <div class="panel">
-              <small>${state.lang === "fr" ? "Vue active" : "Active view"}</small>
-              <h3 id="mockCash">${data.cash}</h3>
-              <div class="mock-chipline">${data.chips.map((chip) => `<span class="mock-chip">${chip}</span>`).join("")}</div>
-            </div>
-            <div class="panel">
-              <small>${state.lang === "fr" ? "Signal" : "Signal"}</small>
-              <h3 id="mockSignal">${data.signal}</h3>
-            </div>
-          </div>
-          <div class="panel">
-            <small>${state.lang === "fr" ? "Donnees exemple" : "Sample data"}</small>
-            <div class="${state.mockModule === "documents" ? "mock-doc-grid" : "feed"}" id="mockFeed">
-              ${data.rows.map(([a, b]) => `<div class="feed-row"><strong>${a}</strong><span>${b}</span></div>`).join("")}
-            </div>
-          </div>
-          <div class="panel">
-            <small>${state.lang === "fr" ? "Indicateurs" : "Indicators"}</small>
-            <div class="bars">
-              <div class="bar"><i id="mockBarA" style="width:70%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
-              <div class="bar"><i id="mockBarB" style="width:44%;background:linear-gradient(90deg,var(--amber),var(--pink));"></i></div>
-              <div class="bar"><i id="mockBarC" style="width:60%;background:linear-gradient(90deg,var(--blue),var(--violet));"></i></div>
-            </div>
-          </div>
-        `;
-        document.querySelectorAll("[data-mock-module]").forEach((btn) => {
-          btn.classList.toggle("active", btn.dataset.mockModule === state.mockModule);
-        });
-      }
-
-      function createCashVisual() {
-        const canvas = $("cashCanvas");
-        const wrap = $("cashCanvasWrap");
-        const tooltip = $("cashTooltip");
-        if (!canvas || !wrap) return null;
-        const context = canvas.getContext("2d");
-        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        let frame = 0;
-        let width = 0;
-        let height = 0;
-        let hoverIndex = -1;
-        let range = state.cashRange;
-        let model = { base: 3470, inflow: 1200, outflow: 280, confidence: 74 };
-        let points = [];
-
-        const profiles = {
-          "7d": [0, .04, .025, .11, .08, .17, .23],
-          "30d": [0, .05, .02, .16, .12, .24, .2, .31, .29, .42, .5],
-          "90d": [0, .08, .04, .18, .13, .29, .22, .39, .34, .51, .47, .62, .7]
-        };
-
-        function resize() {
-          const rect = wrap.getBoundingClientRect();
-          const ratio = Math.min(2, window.devicePixelRatio || 1);
-          width = Math.max(1, rect.width);
-          height = Math.max(1, rect.height);
-          canvas.width = Math.round(width * ratio);
-          canvas.height = Math.round(height * ratio);
-          canvas.style.width = `${width}px`;
-          canvas.style.height = `${height}px`;
-          context.setTransform(ratio, 0, 0, ratio, 0, 0);
-          makePoints();
-          if (reducedMotion) draw(0);
-        }
-
-        function makePoints() {
-          const profile = profiles[range] || profiles["30d"];
-          const span = Math.max(260, model.inflow - model.outflow);
-          const values = profile.map((value, index) => model.base + value * span + Math.sin(index * 1.7) * span * .045);
-          const min = Math.min(...values) - span * .08;
-          const max = Math.max(...values) + span * .08;
-          points = values.map((value, index) => ({
-            x: 10 + index * ((width - 20) / Math.max(1, values.length - 1)),
-            y: height - 14 - ((value - min) / Math.max(1, max - min)) * (height - 34),
-            value
-          }));
-        }
-
-        function traceLine() {
-          context.beginPath();
-          points.forEach((point, index) => {
-            if (index === 0) context.moveTo(point.x, point.y);
-            else {
-              const previous = points[index - 1];
-              const middle = (previous.x + point.x) / 2;
-              context.bezierCurveTo(middle, previous.y, middle, point.y, point.x, point.y);
-            }
-          });
-        }
-
-        function draw(time) {
-          context.clearRect(0, 0, width, height);
-          if (!points.length) return;
-          const gradient = context.createLinearGradient(0, 0, width, 0);
-          gradient.addColorStop(0, "#8b5cf6");
-          gradient.addColorStop(.48, "#22d3ee");
-          gradient.addColorStop(1, "#2dd4bf");
-
-          traceLine();
-          context.lineWidth = 8;
-          context.strokeStyle = "rgba(34, 211, 238, .08)";
-          context.stroke();
-          traceLine();
-          context.lineWidth = 2;
-          context.strokeStyle = gradient;
-          context.shadowColor = "rgba(34, 211, 238, .65)";
-          context.shadowBlur = 13;
-          context.stroke();
-          context.shadowBlur = 0;
-
-          const area = context.createLinearGradient(0, 0, 0, height);
-          area.addColorStop(0, "rgba(34, 211, 238, .22)");
-          area.addColorStop(1, "rgba(34, 211, 238, 0)");
-          traceLine();
-          context.lineTo(points[points.length - 1].x, height);
-          context.lineTo(points[0].x, height);
-          context.closePath();
-          context.fillStyle = area;
-          context.fill();
-
-          points.forEach((point, index) => {
-            const active = index === hoverIndex;
-            context.beginPath();
-            context.arc(point.x, point.y, active ? 5 : 2.4, 0, Math.PI * 2);
-            context.fillStyle = active ? "#ffffff" : "#67e8f9";
-            context.shadowColor = "#22d3ee";
-            context.shadowBlur = active ? 18 : 8;
-            context.fill();
-            context.shadowBlur = 0;
-          });
-
-          if (!reducedMotion && points.length > 1) {
-            const progress = (time * .00012) % 1;
-            const segment = Math.min(points.length - 2, Math.floor(progress * (points.length - 1)));
-            const local = progress * (points.length - 1) - segment;
-            const start = points[segment];
-            const end = points[segment + 1];
-            context.beginPath();
-            context.arc(start.x + (end.x - start.x) * local, start.y + (end.y - start.y) * local, 3.4, 0, Math.PI * 2);
-            context.fillStyle = "#ffffff";
-            context.shadowColor = "#67e8f9";
-            context.shadowBlur = 18;
-            context.fill();
-            context.shadowBlur = 0;
-            frame = requestAnimationFrame(draw);
-          }
-        }
-
-        function move(event) {
-          const rect = canvas.getBoundingClientRect();
-          const x = event.clientX - rect.left;
-          const y = event.clientY - rect.top;
-          let nearest = -1;
-          let distance = 34;
-          points.forEach((point, index) => {
-            const nextDistance = Math.hypot(point.x - x, point.y - y);
-            if (nextDistance < distance) {
-              nearest = index;
-              distance = nextDistance;
-            }
-          });
-          hoverIndex = nearest;
-          if (nearest >= 0) {
-            const point = points[nearest];
-            const suffix = state.lang === "fr" ? "Projection" : "Forecast";
-            tooltip.innerHTML = `<strong>${fmt(point.value, "EUR")}</strong>${suffix} ${nearest + 1}/${points.length}`;
-            tooltip.style.left = `${point.x}px`;
-            tooltip.style.top = `${point.y}px`;
-            tooltip.classList.add("visible");
-          } else {
-            tooltip.classList.remove("visible");
-          }
-          if (reducedMotion) draw(0);
-        }
-
-        const observer = typeof ResizeObserver === "function" ? new ResizeObserver(resize) : null;
-        if (observer) observer.observe(wrap);
-        else window.addEventListener("resize", resize);
-        canvas.addEventListener("pointermove", move);
-        canvas.addEventListener("pointerleave", () => {
-          hoverIndex = -1;
-          tooltip.classList.remove("visible");
-          if (reducedMotion) draw(0);
-        });
-        resize();
-        if (!reducedMotion) frame = requestAnimationFrame(draw);
-
-        return {
-          setRange(nextRange) {
-            range = nextRange;
-            makePoints();
-            if (reducedMotion) draw(0);
-          },
-          update(nextModel) {
-            model = { ...model, ...nextModel };
-            makePoints();
-            if (reducedMotion) draw(0);
-          },
-          destroy() {
-            cancelAnimationFrame(frame);
-            if (observer) observer.disconnect();
-            else window.removeEventListener("resize", resize);
-          }
-        };
-      }
-
-      function updateCashVisual(confidence = 74) {
-        if (state.mockModule !== "dashboard") return;
-        const amount = Number($("salaryRange")?.value || 1200);
-        const reserved = Math.min(Number($("keepRange")?.value || 500), amount);
-        const available = Math.max(0, amount - reserved) + 2970;
-        const inflow = state.scenario === "docs" ? Math.round(amount) : amount;
-        const outflow = state.scenario === "docs" ? Math.round(amount - (amount * reserved / 100)) : reserved;
-        setText("cashAvailable", state.scenario === "docs" ? `${Math.round(amount)} docs` : fmt(available, "EUR"));
-        setText("cashInflow", state.scenario === "docs" ? `${Math.round(reserved)}%` : fmt(inflow, "EUR"));
-        setText("cashOutflow", state.scenario === "docs" ? `${Math.round(Number($("rateRange")?.value || 0))} alertes` : fmt(outflow, "EUR"));
-        setText("cashConfidenceLabel", `${Math.round(confidence)}%`);
-        if ($("cashConfidence")) $("cashConfidence").style.setProperty("--cash-confidence", `${Math.round(confidence)}%`);
-        if ($("cashDelta")) {
-          const delta = Math.max(-9.9, Math.min(18.9, ((amount - reserved) / Math.max(1, amount)) * 12));
-          $("cashDelta").textContent = `${delta >= 0 ? "+" : ""}${delta.toLocaleString(state.lang === "fr" ? "fr-FR" : "en-US", { maximumFractionDigits: 1 })}%`;
-        }
-        if (cashVisual) cashVisual.update({ base: available, inflow: Math.max(180, inflow), outflow: Math.max(60, outflow), confidence });
       }
 
       function applyPublicAtlasMeta() {
@@ -3520,130 +3043,26 @@
         };
       }
 
-      function renderScenario() {
-        configureScenarioControls(false);
-        const a = Number($("salaryRange").value);
-        const b = Number($("keepRange").value);
-        const c = Number($("rateRange").value);
-        const s = scenarios[state.lang][state.scenario];
-        setText("scenarioTitle", s.title);
-        setText("scenarioText", s.text);
-        let decision = s.decision;
-        let confidence = 68;
-        let feed = s.feed;
-
-        if (state.scenario === "pvt") {
-          const salary = a;
-          const keep = Math.min(b, salary);
-          const rate = c;
-          const convert = Math.max(0, salary - keep);
-          const target = convert * rate;
-          confidence = Math.max(18, Math.min(92, 36 + ((rate - .95) / .23) * 38 + (keep / Math.max(1, salary)) * 18));
-          decision = rate >= 1.08 ? (state.lang === "fr" ? "Convertir partiellement" : "Convert partially") : s.decision;
-          setText("controlLabelA", state.lang === "fr" ? "Montant source" : "Source amount");
-          setText("controlLabelB", state.lang === "fr" ? "Reserve a garder" : "Reserve to keep");
-          setText("controlLabelC", state.lang === "fr" ? "Taux cible simule" : "Simulated target rate");
-          setText("salaryOut", fmt(salary, "EUR"));
-          setText("keepOut", fmt(keep, "EUR"));
-          setText("rateOut", `${rate.toFixed(3)} USD`);
-          setText("resultLabelA", state.lang === "fr" ? "A convertir" : "To convert");
-          setText("resultLabelB", state.lang === "fr" ? "Equivalent cible" : "Target equivalent");
-          setText("resultLabelC", state.lang === "fr" ? "Reserve" : "Reserve");
-          setText("convertAud", fmt(convert, "EUR"));
-          setText("convertEur", fmt(target, "USD"));
-          setText("bufferAud", fmt(keep, "EUR"));
-          feed = [
-            ...s.feed,
-            [state.lang === "fr" ? "Conversion" : "Conversion", `${fmt(convert, "EUR")} -> ${fmt(target, "USD")}`]
-          ];
-        } else if (state.scenario === "trip") {
-          const total = a;
-          const paid = Math.min(b, total);
-          const participants = Math.max(2, Math.round(c));
-          const myShare = total / participants;
-          const balance = paid - myShare;
-          confidence = Math.max(18, Math.min(92, 35 + participants * 8 + (paid / Math.max(1, total)) * 24));
-          decision = balance >= 0 ? (state.lang === "fr" ? "A recevoir" : "To receive") : (state.lang === "fr" ? "A rembourser" : "To reimburse");
-          setText("controlLabelA", state.lang === "fr" ? "Depense totale" : "Total expense");
-          setText("controlLabelB", state.lang === "fr" ? "Montant paye par moi" : "Amount I paid");
-          setText("controlLabelC", state.lang === "fr" ? "Participants" : "Participants");
-          setText("salaryOut", fmt(total, "EUR"));
-          setText("keepOut", fmt(paid, "EUR"));
-          setText("rateOut", String(participants));
-          setText("resultLabelA", state.lang === "fr" ? "Ma part" : "My share");
-          setText("resultLabelB", decision);
-          setText("resultLabelC", state.lang === "fr" ? "Participants" : "Participants");
-          setText("convertAud", fmt(myShare, "EUR"));
-          setText("convertEur", fmt(Math.abs(balance), "EUR"));
-          setText("bufferAud", String(participants));
-          feed = [
-            [state.lang === "fr" ? "Depense partagee" : "Shared expense", fmt(total, "EUR")],
-            [state.lang === "fr" ? "Part/personne" : "Share/person", fmt(myShare, "EUR")],
-            [state.lang === "fr" ? "Matching transaction" : "Matched transaction", paid > 0 ? fmt(paid, "EUR") : "-"]
-          ];
-        } else {
-          const docs = Math.round(a);
-          const linkedPct = Math.round(b);
-          const expiring = Math.round(c);
-          const linked = Math.round(docs * linkedPct / 100);
-          const unlinked = Math.max(0, docs - linked);
-          confidence = Math.max(18, Math.min(92, linkedPct - expiring + 30));
-          decision = expiring > 0 ? (state.lang === "fr" ? "Prioriser expirations" : "Prioritize expirations") : s.decision;
-          setText("controlLabelA", state.lang === "fr" ? "Documents charges" : "Loaded documents");
-          setText("controlLabelB", state.lang === "fr" ? "Pourcentage lie" : "Linked percentage");
-          setText("controlLabelC", state.lang === "fr" ? "Expire bientot" : "Expiring soon");
-          setText("salaryOut", String(docs));
-          setText("keepOut", `${linkedPct}%`);
-          setText("rateOut", String(expiring));
-          setText("resultLabelA", state.lang === "fr" ? "Documents lies" : "Linked documents");
-          setText("resultLabelB", state.lang === "fr" ? "Non lies" : "Unlinked");
-          setText("resultLabelC", state.lang === "fr" ? "A surveiller" : "To watch");
-          setText("convertAud", String(linked));
-          setText("convertEur", String(unlinked));
-          setText("bufferAud", String(expiring));
-          feed = [
-            [state.lang === "fr" ? "Factures" : "Invoices", `${Math.max(1, Math.round(docs * .12))}`],
-            [state.lang === "fr" ? "Liens actifs" : "Active links", String(linked)],
-            [state.lang === "fr" ? "Partage possible" : "Shareable", state.lang === "fr" ? "Oui" : "Yes"]
-          ];
-        }
-
-        setText("decisionPill", decision);
-        if ($("confidenceBar")) $("confidenceBar").style.width = `${confidence}%`;
-        if ($("scenarioFeed")) $("scenarioFeed").innerHTML = feed.map(([x,y]) => `<div class="feed-row"><strong>${x}</strong><span>${y}</span></div>`).join("");
-        if (state.mockModule === "dashboard") {
-          setText("mockCash", state.scenario === "docs" ? `${Math.round(a)} docs` : fmt(Math.max(0, a - Math.min(b, a)) + 2970, "EUR"));
-          setText("mockSignal", decision);
-          if ($("mockFeed")) $("mockFeed").innerHTML = feed.slice(0, 3).map(([x,y]) => `<div class="feed-row"><strong>${x}</strong><span>${y}</span></div>`).join("");
-        }
-        if ($("mockBarA")) $("mockBarA").style.width = `${Math.max(20, Math.min(95, (b / Math.max(1, a)) * 100))}%`;
-        if ($("mockBarB")) $("mockBarB").style.width = `${Math.max(20, Math.min(95, ((a - Math.min(b, a)) / Math.max(1, a)) * 100))}%`;
-        if ($("mockBarC")) $("mockBarC").style.width = `${Math.round(confidence)}%`;
-        updateCashVisual(confidence);
-        document.querySelectorAll("[data-scenario]").forEach((btn) => btn.classList.toggle("active", btn.dataset.scenario === state.scenario));
-      }
-
       function renderModule() {
         const [title, text, proof] = modules[state.lang][state.module];
-        const figures = moduleFigures[state.lang][state.module] || [];
         $("moduleTitle").textContent = title;
         $("moduleText").textContent = text;
-        $("moduleProof").innerHTML = proof.map((p, index) => {
-          const fig = figures[index] || [p, ""];
-          return `<div class="proof"><strong>${fig[1]}</strong><span>${p} - ${fig[0]}</span></div>`;
-        }).join("") + `<div class="proof" style="grid-column:1/-1;"><strong>${state.lang === "fr" ? "Ce que tu peux tester" : "What you can test"}</strong><span>${figures[3] || ""}</span></div>`;
+        $("moduleProof").replaceChildren(...proof.map((label) => {
+          const detail = document.createElement("div");
+          detail.className = "proof";
+          detail.textContent = label;
+          return detail;
+        }));
         document.querySelectorAll("[data-module]").forEach((btn) => btn.classList.toggle("active", btn.dataset.module === state.module));
       }
 
       document.querySelectorAll("[data-lang]").forEach((btn) => btn.addEventListener("click", () => applyLang(btn.dataset.lang)));
-      document.querySelectorAll("[data-scenario]").forEach((btn) => btn.addEventListener("click", () => { state.scenario = btn.dataset.scenario; configureScenarioControls(true); renderScenario(); }));
       document.querySelectorAll("[data-module]").forEach((btn) => btn.addEventListener("click", () => { state.module = btn.dataset.module; renderModule(); }));
-      document.querySelectorAll("[data-mock-module]").forEach((btn) => btn.addEventListener("click", () => { state.mockModule = btn.dataset.mockModule; renderMockModule(); renderScenario(); }));
-      ["salaryRange", "keepRange", "rateRange"].forEach((id) => $(id).addEventListener("input", renderScenario));
       applyLang("fr");
       loadPublicAtlasMeta();
     })();
 </script>
   <script src="/project-enhancements.js"></script>
+  <script src="/project-demo.js"></script>
 </body>
 </html>

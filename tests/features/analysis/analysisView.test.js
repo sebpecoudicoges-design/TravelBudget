@@ -361,3 +361,30 @@ describe('Analysis view helpers', () => {
     expect(renderAnalysisReferenceMix({ model: { referenceComparisonSeries: [] } })).toContain('Aucune référence pays active');
   });
 });
+
+
+it.each(['fx', 'none'])('leaves general insights visible without treating optional reference as zero (%s)', referenceStatus => {
+  const model = { base: 'EUR', referenceStatus, missingReferenceFx: referenceStatus === 'fx' ? ['ABC → EUR'] : [],
+    referencePerDay: 29, comparablePerDay: 45, avgPerDay: 45, budgetPerDay: 30, projection: 135,
+    totalBudget: 90, comparableDays: 3, excludedPerDay: 2,
+    topCategories: [['Lunch', 45]], unmappedCategorySeries: [{ name: 'Extras', actual: 10 }],
+    referenceComparisonSeries: [{ name: 'Repas', actualPerDay: 45, referencePerDay: 29 }],
+  };
+  const overview = renderAnalysisOverviewStrip({ model, isEn: true, t: (key) => key });
+  const insights = renderAnalysisInsights({ model, isEn: true });
+  expect(overview).not.toContain('analysis.reference.comparable_days');
+  expect(insights).toContain('Pace above target');
+  expect(insights).toContain('Dominant category');
+  expect(insights).not.toMatch(/Actual above reference|Actual below reference|referenced comparable scope|Map next/);
+  const below = renderAnalysisInsights({ model: { ...model, avgPerDay: 15 }, isEn: true });
+  expect(below).toContain('Pace under control');
+  expect(below).not.toContain('referenced comparable scope');
+  const panel = renderAnalysisReferenceSummary({ model, isEn: true });
+  expect(panel).toContain('role="status"');
+  expect(panel).toContain(referenceStatus === 'fx' ? 'ABC → EUR' : 'No active country reference');
+  expect(panel).not.toContain('29');
+  expect(renderAnalysisReferenceMix({ model })).toBe('');
+  const delta = renderAnalysisProgressDeltaCard({ referenceAvailable: false, deltaReferenceAmount: 50, isEn: true });
+  expect(delta).toContain('Vs app budget');
+  expect(delta).not.toContain('Vs country reference');
+});

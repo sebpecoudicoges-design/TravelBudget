@@ -7,6 +7,7 @@ describe('nutrition domain extraction contract', () => {
   const main = fs.readFileSync('src/main.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/48_nutrition_ui.js', 'utf8');
   const repository = fs.readFileSync('src/data/nutritionRepository.js', 'utf8');
+  const mealReplay = fs.readFileSync('src/data/nutritionMealReplayRepository.js', 'utf8');
   const store = fs.readFileSync('src/features/nutrition/nutritionStore.js', 'utf8');
   const view = fs.readFileSync('src/features/nutrition/nutritionView.js', 'utf8');
   const offlineQueue = fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8');
@@ -107,8 +108,9 @@ describe('nutrition domain extraction contract', () => {
 
   it('keeps the extracted modules responsible for their domain surfaces', () => {
     expect(repository).toContain('async syncLocalRow');
-    expect(repository).toContain('async upsertMeal');
-    expect(repository).toContain('async insertMealItem');
+    expect(repository).toContain('nutritionMealReplayRepository.js');
+    expect(mealReplay).toContain('ignoreDuplicates: true');
+    expect(mealReplay).toContain('syncNutritionLocalMeal');
     expect(repository).toContain('nutritionSleepRepository.js');
     expect(store).toContain('hydrateRemote');
     expect(store).toContain('hydrateLocal');
@@ -124,7 +126,7 @@ describe('nutrition domain extraction contract', () => {
     expect(view).toContain('data-nutrition-water-delete');
     expect(repository).toContain('consumed_time');
     expect(legacy).toContain('deleteWaterEntry');
-    expect(legacy).toContain('.select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,consumed_time,created_at")');
+    expect(legacy).toContain('.select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,consumed_time,created_at,sync_id")');
     expect(view).toContain('renderGoalCockpit');
     expect(legacy).toContain('cookingEditorOpen');
     expect(legacy).toContain('id="nutrition-cook-start"');

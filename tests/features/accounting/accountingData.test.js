@@ -10,15 +10,36 @@ it('reads every page in stable ID order and propagates errors without partial su
 });
 it('isolates local configuration per account and travel and reports storage failures', () => {
   const entries = new Map();
-  const storage = { getItem: key => entries.get(key), setItem: (key, value) => entries.set(key, value) };
-  saveSettings(storage, 'alice', 'trip', { mapping: { x: '601' } });
-  expect(readSettings(storage, 'alice', 'trip')).toEqual({ mapping: { x: '601' } });
-  expect(readSettings(storage, 'bob', 'trip')).toEqual({});
-  expect(readSettings(storage, 'alice', 'other')).toEqual({});
-  entries.set(settingsKey('alice', 'trip'), '{invalid');
-  expect(readSettings(storage, 'alice', 'trip')).toEqual({});
-  expect(() => saveSettings({ setItem() { throw new Error('full'); } }, 'alice', 'trip', {})).toThrow('full');
+  const storage = { getItem: key => entries.get(key) ?? null, setItem: (key, value) => entries.set(key, value) };
+  const [initial, raw] = readSettings(storage, 'alice', 'trip');
+  expect(initial).toEqual({});
+  const saved = { mapping: { x: '601' } };
+  const written = saveSettings(storage, 'alice', 'trip', saved, raw);
+  expect(readSettings(storage, 'alice', 'trip')).toEqual([saved, written]);
+  expect(readSettings(storage, 'bob', 'trip')).toEqual([{}, null]);
+  expect(readSettings(storage, 'alice', 'other')).toEqual([{}, null]);
+  expect(() => saveSettings({ ...storage, setItem() { throw new Error('full'); } }, 'alice', 'trip', {}, written)).toThrow('full');
+  expect(readSettings(storage, 'alice', 'trip')[0]).toEqual(saved);
 });
+
+it.each(['{invalid', 'null', '[]', '0', ''])('leaves unreadable settings intact (%j)', raw => {
+  const storage = { getItem: () => raw, setItem() { throw new Error('unexpected write'); } };
+  expect(() => readSettings(storage, 'alice', 'trip')).toThrow();
+  expect(() => saveSettings(storage, 'alice', 'trip', {}, null)).toThrow(/autre onglet/);
+});
+
+it('rejects a save based on a stale snapshot, even if the stored data was removed', () => {
+  let stored = '{"equityMode":"calculated"}';
+  const storage = { getItem: () => stored, setItem: (_key, value) => { stored = value; } };
+  const [settings, raw] = readSettings(storage, 'alice', 'trip');
+  const newer = saveSettings(storage, 'alice', 'trip', { ...settings, equityMode: 'declared' }, raw);
+  expect(() => saveSettings(storage, 'alice', 'trip', settings, raw)).toThrow(/autre onglet/);
+  expect(stored).toBe(newer);
+  stored = null;
+  expect(() => saveSettings(storage, 'alice', 'trip', settings, newer)).toThrow(/autre onglet/);
+  expect(stored).toBeNull();
+});
+
 it('requires a signed-in identity and travel before requesting data', async () => {
   await expect(loadAccountingData({ client: {}, userId: '', travelId: 'x' })).rejects.toThrow();
 });

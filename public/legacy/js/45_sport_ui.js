@@ -4099,7 +4099,7 @@
         CACHE.status = txt("Seance sauvegardee localement. Connecte-toi pour synchroniser.", "Workout saved locally. Sign in to sync.");
         try {
           if (typeof window.tbOfflineQueueEnqueue === "function") {
-            window.tbOfflineQueueEnqueue("sport.sync_local", {}, { label: "sport" });
+            await window.tbOfflineQueueEnqueue("sport.sync_local", {}, { label: "sport" });
           }
         } catch (_) {}
         return;
@@ -4133,7 +4133,7 @@
         CACHE.status = txt("Seance sauvegardee localement. Synchro Supabase a verifier.", "Workout saved locally. Supabase sync needs checking.");
         try {
           if (typeof window.tbOfflineQueueEnqueue === "function") {
-            window.tbOfflineQueueEnqueue("sport.sync_local", {}, { label: "sport" });
+            await window.tbOfflineQueueEnqueue("sport.sync_local", {}, { label: "sport" });
           }
         } catch (_) {}
         console.warn("[sport] save failed", CACHE.error);

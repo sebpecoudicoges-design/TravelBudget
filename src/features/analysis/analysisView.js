@@ -28,6 +28,7 @@ export function buildAnalysisOverviewCards({
   scope = 'budget',
   mode = 'planned',
   currencyMode = 'account',
+  isEn = false,
   t,
 } = {}) {
   const rangeText = `${model.start || '-'} -> ${model.end || '-'}`;
@@ -69,9 +70,11 @@ export function buildAnalysisOverviewCards({
     {
       label: translate(t, 'analysis.overview.coverage'),
       value: translate(t, 'analysis.expenses_count', { count: txCount }),
-      meta: Number(model.comparableDays) > 0
-        ? translate(t, 'analysis.reference.comparable_days', { count: Number(model.comparableDays) })
-        : translate(t, 'analysis.reference.missing_range'),
+      meta: model.referenceStatus === 'fx'
+        ? (isEn ? 'Country reference unavailable' : 'Référence pays indisponible')
+        : model.referenceStatus !== 'none' && Number(model.comparableDays) > 0
+          ? translate(t, 'analysis.reference.comparable_days', { count: Number(model.comparableDays) })
+          : translate(t, 'analysis.reference.missing_range'),
       accent: 'coverage',
     },
   ];
@@ -111,16 +114,20 @@ export function buildAnalysisInsights({
   const totalBudget = safeNum(model.totalBudget);
   const comparablePerDay = safeNum(model.comparablePerDay);
   const referencePerDay = safeNum(model.referencePerDay);
+  const referenceUsable = referencePerDay > 0 && (!model.referenceStatus || model.referenceStatus === 'available');
+  const comparableDetail = referenceUsable
+    ? (isEn ? ` On the referenced comparable scope, you are at ${money(comparablePerDay)}/${day}.` : ` Sur le comparable sourcé, tu es à ${money(comparablePerDay)}/jour.`)
+    : '';
   const avgPerDay = safeNum(model.avgPerDay);
   const budgetPerDay = safeNum(model.budgetPerDay);
   const spent = Math.max(safeNum(model.spent), 1);
   const outAmount = safeNum(model.outAmount);
-  const excludedPerDay = safeNum(model.excludedPerDay);
+  const excludedPerDay = referenceUsable ? safeNum(model.excludedPerDay) : 0;
   const nightCoveredCount = safeNum(model.nightCoveredCount);
   const delta = projection - totalBudget;
   const sourcedGap = comparablePerDay - referencePerDay;
   const top = Array.isArray(model.topCategories) ? model.topCategories[0] : null;
-  const topUnmapped = Array.isArray(model.unmappedCategorySeries) ? model.unmappedCategorySeries[0] : null;
+  const topUnmapped = referenceUsable && Array.isArray(model.unmappedCategorySeries) ? model.unmappedCategorySeries[0] : null;
   const nightLine = nightCoveredCount > 0
     ? {
         icon: '🌙',
@@ -133,7 +140,7 @@ export function buildAnalysisInsights({
 
   const insights = [
     ...(nightLine ? [nightLine] : []),
-    {
+    ...(referenceUsable ? [{
       icon: sourcedGap > 0 ? '🧭' : '🌿',
       title: sourcedGap > 0
         ? (isEn ? 'Actual above reference' : 'Réel au-dessus du sourcé')
@@ -145,7 +152,7 @@ export function buildAnalysisInsights({
         : (isEn
             ? `On the comparable scope, you spend ${money(comparablePerDay)}/${day} versus a country reference of ${money(referencePerDay)}/${day}, so ${money(Math.abs(sourcedGap))}/${day} below.`
             : `Sur le périmètre comparable, tu dépenses ${money(comparablePerDay)}/jour contre une référence pays de ${money(referencePerDay)}/jour, soit ${money(Math.abs(sourcedGap))}/jour en dessous.`),
-    },
+    }] : []),
     {
       icon: avgPerDay > budgetPerDay ? '⚠️' : '✅',
       title: avgPerDay > budgetPerDay
@@ -153,11 +160,11 @@ export function buildAnalysisInsights({
         : (isEn ? 'Pace under control' : 'Cadence maîtrisée'),
       body: avgPerDay > budgetPerDay
         ? (isEn
-            ? `Overall, you are running at ${money(avgPerDay)}/${day} for an app target of ${money(budgetPerDay)}/${day}. On the referenced comparable scope, you are at ${money(comparablePerDay)}/${day}.`
-            : `Globalement, tu tournes à ${money(avgPerDay)}/jour pour une cible app de ${money(budgetPerDay)}/jour. Sur le comparable sourcé, tu es à ${money(comparablePerDay)}/jour.`)
+            ? `Overall, you are running at ${money(avgPerDay)}/${day} for an app target of ${money(budgetPerDay)}/${day}.${comparableDetail}`
+            : `Globalement, tu tournes à ${money(avgPerDay)}/jour pour une cible app de ${money(budgetPerDay)}/jour.${comparableDetail}`)
         : (isEn
-            ? `Overall, you stay below target with ${money(avgPerDay)}/${day} versus ${money(budgetPerDay)}/${day} targeted. On the referenced comparable scope, you are at ${money(comparablePerDay)}/${day}.`
-            : `Globalement, tu restes sous la cible avec ${money(avgPerDay)}/jour contre ${money(budgetPerDay)}/jour visés. Sur le comparable sourcé, tu es à ${money(comparablePerDay)}/jour.`),
+            ? `Overall, you stay below target with ${money(avgPerDay)}/${day} versus ${money(budgetPerDay)}/${day} targeted.${comparableDetail}`
+            : `Globalement, tu restes sous la cible avec ${money(avgPerDay)}/jour contre ${money(budgetPerDay)}/jour visés.${comparableDetail}`),
     },
     {
       icon: top ? '🧲' : '•',
@@ -374,6 +381,7 @@ export function renderAnalysisProgressDeltaCard({
   deltaBudgetTone = '#94a3b8',
   deltaBudgetPct = 0,
   deltaBudgetAmount = 0,
+  referenceAvailable = true,
   deltaReferenceTone = '#94a3b8',
   deltaReferencePct = 0,
   deltaReferenceAmount = 0,
@@ -387,7 +395,7 @@ export function renderAnalysisProgressDeltaCard({
         <span aria-hidden="true" style="position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 18% 14%, rgba(255,255,255,.92), rgba(255,255,255,0) 34%), linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.34)); pointer-events:none;"></span>
         <div style="position:relative; z-index:1;">
           <div class="analysis-stat-label" style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(15,23,42,.72);">${escapeHtml(tr('Écart de tendance', 'Trend gap'))}</div>
-          <div class="analysis-stat-meta" style="margin-top:4px; font-size:12px; color:rgba(15,23,42,.58);">${escapeHtml(tr('Projection finale comparée au budget app et à la référence pays.', 'Final projection compared with app budget and country reference.'))}</div>
+          <div class="analysis-stat-meta" style="margin-top:4px; font-size:12px; color:rgba(15,23,42,.58);">${escapeHtml(referenceAvailable ? tr('Projection finale comparée au budget app et à la référence pays.', 'Final projection compared with app budget and country reference.') : tr('Projection finale comparée au budget app.', 'Final projection compared with app budget.'))}</div>
           <div class="analysis-stat-meta">${escapeHtml(tr('Écart à date : ', 'To-date gap: ') + (atDateAmount > 0 ? '+' : '') + formatMoney(formatCurrency, atDateAmount, currency))}</div>
         </div>
         <div style="position:relative; z-index:1; display:flex; flex-direction:column; gap:12px;">
@@ -403,7 +411,7 @@ export function renderAnalysisProgressDeltaCard({
               currency,
             }))}</div>
           </div>
-          <div style="padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border:1px solid rgba(255,255,255,.78); box-shadow:inset 0 1px 0 rgba(255,255,255,.78);">
+          ${referenceAvailable ? `<div style="padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border:1px solid rgba(255,255,255,.78); box-shadow:inset 0 1px 0 rgba(255,255,255,.78);">
             <div style="font-size:12px; color:rgba(15,23,42,.58);">${escapeHtml(tr('Vs référence pays', 'Vs country reference'))}</div>
             <div style="margin-top:4px; font-size:24px; font-weight:800; color:${escapeHtml(deltaReferenceTone)};">${escapeHtml(formatSignedPct(deltaReferencePct))}</div>
             <div style="margin-top:4px; font-size:12px; font-weight:750; color:rgba(15,23,42,.62);">${escapeHtml(deltaAmountText({
@@ -414,7 +422,7 @@ export function renderAnalysisProgressDeltaCard({
               formatCurrency,
               currency,
             }))}</div>
-          </div>
+          </div>` : ''}
         </div>
       </div>`;
 }
@@ -476,7 +484,15 @@ export function buildAnalysisReferenceRows(model = {}) {
 export function renderAnalysisReferenceSummary({
   model = {},
   formatCurrency,
+  isEn = false,
 } = {}) {
+  if (model.referenceStatus === 'none' || model.referenceStatus === 'fx') {
+    const pairs = model.missingReferenceFx?.join(', ');
+    const message = model.referenceStatus === 'fx'
+      ? (isEn ? 'Country reference unavailable: missing exchange rate' : 'Référence pays indisponible : taux de change manquant')
+      : (isEn ? 'No active country reference for this date range' : 'Aucune référence pays active sur cette plage');
+    return `<div class="analysis-reference-empty" role="status">${escapeHtml(pairs ? `${message} (${pairs})` : message)}</div>`;
+  }
   const money = (value) => formatMoney(formatCurrency, value, model.base);
   const days = Array.isArray(model.days) ? model.days.length : 0;
   const coverage = model.referenceCoverageDays && days ? `${model.referenceCoverageDays}/${days} jours couverts` : 'Aucune source active';
@@ -511,6 +527,7 @@ export function renderAnalysisReferenceMix({
   model = {},
   formatCurrency,
 } = {}) {
+  if (model.referenceStatus && model.referenceStatus !== 'available') return '';
   const rows = buildAnalysisReferenceRows(model);
   const money = (value) => formatMoney(formatCurrency, value, model.base);
 

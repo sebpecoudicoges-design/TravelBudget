@@ -73,6 +73,19 @@ describe('Nutrition store', () => {
     expect(store.state.items).toEqual([{ id: 'remote-item', meal_id: 'remote-meal', label: 'Banane', localOnly: false, offlinePending: false }]);
   });
 
+  it('shows one version of a meal and does not add a pending conflict to synchronized totals', () => {
+    const store = createNutritionStore();
+    const remote = { id: 'server', sync_id: 'same', meal_date: '2026-07-10' };
+    const item = { id: 'server-item', meal_id: 'server', kcal: 100 };
+    const draft = { syncId: 'same', meal: { ...remote, id: 'local' }, item: { meal_id: 'local', kcal: 200 } };
+    store.hydrateRemote({ meals: [remote], items: [item] });
+    store.mergeOptimisticRow(draft);
+    expect(store.selectedRows('2026-07-10').items).toMatchObject([{ meal_id: 'local', kcal: 200 }]);
+    store.hydrateRemote({ meals: [remote], items: [item] });
+    store.mergeOptimisticRow({ ...draft, syncConflict: true });
+    expect(store.selectedRows('2026-07-10')).toEqual({ meals: [remote], items: [item] });
+  });
+
   it('resets account scoped data without dropping default UI filters', () => {
     const store = createNutritionStore({
       loaded: true,

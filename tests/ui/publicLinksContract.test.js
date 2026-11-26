@@ -8,7 +8,7 @@ describe('public release links contract', () => {
     const page = readFileSync('public/projet.html', 'utf8');
     const link = page.match(/<a[^>]*data-latest-apk[^>]*>[^<]*<\/a>/)?.[0];
     const apkVersion = link?.match(/travelbudget-(\d+\.\d+\.\d+)-/)?.[1];
-    expect(page).toContain(`<small data-i18n="status.release">Version actuelle</small><strong>${version}</strong>`);
+    expect(page).toContain(`<small data-i18n="status.release">Version web</small><strong>${version}</strong>`);
     expect(apkVersion).toMatch(/^\d+\.\d+\.\d+$/);
     expect(link).toContain(`APK ${apkVersion}`);
     expect(link).toContain(`app.cta.button.${apkVersion.replaceAll('.', '')}`);

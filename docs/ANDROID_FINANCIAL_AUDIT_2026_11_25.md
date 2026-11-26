@@ -10,7 +10,7 @@ Le workflow `Published Android APK smoke` établit une preuve séparée en émul
 - Le wallet termine à 395 EUR (500 − 120 + 15), sans second débit de 45 EUR. La consommation budgétaire nette est de 30 EUR répartis sur trois jours, soit 10 EUR/j.
 - Le modèle du tableau de bord ne classe plus une quote-part personnelle dans la trésorerie prévisionnelle du seul fait que son libellé contient « Avance ».
 - Le détail de trésorerie d’Analyse utilise la date d’opération réelle, même si les jours budgétaires visibles sont différents. La ventilation budgétaire garde ses propres dates.
-- Reste une décision fonctionnelle sur l’indicateur « Budget dépensé/jour » du tableau de bord : il affiche la dépense personnelle brute de 15 EUR/j, contre 10 EUR/j net dans Budget et Analyse après l’avoir. Ne pas présenter ces montants comme équivalents avant choix du produit.
+- La légende « Dépenses avant avoirs/jour » du tableau de bord indique que sa série affiche 15 EUR/j bruts, contre 10 EUR/j nets dans Budget et Analyse après l’avoir. La légende seule change ; remplacer cette série par une série nette reste un choix produit.
 - Validation : modèles client réels avec données fictives, sans compte de production. Restent les manipulations de l’interface sur l’appareil, le basculement de réseau et les autres parcours métier.
 
 ## Contrôle physique minimal
@@ -21,7 +21,7 @@ Avant toute mise à jour, relever la version installée et le package. Ne pas d�
 
 `npm run test:e2e -- tests/e2e/financial-trip-budget.spec.js --project=desktop-chromium`
 ouvre la vraie application en 1440 et 390 px, en clair et sombre, avec un compte de test fictif.
-Le parcours vérifie le solde du compte (395 EUR), la part personnelle (45 EUR) et
+Le parcours vérifie le solde du compte (395 EUR), la légende et les 15 EUR/j bruts du tableau de bord, la part personnelle (45 EUR) et
 le montant à recevoir (75 EUR) dans Trip, les trois jours de budget à 10 EUR nets,
 ainsi que le total de 30 EUR et l'avoir de 15 EUR dans Analyse.
 Il contrôle aussi que la sortie de 120 EUR apparaît selon sa date réelle, pas selon

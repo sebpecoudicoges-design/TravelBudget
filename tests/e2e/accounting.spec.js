@@ -496,3 +496,35 @@ test('asset attachment preserves one asset, survives refresh and local storage f
  await page.locator('[data-ac-unlink-asset="purchase"]').click();
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('tb-accounting-v1:user-a:trip-a')).assetLinks)).toEqual([]);
 });
+
+test('accounting rejects saving over edits from another tab and reloads their value', async ({ page, context }) => {
+  await setup(page);
+  const second = await context.newPage();
+  await setup(second);
+  for (const tab of [page, second]) {
+    await tab.locator('.tb-accounting-tabs [data-ac-tab="settings"]').click();
+    await openComplements(tab);
+  }
+  const debt = tab => tab.locator('[data-ac-balance="EUR"] [data-ac-debt]');
+  await debt(page).fill('55');
+  await page.getByRole('button', { name: 'Enregistrer les compléments' }).click();
+  await expect(page.getByRole('status')).toContainText('Paramétrage enregistré');
+  await debt(second).fill('88');
+  await second.getByRole('button', { name: 'Enregistrer les compléments' }).click();
+  await expect(second.locator('#ac-complements [role="alert"]')).toContainText('autre onglet');
+  await expect(debt(second)).toHaveValue('88');
+  await second.locator('#ac-complements [data-ac-dialog-close]').click();
+  await second.locator('[data-ac-refresh]').click();
+  await openComplements(second);
+  await expect(debt(second)).toHaveValue('55');
+});
+
+test('accounting leaves unreadable local settings intact instead of showing incomplete totals', async ({ page }) => {
+  await setup(page);
+  const key = 'tb-accounting-v1:user-a:trip-a';
+  await page.evaluate(key => localStorage.setItem(key, '{interrompu'), key);
+  await page.locator('[data-ac-refresh]').click();
+  await expect(page.getByRole('alert')).toContainText('Paramétrage local illisible');
+  await expect(page.locator('.tb-accounting-kpi')).toHaveCount(0);
+  expect(await page.evaluate(key => localStorage.getItem(key), key)).toBe('{interrompu');
+});
