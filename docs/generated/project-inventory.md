@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `e7790f3f481dca2e6c603b27d7eccb6d5141e6c2`
-> Empreinte du snapshot : `fdb9f9f91797983f7f277fb62b1de33d669a217db94bd042d115b3c60528e435`
-> Généré le : `2026-11-26T04:06:25.663Z`
+> Commit analysé : `772d026b20ff3ca28c7a7445e44804b869523a58`
+> Empreinte du snapshot : `d72129df23b519919b926df2aa94b27d7ccd1e5703e3c949804f295c9b83335f`
+> Généré le : `2026-11-26T05:07:18.069Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 65 |
-| Fichiers de tests | 210 |
+| Fichiers de tests | 211 |
 | Migrations Supabase | 179 |
 | Fonctions Edge | 15 |
 | Projet Android présent | Oui |
@@ -394,6 +394,7 @@ Modules :
 - `tests/e2e/offline-queue-revision.spec.js`
 - `tests/e2e/offline-queue-tabs.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
+- `tests/e2e/trip-expense-entry.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 
@@ -482,6 +483,7 @@ Modules :
 - `tests/e2e/offline-queue-revision.spec.js`
 - `tests/e2e/offline-queue-tabs.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
+- `tests/e2e/trip-expense-entry.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 - `tests/features/accounting/accountingChargeRegression.test.js`

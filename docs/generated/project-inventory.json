@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "e7790f3f481dca2e6c603b27d7eccb6d5141e6c2",
-  "snapshotFingerprint": "fdb9f9f91797983f7f277fb62b1de33d669a217db94bd042d115b3c60528e435",
-  "generatedAt": "2026-11-26T04:06:25.663Z",
+  "commit": "772d026b20ff3ca28c7a7445e44804b869523a58",
+  "snapshotFingerprint": "d72129df23b519919b926df2aa94b27d7ccd1e5703e3c949804f295c9b83335f",
+  "generatedAt": "2026-11-26T05:07:18.069Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
@@ -371,6 +371,7 @@
     "tests/e2e/offline-queue-revision.spec.js",
     "tests/e2e/offline-queue-tabs.spec.js",
     "tests/e2e/trip-analysis.spec.js",
+    "tests/e2e/trip-expense-entry.spec.js",
     "tests/e2e/wallet-journal.spec.js",
     "tests/e2e/wallet-layout.spec.js",
     "tests/features/accounting/accountingChargeRegression.test.js",
@@ -574,6 +575,7 @@
     "tests/e2e/offline-queue-revision.spec.js",
     "tests/e2e/offline-queue-tabs.spec.js",
     "tests/e2e/trip-analysis.spec.js",
+    "tests/e2e/trip-expense-entry.spec.js",
     "tests/e2e/wallet-journal.spec.js",
     "tests/e2e/wallet-layout.spec.js"
   ],
