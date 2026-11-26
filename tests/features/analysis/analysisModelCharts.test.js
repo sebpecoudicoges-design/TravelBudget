@@ -89,6 +89,7 @@ it('converts at the cash date before allocating the visible budget share', () =>
     },
   });
   expect(model.base).toBe('EUR');
+  expect(model.usesExchangeRates).toBe(true);
   expect(model.velocity).toEqual([15, 15, 15]);
   expect(model.comparablePerDay).toBe(15);
   expect(converted.length).toBeGreaterThan(0);
@@ -137,6 +138,7 @@ it('keeps an excluded foreign-currency expense from blocking the visible subset'
     transaction({ amount: 0, currency: 'ZZZ' }),
   ] });
   expect(model.spent).toBe(30);
+  expect(model.usesExchangeRates).toBe(false);
   expect(model.missingFx).toEqual([]);
 });
 

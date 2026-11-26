@@ -239,12 +239,14 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     await end.fill('2026-10-24');
     await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^50[,.]00/);
     await expect(chart).toBeVisible();
+    await expect(summary.getByText('pas forcément le taux historique', { exact: false })).toBeVisible();
     await page.locator('#analysis-comparison').selectOption('previous');
     await expect(comparison.getByRole('status')).toContainText('taux de change manquant');
     await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toContainText(/^50[,.]00/);
 
     await start.fill('2026-10-22');
     await expect(summary.getByRole('status')).toContainText('ZFX → EUR');
+    await expect(summary.locator('[data-analysis-fx-note]')).toHaveCount(0);
     await expect(summary.locator('.analysis-stat-value')).toHaveCount(0);
     await expect(comparison).toBeEmpty();
     await expect(chart).toBeHidden();

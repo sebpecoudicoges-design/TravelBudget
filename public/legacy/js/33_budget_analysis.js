@@ -648,7 +648,7 @@ function _analysisBucketOrder(){
     const value = _safeNum(amount);
     if (!value || cur === base) return value;
     // Legacy budget helpers can silently return the original amount or zero when FX is absent.
-    // Check the date-aware result; do not propagate either of those fallback amounts.
+    // The date selects a budget segment; these helpers do not fetch historical rates.
     try {
       const out = Number(window.tbFxConvertForDateCached?.(value, cur, base, dateISO));
       if (Number.isFinite(out) && out !== 0) return out;
@@ -786,11 +786,15 @@ function _sumTxArray(txs, base, convert){
     const cutoffEnd = _analysisCutoffEnd();
     const base = forcedBase || _resolveAnalysisCurrency(start, end);
     const missingFx = new Set();
+    let usesExchangeRates = false;
     const missingReferenceFx = new Set();
     const convert = (amount, source, dateISO, failures = missingFx) => {
       const from = _upper(source || base);
       const value = _convertAnalysisAmount(amount, from, dateISO, base);
-      if (value !== null) return value;
+      if (value !== null) {
+        if (value && from !== base) usesExchangeRates = true;
+        return value;
+      }
       failures.add(`${from} → ${base}`);
       return 0; // Partial accumulators need their corresponding unavailable state.
     };
@@ -1195,7 +1199,7 @@ const cashBreakdown = window.TBAnalysisCashBreakdown?.buildCashBreakdown?.({
 }) || {};
 
 return {
-  base, start, end, days, mode: cashflowMode, txs, spent, paidSpent, missingFx: Array.from(missingFx).sort(),
+  base, start, end, days, mode: cashflowMode, txs, spent, paidSpent, usesExchangeRates, missingFx: Array.from(missingFx).sort(),
 
   incomeReal: incomeRealAmount,
   incomeToDate: incomeRealAmount,
@@ -1770,11 +1774,12 @@ function _openTxDrilldown(kind, key, model, opener){
     const comparisonHost = _el('analysis-period-comparison');
     if (comparisonHost) comparisonHost.innerHTML = '';
     if (_showAnalysisFxState(model)) return;
+    let usesExchangeRates = model.usesExchangeRates;
     if (comparisonHost && _el('analysis-comparison')?.value === 'previous') {
       const period = _el('analysis-period');
       const inputs = _rangeInputs();
       const travel = _getSelectedTravel();
-      window.TBAnalysisPeriodComparison.renderPreviousPeriodComparison({
+      const comparison = window.TBAnalysisPeriodComparison.renderPreviousPeriodComparison({
         host: comparisonHost, current: model, periodPreset: period?.value || 'range',
         travelBounds: { start: _norm(travel?.start_date || travel?.start), end: _norm(travel?.end_date || travel?.end) },
         computeForRange(range) {
@@ -1792,6 +1797,7 @@ function _openTxDrilldown(kind, key, model, opener){
         },
         formatCurrency: _fmtMoney, isEn: _analysisIsEnglish(),
       });
+      usesExchangeRates ||= comparison?.metrics && comparison.previous?.usesExchangeRates;
     }
 
     safe('overview-strip', _renderOverviewStrip);
@@ -1810,6 +1816,16 @@ function _openTxDrilldown(kind, key, model, opener){
     const summaryHostPre = _el('analysis-summary');
     if (summaryHostPre && model && Array.isArray(model.txs) && model.txs.length === 0) {
       summaryHostPre.innerHTML = `<div class="muted">Aucune dépense visible pour ce scope, cette plage, ou ces filtres.</div>`;
+    }
+    if (summaryHostPre && usesExchangeRates) {
+      const note = document.createElement('p');
+      note.className = 'muted';
+      note.dataset.analysisFxNote = '';
+      note.style.gridColumn = '1 / -1';
+      note.textContent = _analysisIsEnglish()
+        ? 'Currency conversion uses saved rates or your settings, not necessarily the historical rate for the transaction date.'
+        : 'La conversion utilise des taux en cache ou tes réglages, pas forcément le taux historique à la date de l’opération.';
+      summaryHostPre.appendChild(note);
     }
     if (!view) return;
 
