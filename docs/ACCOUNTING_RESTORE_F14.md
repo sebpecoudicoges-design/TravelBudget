@@ -28,8 +28,12 @@ ou différent, une version inconnue, un horodatage invalide et un jeu de famille
 absent, incomplet ou de type inattendu. La profondeur des réglages est limitée.
 Le résultat indique uniquement la date et les familles examinées, sans valeurs
 comptables ni identifiants. « Périmètre contrôlé » ne signifie pas « restaurable » :
-les champs détaillés et leurs références actives, l’état local et les conflits
-ne sont pas encore évalués. Rien n’est écrit, importé, exporté ou publié.
+les champs détaillés, la compatibilité métier des liens, l’état local et les
+conflits ne sont pas encore évalués. Avec un inventaire complet du même compte
+et voyage fourni séparément, le prototype vérifie la présence des références
+actives (comptes, biens, opérations d’origine, remboursements et positions).
+Il distingue un inventaire indisponible d’une référence absente et ne retourne
+que des nombres par type. Il ne vérifie pas les anciennes traces archivées. Rien n’est écrit, importé, exporté ou publié.
 
 ## Porte de sortie avant synchronisation
 

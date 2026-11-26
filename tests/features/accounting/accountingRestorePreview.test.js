@@ -65,3 +65,41 @@ describe('isolated accounting restore preview', () => {
     expect(preview({ settings: { ...candidate.settings, debts: [deep] } })).toEqual({ status: 'depth-limit' });
   });
 });
+
+describe('active references for the same account and trip', () => {
+  const settings = {
+    ...candidate.settings,
+    walletAccounts: { 'bank-fixture': '512100' },
+    debts: [{ originTransactionId: 'funding', assetId: 'linked-house', repayments: [{ transactionId: 'repayment' }] }],
+    archivedDebts: [{ originTransactionId: 'archived-source' }],
+    positions: [{ transactionIds: ['deposit'] }],
+    assetLinks: [{ asset_id: 'linked-car', transaction_id: 'car-purchase' }],
+    positionAudit: [{ transactionId: 'historic-source' }],
+  };
+  const sources = { ...scope, complete: true,
+    transactionIds: ['funding', 'repayment', 'deposit', 'car-purchase'],
+    assetIds: ['linked-house', 'linked-car'], walletIds: ['bank-fixture'],
+  };
+  const review = (inventory, data = settings) => previewAccountingRestore(raw({ settings: data }), scope, inventory);
+
+  it('confirms presence of the active references, without using archived rows or claiming restore readiness', () => {
+    expect(review(sources)).toMatchObject({ status: 'references-present', requiresFurtherValidation: true });
+  });
+
+  it.each([{ complete: false }, { travelId: 'other-trip' }, { userId: 'other-user' }, { walletIds: null }])(
+    'never reports an inventory that cannot be trusted as missing data: %j', changes => {
+      expect(review({ ...sources, ...changes })).toEqual({ status: 'sources-unavailable' });
+    },
+  );
+
+  it('reports missing types without returning IDs or data', () => {
+    const result = review({ ...sources, transactionIds: ['funding', 'deposit', 'car-purchase'], assetIds: [], walletIds: [] });
+    expect(result).toEqual({ status: 'missing-references', missing: { transaction: 1, asset: 2, wallet: 1 } });
+    expect(JSON.stringify(result)).not.toMatch(/repayment|linked-house|bank-fixture/);
+  });
+
+  it('does not silently skip a malformed active reference', () => {
+    expect(review(sources, { ...settings, positions: [{ transactionIds: [null] }] }))
+      .toEqual({ status: 'invalid-active-references' });
+  });
+});

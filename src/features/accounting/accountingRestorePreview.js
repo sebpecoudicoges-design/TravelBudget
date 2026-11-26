@@ -42,8 +42,51 @@ function withinDepth(root) {
   return true;
 }
 
+// An incomplete, unscoped, or malformed inventory cannot prove absence.
+function reviewActiveReferences(settings, scope, sources) {
+  const sourceLists = { transaction: sources?.transactionIds, asset: sources?.assetIds, wallet: sources?.walletIds };
+  if (sources?.complete !== true || sources.userId !== scope.userId || sources.travelId !== scope.travelId ||
+      !Object.values(sourceLists).every(ids => Array.isArray(ids) && ids.every(isId))) {
+    return { status: 'sources-unavailable' };
+  }
+
+  const references = { transaction: new Set(), asset: new Set(), wallet: new Set() };
+  let valid = true;
+  const add = (type, id, optional = false) => {
+    if (optional && (id === undefined || id === '')) return;
+    if (isId(id)) references[type].add(id);
+    else valid = false;
+  };
+
+  for (const id of Object.keys(settings.walletAccounts)) add('wallet', id);
+  for (const debt of settings.debts) {
+    add('asset', debt.assetId, true);
+    add('transaction', debt.originTransactionId, true);
+    if (!isRecordList(debt.repayments)) { valid = false; continue; }
+    for (const repayment of debt.repayments) add('transaction', repayment.transactionId);
+  }
+  for (const position of settings.positions) {
+    if (!Array.isArray(position.transactionIds)) { valid = false; continue; }
+    for (const id of position.transactionIds) add('transaction', id);
+  }
+  for (const link of settings.assetLinks) {
+    add('asset', link.asset_id);
+    add('transaction', link.transaction_id);
+  }
+  if (!valid) return { status: 'invalid-active-references' };
+
+  const missing = {};
+  for (const [type, ids] of Object.entries(sourceLists)) {
+    const existing = new Set(ids);
+    missing[type] = [...references[type]].filter(id => !existing.has(id)).length;
+  }
+  return Object.values(missing).some(count => count > 0)
+    ? { status: 'missing-references', missing }
+    : { status: 'references-present' };
+}
+
 // The scope must come from the active session, never from the input contents.
-export function previewAccountingRestore(raw, scope) {
+export function previewAccountingRestore(raw, scope, sources) {
   if (!isId(scope?.userId) || !isId(scope?.travelId)) return { status: 'scope-unavailable' };
   if (typeof raw !== 'string') return { status: 'invalid-json' };
   if (raw.length > MAX_BYTES || new TextEncoder().encode(raw).length > MAX_BYTES) return { status: 'size-limit' };
@@ -59,8 +102,13 @@ export function previewAccountingRestore(raw, scope) {
       !Object.entries(settingsChecks).every(([key, valid]) => valid(candidate.settings[key]))) {
     return { status: 'invalid-settings' };
   }
+  const status = sources === undefined ? 'scope-reviewed' : 'references-present';
+  if (sources !== undefined) {
+    const checked = reviewActiveReferences(candidate.settings, scope, sources);
+    if (checked.status !== status) return checked;
+  }
   return {
-    status: 'scope-reviewed', requiresFurtherValidation: true,
+    status, requiresFurtherValidation: true,
     createdAt: candidate.createdAt, families: Object.keys(familyChecks),
   };
 }
