@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TravelBudget · Budget, dépenses partagées et documents</title>
+  <link rel="canonical" href="https://stunning-dieffenbachia-2b2ed0.netlify.app/projet.html" />
   <meta name="description" content="Découvre TravelBudget : suis ton budget de voyage et partage les dépenses avec tes amis. Essaie la simulation et regarde le parcours dans l’application." />
   <script>
     (() => {
@@ -830,6 +831,8 @@
     @keyframes atlasOrbit { to { transform: rotate(360deg); } }
 
     section.band { padding: 78px 0; }
+    #alpha-fermee { scroll-margin-top: 80px; }
+    .alpha-status { margin-top: 18px; }
     .section-head {
       display: flex;
       align-items: end;
@@ -1368,6 +1371,7 @@
           <a class="btn primary" href="#demo" data-i18n="hero.primary">Ouvrir la démo</a>
           <a class="btn" href="#video-demo" data-i18n="demo.video.cta">Voir la vidéo</a>
           <a class="btn" href="#app" data-i18n="hero.secondary">Telecharger l'APK</a>
+          <a class="btn" href="#alpha-fermee" data-i18n="alpha.link">Test Alpha fermé</a>
         </div>
         <p class="hero-note" data-i18n="hero.note">La page ci-dessous ne charge aucune donnee personnelle : elle montre le produit, les modules et la logique technique.</p>
         <div class="auth-entry">
@@ -2013,6 +2017,31 @@
       </div>
     </section>
 
+    <section id="alpha-fermee" class="band" aria-labelledby="alpha-title">
+      <div class="shell">
+        <div class="section-head">
+          <h2 id="alpha-title" data-i18n="alpha.title">Test Alpha fermé sur Google Play</h2>
+          <p data-i18n="alpha.intro">Aide à tester TravelBudget sur Android avant sa sortie. Cette première phase est prévue en France.</p>
+        </div>
+        <div class="trust-hub">
+          <div class="trust-head">
+            <div>
+              <h3 data-i18n="alpha.eligibility">Pour participer</h3>
+              <ul>
+                <li data-i18n="alpha.device">Utilise un téléphone Android avec Google Play.</li>
+                <li data-i18n="alpha.country">Le pays de ton compte Google Play doit être la France.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="alpha-status">
+            <span class="eyebrow" data-i18n="alpha.status">Inscriptions pas encore ouvertes</span>
+            <p data-i18n="alpha.pending">L’approbation de Google Play n’est pas encore définitive. Le lien officiel d’inscription sera ajouté ici quand le test sera ouvert, pour rejoindre le test avec ton compte Google Play.</p>
+            <!-- When the France track is open, add only the verified participant opt-in link copied from this app's Play Console. Do not derive a URL from the package or publish tester lists. -->
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="trust" class="band">
       <div class="shell">
         <div class="section-head">
@@ -2031,7 +2060,7 @@
             <a class="trust-action primary" href="/privacy.html" data-i18n="trusthub.openprivacy">Ouvrir la confidentialite</a>
             <a class="trust-action" href="/privacy.html#fr-suppression" data-i18n="trusthub.deleteaction">Supprimer mon compte</a>
             <a class="trust-action" id="trustApkLink" href="#app" data-i18n="trusthub.apk">Telecharger l'APK</a>
-            <span class="trust-action disabled" data-i18n="trusthub.pending">Lien Play Store a venir</span>
+            <a class="trust-action" href="#alpha-fermee" data-i18n="alpha.link">Test Alpha fermé</a>
           </div>
         </div>
       </div>
@@ -2088,6 +2117,14 @@
     (() => {
       const copy = {
         fr: {
+          "alpha.link": "Test Alpha fermé",
+          "alpha.title": "Test Alpha fermé sur Google Play",
+          "alpha.intro": "Aide à tester TravelBudget sur Android avant sa sortie. Cette première phase est prévue en France.",
+          "alpha.eligibility": "Pour participer",
+          "alpha.device": "Utilise un téléphone Android avec Google Play.",
+          "alpha.country": "Le pays de ton compte Google Play doit être la France.",
+          "alpha.status": "Inscriptions pas encore ouvertes",
+          "alpha.pending": "L’approbation de Google Play n’est pas encore définitive. Le lien officiel d’inscription sera ajouté ici quand le test sera ouvert, pour rejoindre le test avec ton compte Google Play.",
           "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.lab": "Lab", "nav.atlas": "Atlas", "nav.app": "App", "nav.privacy": "Confidentialite", "nav.tech": "Technique", "nav.cta": "Tester la demo",
           "hero.eyebrow": "TravelBudget · Démo publique, données fictives",
           "hero.title": "Ton budget, tes documents et tes objectifs. Un seul cockpit.",
@@ -2348,6 +2385,14 @@
           "footer": "TravelBudget · Démo publique interactive", "footer.privacy": "Confidentialite", "footer.owner": "Projet de"
         },
         en: {
+          "alpha.link": "Closed alpha test",
+          "alpha.title": "Google Play closed alpha test",
+          "alpha.intro": "Help test TravelBudget on Android before launch. This first phase is planned for France.",
+          "alpha.eligibility": "Who can join",
+          "alpha.device": "Use an Android phone with Google Play.",
+          "alpha.country": "Your Google Play account country must be set to France.",
+          "alpha.status": "Sign-ups are not open yet",
+          "alpha.pending": "Google Play approval is not final yet. Once the test opens, the official opt-in link will appear here so you can join with your Google Play account.",
           "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Journeys", "nav.lab": "Lab", "nav.atlas": "Atlas", "nav.app": "App", "nav.privacy": "Privacy", "nav.tech": "Tech", "nav.cta": "Try the demo",
           "hero.eyebrow": "TravelBudget · Public demo, fictional data",
           "hero.title": "Your budget, documents and goals. One cockpit.",

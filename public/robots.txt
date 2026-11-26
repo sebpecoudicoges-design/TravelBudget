@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://stunning-dieffenbachia-2b2ed0.netlify.app/sitemap.xml

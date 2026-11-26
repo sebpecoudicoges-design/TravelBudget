@@ -74,3 +74,25 @@ test('project timeline leads with verified dates and keeps version as secondary 
   await expect(page.locator('#releaseSpotlight strong').first()).toHaveText('26/11/2026');
   await expect(page.locator('.release-pulse-card').first()).toContainText('26/11/2026');
 });
+
+for (const width of [1440, 390]) {
+  test(`project closed alpha information never offers unverified signup (${width} px)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 850 });
+    await page.emulateMedia({ colorScheme: width === 390 ? 'dark' : 'light', reducedMotion: 'reduce' });
+    await page.goto('/projet.html');
+    await page.locator('.hero').getByRole('link', { name: 'Test Alpha fermé' }).click();
+    await expect(page).toHaveURL(/#alpha-fermee$/);
+    const section = page.locator('#alpha-fermee');
+    await expect(section.getByRole('heading', { name: 'Test Alpha fermé sur Google Play' })).toBeInViewport();
+    await expect(section).toContainText('Le pays de ton compte Google Play doit être la France.');
+    await expect(section).toContainText('Inscriptions pas encore ouvertes');
+    await expect(section).toContainText('L’approbation de Google Play n’est pas encore définitive.');
+    await expect(section.locator('a, form, input, button')).toHaveCount(0);
+    await page.locator('[data-lang="en"]:visible').click();
+    await expect(section.getByRole('heading', { name: 'Google Play closed alpha test' })).toBeVisible();
+    await expect(section).toContainText('Your Google Play account country must be set to France.');
+    await expect(section).toContainText('Sign-ups are not open yet');
+    await expect(page.locator('#trust').getByRole('link', { name: 'Closed alpha test' })).toHaveAttribute('href', '#alpha-fermee');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+}
