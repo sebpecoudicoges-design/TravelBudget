@@ -55,3 +55,34 @@ it.each(['{broken', 'null', '{}', '[null]'])('strict pending reads preserve malf
   expect(storage.setItem).not.toHaveBeenCalled();
   expect(loadLocalNutritionRows({ storage: { getItem: () => null }, key: 'pending', strict: true })).toEqual([]);
 });
+
+it('rotates past a full batch of conflicting or retryable meals without discarding them', async () => {
+  const blocked = Array.from({ length: 25 }, (_, i) => row(`old-${i}`));
+  let rows = [...blocked, row('healthy')];
+  const discard = vi.fn();
+  const run = vi.fn(async ({ row: entry }) => {
+    if (entry.syncId === 'healthy') return { syncedItem: true };
+    if (entry.syncId === 'old-0') throw new Error('Temporary failure');
+    return { skippedItem: true };
+  });
+  const context = vm.createContext({ CACHE: {}, window: {}, navigator: { onLine: true }, console: { warn() {} },
+    txt: fr => fr, n: (value, fallback) => Number(value) || fallback, client: () => ({}), uid: () => 'a', localMealKey: () => 'a',
+    loadLocalMeals: () => structuredClone(rows), saveLocalMeals: value => { rows = structuredClone(value); },
+    localDateISO: () => '2026-11-23', activeTravelId: () => 'trip', table: x => x,
+    repository: () => ({ syncLocalRow: run }), publishNutrition() {}, discardNutritionQueue: discard, isOfflineSkipError: () => false });
+  vm.runInContext(sync, context);
+  const batch = () => vm.runInContext('syncLocalNutritionRows("manual")', context);
+  await expect(batch()).resolves.toBe(0);
+  expect(run.mock.calls.map(([{ row: entry }]) => entry.syncId)).toEqual(blocked.map(entry => entry.syncId));
+  run.mockClear();
+  await expect(batch()).resolves.toBe(1);
+  expect(run.mock.calls[0][0].row.syncId).toBe('healthy');
+  expect(run).toHaveBeenCalledTimes(25);
+  expect(rows.map(entry => entry.syncId)).toEqual(blocked.map(entry => entry.syncId));
+  expect(rows[0]).toMatchObject({ syncAttempts: 2, syncError: 'Temporary failure' });
+  expect(rows[24]).toMatchObject({ syncAttempts: 1, syncConflict: true });
+  run.mockClear();
+  await expect(batch()).resolves.toBe(0);
+  expect(run.mock.calls[0][0].row.syncId).toBe('old-24');
+  expect(discard).not.toHaveBeenCalled();
+});

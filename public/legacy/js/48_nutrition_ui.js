@@ -848,7 +848,9 @@
     if (!sameScope() || CACHE.syncingLocal) return 0;
     const allRows = loadLocalMeals(true);
     if (!allRows.length) return 0;
-    const rows = allRows.slice(0, 25);
+    // A full batch of failures must not permanently hide untried meals.
+    const attempts = row => Math.max(0, n(row.syncAttempts, 0));
+    const rows = allRows.sort((a, b) => attempts(a) - attempts(b)).slice(0, 25);
     const forceOnlineAttempt = options.forceOnline === true || reason === "manual";
     const offline = forceOnlineAttempt && navigator?.onLine !== false ? false : (typeof window.tbShouldUseOfflineMode === "function")
       ? await window.tbShouldUseOfflineMode(`nutrition:sync:${reason || "manual"}`)
@@ -890,7 +892,7 @@
           outcomes.set(snapshot, [Object.assign({}, row, {
             syncError: msg,
             syncConflict: row.syncConflict === true || e?.code === "NUTRITION_MEAL_CONFLICT",
-            syncAttempts: Math.max(0, n(row.syncAttempts, 0)) + 1,
+            syncAttempts: attempts(row) + 1,
             syncUpdatedAt: new Date().toISOString(),
           })]);
           if (!isOfflineSkipError(e)) console.warn("[nutrition] local sync failed", msg);

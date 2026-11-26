@@ -68,7 +68,7 @@ describe('nutrition domain extraction contract', () => {
   });
 
   it('bounds Nutrition recovery work and chunks remote item requests', () => {
-    expect(legacy).toContain('const rows = allRows.slice(0, 25);');
+    expect(legacy).toContain('const rows = allRows.sort((a, b) => attempts(a) - attempts(b)).slice(0, 25);');
     expect(legacy).toContain('index += 80');
     expect(legacy).toContain('Promise.all(chunks.map(ids => c.from(table("nutrition_meal_items"))');
     expect(legacy).toContain('upsertOptimisticNutritionRow(row, { publish: false })');
