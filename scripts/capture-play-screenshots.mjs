@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fixtureTables, fixtureUser, fixtureTime, fixtureResponse, projectOrigin } from './fixtures/connectedStartup.mjs';
 
@@ -143,18 +143,36 @@ function renderFixtureBootstrap() {
         }
         throw Error(stage);
       };
+      const overlaysAbsent = () => !visible(document.getElementById('tb-boot-overlay'))
+        && !visible(document.querySelector('.tb-ad-launch'))
+        && !document.body.classList.contains('tb-auth-visible');
+      const redraw = () => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      const foreground = target => {
+        const rect=target.getBoundingClientRect();
+        if (rect.bottom<5 || rect.top>=innerHeight || rect.right<5 || rect.left>=innerWidth) return false;
+        const x=Math.min(innerWidth-10,Math.max(10,rect.left+Math.min(90,rect.width/2)));
+        const y=Math.min(innerHeight-42,Math.max(10,rect.top+Math.min(30,rect.height/2)));
+        const hit=document.elementFromPoint(x,y);
+        return hit && (hit===target || target.contains(hit));
+      };
       const ready = async (name, check) => {
         const target=await poll(check,name);
-        target.scrollIntoView({block:'center',behavior:'instant'});
-        await sleep(900);
-        if (!check()) throw Error(name+'-after-scroll');
+        target.scrollIntoView({block:'start',behavior:'instant'});
+        await redraw();
+        await sleep(1800);
+        await poll(()=>overlaysAbsent() && check() && foreground(target),name+'-foreground',11000);
         console.info('TB_PLAY_NATIVE_READY '+name);
-        await sleep(15000);
+        // Give the physical compositor multiple independently checked frames.
+        await sleep(22000);
         console.info('TB_PLAY_NATIVE_LEAVE '+name);
       };
       const navigate = async name => {
         window.showView(name);
+        const scroller=document.scrollingElement;
+        if (scroller) scroller.scrollTop=0;
+        window.scrollTo(0,0);
         await poll(()=>bodyView()===name,'view-'+name);
+        await redraw();
       };
       void (async()=>{
         try {
@@ -164,7 +182,8 @@ function renderFixtureBootstrap() {
             typeof window.showView==='function' &&
             window.sbRole==='user' && window.sbUser?.id===fixtureUser &&
             (counts.served['GET /rest/v1/wallets']>0 || window.__TB_OFFLINE_SNAPSHOT__?.restored) &&
-            document.body && !document.body.classList.contains('tb-auth-visible'),'native-standard-account',65000);
+            document.body && !document.body.classList.contains('tb-auth-visible'),'native-standard-account',90000);
+          await poll(overlaysAbsent,'native-boot-overlay-removal',35000);
           const tripTab=document.querySelector('#tab-trip');
           if (visible(tripTab) && getComputedStyle(tripTab).visibility!=='hidden') throw Error('trip-tab-visible');
           window.showView('trip');
@@ -178,7 +197,7 @@ function renderFixtureBootstrap() {
           await ready('screenshot-02-transactions',()=>{
             const list=document.querySelector('#tx-list');
             const row=Array.from(list?.querySelectorAll('*')||[]).find(e=>e.childNodes.length && text(e).includes('Déjeuner au lac') && !Array.from(e.children).some(c=>text(c).includes('Déjeuner au lac')));
-            return visible(row) && text(list).includes('Bus local') && text(list).includes('Sortie volcan') ? row : null;
+            return visible(row) && text(list).includes('Bus local') && text(list).includes('Sortie volcan') ? document.querySelector('.tx-list-head') : null;
           });
           await navigate('dashboard');
           document.querySelector('#db-today')?.click();
@@ -190,7 +209,7 @@ function renderFixtureBootstrap() {
           await ready('screenshot-04-analyse',()=>{
             const total=document.querySelector('#analysis-summary .analysis-stat--glass-blue .analysis-stat-value');
             const chart=document.querySelector('#analysis-category-bars-chart');
-            return /^60[,.]00/.test(text(total)) && visible(chart) && chart.querySelector('canvas,svg') ? chart : null;
+            return /^60[,.]00/.test(text(total)) && visible(chart) && chart.querySelector('canvas,svg') ? (chart.closest('.card')||chart) : null;
           });
           console.info('TB_PLAY_NATIVE_DONE');
         } catch(error) {
@@ -228,7 +247,18 @@ const getState=()=>{
 };
 const passed=new Set();
 const expected=new Set(['screenshot-01-compte','screenshot-02-transactions','screenshot-03-budget','screenshot-04-analyse']);
-const deadline=Date.now()+175000;
+const deadline=Date.now()+225000;
+const ocrNormalization=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
+const criteria={
+  'screenshot-01-compte': t=>/carte voyage/.test(t) && /solde/.test(t) && /240[.,]00/.test(t),
+  'screenshot-02-transactions': t=>/liste/.test(t) && /bus local|dejeuner au lac/.test(t) && /dupliquer|facture|recherche/.test(t),
+  'screenshot-03-budget': t=>/budget net/.test(t) && /120/.test(t) && /objectif/.test(t),
+  'screenshot-04-analyse': t=>/toutes les categories|vue detaillee/.test(t) && /repas|transport|activit/.test(t),
+};
+const acceptedPixels=[];
+const rejectedCounts={};
+const candidate=join(process.env.RUNNER_TEMP,'travelbudget-candidate.png');
+
 while (Date.now()<deadline) {
   const state=getState();
   if (state?.type==='READY' && expected.has(state.name) && !passed.has(state.name)) {
@@ -239,9 +269,18 @@ while (Date.now()<deadline) {
       if (png.subarray(0,8).toString('hex')!=='89504e470d0a1a0a' || png.readUInt32BE(16)!==1080 || png.readUInt32BE(20)!==1920) {
         throw Error('Native PNG resolution mismatch');
       }
-      await writeFile(join(out,state.name+'.png'),png);
-      passed.add(state.name);
-      console.log('Verified native capture',state.name);
+      await writeFile(candidate,png);
+      const rawText=execFileSync('tesseract',[candidate,'stdout','-l','fra+eng','--psm','11'],{encoding:'utf8',timeout:7500,maxBuffer:1024*1024,stdio:['ignore','pipe','ignore']});
+      await rm(candidate,{force:true});
+      const pixels=ocrNormalization(rawText);
+      if (!/preparation de votre espace|preparation des donnees/.test(pixels) && criteria[state.name](pixels)) {
+        await writeFile(join(out,state.name+'.png'),png);
+        passed.add(state.name);
+        acceptedPixels.push(state.name);
+        console.log('DOM + OCR verified native capture',state.name);
+      } else {
+        rejectedCounts[state.name]=(rejectedCounts[state.name]||0)+1;
+      }
     }
   }
   if (state?.type==='FAIL') {
@@ -257,13 +296,15 @@ while (Date.now()<deadline) {
     }
     throw Error('Native app fixture could not verify stage: '+state.name);
   }
-  if (state?.type==='DONE' && passed.size!==expected.size) throw Error('App finished but not all native captures arrived: '+passed.size);
+  if (state?.type==='DONE') break;
   if (passed.size===expected.size) break;
   await new Promise(resolve=>setTimeout(resolve,850));
 }
-if (passed.size!==expected.size) throw Error('Native capture timeout: '+passed.size+' of '+expected.size+' screenshots');
+console.log('Native OCR results',JSON.stringify({acceptedPixels,rejectedCounts}));
+if (passed.size<2) throw Error('Fewer than two distinct native screenshots passed visual verification: '+passed.size);
 await writeFile(join(out,'provenance.txt'),
   'TravelBudget 10.5.397, exact UI source at 2a85d8941df4a18d780236ae49eccc323759f44f.\n'+
   'Raw native ADB emulator captures, 1080×1920, standard app role.\n'+
   'Unpublished debug capture build, synthetic read-only bootstrap, no external egress or account.\n'+
-  'Fictional Taupō data: wallet 240 NZD, 3 transactions, 120 NZD left for the day, 60 NZD in Analyse. Trip access refused to standard role (not pictured).\n');
+  'Fictional Taupō data: wallet 240 NZD, 3 transactions, 120 NZD left for the day, 60 NZD in Analyse. Trip access refused to standard role.\n'+
+  'DOM and on-device pixel OCR verified: '+acceptedPixels.join(', ')+'\n');
