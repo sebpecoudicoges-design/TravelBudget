@@ -46,6 +46,30 @@ function withinDepth(root) {
   return true;
 }
 
+function validDebtTimeline(debt, asOfDay) {
+  return positiveAmount(debt.openingAmount) && Number.isSafeInteger(cents(debt.openingAmount))
+    && cents(debt.openingAmount) > 0 && validDay(debt.openingDate) && debt.openingDate <= asOfDay
+    && typeof debt.currency === 'string' && /^[A-Z]{3}$/.test(debt.currency)
+    && (debt.adjustments === undefined || (isRecordList(debt.adjustments) && debt.adjustments.every(a =>
+      isId(a.id) && typeof a.reason === 'string' && a.reason.trim() && validDay(a.date)
+      && a.date >= debt.openingDate && a.date <= asOfDay && Number.isFinite(a.amount)
+      && Number.isSafeInteger(cents(a.amount)) && cents(a.amount) !== 0)));
+}
+
+function negativeDebtBalance(debt, transactionById) {
+  const events = [
+    ...(debt.adjustments || []).map(a => ({ date: a.date, id: a.id, kind: 0, delta: cents(a.amount) })),
+    ...debt.repayments.map(r => ({
+      date: transactionById.get(r.transactionId).cashDate, id: r.transactionId, kind: 1, delta: cents(-r.principal),
+    })),
+  ].sort((a, b) => a.date.localeCompare(b.date) || a.kind - b.kind || a.id.localeCompare(b.id));
+  let balance = BigInt(cents(debt.openingAmount));
+  return events.some(e => {
+    balance += BigInt(e.delta);
+    return balance < 0n;
+  });
+}
+
 // An incomplete, unscoped, or malformed inventory cannot prove absence.
 function reviewActiveReferences(settings, scope, sources) {
   const sourceLists = { transaction: sources?.transactionIds, asset: sources?.assetIds, wallet: sources?.walletIds };
@@ -86,7 +110,11 @@ function reviewActiveReferences(settings, scope, sources) {
     if (debt.originTransactionId !== undefined && debt.originTransactionId !== '') {
       addTyped(debt.originTransactionId, debt.currency, 'funding', debt.openingAmount, debt.openingDate);
     }
-    if (!isRecordList(debt.repayments)) { valid = false; continue; }
+    if (!isRecordList(debt.repayments) || (typed && (!validDebtTimeline(debt, asOfDay)
+        || debt.repayments.some(r => !positiveAmount(r.principal) || !Number.isSafeInteger(cents(-r.principal)))))) {
+      valid = false;
+      continue;
+    }
     for (const repayment of debt.repayments) addTyped(repayment.transactionId, debt.currency, 'repayment', repayment.principal, debt.openingDate);
   }
   for (const position of settings.positions) {
@@ -152,6 +180,9 @@ function reviewActiveReferences(settings, scope, sources) {
           || (rule.role === 'repayment' && (cents(rule.amount) > cents(row.amount) || row.cashDate < rule.openingDate))) incompatible++;
     }
     if (incompatible > 0) return { status: 'incompatible-references', incompatible: { transaction: incompatible } };
+    // Do not compute a debt timeline until every linked source is compatible.
+    const negative = settings.debts.filter(debt => negativeDebtBalance(debt, byId)).length;
+    if (negative > 0) return { status: 'incompatible-references', incompatible: { debt: negative } };
   }
   return { status: 'references-present' };
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { debtLedger } from '../../../src/features/accounting/accountingDebts.js';
 import { previewAccountingRestore } from '../../../src/features/accounting/accountingRestorePreview.js';
 
 const scope = Object.freeze({ userId: 'synthetic-user', travelId: 'synthetic-travel' });
@@ -262,5 +263,58 @@ describe('typed purchases in the accounting restore review', () => {
     expect(review({ ...sources, assetMetadata: [asset, asset] })).toEqual({ status: 'sources-unavailable' });
     expect(review({ ...sources, assetIds: [], assetMetadata: [] }))
       .toEqual({ status: 'missing-references', missing: { transaction: 0, asset: 1, wallet: 0 } });
+  });
+});
+
+describe('typed debt balance history', () => {
+  const debt = { id: 'synthetic-loan', name: 'Dette fictive', currency: 'EUR',
+    openingAmount: 100, openingDate: '2026-01-01',
+    repayments: [{ transactionId: 'payment-2', principal: 50 }, { transactionId: 'payment-1', principal: 60 }],
+  };
+  const sources = { ...scope, complete: true, asOfDay: '2026-01-31',
+    transactionIds: ['payment-1', 'payment-2'], assetIds: [], walletIds: [],
+    transactionMetadata: [
+      { id: 'payment-2', currency: 'EUR', type: 'expense', amount: 55, payNow: true, cashDate: '2026-01-20' },
+      { id: 'payment-1', currency: 'EUR', type: 'expense', amount: 65, payNow: true, cashDate: '2026-01-10' },
+    ],
+  };
+  const adjust = (date, amount) => ({ id: 'synthetic-adjustment', date, amount, reason: 'Correction privée fictive' });
+  const review = (data = debt, inventory = sources) => previewAccountingRestore(raw({ settings: {
+    ...candidate.settings, debts: [data], archivedDebts: [{ ...debt, openingAmount: 1 }],
+  } }), scope, inventory);
+  const rejected = { status: 'incompatible-references', incompatible: { debt: 1 } };
+
+  it('rejects payments that fit individually but together exceed capital; does not return amounts or identifiers', () => {
+    expect(review()).toEqual(rejected);
+  });
+
+  it('uses trusted cash-date order and counts same-day adjustments before payment', () => {
+    const candidateDebt = { ...debt, adjustments: [adjust('2026-01-20', 10)] };
+    expect(review(candidateDebt)).toMatchObject({ status: 'references-present', requiresFurtherValidation: true });
+    const tooLate = { ...candidateDebt, adjustments: [adjust('2026-01-21', 10)] };
+    expect(review(tooLate)).toEqual(rejected);
+    const liveBalance = d => debtLedger({ debts: [d] }, sources.transactionMetadata, sources.asOfDay).rows[0].remaining;
+    expect(liveBalance(candidateDebt)).toBe(0);
+    expect(liveBalance(tooLate)).toBeNull();
+  });
+
+  it('guards balances in cents down to zero, including a signed adjustment', () => {
+    const exact = { ...debt, openingAmount: 110.01, adjustments: [adjust('2026-01-10', -0.01)] };
+    expect(review(exact)).toMatchObject({ status: 'references-present', requiresFurtherValidation: true });
+    expect(review({ ...exact, openingAmount: 110 })).toEqual(rejected);
+  });
+
+  it.each([null, [adjust('2026-02-01', 10)], [adjust('2026-01-20', '10')], [adjust('2026-01-20', 0)]])(
+    'rejects malformed active adjustments: %j', adjustments => {
+      expect(review({ ...debt, adjustments })).toEqual({ status: 'invalid-active-references' });
+    },
+  );
+
+  it('reports an unavailable or incompatible source before interpreting the debt balance', () => {
+    expect(review(debt, { ...sources, transactionMetadata: sources.transactionMetadata.slice(1) }))
+      .toEqual({ status: 'sources-unavailable' });
+    const [first, second] = sources.transactionMetadata;
+    expect(review(debt, { ...sources, transactionMetadata: [{ ...first, payNow: false }, second] }))
+      .toEqual({ status: 'incompatible-references', incompatible: { transaction: 1 } });
   });
 });
