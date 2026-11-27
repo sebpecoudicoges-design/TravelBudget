@@ -84,3 +84,25 @@ résoudre l’activité Android attendue. Les APK ne sont pas en téléversement
 Ce contrôle n’ouvre pas Google, ne valide pas Firebase ni un retour OAuth
 complet, et ne teste pas les écrans après authentification. Il ne suffit
 pas à décider de l’activation de R8 pour le prochain AAB Play.
+
+Le [run 45918982007](https://github.com/sebpecoudicoges-design/TravelBudget/actions/runs/45918982007)
+a passé ce contrôle pour le témoin et pour R8.
+
+### Mémoire : référence locale reproductible
+
+Le workflow relève séparément le PSS et le RSS totaux du **processus
+principal** avec [dumpsys meminfo](https://developer.android.com/tools/dumpsys).
+Même émulateur et même version Android, trois réinstallations par variante,
+ordre alterné, mesure trois secondes après observation de l’écran de
+connexion hors ligne, avec vérification du PID. Il rapporte les six
+valeurs et la médiane par variante. Le fournisseur WebView est identifié,
+mais les processus de rendu isolés ne sont pas imputés au processus
+principal et ne sont pas inclus dans ces chiffres.
+
+Ces relevés ne sont ni un pic mémoire ni la mesure
+[Android vitals](https://developer.android.com/google/play/vitals/memory-usage)
+(RSS anonyme + swap, par état du processus, tranche de RAM et percentile).
+Ils ne couvrent pas encore une session ouverte, la navigation entre
+modules ni les documents. Avant toute correction, relever la série et la
+tranche de mémoire concernées dans Play, puis isoler chaque parcours avec
+des données fictives. Une variation sur émulateur ne résout pas l’alerte Play.

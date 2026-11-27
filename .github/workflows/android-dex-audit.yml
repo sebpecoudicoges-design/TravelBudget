@@ -112,7 +112,7 @@ jobs:
           device shell svc data disable
           device shell input keyevent KEYCODE_WAKEUP
           device shell wm dismiss-keyguard
-      - name: Verify cold offline startup before and after R8
+      - name: Verify cold offline startup and record main-process memory
         shell: bash
         run: |
           set -euo pipefail
@@ -126,8 +126,20 @@ jobs:
             "$signer" sign --ks "$key" --ks-pass pass:ephemeral-ci --ks-key-alias tb-ci \
               --out "$apk" "$RUNNER_TEMP/tb-$variant-unsigned.apk"
             "$signer" verify "$apk"
-            bash scripts/android/r8_emulator_smoke.sh "$apk" "$variant"
           done
+          for sample in baseline:1 r8:1 r8:2 baseline:2 baseline:3 r8:3; do
+            variant=${sample%:*}
+            round=${sample#*:}
+            bash scripts/android/r8_emulator_smoke.sh "$RUNNER_TEMP/tb-$variant-emulator.apk" "$variant" "$round"
+          done
+          "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell dumpsys webviewupdate | grep 'Current WebView package'
+          python3 -B scripts/android/startup_memory.py summary "$RUNNER_TEMP/tb-startup-memory"  | tee "$RUNNER_TEMP/tb-startup-memory.json"
+          {
+            echo '### Offline startup memory, main process only (not Android vitals)'
+            echo '```json'
+            cat "$RUNNER_TEMP/tb-startup-memory.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Stop the emulator
         if: always()
         run: '"$ANDROID_HOME/platform-tools/adb" -s emulator-5554 emu kill || true'
