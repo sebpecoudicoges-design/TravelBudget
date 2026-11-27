@@ -21,6 +21,11 @@ on:
       - 'scripts/audit-nutrition/**'
       - 'tests/e2e/financial-trip-budget.spec.js'
       - 'tests/e2e/document-preview-audit.spec.js'
+      - 'tests/e2e/assistant-ai.spec.js'
+      - 'public/legacy/js/31_help_faq.js'
+      - 'public/legacy/js/32_help_assistant.js'
+      - 'src/features/assistant/assistantAiClient.js'
+      - 'supabase/functions/assistant-help/**'
       - 'tests/data/mutationQueue*.test.js'
       - 'tests/e2e/offline-queue-*.spec.js'
       - 'tests/data/nutrition*.test.js'
@@ -64,3 +69,4 @@ jobs:
       - run: npm run test:e2e -- tests/e2e/offline-queue-tabs.spec.js tests/e2e/offline-queue-revision.spec.js --project=desktop-chromium
 
       - run: npm run test:e2e -- tests/e2e/document-preview-audit.spec.js --project=desktop-chromium
+      - run: npm run test:e2e -- tests/e2e/assistant-ai.spec.js --project=desktop-chromium
