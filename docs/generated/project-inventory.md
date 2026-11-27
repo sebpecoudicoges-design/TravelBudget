@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `337d0c35b717e85d76e94e06d650b66ab662e28e`
-> Empreinte du snapshot : `77e127ffdaae700695458cf2fbe34f6a9a6973076acbef9c5073ed85be6e48af`
-> Généré le : `2026-11-27T18:32:16.016Z`
+> Commit analysé : `0b97a78ceceefe1efc393bfbb3bb3da68c7949cd`
+> Empreinte du snapshot : `acd906a5980a813be39e9fae25dddbaed3db27a8391f80f2053e71729b21a1c7`
+> Généré le : `2026-11-27T19:02:20.322Z`
 
 # Inventaire du projet TravelBudget
 
@@ -895,6 +895,7 @@ Modules :
 - `docs/WALLET_JOURNAL_10_5_386.md`
 - `docs/WEB_10_5_393.md`
 - `docs/WEB_10_5_396.md`
+- `docs/WEB_CSP_F12.md`
 - `docs/assistant-ai-evaluation.md`
 - `docs/deployment_settings_checklist.md`
 
