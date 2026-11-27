@@ -169,3 +169,20 @@ visuellement son rendu, séparément du simple clic. Une exécution verte
 prouve la capture, pas le rendu. L’URL du PDF est locale au shell :
 l’ouverture d’un document signé via un lecteur externe et un stockage
 réel reste une validation distincte. Aucun compte ni service réel n’est utilisé.
+
+Résultat : [exécution Android 45956244692](https://github.com/sebpecoudicoges-design/TravelBudget/actions/runs/45956244692),
+API 35, WebView 124.0.6367.219. Le modal et son lien sont visibles,
+mais le cadre PDF reste blanc (aucune trace du rectangle rouge attendu).
+Quatre secondes après le clic, l’écran est toujours sur le même modal,
+sans PDF affiché ni activité externe au premier plan. C’est le résultat
+sur le PDF interne du banc, pas une mesure du lien HTTPS signé vers
+un stockage distant. La CI est verte pour la capture ; le rendu dans
+la WebView n’est pas validé.
+
+Prochain contrôle : mesurer séparément l’ouverture externe d’un lien
+HTTPS servi par un hôte de test et le rendu embarqué, sans réutiliser
+une URL de production. Ne pas supprimer le repli navigateur observé
+par l’utilisateur et ne pas présenter le cadre blanc comme un aperçu
+fonctionnel. Pour une correction, comparer une ouverture externe
+Android explicite et un vrai moteur d’aperçu ; vérifier téléchargement,
+erreur et retour dans l’app avant d’en faire le chemin par défaut.
