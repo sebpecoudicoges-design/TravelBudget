@@ -59,3 +59,50 @@
 .demo-result-group h4, .trip-demo-play h4 { margin: 0; }
 #demo-journey .demo-result-group dd, #demo-journey .demo-split-preview dd { white-space: normal; overflow-wrap: anywhere; text-align: end; }
 .demo-return { display: block; margin-top: 12px; }
+
+.tb-demo-hub {
+  min-width: 0;
+  padding: clamp(14px, 3.2vw, 40px);
+  border: 1px solid var(--tb-line);
+  border-radius: var(--tb-radius-lg);
+  background: var(--tb-surface);
+  box-shadow: var(--tb-shadow-soft, var(--tb-shadow));
+}
+.tb-demo-hub .section-head { margin-bottom: 20px; }
+.tb-demo-kicker {
+  margin: 0 0 9px;
+  color: var(--tb-ink);
+  font-size: .84rem;
+  font-weight: 850;
+}
+.tb-demo-hub .demo-switch a {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  text-decoration: none;
+}
+.tb-demo-hub .demo-switch a[aria-current] {
+  color: var(--tb-surface);
+  border-color: var(--tb-ink);
+  background: var(--tb-ink);
+  box-shadow: none;
+}
+.tb-demo-stage {
+  min-width: 0;
+  padding: clamp(12px, 2vw, 24px);
+  border: 1px solid var(--tb-line);
+  border-radius: var(--tb-radius-md);
+  background: var(--tb-surface-soft);
+}
+.tb-demo-stage .trip-demo > div { background: var(--tb-surface); }
+.tb-demo-video {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--tb-line);
+}
+.tb-demo-video h3 { margin: 0 0 12px; font-size: clamp(1.1rem, 2vw, 1.45rem); }
+#demo .tb-demo-video .project-video { margin: 0; }
+@media (max-width: 630px) {
+  .tb-demo-hub .demo-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tb-demo-hub .demo-switch a { padding-inline: 10px; }
+}

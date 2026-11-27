@@ -1398,88 +1398,96 @@
 
     <section id="demo" class="band" aria-labelledby="demo-title">
       <div class="shell">
-        <div class="section-head">
-          <h2 id="demo-title" data-i18n="demo.hub.title">Les démos TravelBudget</h2>
-          <p data-i18n="demo.hub.lead">Choisis un parcours. Saisis quelques valeurs fictives, vérifie le détail, puis observe le résultat.</p>
-        </div>
-        <span id="lab" aria-hidden="true"></span>
-        <nav id="demo-selection" class="demo-switch" data-demo-switch hidden aria-label="Démonstrations">
-          <a href="#demo-trip" data-scenario="trip" data-i18n="demo.tab.trip">Dépense partagée</a>
-          <a href="#demo-fx" data-scenario="fx" data-i18n="demo.tab.fx">Change</a>
-          <a href="#demo-transaction" data-scenario="transaction" data-i18n="demo.tab.transaction">Transaction</a>
-          <a href="#demo-documents" data-scenario="documents" data-i18n="demo.tab.documents">Documents</a>
-          <a href="#demo-sport" data-scenario="sport" data-i18n="demo.tab.sport">Sport</a>
-          <a href="#demo-nutrition" data-scenario="nutrition" data-i18n="demo.tab.nutrition">Alimentation</a>
-        </nav>
-        <div id="demo-trip" data-demo-panel="trip">
-          <div class="section-head demo-scenario-head">
-            <h3 tabindex="-1" data-i18n="demo.title">Un dîner à Taupō, deux budgets.</h3>
-            <p data-i18n="demo.lead">Saisis un dîner pour deux dans Partage (Trip), vérifie le partage, puis retrouve le paiement dans Compte et ta part dans Budget et Analyse.</p>
+        <div class="tb-demo-hub">
+          <div class="section-head">
+            <h2 id="demo-title" data-i18n="demo.hub.title">Les démos TravelBudget</h2>
+            <p data-i18n="demo.hub.lead">Choisis un parcours. Saisis quelques valeurs fictives, vérifie le détail, puis observe le résultat.</p>
           </div>
-          <div class="trip-demo" data-trip-demo>
-            <div class="trip-demo-play">
-              <span class="eyebrow" data-i18n="demo.badge">Simulation guidée · Données fictives</span>
-              <ol class="demo-steps" aria-label="Étapes">
-                <li data-demo-stage="0" aria-current="step" data-i18n="demo.stage.expense">Dépense Trip</li>
-                <li data-demo-stage="1" data-i18n="demo.stage.split">Parts</li>
-                <li data-demo-stage="2" data-i18n="demo.stage.review">Compte, Budget et Analyse</li>
-              </ol>
-              <form id="demo-expense">
-                <h3 data-i18n="demo.dinner">Dîner à Taupō</h3>
-                <label for="demo-amount" data-i18n="demo.amount">Montant payé (NZD)</label>
-                <div class="demo-fields">
-                  <input id="demo-amount" type="number" min="2" max="300" step="1" inputmode="numeric" value="60" required aria-describedby="demo-hint" />
-                  <button type="submit" class="btn primary" data-i18n="demo.record">Vérifier les parts</button>
+          <span id="lab" aria-hidden="true"></span>
+          <p class="tb-demo-kicker" data-i18n="demo.hub.step">Choisis une démo</p>
+          <nav id="demo-selection" class="demo-switch" data-demo-switch hidden aria-label="Démonstrations">
+            <a href="#demo-trip" data-scenario="trip" data-i18n="demo.tab.trip">Dépense partagée</a>
+            <a href="#demo-fx" data-scenario="fx" data-i18n="demo.tab.fx">Change</a>
+            <a href="#demo-transaction" data-scenario="transaction" data-i18n="demo.tab.transaction">Transaction</a>
+            <a href="#demo-documents" data-scenario="documents" data-i18n="demo.tab.documents">Documents</a>
+            <a href="#demo-sport" data-scenario="sport" data-i18n="demo.tab.sport">Sport</a>
+            <a href="#demo-nutrition" data-scenario="nutrition" data-i18n="demo.tab.nutrition">Alimentation</a>
+          </nav>
+          <div class="tb-demo-stage">
+          <div id="demo-trip" data-demo-panel="trip">
+            <div class="section-head demo-scenario-head">
+              <h3 tabindex="-1" data-i18n="demo.title">Un dîner à Taupō, deux budgets.</h3>
+              <p data-i18n="demo.lead">Saisis un dîner pour deux dans Partage (Trip), vérifie le partage, puis retrouve le paiement dans Compte et ta part dans Budget et Analyse.</p>
+            </div>
+            <div class="trip-demo" data-trip-demo>
+              <div class="trip-demo-play">
+                <span class="eyebrow" data-i18n="demo.badge">Simulation guidée · Données fictives</span>
+                <ol class="demo-steps" aria-label="Étapes">
+                  <li data-demo-stage="0" aria-current="step" data-i18n="demo.stage.expense">Dépense Trip</li>
+                  <li data-demo-stage="1" data-i18n="demo.stage.split">Parts</li>
+                  <li data-demo-stage="2" data-i18n="demo.stage.review">Compte, Budget et Analyse</li>
+                </ol>
+                <form id="demo-expense">
+                  <h3 data-i18n="demo.dinner">Dîner à Taupō</h3>
+                  <label for="demo-amount" data-i18n="demo.amount">Montant payé (NZD)</label>
+                  <div class="demo-fields">
+                    <input id="demo-amount" type="number" min="2" max="300" step="1" inputmode="numeric" value="60" required aria-describedby="demo-hint" />
+                    <button type="submit" class="btn primary" data-i18n="demo.record">Vérifier les parts</button>
+                  </div>
+                  <p class="demo-note" id="demo-hint" data-i18n="demo.range">Entre 2 et 300 NZD, en dollars entiers dans cette démo.</p>
+                </form>
+                <div id="demo-share" hidden>
+                  <h3 id="demo-share-title" tabindex="-1" data-i18n="demo.share.title">Partager la dépense</h3>
+                  <p data-i18n="demo.share.text">Tu règles avec ta carte voyage. Avec Alex, chacun paie la moitié du dîner.</p>
+                  <dl class="demo-split-preview"><div><dt data-i18n="demo.preview.personal">Ta part</dt><dd id="demo-preview-personal">—</dd></div><div><dt data-i18n="demo.preview.alex">Part d’Alex</dt><dd id="demo-preview-alex">—</dd></div></dl>
+                  <button type="button" class="btn primary" id="demo-split" data-i18n="demo.share.action">Enregistrer la dépense</button>
+                  <button type="button" class="btn" id="demo-edit" data-i18n="demo.share.edit">Modifier le montant</button>
                 </div>
-                <p class="demo-note" id="demo-hint" data-i18n="demo.range">Entre 2 et 300 NZD, en dollars entiers dans cette démo.</p>
-              </form>
-              <div id="demo-share" hidden>
-                <h3 id="demo-share-title" tabindex="-1" data-i18n="demo.share.title">Partager la dépense</h3>
-                <p data-i18n="demo.share.text">Tu règles avec ta carte voyage. Avec Alex, chacun paie la moitié du dîner.</p>
-                <dl class="demo-split-preview"><div><dt data-i18n="demo.preview.personal">Ta part</dt><dd id="demo-preview-personal">—</dd></div><div><dt data-i18n="demo.preview.alex">Part d’Alex</dt><dd id="demo-preview-alex">—</dd></div></dl>
-                <button type="button" class="btn primary" id="demo-split" data-i18n="demo.share.action">Enregistrer la dépense</button>
-                <button type="button" class="btn" id="demo-edit" data-i18n="demo.share.edit">Modifier le montant</button>
+                <div id="demo-review" hidden>
+                  <h3 id="demo-review-title" tabindex="-1" data-i18n="demo.review.title">Le paiement n’est pas ta dépense finale</h3>
+                  <p data-i18n="demo.review.text">Ton compte a été débité du total. Trip suit ce qu’Alex te doit. Budget et Analyse retiennent ta part personnelle, sans compter deux fois le paiement.</p>
+                </div>
+                <button type="button" class="btn demo-reset" id="demo-reset" hidden data-i18n="demo.reset">Recommencer</button>
               </div>
-              <div id="demo-review" hidden>
-                <h3 id="demo-review-title" tabindex="-1" data-i18n="demo.review.title">Le paiement n’est pas ta dépense finale</h3>
-                <p data-i18n="demo.review.text">Ton compte a été débité du total. Trip suit ce qu’Alex te doit. Budget et Analyse retiennent ta part personnelle, sans compter deux fois le paiement.</p>
-              </div>
-              <button type="button" class="btn demo-reset" id="demo-reset" hidden data-i18n="demo.reset">Recommencer</button>
-            </div>
-            <div class="trip-demo-results" aria-live="polite">
-              <div class="demo-result-group">
-                <h3 data-i18n="demo.step.account">Compte</h3>
-                <dl>
-                  <div><dt data-i18n="demo.balance">Solde du compte</dt><dd id="demo-balance">300 NZD</dd></div>
-                  <div><dt data-i18n="demo.paid">Montant débité</dt><dd id="demo-paid">—</dd></div>
-                </dl>
-              </div>
-              <div class="demo-result-group">
-                <h3>Trip</h3>
-                <dl><div><dt data-i18n="demo.owed">Alex te doit</dt><dd id="demo-owed">—</dd></div></dl>
-              </div>
-              <div class="demo-result-group">
-                <h3 data-i18n="demo.step.budget">Budget et Analyse</h3>
-                <dl>
-                  <div><dt data-i18n="demo.daily">Budget du jour</dt><dd>150 NZD</dd></div>
-                  <div><dt data-i18n="demo.category">Ta part · Repas</dt><dd id="demo-personal">—</dd></div>
-                  <div><dt data-i18n="demo.left">Reste à dépenser</dt><dd id="demo-left">150 NZD</dd></div>
-                </dl>
+              <div class="trip-demo-results" aria-live="polite">
+                <div class="demo-result-group">
+                  <h3 data-i18n="demo.step.account">Compte</h3>
+                  <dl>
+                    <div><dt data-i18n="demo.balance">Solde du compte</dt><dd id="demo-balance">300 NZD</dd></div>
+                    <div><dt data-i18n="demo.paid">Montant débité</dt><dd id="demo-paid">—</dd></div>
+                  </dl>
+                </div>
+                <div class="demo-result-group">
+                  <h3>Trip</h3>
+                  <dl><div><dt data-i18n="demo.owed">Alex te doit</dt><dd id="demo-owed">—</dd></div></dl>
+                </div>
+                <div class="demo-result-group">
+                  <h3 data-i18n="demo.step.budget">Budget et Analyse</h3>
+                  <dl>
+                    <div><dt data-i18n="demo.daily">Budget du jour</dt><dd>150 NZD</dd></div>
+                    <div><dt data-i18n="demo.category">Ta part · Repas</dt><dd id="demo-personal">—</dd></div>
+                    <div><dt data-i18n="demo.left">Reste à dépenser</dt><dd id="demo-left">150 NZD</dd></div>
+                  </dl>
+                </div>
               </div>
             </div>
           </div>
+          <div id="demo-journey" data-demo-panel="other" hidden></div>
+          <a class="project-video-link demo-return" href="#demo-selection" data-i18n="demo.hub.back" data-demo-return hidden>Choisir une autre démo</a>
+          <noscript><p class="demo-note">La partie interactive a besoin de JavaScript. La vidéo reste disponible.</p></noscript>
+          <p class="demo-note" data-i18n="demo.local">La démo de cette page ne se connecte pas à l’app et ne sauvegarde aucune donnée. Elle illustre certains parcours avec des données fictives.</p>
+          </div>
+          <div class="tb-demo-video">
+          <h3 data-i18n="demo.hub.video">Voir l’application en action</h3>
+          <figure class="product-frame project-video" id="video-demo">
+            <video controls playsinline preload="none" width="1440" height="1000" poster="./demo-media/taupo-poster.jpg" aria-labelledby="demo-video-title">
+              <source src="./demo-media/travelbudget-taupo-demo.mp4" type="video/mp4" />
+            </video>
+            <figcaption id="demo-video-title" data-i18n="demo.video.caption">Capture continue de l’application web sur ordinateur, en thème clair. Données fictives, repères en français et fond musical.</figcaption>
+            <a class="project-video-link" href="./demo-media/travelbudget-taupo-demo.mp4" data-i18n="demo.video.open">Ouvrir la vidéo séparément</a>
+          </figure>
+          </div>
         </div>
-        <div id="demo-journey" data-demo-panel="other" hidden></div>
-        <a class="project-video-link demo-return" href="#demo-selection" data-i18n="demo.hub.back" data-demo-return hidden>Choisir une autre démo</a>
-        <noscript><p class="demo-note">La partie interactive a besoin de JavaScript. La vidéo reste disponible.</p></noscript>
-        <p class="demo-note" data-i18n="demo.local">La démo de cette page ne se connecte pas à l’app et ne sauvegarde aucune donnée. Elle illustre certains parcours avec des données fictives.</p>
-        <figure class="product-frame project-video" id="video-demo">
-          <video controls playsinline preload="none" width="1440" height="1000" poster="./demo-media/taupo-poster.jpg" aria-labelledby="demo-video-title">
-            <source src="./demo-media/travelbudget-taupo-demo.mp4" type="video/mp4" />
-          </video>
-          <figcaption id="demo-video-title" data-i18n="demo.video.caption">Capture continue de l’application web sur ordinateur, en thème clair. Données fictives, repères en français et fond musical.</figcaption>
-          <a class="project-video-link" href="./demo-media/travelbudget-taupo-demo.mp4" data-i18n="demo.video.open">Ouvrir la vidéo séparément</a>
-        </figure>
       </div>
     </section>
 
@@ -1575,7 +1583,7 @@
           <p data-i18n="app.lead">Deux façons de tester sur Android : l’APK en téléchargement direct ci-dessous, ou l’Alpha fermée sur Google Play. Les deux installations sont distinctes.</p>
         </div>
         <div class="app-grid">
-          <article class="app-card app-card-primary"><strong>10.5.397</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105397">APK Android 10.5.397 signé avec la même clé que la version 10.5.395.</p></article>
+          <article class="app-card app-card-primary"><strong>10.5.398</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105398">APK Android 10.5.398 avec le nouveau logo, signé avec la même clé que la version 10.5.397.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les données disponibles sur l’appareil restent consultables. Certaines saisies peuvent attendre le retour du réseau.</p></article>
           <article class="app-card"><strong>Projet vivant</strong><h3 data-i18n="app.project.title">Atlas et fresque synchronises</h3><p data-i18n="app.project.body">La version, l inventaire du depot, les preuves de validation et l APK restent lisibles au meme endroit.</p></article>
         </div>
@@ -2032,9 +2040,9 @@
         <div class="cta">
           <div>
             <h2 data-i18n="app.cta.title">APK Android en téléchargement direct.</h2>
-            <p data-i18n="app.cta.body.105397">Installe l’APK 10.5.397 pour tester la nouvelle compilation.</p>
+            <p data-i18n="app.cta.body.105398">Téléchargement direct. Si tu participes à l’Alpha, installe plutôt la version depuis Google Play.</p>
           </div>
-          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.397-20261126-053351-debug.apk" download data-latest-apk data-i18n="app.cta.button.105397">Télécharger l'APK 10.5.397</a>
+          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.398-20261127-000253-debug.apk" download data-latest-apk data-i18n="app.cta.button.105398">Télécharger l'APK 10.5.398</a>
         </div>
       </div>
     </section>
@@ -2161,6 +2169,8 @@
           "auth.title": "Accéder à l’app complète", "auth.body": "Les démos sont publiques. Pour synchroniser tes données, crée un compte ou connecte-toi.", "auth.signup": "Creer un compte", "auth.login": "Se connecter",
           "status.release": "Version web", "status.mobile": "Android", "status.mobile.value": "APK de test", "status.owner": "Projet par",
           "mock.cashflow": "Cashflow estime", "mock.signal": "Signal du jour", "mock.projection": "Projection", "mock.feed": "Flux recent",
+          "demo.hub.step": "Choisis une démo",
+          "demo.hub.video": "Voir l’application en action",
           "demo.hub.title": "Les démos TravelBudget",
           "demo.hub.back": "Choisir une autre démo",
           "demo.hub.lead": "Choisis un parcours. Saisis quelques valeurs fictives, vérifie le détail, puis observe le résultat.",
@@ -2284,8 +2294,8 @@
           "release.105319": "Stabilisation : choix clair/sombre/systeme sur la page Projet, premier rendu Dashboard fiabilise, Cautions retire de l interface et retours traites archives avec leurs dates.",
           "release.105318": "Interface generale : la page Projet adopte la palette corail/lagon, retire ses panneaux de suivi internes et l ecran de chargement devient plus clair, rassurant et compatible theme sombre.",
           "release.105317": "Stabilisation Dashboard : le Hero premium respecte maintenant le theme sombre, la courbe se recree au changement de theme et les mutations wallet reverifient la connexion avant Supabase.",
-          "app.apk.body.105397": "APK Android 10.5.397 signé avec la même clé que la version 10.5.395.",
-          "app.cta.body.105397": "Installe l’APK 10.5.397 pour tester la nouvelle compilation.", "app.cta.button.105397": "Télécharger l'APK 10.5.397",
+          "app.apk.body.105398": "APK Android 10.5.398 avec le nouveau logo, signé avec la même clé que la version 10.5.397.",
+          "app.cta.body.105398": "Téléchargement direct. Si tu participes à l’Alpha, installe plutôt la version depuis Google Play.", "app.cta.button.105398": "Télécharger l'APK 10.5.398",
           "app.apk.body.105316": "APK debug 10.5.316 prete pour la campagne de tests modules.",
           "app.version.title.105316": "Stabilisation", "app.version.body.105316": "Campagne module par module ouverte.",
           "release.105316": "Stabilisation : les modules sont figes pour les utilisateurs standards. Le nouveau role test donne acces aux modules et a une campagne integree de 45 scenarios avec resultat OK, Pas OK, notes et cloture par module.",
@@ -2445,6 +2455,8 @@
           "auth.title": "Open the full app", "auth.body": "The demo is public. To sync your own data, create an account or sign in.", "auth.signup": "Create account", "auth.login": "Sign in",
           "status.release": "Web version", "status.mobile": "Android", "status.mobile.value": "Test APK", "status.owner": "A project by",
           "mock.cashflow": "Estimated cashflow", "mock.signal": "Today's signal", "mock.projection": "Projection", "mock.feed": "Recent feed",
+          "demo.hub.step": "Choose a demo",
+          "demo.hub.video": "See the app in action",
           "demo.hub.title": "TravelBudget demos",
           "demo.hub.back": "Choose another demo",
           "demo.hub.lead": "Choose a workflow. Enter a few fictional values, review the details and see the result.",
@@ -2565,8 +2577,8 @@
           "release.105319": "Stabilization: light, dark and system choices on the Project page, reliable first Dashboard render, Cautions removed from the interface, and treated feedback archived with its dates.",
           "release.105318": "General interface: the Project page adopts the coral and lagoon palette, removes internal tracking panels, and the loading screen becomes clearer, reassuring and dark-mode compatible.",
           "release.105317": "Dashboard stabilization: the premium Hero now follows dark mode, the cashflow chart is recreated when the theme changes, and wallet mutations recheck connectivity before Supabase.",
-          "app.apk.body.105397": "Android APK 10.5.397 signed with the same key as 10.5.395.",
-          "app.cta.body.105397": "Install APK 10.5.397 to test the upgraded build.", "app.cta.button.105397": "Download APK 10.5.397",
+          "app.apk.body.105398": "Android APK 10.5.398 with the new logo, signed with the same key as 10.5.397.",
+          "app.cta.body.105398": "Direct download. If you are taking part in the Alpha, install from Google Play instead.", "app.cta.button.105398": "Download APK 10.5.398",
           "app.apk.body.105316": "Debug APK 10.5.316 is ready for the module testing campaign.",
           "app.version.title.105316": "Stabilization", "app.version.body.105316": "The module-by-module campaign is open.",
           "release.105316": "Stabilization: modules are frozen for standard users. The new test role can access modules and an integrated 45-scenario campaign with OK, Not OK, notes and per-module completion.",
