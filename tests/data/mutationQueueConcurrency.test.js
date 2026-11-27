@@ -373,3 +373,63 @@ it.each(['load', 'fingerprint'])('does not write a Trip replay after its intent 
   expect(context._updateExpense).not.toHaveBeenCalled();
   expect(context.tripState._offlineReplaySaving).toBe(false);
 });
+
+it.each(['similar-expense', 'lookup-error', 'clear'])(
+  'only confirms a queued Trip creation after a verified lookup and actual write: %s',
+  async scenario => {
+    const values = new Map();
+    const storage = {
+      getItem: key => values.get(key) ?? null,
+      setItem: (key, value) => values.set(key, value),
+      removeItem: key => values.delete(key),
+    };
+    const toastOk = vi.fn();
+    const cleanup = vi.fn();
+    const find = vi.fn().mockImplementation(async () => {
+      if (scenario === 'lookup-error') throw new Error('Network read failed');
+      return scenario === 'similar-expense' ? 'previous-expense' : null;
+    });
+    const add = vi.fn(async () => 'new-expense');
+    const window = {
+      Data: { createMutationQueueStore, flushMutationQueue }, sbUser: { id: 'synthetic' },
+      addEventListener() {}, dispatchEvent() {}, toastOk, tbTripCleanupOfflineOptimistic: cleanup,
+    };
+    const context = vm.createContext({
+      window, localStorage: storage, navigator: { language: 'fr' },
+      setTimeout() {}, setInterval() {}, clearInterval() {}, console: { warn() {} },
+      sbUser: window.sbUser, tripState: { activeTripId: 'trip', members: [{ id: 'payer' }], expenses: [] },
+      TB_CONST: { TABLES: { trip_expenses: 'trip_expenses' } },
+      _loadActiveData: async () => {},
+      _tripExpenseFormForQueue: form => form,
+      _normalizeCurrency: currency => currency,
+      _normalizeTripEntryKind: kind => kind,
+      _tripRepository: () => ({ findExpenseByFingerprint: find }),
+      _addExpense: add,
+    });
+    const source = fs.readFileSync('public/legacy/js/29_trip_v1.js', 'utf8');
+    vm.runInContext(source.slice(source.indexOf('async function _findExistingTripExpenseForReplay('),
+      source.indexOf('function _tripCleanupOfflineOptimistic(')), context);
+    vm.runInContext(fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8'), context);
+    const form = { label: 'Bus', date: '2026-11-26', amount: 10, currency: 'EUR', paidByMemberId: 'payer', kind: 'expense' };
+    const queued = await window.tbOfflineQueueEnqueue('trip.expense.create', { tripId: 'trip', form });
+    toastOk.mockClear();
+
+    const result = await window.tbOfflineQueueSync('manual');
+    expect(find).toHaveBeenCalledExactlyOnceWith({ table: 'trip_expenses', tripId: 'trip', ...form });
+    if (scenario === 'clear') {
+      expect(result).toMatchObject({ ok: true, synced: 1 });
+      expect(add).toHaveBeenCalledExactlyOnceWith({ ...form, skipDuplicateCheck: true });
+      expect(cleanup).toHaveBeenCalledExactlyOnceWith(queued.id);
+      expect(window.tbOfflineQueuePending()).toEqual([]);
+    } else {
+      expect(result).toMatchObject({ ok: false, synced: 0, failed: 1 });
+      expect(add).not.toHaveBeenCalled();
+      expect(cleanup).not.toHaveBeenCalled();
+      expect(toastOk).not.toHaveBeenCalled();
+      expect(window.tbOfflineQueuePending()).toEqual([expect.objectContaining({
+        id: queued.id, payload: expect.objectContaining({ form }), status: 'pending',
+        error: expect.stringContaining(scenario === 'similar-expense' ? 'similaire' : 'verification'),
+      })]);
+    }
+  },
+);

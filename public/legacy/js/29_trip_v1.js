@@ -3366,44 +3366,39 @@ async function _persistSettlementWithWallet(wallet) {
   }
 
   async function _findExistingTripExpenseForReplay(tripId, form) {
-    try {
-      const normalizedTripId = String(tripId || "").trim();
-      const date = String(form?.date || "").slice(0, 10);
-      const label = String(form?.label || "").trim();
-      const amount = Number(form?.amount || 0);
-      const currency = _normalizeCurrency(form?.currency);
-      const paidByMemberId = String(form?.paidByMemberId || "");
-      if (!normalizedTripId || !date || !label || !isFinite(amount) || amount <= 0 || !currency || !paidByMemberId) return null;
+    const normalizedTripId = String(tripId || "").trim();
+    const date = String(form?.date || "").slice(0, 10);
+    const label = String(form?.label || "").trim();
+    const amount = Number(form?.amount || 0);
+    const currency = _normalizeCurrency(form?.currency);
+    const paidByMemberId = String(form?.paidByMemberId || "");
+    if (!normalizedTripId || !date || !label || !isFinite(amount) || amount <= 0 || !currency || !paidByMemberId) return null;
 
-      const candidates = (tripState.expenses || []).filter((ex) => {
-        if (!ex || ex.localOnly) return false;
-        return String(ex.tripId || ex.trip_id || normalizedTripId) === normalizedTripId
-          && String(ex.date || "").slice(0, 10) === date
-          && String(ex.label || "").trim().toLowerCase() === label.toLowerCase()
-          && Math.abs(Number(ex.amount || 0) - amount) < 0.005
-          && _normalizeCurrency(ex.currency) === currency
-          && String(ex.paidByMemberId || ex.paid_by_member_id || "") === paidByMemberId
-          && _normalizeTripEntryKind(ex.kind) === _normalizeTripEntryKind(form?.kind);
-      });
-      if (candidates.length) {
-        candidates.sort((a, b) => String(a.createdAt || a.created_at || "").localeCompare(String(b.createdAt || b.created_at || "")));
-        return candidates[0].id || candidates[0].expenseId || null;
-      }
-
-      return await _tripRepository().findExpenseByFingerprint({
-        table: TB_CONST.TABLES.trip_expenses,
-        tripId: normalizedTripId,
-        date,
-        label,
-        amount,
-        currency,
-        paidByMemberId,
-        kind: _normalizeTripEntryKind(form?.kind),
-      });
-    } catch (e) {
-      console.warn("[Trip] offline replay duplicate guard failed", e);
-      return null;
+    const candidates = (tripState.expenses || []).filter((ex) => {
+      if (!ex || ex.localOnly) return false;
+      return String(ex.tripId || ex.trip_id || normalizedTripId) === normalizedTripId
+        && String(ex.date || "").slice(0, 10) === date
+        && String(ex.label || "").trim().toLowerCase() === label.toLowerCase()
+        && Math.abs(Number(ex.amount || 0) - amount) < 0.005
+        && _normalizeCurrency(ex.currency) === currency
+        && String(ex.paidByMemberId || ex.paid_by_member_id || "") === paidByMemberId
+        && _normalizeTripEntryKind(ex.kind) === _normalizeTripEntryKind(form?.kind);
+    });
+    if (candidates.length) {
+      candidates.sort((a, b) => String(a.createdAt || a.created_at || "").localeCompare(String(b.createdAt || b.created_at || "")));
+      return candidates[0].id || candidates[0].expenseId || null;
     }
+
+    return _tripRepository().findExpenseByFingerprint({
+      table: TB_CONST.TABLES.trip_expenses,
+      tripId: normalizedTripId,
+      date,
+      label,
+      amount,
+      currency,
+      paidByMemberId,
+      kind: _normalizeTripEntryKind(form?.kind),
+    });
   }
 
   async function _tripReplayOfflineExpenseMutation(payload, mayReplay = () => true) {
@@ -3439,10 +3434,19 @@ async function _persistSettlementWithWallet(wallet) {
       if (String(payload?.mode || payload?.kind || "").includes("update") || payload?.expenseId) {
         await _updateExpense(Object.assign({ expenseId: payload.expenseId }, form));
       } else {
-        const existingExpenseId = await _findExistingTripExpenseForReplay(tripId, form);
+        let similarExpense;
+        try {
+          similarExpense = await _findExistingTripExpenseForReplay(tripId, form);
+        } catch (cause) {
+          ensureCurrent();
+          throw new Error("Trip : verification indisponible. Saisie conservee en attente.", { cause });
+        }
         ensureCurrent();
-        if (existingExpenseId) return existingExpenseId;
-        await _addExpense(Object.assign({}, form, { skipDuplicateCheck: true }));
+        // Resemblance cannot identify this action or confirm its Budget/Wallet writes.
+        if (similarExpense) {
+          throw new Error("Trip : une operation similaire existe. Saisie conservee en attente de verification.");
+        }
+        return await _addExpense(Object.assign({}, form, { skipDuplicateCheck: true }));
       }
     } finally {
       tripState._offlineReplaySaving = false;
