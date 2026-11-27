@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `ea6819f02afac0da379a5a3a383ca8b9d151f239`
-> Empreinte du snapshot : `16cfb520d012856572693d34cbb0d3d68b3ca8c0af9ee48eb0778401f5ca69a4`
-> Généré le : `2026-11-27T10:31:58.179Z`
+> Commit analysé : `94e5e36cf930f51b03a6819fe0f17488e9181bf9`
+> Empreinte du snapshot : `bc039d08aca3fa2ff7a9236791aa067a78c241924720d0d798f5d4e0b9a97da0`
+> Généré le : `2026-11-27T11:05:35.905Z`
 
 # Inventaire du projet TravelBudget
 
@@ -868,6 +868,7 @@ Modules :
 - `docs/MANUAL_TESTS.md`
 - `docs/MODULE_RECOVERY_10_5_384.md`
 - `docs/MODULE_TEST_CAMPAIGN.md`
+- `docs/NUTRITION_ATOMIC_F4.md`
 - `docs/PLAY_STORE_READINESS.md`
 - `docs/PREPAID_PROJECTION_10_5_375.md`
 - `docs/PROJECT_ATLAS.md`
