@@ -16,4 +16,17 @@ Exécuter avec PGlite `0.3.15` installé hors du dépôt :
 node scripts/audit-nutrition/test-atomic-meal.mjs /chemin/vers/pglite/dist/index.js
 ```
 
-Le banc emploie une seule connexion PostgreSQL en mémoire. Il ne prouve pas la concurrence entre deux sessions indépendantes, l’intégration PostgREST ni la coordination avec les anciens clients qui écrivent directement dans les tables. Confirmer ces points sur un banc Supabase isolé, puis vérifier le mappage des résultats vers la file du client et le choix explicite en cas de conflit. Ne pas substituer un nouvel identifiant de rejeu à une saisie existante. Aucun changement de schéma ou de client en production.
+## Deux connexions PostgreSQL indépendantes
+
+Le second banc démarre un PostgreSQL 17.12 vierge sur l’adresse locale, avec un port temporaire et un mot de passe généré. Il charge le même schéma fictif. Il observe réellement le blocage entre deux sessions :
+
+1. Après validation de la première transaction, le rejeu concurrent retrouve la même opération sans écrire de nouveau.
+2. Après annulation de la première transaction, la session en attente crée un seul repas avec ses propres quantités.
+3. Si l’autre session modifie l’en-tête du repas pendant le rejeu, celui-ci signale un conflit et ne touche ni l’édition ni les aliments.
+
+Avec les binaires PostgreSQL et le module Node `pg` 8.16.3 installés hors du dépôt :
+```sh
+node scripts/audit-nutrition/test-atomic-meal-concurrency.mjs /chemin/vers/pg/bin /chemin/vers/node_modules/pg/lib/index.js
+```
+
+Ce banc ne teste pas PostgREST, une vraie perte de réponse HTTP, ni une ancienne édition qui modifie uniquement les aliments sans verrouiller l’en-tête. Tester la coordination avec ces écritures et le traitement client des résultats sur un banc Supabase isolé avant de brancher la RPC. Ne pas substituer un nouvel identifiant de rejeu à une saisie existante. Aucun changement de schéma ou de client en production.
