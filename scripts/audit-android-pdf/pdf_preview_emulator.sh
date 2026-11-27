@@ -51,9 +51,18 @@ done
 [[ "$coords" =~ ^[0-9]+\ [0-9]+$ ]]
 device exec-out screencap -p > "$dir/before.png"
 read -r x y <<< "$coords"
+if [[ -n "${TB_PDF_FIXTURE_LOG:-}" ]]; then
+  printf '\n--- fallback tap ---\n' >>"$TB_PDF_FIXTURE_LOG"
+fi
 device shell input tap "$x" "$y"
 sleep 4
 device exec-out screencap -p > "$dir/after.png"
 dump_view "$dir/after.xml" || echo 'Accessibility tree unavailable after the tap' >&2
 device shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' > "$dir/foreground.txt" || true
+if [[ -n "${TB_PDF_FIXTURE_LOG:-}" ]]; then
+  device shell cmd package resolve-activity --brief -a android.intent.action.VIEW -t application/pdf > "$dir/pdf-handler.txt" || true
+  device shell input keyevent KEYCODE_BACK
+  sleep 2
+  device shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' > "$dir/foreground-after-back.txt" || true
+fi
 printf 'Captured a synthetic PDF iframe and tapped the real fallback link. Review the screenshots; an HTTP request or tap is not a rendering verdict.\n'

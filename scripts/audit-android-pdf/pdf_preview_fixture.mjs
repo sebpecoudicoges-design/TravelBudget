@@ -5,8 +5,9 @@ import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const [rendererFile, outputDir] = process.argv.slice(2);
-assert(rendererFile && outputDir, 'Usage: node pdf_preview_fixture.mjs renderer-file empty-web-dir');
+const [rendererFile, outputDir, mode = "local"] = process.argv.slice(2);
+assert(rendererFile && outputDir && ['local', 'https'].includes(mode),
+  'Usage: node pdf_preview_fixture.mjs renderer-file empty-web-dir [local|https]');
 const { renderDocumentPreviewModal } = await import(pathToFileURL(path.resolve(rendererFile)).href);
 await mkdir(outputDir, { recursive: true });
 assert.deepEqual(await readdir(outputDir), [], 'Use an empty Capacitor web directory');
@@ -34,7 +35,9 @@ const labels = {
   'documents.action.new_tab': 'Open in new tab',
   'documents.action.close': 'Close preview',
 };
-const url = '/audit-document.pdf';
+const host = 'https://127.0.0.1:8443';
+const url = mode === 'https' ? `${host}/audit-document.pdf?token=fixture-only` : '/audit-document.pdf';
+const frameSource = mode === 'https' ? host : "'self'";
 const modal = renderDocumentPreviewModal({
   name: 'Synthetic itinerary',
   url,
@@ -46,7 +49,7 @@ assert(modal.includes(`<iframe src="${url}"`));
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>TravelBudget PDF audit</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; frame-src 'self'; form-action 'none'; connect-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; frame-src ${frameSource}; form-action 'none'; connect-src 'none'">
 <style>
 body { margin: 24px 12px; font: 16px system-ui; color: #111; background: #eef3f3; }
 .tb-doc-preview { padding: 12px; background: white; border: 1px solid #234; }

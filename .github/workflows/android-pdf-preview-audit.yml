@@ -5,8 +5,7 @@ on:
     branches: [codex/handoff-audit-2026-11-25-cloud]
     paths:
       - '.github/workflows/android-pdf-preview-audit.yml'
-      - 'scripts/audit-android-pdf/pdf_preview_fixture.mjs'
-      - 'scripts/audit-android-pdf/pdf_preview_emulator.sh'
+      - 'scripts/audit-android-pdf/**'
   workflow_dispatch:
 
 permissions:
@@ -25,7 +24,9 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - name: Build an emulator-only Capacitor shell with a synthetic PDF
+      - name: Verify the synthetic HTTPS transport contract
+        run: node --test scripts/audit-android-pdf/test-pdf-preview-https.mjs
+      - name: Build an emulator-only Capacitor shell with a synthetic HTTPS PDF
         shell: bash
         run: |
           set -euo pipefail
@@ -36,7 +37,29 @@ jobs:
           test "$(git rev-parse HEAD)" = "$source_sha"
           test ! -e android/app/google-services.json
           npm ci
-          node "$GITHUB_WORKSPACE/scripts/audit-android-pdf/pdf_preview_fixture.mjs" src/features/documents/documentView.js dist
+          node "$GITHUB_WORKSPACE/scripts/audit-android-pdf/pdf_preview_fixture.mjs" src/features/documents/documentView.js dist https
+          fixture="$RUNNER_TEMP/tb-pdf-https"
+          mkdir -m 700 "$fixture"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj '/CN=TravelBudget PDF Fixture' \
+            -addext subjectAltName=IP:127.0.0.1 -keyout "$fixture/fixture.key" -out "$fixture/fixture.crt"
+          cp dist/audit-document.pdf "$fixture/audit-document.pdf"
+          # Only the disposable local audit app trusts this one certificate.
+          mkdir -p android/app/src/debug/res/{raw,xml}
+          cp "$fixture/fixture.crt" android/app/src/debug/res/raw/audit_pdf_fixture.crt
+          cat > android/app/src/debug/res/xml/audit_pdf_network.xml <<'XML'
+          <network-security-config>
+            <domain-config cleartextTrafficPermitted="false">
+              <domain>127.0.0.1</domain>
+              <trust-anchors><certificates src="@raw/audit_pdf_fixture" /></trust-anchors>
+            </domain-config>
+          </network-security-config>
+          XML
+          test ! -e android/app/src/debug/AndroidManifest.xml
+          cat > android/app/src/debug/AndroidManifest.xml <<'XML'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <application android:networkSecurityConfig="@xml/audit_pdf_network" />
+          </manifest>
+          XML
           sed -i 's/variant.applicationId.set("com.travelbudget.app")/variant.applicationId.set("org.travelbudget.audit.pdf")/' android/app/build.gradle
           grep -F 'variant.applicationId.set("org.travelbudget.audit.pdf")' android/app/build.gradle
           ./node_modules/.bin/cap sync android
@@ -76,8 +99,31 @@ jobs:
           device shell svc data disable
           device shell input keyevent KEYCODE_WAKEUP
           device shell wm dismiss-keyguard
-      - name: Observe the iframe and tap the fallback link
-        run: bash scripts/audit-android-pdf/pdf_preview_emulator.sh "$RUNNER_TEMP/tb-pdf-debug.apk" "$RUNNER_TEMP/tb-pdf-evidence"
+      - name: Observe the HTTPS iframe and tap the existing fallback link
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture="$RUNNER_TEMP/tb-pdf-https"
+          evidence="$RUNNER_TEMP/tb-pdf-evidence"
+          mkdir -p "$evidence"
+          export TB_PDF_FIXTURE_LOG="$evidence/fixture-requests.txt"
+          device() { "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 "$@"; }
+          node scripts/audit-android-pdf/pdf_preview_https.mjs \
+            "$fixture/fixture.crt" "$fixture/fixture.key" "$fixture/audit-document.pdf" >>"$TB_PDF_FIXTURE_LOG" 2>&1 &
+          pid=$!
+          trap 'device reverse --remove tcp:8443 || true; kill "$pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 20); do
+            grep -Fq 'loopback PDF fixture ready' "$TB_PDF_FIXTURE_LOG" && break
+            sleep .25
+          done
+          url='https://127.0.0.1:8443/audit-document.pdf?token=fixture-only'
+          curl --noproxy '*' --max-time 5 --fail --silent --show-error --cacert "$fixture/fixture.crt" \
+            "$url" -o "$fixture/host-check.pdf"
+          cmp "$fixture/audit-document.pdf" "$fixture/host-check.pdf"
+          printf '\n--- emulator WebView launch ---\n' >>"$TB_PDF_FIXTURE_LOG"
+          device reverse tcp:8443 tcp:8443
+          bash scripts/audit-android-pdf/pdf_preview_emulator.sh "$RUNNER_TEMP/tb-pdf-debug.apk" "$evidence"
+          awk '/emulator WebView launch/{emulator=1} emulator && /"mode":"inline","method":"GET","status":20[06]/{got=1} END{exit !got}' "$TB_PDF_FIXTURE_LOG"
       - name: Retain only synthetic screenshots and diagnostics for review
         if: always()
         uses: actions/upload-artifact@v5
