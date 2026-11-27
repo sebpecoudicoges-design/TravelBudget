@@ -51,7 +51,7 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: node --test scripts/audit-nutrition/test-atomic-meal-client.mjs
+      - run: node --test scripts/audit-nutrition/test-atomic-meal-client.mjs scripts/audit-nutrition/test-atomic-meal-conflict.mjs
       - run: npm test -- --maxWorkers=2
       - run: npm run docs:check
       - run: npm run build

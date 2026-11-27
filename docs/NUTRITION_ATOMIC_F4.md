@@ -49,4 +49,14 @@ Le transport du banc est lié au jeton synthétique d’un seul compte, pas à l
 node --test scripts/audit-nutrition/test-atomic-meal-client.mjs
 ```
 
-Ces tests ne rendent pas atomique l’ancienne édition qui envoie l’en-tête et l’aliment dans deux requêtes. Ils ne couvrent pas non plus le déplacement entre repas ou la suppression de l’en-tête au moment du rejeu. Il reste à concevoir une édition à transaction unique, à traiter la suppression d’un repas en attente de rejeu, puis à valider le branchement de la file et le choix de résolution d’un conflit. Aucun changement de schéma ni d’application en production.
+Ces tests ne rendent pas atomique l’ancienne édition qui envoie l’en-tête et l’aliment dans deux requêtes. Ils ne couvrent pas non plus le déplacement entre repas ou la suppression de l’en-tête au moment du rejeu. Il reste à concevoir une édition à transaction unique, à traiter la suppression d’un repas en attente de rejeu, puis à valider le branchement de la file et l’interface de résolution d’un conflit. Aucun changement de schéma ni d’application en production.
+
+## Choix explicite en cas de conflit (isolé)
+
+Le protocole client prépare une prévisualisation pour un seul compte, une seule saisie et deux révisions : celle de la saisie locale et celle du repas distant complet, aliments compris. Sans choix, la saisie reste en attente. Si la personne choisit « garder la version distante », le protocole relit le repas distant puis demande à la file de retirer la seule saisie conflictuelle revue, à condition que sa révision corresponde toujours. Si le repas distant est absent ou différent, il faut revoir la prévisualisation ; une erreur de lecture, un changement de compte ou de saisie et un échec de stockage ne sont pas des confirmations. Le protocole ne modifie jamais le repas distant et ne crée ni nouvelle saisie ni nouvel identifiant. Une édition distante après la relecture reste une édition distante normale : cette procédure n’est pas une transaction répartie.
+
+Les tests utilisent des adaptateurs fictifs. L’intégration devra produire une version cohérente de l’ensemble du repas en une lecture, puis vérifier compte, conflit et révision dans la même transaction locale que le retrait. Ce contrat ne prouve pas que l’ancien localStorage réalise cette transaction ni qu’une interface affiche déjà le choix.
+
+```sh
+node --test scripts/audit-nutrition/test-atomic-meal-conflict.mjs
+```
