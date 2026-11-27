@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Strictly scoped to the disposable, offline CI emulator.
+set -euo pipefail
+apk="${1:?emulator APK required}"
+variant="${2:?baseline or r8 required}"
+case "$variant" in baseline|r8) ;; *) exit 2 ;; esac
+pkg=fr.pecloud.travelbudget
+activity="$pkg/com.travelbudget.app.MainActivity"
+device() { "${ANDROID_HOME:?}/platform-tools/adb" -s emulator-5554 "$@"; }
+test "$(device shell getprop ro.kernel.qemu | tr -d '\r')" = 1
+test "$(device shell settings get global airplane_mode_on | tr -d '\r')" = 1
+device install "$apk" | grep -Fx Success
+trap 'device uninstall "$pkg" >/dev/null' EXIT
+
+dir="${RUNNER_TEMP:?}/tb-emulator-$variant"
+mkdir -p "$dir"
+device shell dumpsys package "$pkg" > "$dir/package.txt"
+grep -F 'versionName=10.5.397' "$dir/package.txt"
+grep -F 'versionCode=10050397' "$dir/package.txt"
+device shell cmd package resolve-activity --brief -a android.intent.action.VIEW \
+  -c android.intent.category.BROWSABLE -d "$pkg://auth-callback" -p "$pkg" > "$dir/oauth-route.txt"
+grep -Fx "$activity" "$dir/oauth-route.txt"
+
+device shell am start -W -n "$activity" | tee "$dir/launch.txt"
+grep -F 'Status: ok' "$dir/launch.txt"
+for retry in $(seq 1 20); do
+  if timeout 12 "${ANDROID_HOME}/platform-tools/adb" -s emulator-5554 shell uiautomator dump /sdcard/tb-r8-window.xml >/dev/null &&
+     device exec-out cat /sdcard/tb-r8-window.xml > "$dir/window.xml" &&
+     python3 -B "$(dirname "$0")/check_offline_screen.py" "$dir/window.xml"; then
+    device shell pidof "$pkg"
+    printf 'PASS [%s]: release login screen rendered locally in WebView and Android callback route resolves\n' "$variant"
+    exit 0
+  fi
+  sleep 2
+done
+echo "Offline WebView or its expected form did not render: $variant" >&2
+exit 1

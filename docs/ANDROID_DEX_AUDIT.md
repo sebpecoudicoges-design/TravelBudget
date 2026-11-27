@@ -66,3 +66,21 @@ natif de taille inchangé. Le workflow n’envoie ni les bundles ni le mapping ;
 il affiche les empreintes et, si disponible, les scores via `android analyze`.
 Les vérifications sur émulateur et l’AAB exact de Play restent distincts de
 cette expérience ; la release du dépôt et l’Alpha ne sont pas modifiés.
+
+Le [run R8 45908969275](https://github.com/sebpecoudicoges-design/TravelBudget/actions/runs/45908969275)
+a mesuré **5 357 336 octets de DEX** côté candidat (−71,40 %),
+avec mapping et métadonnées R8, sans symboles natifs. Ce gain de taille
+n’est pas le score d’obscurcissement Play.
+
+### Vérification de compatibilité hors ligne
+
+Le même workflow assemble aussi les deux APK release pour un émulateur
+API 35. Il signe uniquement ces APK avec une clé jetable du runner.
+Après activation du mode avion et coupure des radios, chaque installation
+part de zéro : l’écran de connexion doit réellement être rendu dans
+WebView, le processus doit être actif et la route de retour OAuth doit
+résoudre l’activité Android attendue. Les APK ne sont pas en téléversement.
+
+Ce contrôle n’ouvre pas Google, ne valide pas Firebase ni un retour OAuth
+complet, et ne teste pas les écrans après authentification. Il ne suffit
+pas à décider de l’activation de R8 pour le prochain AAB Play.
