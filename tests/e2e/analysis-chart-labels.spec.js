@@ -99,3 +99,91 @@ for (const width of [390, 1440]) for (const theme of ['light', 'dark']) {
     await card.screenshot({ path: `test-results/analysis-category-card-${width}-${theme}.png` });
   });
 }
+
+test('category charts distinguish grouped positives, signed detail, exact zero and no rows', async ({ page, baseURL }) => {
+  const categories = Array.from({ length: 10 }, (_, i) => `Poste ${i + 1}`);
+  const rows = [
+    ...categories.map((name, i) => [name, i === 0 ? 30 : i < 8 ? 8 : 7, 'expense', '10']),
+    ['Crédit net', 10, 'expense', '10'],
+    ['Crédit net', 34, 'income', '10'],
+    ['Annulé', 15, 'expense', '11'],
+    ['Annulé', 15, 'income', '11'],
+  ];
+  const transactions = rows.map(([category, amount, type, day], i) => {
+    const date = `2026-10-${day}`;
+    return { ...fixtureTables.transactions[i], category, amount, type,
+      label: `${type === 'income' ? 'Remboursement' : 'Dépense'} ${category}`,
+      date_start: date, date_end: date, budget_date_start: date, budget_date_end: date,
+      paid_at: `${date}T12:00:00Z`,
+    };
+  });
+  await installConnectedFixture(page, baseURL, { tables: {
+    ...fixtureTables,
+    profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+    transactions,
+  } });
+  await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+  await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+  await page.goto('/?freeze=1');
+  await page.locator('#tab-analysis').click();
+
+  const charts = () => page.evaluate(() => {
+    const chart = id => window.echarts?.getInstanceByDom(document.getElementById(id))?.getOption();
+    const pie = chart('analysis-category-chart')?.series?.[0]?.data;
+    const bar = chart('analysis-category-bars-chart');
+    return {
+      pie: pie?.map(({ name, value, grouped }) => ({ name, value, grouped: !!grouped })),
+      bars: bar?.yAxis?.[0]?.data.map((name, i) => [name, bar.series[0].data[i].value]),
+    };
+  });
+  const note = page.locator('#analysis-category-pie-note');
+  const picker = page.locator('#analysis-category-drilldown');
+  const open = page.locator('#analysis-category-open');
+  const dialog = page.locator('#tb-analysis-tx-drilldown');
+  await expect(note).toContainText('Pourcentages sur les catégories à dépense nette positive');
+  const { pie, bars } = await charts();
+  expect(pie).toHaveLength(9);
+  expect(pie[0]).toEqual({ name: categories[0], value: 30, grouped: false });
+  expect(pie.slice(1, 8)).toEqual(expect.arrayContaining(
+    categories.slice(1, 8).map(name => ({ name, value: 8, grouped: false })),
+  ));
+  expect(pie[8]).toEqual({ name: 'Autres catégories (groupées)', value: 14, grouped: true });
+  const pieShares = await page.evaluate(() => {
+    const chart = window.echarts.getInstanceByDom(document.getElementById('analysis-category-chart'));
+    const pie = chart.getModel().getSeriesByIndex(0);
+    return [0, 8].map(i => pie.getDataParams(i).percent);
+  });
+  expect(pieShares).toEqual([30, 14]); // All positive net categories total 100, not the signed 76.
+  expect(Object.fromEntries(bars)).toEqual({
+    ...Object.fromEntries(categories.map((name, i) => [name, i === 0 ? 30 : i < 8 ? 8 : 7])),
+    'Crédit net': -24, 'Annulé': 0,
+  });
+  await picker.selectOption('Crédit net');
+  await open.press('Enter');
+  await expect(dialog).toContainText('Remboursement Crédit net');
+  await expect(dialog).toContainText('Dépense Crédit net');
+  await page.keyboard.press('Escape');
+  await expect(open).toBeFocused();
+
+  await page.locator('#analysis-period').selectOption('range');
+  async function setRange(day) {
+    const date = `2026-10-${day}`;
+    await page.locator('#analysis-range-start').fill(date);
+    await page.locator('#analysis-range-end').fill(date);
+  }
+  await setRange('11');
+  await expect.poll(charts).toEqual({ pie: [], bars: [['Annulé', 0]] });
+  await expect(note).toContainText('Aucune catégorie à dépense nette positive');
+  await expect(picker).toBeVisible();
+  await picker.selectOption('Annulé');
+  await open.press('Enter');
+  await expect(dialog).toContainText('Dépense Annulé');
+  await expect(dialog).toContainText('Remboursement Annulé');
+  await page.keyboard.press('Escape');
+
+  await setRange('12');
+  await expect.poll(charts).toEqual({ pie: [], bars: [] });
+  await expect(page.locator('#analysis-summary')).toContainText('Aucune dépense visible');
+  await expect(picker).toBeHidden();
+  await expect(picker).toHaveValue('');
+});
