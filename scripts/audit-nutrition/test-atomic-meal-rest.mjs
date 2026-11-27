@@ -5,6 +5,7 @@ import { createHmac, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { atomicMealRpc, replayAtomicMeal } from './atomic-meal-client.mjs';
 import { loadNutritionAuditFixture, userA } from './fixture.mjs';
 import { localPort, startNutritionAuditPostgres } from './local-postgres.mjs';
 
@@ -21,11 +22,13 @@ const signingInput = encode({ alg: 'HS256', typ: 'JWT' }) + '.' + encode({
 });
 const token = signingInput + '.' + createHmac('sha256', jwtSecret).update(signingInput).digest('base64url');
 const headers = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
-const meal = {
-  p_sync_id: 'http-response-lost', p_travel_id: null, p_meal_date: '2026-11-27',
-  p_meal_type: 'dinner', p_label: 'Synthetic dinner', p_notes: 'tb_sync:http-response-lost',
-  p_water_ml: 150, p_consumed_time: '18:15',
-  p_items: [
+const row = {
+  syncId: 'http-response-lost',
+  meal: {
+    user_id: userA, travel_id: null, meal_date: '2026-11-27', meal_type: 'dinner',
+    label: 'Synthetic dinner', water_ml: 150, consumed_time: '18:15',
+  },
+  items: [
     { food_key: 'rice_cooked', label: 'Synthetic rice', grams: 80 },
     { food_key: 'pasta_cooked', label: 'Synthetic pasta', grams: 120 },
   ],
@@ -49,7 +52,19 @@ try {
 
   const restPort = await localPort();
   const origin = `http://127.0.0.1:${restPort}`;
-  const url = origin + '/rpc/audit_nutrition_create_meal_v1';
+  const url = origin + '/rpc/' + atomicMealRpc;
+  const replay = (endpoint, snapshot = row, isCurrent = () => true) => replayAtomicMeal({
+    userId: userA, row: snapshot, isCurrent,
+    transport: {
+      userId: userA,
+      async rpc(name, args) {
+        assert.equal(name, atomicMealRpc);
+        const response = await request(endpoint, args);
+        const value = await response.json();
+        return response.ok ? { data: value } : { error: value };
+      },
+    },
+  });
   rest = spawn(resolve(postgrestBin), [], {
     env: {
       PATH: process.env.PATH, LC_ALL: 'C',
@@ -74,6 +89,7 @@ try {
   }
   assert.equal(ready, true, 'PostgREST failed to start: ' + restLog);
 
+  let firstPayload;
   let resolveForwarded;
   const forwarded = new Promise(resolve => { resolveForwarded = resolve; });
   // The local proxy waits for the first upstream response, then drops only the
@@ -83,6 +99,7 @@ try {
       const parts = [];
       for await (const chunk of incoming) parts.push(chunk);
       const payload = JSON.parse(Buffer.concat(parts).toString('utf8'));
+      firstPayload = payload;
       resolveForwarded({ value: await json(await request(url, payload)) });
     } catch (error) {
       resolveForwarded({ error });
@@ -91,7 +108,7 @@ try {
     }
   });
   await new Promise((done, reject) => proxy.once('error', reject).listen(0, '127.0.0.1', done));
-  await assert.rejects(request(`http://127.0.0.1:${proxy.address().port}`, meal), { name: 'TypeError' });
+  await assert.rejects(replay(`http://127.0.0.1:${proxy.address().port}`), { name: 'TypeError' });
   const original = await forwarded;
   if (original.error) throw original.error;
   const [created] = original.value;
@@ -101,16 +118,23 @@ try {
     count(i.id)::int as items from public.nutrition_meals m
     left join public.nutrition_meal_items i on i.meal_id = m.id where m.user_id = $1`, [userA])).rows[0];
   assert.deepEqual(await counts(), { meals: 1, items: 2 }, 'first request committed despite dropped response');
-  assert.deepEqual(await json(await request(url, meal)), [{ meal_id: created.meal_id, status: 'already_applied' }]);
-  const edited = { ...meal, p_items: [{ ...meal.p_items[0], grams: 81 }, meal.p_items[1]] };
-  assert.deepEqual(await json(await request(url, edited)), [{ meal_id: created.meal_id, status: 'conflict' }]);
-  const invalid = await request(url, { ...edited, p_sync_id: 'invalid-item', p_items: [meal.p_items[0], { ...meal.p_items[1], grams: -1 }] });
+  assert.deepEqual(await replay(url), {
+    mealId: created.meal_id, status: 'already_applied', disposition: 'confirmed',
+  });
+  const edited = { ...row, items: [{ ...row.items[0], grams: 81 }, row.items[1]] };
+  assert.deepEqual(await replay(url, edited), {
+    mealId: created.meal_id, status: 'conflict', disposition: 'pending',
+  });
+  const invalid = await request(url, {
+    ...firstPayload, p_sync_id: 'invalid-item',
+    p_items: [firstPayload.p_items[0], { ...firstPayload.p_items[1], grams: -1 }],
+  });
   assert.equal(invalid.ok, false);
   assert.equal((await invalid.json()).code, '23514');
   assert.deepEqual(await counts(), { meals: 1, items: 2 });
   assert.deepEqual((await admin.query('select grams::int from public.nutrition_meal_items where meal_id=$1 order by sort_order', [created.meal_id])).rows,
     [{ grams: 80 }, { grams: 120 }]);
-  console.log('PostgREST: lost response after commit, identical retry, changed retry and rollback confirmed.');
+  console.log('PostgREST and audit client: lost response, confirmed identical retry, pending conflict and rollback verified.');
 } finally {
   if (proxy) {
     proxy.closeAllConnections();

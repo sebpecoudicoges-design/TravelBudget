@@ -38,4 +38,14 @@ Avec PostgREST et les mêmes binaires PostgreSQL et module Node installés hors 
 node scripts/audit-nutrition/test-atomic-meal-rest.mjs /chemin/vers/pg/bin /chemin/vers/node_modules/pg/lib/index.js /chemin/vers/postgrest
 ```
 
-Aucun des bancs ne vérifie la coordination avec une ancienne édition qui modifie uniquement les aliments sans verrouiller l’en-tête, ni le traitement des résultats par l’application. Vérifier ces deux points avant de brancher la RPC. Ne pas substituer un nouvel identifiant de rejeu à une saisie existante. Aucun changement de schéma ou de client en production.
+## Contrat client de rejeu (isolé)
+
+Le module `scripts/audit-nutrition/atomic-meal-client.mjs` transmet uniquement la RPC atomique. Il n’efface pas lui-même la file. Il distingue les réponses `created` et `already_applied`, seules capables de confirmer la saisie, de `conflict`, qui reste en attente. Une réponse absente ou inconnue, une erreur de transport, un autre compte ou une révision devenue obsolète ne confirment rien et ne déclenchent aucune écriture de secours. Les nouvelles tentatives repartent de la même saisie enregistrée, avec le même identifiant et la même liste ordonnée. Une ancienne saisie sans compte, date ou voyage explicite (éventuellement nul), ou dont les identifiants divergent, nécessite une revue plutôt qu’une déduction depuis l’écran actuel.
+
+Le transport du banc est lié au jeton synthétique d’un seul compte, pas à la session active d’un client global. Un futur branchement devra conserver cette propriété et supprimer la saisie uniquement sous le contrôle de la révision locale. Le banc PostgREST passe par ce module pour constater successivement l’erreur réseau, le rejeu confirmé et le conflit laissé en attente. Les tests unitaires vérifient aussi un changement de révision pendant la réponse et l’absence de repli si la RPC est indisponible.
+
+```sh
+node --test scripts/audit-nutrition/test-atomic-meal-client.mjs
+```
+
+Il reste à vérifier la coordination avec une ancienne édition qui modifie uniquement les aliments sans verrouiller l’en-tête, puis le branchement réel de la file et le parcours de résolution d’un conflit. Aucun changement de schéma ni d’application en production.
