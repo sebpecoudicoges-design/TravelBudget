@@ -1449,14 +1449,31 @@
           <p class="demo-note" data-i18n="demo.local">La démo de cette page ne se connecte pas à l’app et ne sauvegarde aucune donnée. Elle illustre certains parcours avec des données fictives.</p>
           </div>
           <div class="tb-demo-video">
-          <h3 data-i18n="demo.hub.video">Voir l’application en action</h3>
-          <figure class="product-frame project-video" id="video-demo">
-            <video controls playsinline preload="none" width="1440" height="1000" poster="./demo-media/taupo-poster.jpg" aria-labelledby="demo-video-title">
-              <source src="./demo-media/travelbudget-taupo-demo.mp4" type="video/mp4" />
-            </video>
-            <figcaption id="demo-video-title" data-i18n="demo.video.caption">Capture continue de l’application web sur ordinateur, en thème clair. Données fictives, repères en français et fond musical.</figcaption>
-            <a class="project-video-link" href="./demo-media/travelbudget-taupo-demo.mp4" data-i18n="demo.video.open">Ouvrir la vidéo séparément</a>
-          </figure>
+            <h3 data-i18n="demo.hub.video">Voir l’application en action</h3>
+            <p class="tb-video-intro" data-i18n="demo.video.caption">Capture continue de l’application web sur ordinateur, en thème clair. Données fictives, repères en français et fond musical.</p>
+            <div class="tb-video-grid" id="video-demo">
+              <figure class="product-frame project-video">
+                <figcaption id="demo-video-title" data-i18n="demo.video.trip">Partager une dépense</figcaption>
+                <video controls playsinline preload="none" width="1440" height="1000" poster="./demo-media/taupo-poster.jpg" aria-labelledby="demo-video-title">
+                  <source src="./demo-media/travelbudget-taupo-demo.mp4" type="video/mp4" />
+                </video>
+                <a class="project-video-link" href="./demo-media/travelbudget-taupo-demo.mp4" data-i18n="demo.video.open">Ouvrir la vidéo séparément</a>
+              </figure>
+              <figure class="product-frame project-video" id="video-transaction">
+                <figcaption id="demo-video-transaction" data-i18n="demo.video.transaction">Ajouter une transaction · 38 s</figcaption>
+                <video controls playsinline preload="none" width="1440" height="1000" poster="./demo-media/travelbudget-tuto-transaction-poster.jpg" aria-labelledby="demo-video-transaction">
+                  <source src="./demo-media/travelbudget-tuto-transaction.mp4" type="video/mp4" />
+                </video>
+                <a class="project-video-link" href="./demo-media/travelbudget-tuto-transaction.mp4" data-i18n="demo.video.open">Ouvrir la vidéo séparément</a>
+              </figure>
+              <figure class="product-frame project-video" id="video-voyage">
+                <figcaption id="demo-video-voyage" data-i18n="demo.video.travel">Créer et paramétrer un voyage · 46 s</figcaption>
+                <video controls playsinline preload="none" width="1440" height="1000" poster="./demo-media/travelbudget-tuto-voyage-poster.jpg" aria-labelledby="demo-video-voyage">
+                  <source src="./demo-media/travelbudget-tuto-voyage.mp4" type="video/mp4" />
+                </video>
+                <a class="project-video-link" href="./demo-media/travelbudget-tuto-voyage.mp4" data-i18n="demo.video.open">Ouvrir la vidéo séparément</a>
+              </figure>
+            </div>
           </div>
         </div>
       </div>
@@ -1977,7 +1994,7 @@
         <div class="cta">
           <div>
             <h2 data-i18n="app.cta.title">APK Android en téléchargement direct.</h2>
-            <p data-i18n="app.cta.body.105398">Téléchargement direct. Si tu participes à l’Alpha, installe plutôt la version depuis Google Play.</p>
+            <p data-i18n="app.cta.body.105398">Installe l’APK 10.5.398 en téléchargement direct. Si tu participes à l’Alpha, installe plutôt la version depuis Google Play.</p>
           </div>
           <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.398-20261127-000253-debug.apk" download data-latest-apk data-i18n="app.cta.button.105398">Télécharger l'APK 10.5.398</a>
         </div>
@@ -2107,6 +2124,9 @@
           "status.release": "Version web", "status.mobile": "Android", "status.mobile.value": "APK de test", "status.owner": "Projet par",
           "mock.cashflow": "Cashflow estime", "mock.signal": "Signal du jour", "mock.projection": "Projection", "mock.feed": "Flux recent",
           "demo.hub.step": "Choisis une démo",
+          "demo.video.trip": "Partager une dépense",
+          "demo.video.transaction": "Ajouter une transaction · 38 s",
+          "demo.video.travel": "Créer et paramétrer un voyage · 46 s",
           "demo.hub.video": "Voir l’application en action",
           "demo.hub.title": "Les démos TravelBudget",
           "demo.hub.back": "Choisir une autre démo",
@@ -2227,7 +2247,7 @@
           "release.105318": "Interface generale : la page Projet adopte la palette corail/lagon, retire ses panneaux de suivi internes et l ecran de chargement devient plus clair, rassurant et compatible theme sombre.",
           "release.105317": "Stabilisation Dashboard : le Hero premium respecte maintenant le theme sombre, la courbe se recree au changement de theme et les mutations wallet reverifient la connexion avant Supabase.",
           "app.apk.body.105398": "APK Android 10.5.398 avec le nouveau logo, signé avec la même clé que la version 10.5.397.",
-          "app.cta.body.105398": "Téléchargement direct. Si tu participes à l’Alpha, installe plutôt la version depuis Google Play.", "app.cta.button.105398": "Télécharger l'APK 10.5.398",
+          "app.cta.body.105398": "Installe l’APK 10.5.398 en téléchargement direct. Si tu participes à l’Alpha, installe plutôt la version depuis Google Play.", "app.cta.button.105398": "Télécharger l'APK 10.5.398",
           "app.apk.body.105316": "APK debug 10.5.316 prete pour la campagne de tests modules.",
           "app.version.title.105316": "Stabilisation", "app.version.body.105316": "Campagne module par module ouverte.",
           "release.105316": "Stabilisation : les modules sont figes pour les utilisateurs standards. Le nouveau role test donne acces aux modules et a une campagne integree de 45 scenarios avec resultat OK, Pas OK, notes et cloture par module.",
@@ -2388,6 +2408,9 @@
           "status.release": "Web version", "status.mobile": "Android", "status.mobile.value": "Test APK", "status.owner": "A project by",
           "mock.cashflow": "Estimated cashflow", "mock.signal": "Today's signal", "mock.projection": "Projection", "mock.feed": "Recent feed",
           "demo.hub.step": "Choose a demo",
+          "demo.video.trip": "Split an expense",
+          "demo.video.transaction": "Add a transaction · 38 s",
+          "demo.video.travel": "Create and set up a trip · 46 s",
           "demo.hub.video": "See the app in action",
           "demo.hub.title": "TravelBudget demos",
           "demo.hub.back": "Choose another demo",
@@ -2505,7 +2528,7 @@
           "release.105318": "General interface: the Project page adopts the coral and lagoon palette, removes internal tracking panels, and the loading screen becomes clearer, reassuring and dark-mode compatible.",
           "release.105317": "Dashboard stabilization: the premium Hero now follows dark mode, the cashflow chart is recreated when the theme changes, and wallet mutations recheck connectivity before Supabase.",
           "app.apk.body.105398": "Android APK 10.5.398 with the new logo, signed with the same key as 10.5.397.",
-          "app.cta.body.105398": "Direct download. If you are taking part in the Alpha, install from Google Play instead.", "app.cta.button.105398": "Download APK 10.5.398",
+          "app.cta.body.105398": "Install APK 10.5.398 via direct download. If you are taking part in the Alpha, install from Google Play instead.", "app.cta.button.105398": "Download APK 10.5.398",
           "app.apk.body.105316": "Debug APK 10.5.316 is ready for the module testing campaign.",
           "app.version.title.105316": "Stabilization", "app.version.body.105316": "The module-by-module campaign is open.",
           "release.105316": "Stabilization: modules are frozen for standard users. The new test role can access modules and an integrated 45-scenario campaign with OK, Not OK, notes and per-module completion.",

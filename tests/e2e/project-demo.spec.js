@@ -16,7 +16,7 @@ for (const [width, colorScheme] of [[1440, 'light'], [390, 'dark']]) {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto('/projet.html');
-    await expect(page.locator('#video-demo video')).toHaveAttribute('controls', '');
+    await expect(page.locator('#video-demo video').first()).toHaveAttribute('controls', '');
     await expect(page.locator('#video-demo')).toBeVisible();
     await page.getByRole('link', { name: 'Ouvrir la démo', exact: true }).click();
     const demo = page.locator('#demo');
@@ -128,7 +128,14 @@ for (const [width, colorScheme] of [[1440, 'dark'], [390, 'light']]) {
     await expect(page.locator('section#modules, a[href="#modules"]')).toHaveCount(0);
     await expect(hub.locator('#modules')).toHaveCount(1);
     const journeys = page.locator('#demo-journey');
-    await expect(hub.locator('#video-demo video')).toHaveCount(1);
+    await expect(hub.locator('#video-demo video')).toHaveCount(3);
+    for (const [id, file] of [['video-transaction', 'transaction'], ['video-voyage', 'voyage']]) {
+      const video = hub.locator(`#${id} video`);
+      await expect(video).toHaveAttribute('preload', 'none');
+      await expect(video).toHaveAttribute('poster', `./demo-media/travelbudget-tuto-${file}-poster.jpg`);
+      await expect(video.locator('source')).toHaveAttribute('src', `./demo-media/travelbudget-tuto-${file}.mp4`);
+    }
+
     await expect(hub.getByRole('navigation', { name: 'Démonstrations' }).getByRole('link')).toHaveCount(6);
     await expect(journeys.getByRole('heading', { name: 'Convertir sans toucher à la réserve' })).toBeVisible();
     await expect(hub.locator('#demo-trip')).toBeHidden();

@@ -106,3 +106,9 @@
   .tb-demo-hub .demo-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tb-demo-hub .demo-switch a { padding-inline: 10px; }
 }
+
+.tb-video-intro { margin: 0 0 15px; color: var(--tb-muted); line-height: 1.5; }
+.tb-video-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+#demo .tb-video-grid .project-video { min-width: 0; width: 100%; align-self: start; padding: clamp(10px, 1.5vw, 18px); box-shadow: none; }
+.tb-video-grid .project-video figcaption { color: var(--tb-ink); font-weight: 800; font-size: .94rem; }
+@media (max-width: 780px) { .tb-video-grid { grid-template-columns: 1fr; } }
