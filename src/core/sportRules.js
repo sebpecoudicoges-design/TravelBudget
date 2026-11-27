@@ -172,6 +172,14 @@ export function finalizeWorkout(input = {}) {
   };
 }
 
+// An explicit null is a captured absence, not a request to use a different trip on retry.
+export function sportWorkoutTravelId(summary, fallback = null) {
+  const source = summary || {};
+  if (Object.hasOwn(source, 'travelId')) return source.travelId || null;
+  if (Object.hasOwn(source, 'travel_id')) return source.travel_id || null;
+  return fallback || null;
+}
+
 export function buildSportPersistenceRows(summary = {}, context = {}) {
   const plan = Array.isArray(summary.plan) ? summary.plan : [];
   const doneSets = Array.isArray(summary.doneSets) ? summary.doneSets : [];
@@ -183,7 +191,7 @@ export function buildSportPersistenceRows(summary = {}, context = {}) {
 
   const session = {
     user_id: userId,
-    travel_id: context.travelId || null,
+    travel_id: sportWorkoutTravelId(summary, context.travelId),
     activity_type: primaryActivity,
     started_at: startedAt,
     ended_at: endedAt,

@@ -1,12 +1,12 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
   "version": "10.5.396",
-  "commit": "4659a3512c7e200534cd36fb87ff626718d3436f",
-  "generatedAt": "2026-11-27T22:32:16.698Z",
+  "commit": "b9727b751a55f3149c64754fcf9c4cbb65ed603b",
+  "generatedAt": "2026-11-27T23:04:15.467Z",
   "counts": {
     "screens": 18,
     "criticalFeatures": 11,
-    "tests": 217,
+    "tests": 218,
     "migrations": 179,
     "featureModules": 65,
     "coreModules": 28,

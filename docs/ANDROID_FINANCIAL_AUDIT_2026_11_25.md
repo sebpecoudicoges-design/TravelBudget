@@ -57,3 +57,20 @@ même formulaire. Le test vérifie que seul l’identifiant de la dépense Walle
 est envoyé, avec les deux jeux de dates préservés. Il simule la réponse
 du serveur ; ce contrôle est complémentaire de la preuve SQL historique
 et ne valide ni les RPC du projet connecté ni un appareil réel.
+
+
+### F6 : reprise d’une séance Sport après changement de voyage
+
+Une nouvelle séance locale enregistre le voyage au moment de la sauvegarde.
+La tentative initiale et les reprises réutilisent cette valeur ; une absence
+explicite de voyage reste une absence. Les anciennes entrées dépourvues de
+ce champ gardent le repli précédent, sans migration.
+
+Sur données fictives, le navigateur s’appuie sur l’historique local et le
+vrai client Sport : une réponse perdue laisse la séance non confirmée ;
+après rechargement avec un autre voyage actif, la reprise renvoie le même
+identifiant, le voyage d’origine, le même exercice et ses deux séries
+(8 et 6 répétitions), puis marque la séance confirmée. Une nouvelle
+demande n’envoie plus de sauvegarde. Le serveur de test est simulé ;
+les contraintes de PostgreSQL ou l’état d’un appareil Android ne sont
+pas prouvés par ce parcours.

@@ -270,3 +270,22 @@ describe('sport rules core', () => {
     expect(rows.items[0]).toMatchObject({ session_id: 'session-1', exercise_key: 'barbell_bench_press', exercise_name: 'Bench', planned_sets: 1 });
   });
 });
+
+
+it('preserves captured travel across Sport retry, even when capture meant no travel', () => {
+  const workout = {
+    startedAt: '2026-10-23T09:00:00Z', endedAt: '2026-10-23T10:00:00Z', durationSeconds: 3600,
+    plan: [{ activityKey: 'strength', exerciseName: 'Synthetic workout' }],
+    doneSets: [{ itemIndex: 0, setIndex: 1, reps: 8, weightKg: 20 }],
+  };
+  for (const stored of [{ travelId: 'original-trip' }, { travel_id: 'original-trip' }, { travelId: null }]) {
+    const summary = { ...workout, ...stored };
+    const first = buildSportPersistenceRows(summary, { userId: 'u', travelId: 'active-at-first-attempt' });
+    const retry = buildSportPersistenceRows(summary, { userId: 'u', travelId: 'different-active-trip' });
+    expect(retry).toEqual(first);
+    expect(retry.session.travel_id).toBe(Object.values(stored)[0]);
+    expect(retry.sets).toHaveLength(1);
+  }
+  // Old pending rows without any capture retain the previous fallback behavior.
+  expect(buildSportPersistenceRows(workout, { userId: 'u', travelId: 'legacy-active' }).session.travel_id).toBe('legacy-active');
+});

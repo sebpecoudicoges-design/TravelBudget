@@ -813,8 +813,13 @@
       ? (CACHE.localSessions || []).find(s => String(s.fingerprint || workoutFingerprint(s)) === fingerprint)
       : null;
     const id = summary.localId || existing?.localId || ("local_" + Date.now() + "_" + Math.random().toString(16).slice(2));
+    const contextTravel = window.Core?.sportRules?.sportWorkoutTravelId;
+    const travelId = typeof contextTravel === "function"
+      ? contextTravel(summary, contextTravel(existing, activeTravelId()))
+      : activeTravelId();
     const row = Object.assign({}, summary, {
       localId: id,
+      travelId,
       fingerprint,
       localOnly: !synced,
       savedLocallyAt: new Date().toISOString(),
@@ -4107,7 +4112,7 @@
       try {
         const buildRows = window.Core?.sportRules?.buildSportPersistenceRows;
         if (typeof buildRows !== "function") throw new Error("Sport persistence rules indisponibles");
-        const initialRows = buildRows(summary, { userId, travelId: activeTravelId() });
+        const initialRows = buildRows(localRow, { userId, travelId: activeTravelId() });
         const created = await sportRepository().createWorkout({
           syncKey: localRow.localId,
           rows: initialRows,

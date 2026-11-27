@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `4659a3512c7e200534cd36fb87ff626718d3436f`
-> Empreinte du snapshot : `037324d984a15ea4a714d2cf22ef9fccdeac5ca6a9033aea01ef5f3a2006ed29`
-> Généré le : `2026-11-27T22:32:16.698Z`
+> Commit analysé : `b9727b751a55f3149c64754fcf9c4cbb65ed603b`
+> Empreinte du snapshot : `74c11e03ec2a1580f804b30bb85807645e8cae2dc3d7933c221805a42c9fbcc8`
+> Généré le : `2026-11-27T23:04:15.467Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 65 |
-| Fichiers de tests | 217 |
+| Fichiers de tests | 218 |
 | Migrations Supabase | 179 |
 | Fonctions Edge | 15 |
 | Projet Android présent | Oui |
@@ -397,6 +397,7 @@ Modules :
 - `tests/e2e/nutrition-storage-recovery.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`
 - `tests/e2e/offline-queue-tabs.spec.js`
+- `tests/e2e/sport-sync-audit.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/trip-expense-entry.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
@@ -491,6 +492,7 @@ Modules :
 - `tests/e2e/nutrition-storage-recovery.spec.js`
 - `tests/e2e/offline-queue-revision.spec.js`
 - `tests/e2e/offline-queue-tabs.spec.js`
+- `tests/e2e/sport-sync-audit.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/trip-expense-entry.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
