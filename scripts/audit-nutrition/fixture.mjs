@@ -11,7 +11,8 @@ export async function loadNutritionAuditFixture(db) {
     create schema auth;
     create table auth.users(id uuid primary key);
     create function auth.uid() returns uuid language sql stable as
-      $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+      $$ select coalesce(nullif(current_setting('request.jwt.claim.sub',true),''),
+        nullif(current_setting('request.jwt.claims',true),'')::jsonb ->> 'sub')::uuid $$;
     grant usage on schema auth to authenticated, anon;
     create table public.travels(id uuid primary key, user_id uuid not null references auth.users);
     alter table public.travels enable row level security;

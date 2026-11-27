@@ -29,4 +29,13 @@ Avec les binaires PostgreSQL et le module Node `pg` 8.16.3 installés hors du d�
 node scripts/audit-nutrition/test-atomic-meal-concurrency.mjs /chemin/vers/pg/bin /chemin/vers/node_modules/pg/lib/index.js
 ```
 
-Ce banc ne teste pas PostgREST, une vraie perte de réponse HTTP, ni une ancienne édition qui modifie uniquement les aliments sans verrouiller l’en-tête. Tester la coordination avec ces écritures et le traitement client des résultats sur un banc Supabase isolé avant de brancher la RPC. Ne pas substituer un nouvel identifiant de rejeu à une saisie existante. Aucun changement de schéma ou de client en production.
+## Perte de la réponse HTTP
+
+Un troisième banc utilise PostgREST 14.7 et PostgreSQL 17.12 isolés. Le serveur reçoit un jeton de test éphémère pour le compte fictif. Un proxy local attend le résultat de création, puis coupe la connexion avec le client sans lui transmettre la réponse. La base contient déjà le repas et ses deux aliments lorsque le client constate l’erreur réseau. Avec la même clé, la requête suivante renvoie `already_applied` et le même identifiant ; avec une autre quantité, elle renvoie `conflict` sans changer les quantités enregistrées. Un aliment invalide renvoie une erreur de contrainte et n’ajoute aucune ligne.
+
+Avec PostgREST et les mêmes binaires PostgreSQL et module Node installés hors du dépôt :
+```sh
+node scripts/audit-nutrition/test-atomic-meal-rest.mjs /chemin/vers/pg/bin /chemin/vers/node_modules/pg/lib/index.js /chemin/vers/postgrest
+```
+
+Aucun des bancs ne vérifie la coordination avec une ancienne édition qui modifie uniquement les aliments sans verrouiller l’en-tête, ni le traitement des résultats par l’application. Vérifier ces deux points avant de brancher la RPC. Ne pas substituer un nouvel identifiant de rejeu à une saisie existante. Aucun changement de schéma ou de client en production.
