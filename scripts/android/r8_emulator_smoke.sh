@@ -23,11 +23,32 @@ device shell cmd package resolve-activity --brief -a android.intent.action.VIEW 
   -c android.intent.category.BROWSABLE -d "$pkg://auth-callback" -p "$pkg" > "$dir/oauth-route.txt"
 grep -Fx "$activity" "$dir/oauth-route.txt"
 
+dump_view() {
+  timeout 12 "${ANDROID_HOME}/platform-tools/adb" -s emulator-5554 shell uiautomator dump /sdcard/tb-r8-window.xml >/dev/null &&
+    device exec-out cat /sdcard/tb-r8-window.xml > "$dir/window.xml"
+}
+wait_auth_view() {
+  local action="$1" attempt
+  for attempt in $(seq 1 6); do
+    if dump_view && python3 -B "$(dirname "$0")/auth_navigation.py" "$dir/window.xml" "$action"; then
+      return 0
+    fi
+    sleep 1
+  done
+  echo "Offline auth navigation unavailable: $action [$variant]" >&2
+  return 1
+}
+tap_auth_control() {
+  local target x y
+  target=$(wait_auth_view "$1")
+  read -r x y <<< "$target"
+  device shell input tap "$x" "$y"
+}
+
 device shell am start -W -n "$activity" | tee "$dir/launch.txt"
 grep -F 'Status: ok' "$dir/launch.txt"
 for retry in $(seq 1 20); do
-  if timeout 12 "${ANDROID_HOME}/platform-tools/adb" -s emulator-5554 shell uiautomator dump /sdcard/tb-r8-window.xml >/dev/null &&
-     device exec-out cat /sdcard/tb-r8-window.xml > "$dir/window.xml" &&
+  if dump_view &&
      python3 -B "$(dirname "$0")/check_offline_screen.py" "$dir/window.xml"; then
     pid=$(device shell pidof "$pkg" | tr -d '\r')
     [[ "$pid" =~ ^[1-9][0-9]*$ ]]
@@ -38,6 +59,14 @@ for retry in $(seq 1 20); do
     python3 -B "$(dirname "$0")/startup_memory.py" sample "$dir/meminfo.txt" "$pid" \
       > "$RUNNER_TEMP/tb-startup-memory/$variant-$round.json"
     printf 'PASS [%s]: release login screen rendered locally in WebView and Android callback route resolves\n' "$variant"
+    if [ "$round" = 1 ]; then
+      tap_auth_control find-recovery
+      wait_auth_view is-recovery
+      tap_auth_control find-signin
+      wait_auth_view is-signin
+      test "$(device shell pidof "$pkg" | tr -d '\r')" = "$pid"
+      printf 'PASS [%s]: login → recovery form → login offline, without submission\n' "$variant"
+    fi
     exit 0
   fi
   sleep 2

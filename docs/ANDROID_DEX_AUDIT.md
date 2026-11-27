@@ -129,3 +129,18 @@ dès 10 Mo. Ce calendrier général ne prouve pas une date spécifique
 affichée dans la console. Les scores obtenus ici ne sont pas ceux de
 l’AAB publié. Google recommande le dernier patch de la branche AGP pour
 la fiabilité de la métadonnée ; mesurer 8.13.2 séparément si nécessaire.
+
+Résultat [45926145115](https://github.com/sebpecoudicoges-design/TravelBudget/actions/runs/45926145115) :
+AAB d’audit R8, **91,53 % optimisation / 92 % obscurcissement /
+91,84 % réduction**, 5 357 336 octets DEX, métadonnée avec checksum DEX
+exact. Le témoin n’a pas de scores R8. Aucun résultat ne porte sur .398 Play.
+
+### Navigation native sans données réelles
+
+Le premier essai de chaque variante valide aussi le parcours local
+Connexion → formulaire de récupération → Connexion, en tapant les
+contrôles réels via leur arbre d’accessibilité. Il vérifie que la page
+bascule dans WebView et ne renseigne ni ne soumet aucun champ. Le relevé
+mémoire est fait avant cette interaction. Il reste à tester les écrans
+authentifiés et les documents à partir d’un environnement fictif séparé ;
+les contrôles ne déclenchent pas de connexion ni de récupération réelle.
