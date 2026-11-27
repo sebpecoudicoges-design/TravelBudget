@@ -37,6 +37,8 @@ on:
       - 'src/core/sportRules.js'
       - 'public/legacy/js/45_sport_ui.js'
       - 'tests/e2e/sport-sync-audit.spec.js'
+      - 'src/data/tripRepository.js'
+      - 'tests/e2e/trip-pagination-audit.spec.js'
   workflow_dispatch:
 
 permissions:
@@ -76,3 +78,4 @@ jobs:
       - run: npm run test:e2e -- tests/e2e/assistant-ai.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/analysis-chart-labels.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/sport-sync-audit.spec.js --project=desktop-chromium
+      - run: npm run test:e2e -- tests/e2e/trip-pagination-audit.spec.js --project=desktop-chromium

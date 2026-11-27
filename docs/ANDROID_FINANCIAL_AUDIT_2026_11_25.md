@@ -74,3 +74,17 @@ identifiant, le voyage d’origine, le même exercice et ses deux séries
 demande n’envoie plus de sauvegarde. Le serveur de test est simulé ;
 les contraintes de PostgreSQL ou l’état d’un appareil Android ne sont
 pas prouvés par ce parcours.
+
+
+### F7 : l’écran Trip ne publie pas un solde issu d’une lecture incomplète
+
+Le client et l’écran Trip réels lisent une fixture HTTP limitée à trois
+lignes par page, indépendamment de la limite demandée. Une indisponibilité
+sur la deuxième page des quotes-parts rend visible l’erreur, sans afficher
+un solde partiel. Après un rechargement, le dernier paiement et ses
+quotes-parts sont lus jusqu’à la page vide ; l’écran affiche 180 EUR
+d’opérations et 90 EUR à recevoir. Le règlement annulé n’entre pas dans ce
+solde. Le lien Wallet de la dernière opération et sa transaction restent
+présents. Ces résultats couvrent la lecture et la reprise navigateur en
+données fictives ; pas la configuration de production, la suppression
+d’un Trip ou l’appareil Android.
