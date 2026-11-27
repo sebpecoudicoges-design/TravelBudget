@@ -1,5 +1,6 @@
 // Isolated PostgreSQL fixture. No app, account or remote data.
 import assert from 'node:assert/strict';
+import { setTimeout as delay } from 'node:timers/promises';
 import { loadNutritionAuditFixture, userA, travelA } from './fixture.mjs';
 import { startNutritionAuditPostgres } from './local-postgres.mjs';
 
@@ -28,9 +29,10 @@ try {
   const items = old.snapshot.items.map(({ sort_order, ...item }, i) => ({
     ...item, grams: i === 0 ? 90 : 140, kcal: i === 0 ? 145 : 198,
   }));
-  const edit = (rev, proposed = items, label = 'Edited meal') => one(writer,
+  const editAs = (db, rev, proposed = items, label = 'Edited meal') => one(db,
     'select * from public.audit_nutrition_edit_meal_v1($1,$2,$3,$4,$5,$6,$7,$8)',
     [created.meal_id, key, rev, '2026-11-28', 'dinner', label, 220, JSON.stringify(proposed)]);
+  const edit = (...args) => editAs(writer, ...args);
 
   await assert.rejects(edit(old.revision, [items[0], { ...items[1], grams: -1 }]), { code: '23514' });
   assert.deepEqual(await read(observer), old, 'rejected second food left neither the first update nor header visible');
@@ -51,7 +53,76 @@ try {
   assert.deepEqual(actual.snapshot.items, items.map((item, i) => ({ ...item, sort_order: i })));
   assert.deepEqual(await edit(old.revision, items, 'Older form'), { status: 'conflict', revision: saved.revision });
   assert.deepEqual(await read(observer), actual, 'older form did not overwrite the committed edit');
-  console.log('Nutrition edit audit: invalid second item rolls back everything; committed edition preserves IDs/order; stale forms do not overwrite.');
+  const holderPid = (await one(writer, 'select pg_backend_pid() as pid')).pid;
+  const waiterPid = (await one(observer, 'select pg_backend_pid() as pid')).pid;
+  assert.notEqual(holderPid, waiterPid);
+  async function finishWhileWaiting(task, disposition) {
+    const pending = task.then(value => ({ value }), error => ({ error }));
+    let blocked = false;
+    try {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const status = await one(admin, 'select $2::int = any(pg_blocking_pids($1)) as blocked', [waiterPid, holderPid]);
+        if (status.blocked) { blocked = true; break; }
+        await delay(20);
+      }
+    } finally {
+      await writer.query(blocked && disposition === 'commit' ? 'commit' : 'rollback');
+    }
+    const outcome = await pending;
+    if (outcome.error) throw outcome.error;
+    assert.equal(blocked, true, 'PostgreSQL should report blocking on the other authenticated session');
+    return outcome.value;
+  }
+  const amended = grams => [{ ...items[0], grams }, items[1]];
+  for (const disposition of ['commit', 'rollback']) {
+    const before = await read(observer);
+    const firstGrams = disposition === 'commit' ? 101 : 103;
+    const laterGrams = disposition === 'commit' ? 102 : 104;
+    await writer.query('begin');
+    const first = await edit(before.revision, amended(firstGrams), 'First form');
+    assert.equal(first.status, 'updated');
+    const second = await finishWhileWaiting(
+      editAs(observer, before.revision, amended(laterGrams), 'Second form'), disposition,
+    );
+    const after = await read(observer);
+    assert.equal(after.revision, second.revision);
+    if (disposition === 'commit') {
+      assert.deepEqual(second, { status: 'conflict', revision: first.revision });
+      assert.equal(after.snapshot.header.label, 'First form');
+      assert.equal(after.snapshot.items[0].grams, firstGrams);
+    } else {
+      assert.equal(second.status, 'updated');
+      assert.equal(after.snapshot.header.label, 'Second form');
+      assert.equal(after.snapshot.items[0].grams, laterGrams);
+    }
+  }
+
+  for (const disposition of ['commit', 'rollback']) {
+    const before = await read(observer);
+    await writer.query('begin');
+    const direct = await writer.query(
+      'update public.nutrition_meal_items set grams = $2 where id = $1 and meal_id = $3 and user_id = $4',
+      [items[1].id, 151, created.meal_id, userA],
+    );
+    assert.equal(direct.rowCount, 1);
+    const proposed = [
+      { ...items[0], grams: 110 },
+      { ...items[1], grams: disposition === 'rollback' ? 152 : 140 },
+    ];
+    const full = await finishWhileWaiting(editAs(observer, before.revision, proposed, 'Whole meal'), disposition);
+    const after = await read(observer);
+    assert.equal(full.revision, after.revision);
+    if (disposition === 'commit') {
+      assert.equal(full.status, 'conflict');
+      assert.deepEqual(after.snapshot.header, before.snapshot.header);
+      assert.deepEqual(after.snapshot.items, [before.snapshot.items[0], { ...before.snapshot.items[1], grams: 151 }]);
+    } else {
+      assert.equal(full.status, 'updated');
+      assert.equal(after.snapshot.header.label, 'Whole meal');
+      assert.deepEqual(after.snapshot.items, proposed.map((item, i) => ({ ...item, sort_order: i })));
+    }
+  }
+  console.log('Nutrition edit audit: rollback, exact item set, stale forms, competing whole-meal edits and direct item edit ordered on PostgreSQL.');
 } finally {
   await close();
 }

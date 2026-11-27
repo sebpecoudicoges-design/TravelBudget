@@ -111,4 +111,6 @@ Dans PostgreSQL 17.12 isolé, une quantité négative pour le second aliment ann
 node scripts/audit-nutrition/test-atomic-meal-edit.mjs /chemin/vers/pg/bin /chemin/vers/node_modules/pg/lib/index.js
 ```
 
-Ce lot ne change ni le formulaire ni la production. À vérifier : deux éditions concurrentes, interaction avec les anciennes écritures directes et le rejeu, puis traitement explicite des ajouts/suppressions si le futur écran les permet. Ce chemin d’édition ne recrée pas un repas absent ; le risque de résurrection dans le chemin distinct de création/rejeu reste ouvert.
+Le même banc constate le blocage réel PostgreSQL entre deux sessions en `READ COMMITTED`. Deux formulaires ouverts sur la même révision ne s’écrasent pas : si le premier valide, le second reçoit un conflit ; si le premier annule, le second peut enregistrer. Une modification directe d’un aliment bloque aussi l’édition complète : une fois validée, elle est conservée et rend le formulaire obsolète ; une fois annulée, le formulaire peut s’appliquer. Ces cas testent l’ordre des transactions, pas la réponse HTTP perdue ni la coexistence globale avec une version ancienne.
+
+Ce lot ne change ni le formulaire ni la production. Le traitement explicite des ajouts et suppressions reste à définir si le futur écran les permet. Ce chemin d’édition ne recrée pas un repas absent ; le risque de résurrection dans le chemin distinct de création/rejeu reste ouvert.
