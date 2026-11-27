@@ -179,14 +179,31 @@ sur le PDF interne du banc, pas une mesure du lien HTTPS signé vers
 un stockage distant. La CI est verte pour la capture ; le rendu dans
 la WebView n’est pas validé.
 
-Prochain contrôle : mesurer séparément l’ouverture externe d’un lien
-HTTPS servi par un hôte de test et le rendu embarqué, sans réutiliser
-une URL de production. Ne pas supprimer le repli navigateur observé
-par l’utilisateur et ne pas présenter le cadre blanc comme un aperçu
-fonctionnel. Pour une correction, comparer une ouverture externe
-Android explicite et un vrai moteur d’aperçu ; vérifier téléchargement,
-erreur et retour dans l’app avant d’en faire le chemin par défaut.
+#### Résultat avec un PDF servi en HTTPS local
 
+Dans la [CI 46071116061](https://github.com/sebpecoudicoges-design/TravelBudget/actions/runs/46071116061),
+la même page de test charge un PDF fictif par HTTPS depuis la boucle
+locale du runner. ADB reverse relie l’émulateur hors ligne à cet hôte ;
+seul l’APK de test accepte son certificat éphémère. Le paramètre de
+l’URL est fictif, sans authentification Storage ni document utilisateur.
+
+| Vérification | Observation sur l’émulateur API 35 |
+| --- | --- |
+| Réception du fichier | Avant le clic, un GET WebView reçoit HTTP 200 et les 649 octets du PDF. |
+| Aperçu embarqué | Le cadre reste blanc ; le rectangle rouge du PDF n’apparaît pas. |
+| Lien de repli | Le clic ouvre Chrome lors de son premier lancement. Aucune nouvelle requête PDF n’est arrivée avant la fin de la capture. |
+| Lecteur et retour | Android trouve un lecteur déclaré pour `application/pdf`, mais il n’est pas lancé par ce clic. Le bouton système Retour ramène à l’activité de l’app de test. |
+
+Le HTTPS a donc été validé séparément du rendu. Ce test ne prouve ni
+l’ouverture du PDF une fois Chrome configuré ni le téléchargement, et
+ne conclut pas sur une URL Storage de production : le navigateur
+externe ne reçoit pas la configuration de confiance de l’APK de test.
+Le rapport d’audit distingue la régression du cadre blanc des cas où
+un navigateur ou un lecteur affiche correctement le document. Garder
+le lien de repli observé par l’utilisateur ; la mesure sur son Galaxy
+est différée à la session Android groupée. Une correction future devra
+comparer ouverture explicite et aperçu embarqué, puis vérifier erreur,
+téléchargement et retour avant de retenir un chemin par défaut.
 
 ### Comparer R8 sur la source de la version 10.5.398
 
