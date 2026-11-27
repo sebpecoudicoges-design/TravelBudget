@@ -478,3 +478,33 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }
+
+for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
+  test(`Trip management is accessible without a shared group (${width}px, ${theme})`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: theme });
+    const scopedTables = {
+      ...tables, transactions: [],
+      profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+      settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
+      trip_groups: [], trip_participants: [], trip_members: [], trip_expenses: [],
+      trip_expense_shares: [], trip_expense_budget_links: [],
+    };
+    await installConnectedFixture(page, baseURL, { tables: scopedTables });
+    await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+    await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+    await page.goto('/?freeze=1');
+    await navigate(page, 'trip');
+    const view = page.locator('#view-trip');
+    const panel = view.locator('.trip-manage-panel');
+    await expect(panel.locator('summary')).toBeVisible();
+    if (await panel.getAttribute('open') === null) await panel.locator('summary').click();
+    await expect(panel.locator('#trip-new-name')).toBeEditable();
+    await expect(panel.locator('#trip-create')).toBeEnabled();
+    await expect(panel.locator('#trip-active option')).toHaveCount(0);
+    await expect(panel.locator('#trip-close')).toBeDisabled();
+    await expect(panel.locator('#trip-add-member')).toBeDisabled();
+    await expect(view.locator('[data-trip-open-add-exp]').first()).toBeDisabled();
+    await expect(view.getByRole('heading', { name: 'Partage clos' })).toHaveCount(0);
+  });
+}

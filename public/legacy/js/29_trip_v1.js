@@ -3821,7 +3821,7 @@ return `
       globalNetHTML,
       pendingInvitesHTML,
       tripClosed,
-      closedAt: trip.closed_at || "",
+      closedAt: closedDate,
       myRole,
       labels: {
         closedTitle: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Closed split" : "Partage clos",
