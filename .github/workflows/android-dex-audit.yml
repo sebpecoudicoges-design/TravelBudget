@@ -78,9 +78,6 @@ jobs:
           python3 -B scripts/android/dex_inventory.py "$baseline"
           python3 -B scripts/android/dex_inventory.py "$candidate"
           python3 -B scripts/android/r8_experiment.py compare "$baseline" "$candidate" | tee "$RUNNER_TEMP/tb-dex-comparison.json"
-          if command -v android >/dev/null && android analyze --help >/dev/null 2>&1; then
-            android analyze "$baseline" "$candidate"
-          fi
           {
             echo '### TravelBudget 10.5.397 unsigned R8 experiment (not Play binary)'
             echo 'DEX byte reduction is not a Play optimization score.'
@@ -88,6 +85,38 @@ jobs:
             cat "$RUNNER_TEMP/tb-dex-comparison.json"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Analyze exact audit AABs with pinned Android CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=1.1.16919734
+          url="https://dl.google.com/android/cli/$version/linux_x86_64"
+          cli="$RUNNER_TEMP/tb-offline-analyzer"
+          mkdir -p "$cli"
+          cd "$cli"
+          curl -fLsS --retry 2 --max-time 120 "$url/android-cli" -o android
+          curl -fLsS --retry 2 --max-time 120 "$url/optimization_pack.zip" -o optimization.zip
+          sha256sum -c <<'SUMS'
+          9803784ddf24d4699929eece519ffa8b066afa9a2b93bd58749b3c6d2caaeeec  android
+          343a972ec49e076630300618c3ffa18965ac76e33829bb53fcb727dc7d3ce697  optimization.zip
+          SUMS
+          chmod 700 android
+          export HOME="$cli/home"
+          pack="$HOME/.android/cli/packs/$version/optimization"
+          mkdir -p "$pack"
+          unzip -p optimization.zip optimization.jar > "$pack/optimization.jar"
+          test -s "$pack/optimization.jar"
+          test "$(./android --no-metrics --version)" = "$version"
+          for suffix in unsigned r8-unsigned; do
+            aab="$RUNNER_TEMP/tb-10.5.397-$suffix.aab"
+            timeout 90 ./android --no-metrics analyze --analysis=optimization --format=json "$aab" > "$suffix.json"
+            {
+              echo "### Android CLI $version: audit bundle $suffix (not Play build)"
+              echo '```json'
+              python3 -B "$GITHUB_WORKSPACE/scripts/android/aab_optimization.py" "$aab" "$suffix.json"
+              echo '```'
+            } | tee -a "$GITHUB_STEP_SUMMARY"
+          done
       - name: Boot an isolated API 35 emulator
         shell: bash
         run: |

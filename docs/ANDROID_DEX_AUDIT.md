@@ -106,3 +106,26 @@ Ils ne couvrent pas encore une session ouverte, la navigation entre
 modules ni les documents. Avant toute correction, relever la série et la
 tranche de mémoire concernées dans Play, puis isoler chaque parcours avec
 des données fictives. Une variation sur émulateur ne résout pas l’alerte Play.
+
+Run mémoire [45920499637](https://github.com/sebpecoudicoges-design/TravelBudget/actions/runs/45920499637),
+WebView 124.0.6367.219 : médiane PSS du processus principal
+**84 869 → 71 982 Kio**, RSS total **224 412 → 212 556 Kio**.
+Trois démarrages par version donnent un repère local, pas un P90 Play.
+
+### Mesurer les trois scores DEX
+
+Android CLI 1.1.16919734 et son pack d’optimisation sont épinglés par
+empreinte. La CI analyse les deux AAB expérimentaux sans publicité
+de leurs fichiers, sans connexion Play, et sans télémétrie du CLI.
+Elle contrôle la taille contre l’inventaire ZIP et sépare les trois
+scores de la métadonnée R8 des estimations d’obscurcissement. Un score
+absent est affiché comme inconnu, non comme zéro. Le statut de correspondance
+des DEX indique si la métadonnée peut être associée au binaire analysé.
+
+[Google Play](https://support.google.com/googleplay/android-developer/answer/17492799?hl=en)
+annonce pour février 2027 un minimum de 25 % par catégorie pour les apps
+avec plus de 10 Mo de DEX ; la documentation Android déclenche l’alerte
+dès 10 Mo. Ce calendrier général ne prouve pas une date spécifique
+affichée dans la console. Les scores obtenus ici ne sont pas ceux de
+l’AAB publié. Google recommande le dernier patch de la branche AGP pour
+la fiabilité de la métadonnée ; mesurer 8.13.2 séparément si nécessaire.
