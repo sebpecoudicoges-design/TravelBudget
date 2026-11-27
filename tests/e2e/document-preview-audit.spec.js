@@ -18,11 +18,34 @@ const pdf = {
 };
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXkQAAAAASUVORK5CYII=', 'base64');
 
+// A real, one-page PDF with only synthetic text. No scripts or external resources.
+function fixturePdf() {
+  const drawing = 'BT /F1 20 Tf 30 90 Td (TravelBudget - itineraire fictif) Tj ET\n';
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 360 140] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${drawing.length} >>\nstream\n${drawing}endstream`,
+  ];
+  let body = '%PDF-1.4\n';
+  const offsets = objects.map((object, index) => {
+    const offset = body.length;
+    body += `${index + 1} 0 obj\n${object}\nendobj\n`;
+    return offset;
+  });
+  const xref = body.length;
+  body += `xref\n0 ${offsets.length + 1}\n0000000000 65535 f \n`;
+  body += offsets.map(offset => `${String(offset).padStart(10, '0')} 00000 n \n`).join('');
+  body += `trailer\n<< /Size ${offsets.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(body, 'ascii');
+}
+
 const signPath = doc => '/storage/v1/object/sign/' + bucket + '/' + doc.storage_path;
 const signedPath = doc => signPath(doc) + '?token=' + token;
 
 for (const width of [390, 1440]) for (const theme of ['light', 'dark']) {
-  test(`document list → image preview → PDF fallback (${width}px, ${theme})`, async ({ page, baseURL }) => {
+  test(`document list → image preview → PDF fallback (${width}px, ${theme})`, async ({ page, context, baseURL }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ colorScheme: theme });
     const tables = {
@@ -33,6 +56,16 @@ for (const width of [390, 1440]) for (const theme of ['light', 'dark']) {
       trip_expense_documents: [], asset_documents: [],
     };
     await installConnectedFixture(page, baseURL, { tables });
+    // Page-level routes do not see the first request of an opened tab.
+    // Allow exactly the synthetic PDF there, and never contact live storage.
+    let fallbackNavigations = 0;
+    await context.route('**/*', async route => {
+      const request = route.request();
+      if (request.method() !== 'GET' || !request.isNavigationRequest()
+        || request.url() !== projectOrigin + signedPath(pdf)) return route.abort();
+      await route.fulfill({ contentType: 'application/pdf', body: fixturePdf() });
+      fallbackNavigations += 1;
+    });
     const signedRequests = [];
     const imageLoads = [];
     await page.route(projectOrigin + '/storage/v1/object/sign/**', async route => {
@@ -79,6 +112,10 @@ for (const width of [390, 1440]) for (const theme of ['light', 'dark']) {
     await expect(fallback).toBeVisible();
     await expect(fallback).toHaveAttribute('target', '_blank');
     await expect(fallback).toHaveAttribute('href', projectOrigin + signedPath(pdf));
+    expect(fallbackNavigations).toBe(0);
+    await fallback.click();
+    await expect.poll(() => fallbackNavigations).toBe(1);
+    await expect(preview).toBeVisible();
     // Thumbnail rendering can sign the image again; only the PDF has no thumbnail.
     expect(signedRequests).toContainEqual({ id: receipt.id, expiresIn: 600 });
     expect(signedRequests.filter(entry => entry.id === pdf.id)).toEqual([{ id: pdf.id, expiresIn: 600 }]);

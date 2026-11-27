@@ -149,7 +149,9 @@ La CI [45931471995](https://github.com/sebpecoudicoges-design/TravelBudget/actio
 confirme ce parcours sur les deux versions. Un contrôle Chromium distinct
 ouvre le vrai coffre documentaire avec des réponses fictives : affichage
 d’une image, fermeture de l’aperçu, création d’un lien de courte durée
-et présence du lien de repli pour le PDF à 390 et 1 440 px en clair et
-sombre. Il ne contacte pas le stockage et ne valide pas le rendu PDF
-dans Android WebView. Ce dernier reste à reproduire dans un environnement
-de démonstration séparé avec un fichier PDF fictif.
+et ouverture effective du lien de repli pour le PDF à 390 et 1 440 px
+en clair et sombre. Le clic déclenche une navigation distincte vers
+l’URL attendue, à laquelle le banc sert un PDF fictif réel. Il ne
+contacte pas le stockage et ne vérifie ni le rendu visuel du PDF dans
+l’onglet ni l’ouverture et le rendu dans Android WebView. Le parcours
+Android reste à reproduire dans un environnement isolé.
