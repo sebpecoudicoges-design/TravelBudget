@@ -49,7 +49,7 @@ Le transport du banc est lié au jeton synthétique d’un seul compte, pas à l
 node --test scripts/audit-nutrition/test-atomic-meal-client.mjs
 ```
 
-Ces tests ne rendent pas atomique l’ancienne édition qui envoie l’en-tête et l’aliment dans deux requêtes. Ils ne couvrent pas non plus le déplacement entre repas ou la suppression de l’en-tête au moment du rejeu. Il reste à concevoir une édition à transaction unique, à traiter la suppression d’un repas en attente de rejeu, puis à valider le branchement de la file et l’interface de résolution d’un conflit. Aucun changement de schéma ni d’application en production.
+Ces tests ne rendent pas atomique l’ancienne édition qui envoie l’en-tête et l’aliment dans deux requêtes. Ils ne couvrent pas non plus le déplacement entre repas ou la suppression de l’en-tête au moment du rejeu. Un banc d’édition à transaction unique est décrit plus bas. La suppression d’un repas en attente de rejeu et le branchement de la file restent à valider. Aucun changement de schéma ni d’application en production.
 
 ## Choix explicite en cas de conflit (isolé)
 
@@ -100,3 +100,15 @@ Proposition de séquencement avant tout branchement produit :
 3. **Inventorier puis convertir seulement après cette preuve.** Avant un éventuel basculement, prévoir une période où chaque opération a exactement une file et un seul chemin de rejeu. Vérifier le retour en ligne d’une ancienne version, la relecture après crash à chaque étape, deux onglets, une réponse perdue, et la reprise exacte après rollback applicatif. Une écriture serveur seulement partielle reste un conflit, pas une confirmation. Pour retirer un ancien brouillon, vérifier le même compte, la même identité, la même révision et un résultat distant explicite ; la prise en charge d’un autre brouillon n’est pas un accusé pour celui-ci.
 
 Aucun raccordement ni basculement dans ce lot. Sans contrat serveur de coexistence ou stratégie de retrait des anciens écrivains vérifiée, la transition reste bloquée. L’édition complète à transaction unique et la prise en compte d’une suppression avant rejeu sont des chantiers distincts qui peuvent être étudiés dans le banc isolé.
+
+## Modifier l’en-tête et les aliments existants ensemble (banc isolé)
+
+Le formulaire actuel peut modifier l’en-tête puis l’aliment par deux requêtes ; si la seconde échoue, la première est déjà visible. `scripts/audit-nutrition/atomic-meal-edit.sql` teste une autre voie : la date, le type, le libellé, l’eau et tous les aliments existants (jusqu’à 100) sont mis à jour dans la même transaction. La lecture de référence couvre aussi ce que le formulaire ne change pas (voyage, notes, heure et ordre). Le repas doit déjà exister sous le même identifiant et la même clé. La révision complète est vérifiée après verrouillage de l’en-tête et des aliments. Un inventaire incomplet n’est pas interprété comme une suppression ; aucun aliment n’est créé, déplacé, réordonné ou supprimé. Les identifiants sont conservés.
+
+Dans PostgreSQL 17.12 isolé, une quantité négative pour le second aliment annule l’en-tête et le premier aliment déjà traités. Une autre connexion continue de lire l’ancienne version avant le commit, puis voit les trois modifications ensemble. Un formulaire basé sur l’ancienne révision obtient `conflict` et laisse la version enregistrée intacte. Cette révision décrit les valeurs, pas l’historique ; une réponse d’édition perdue n’est pas encore distinguée d’un conflit. Un échange de valeurs tombant sur l’index d’unicité intermédiaire peut nécessiter un contrat différent ; dans ce cas aucun changement partiel ne doit être confirmé.
+
+```sh
+node scripts/audit-nutrition/test-atomic-meal-edit.mjs /chemin/vers/pg/bin /chemin/vers/node_modules/pg/lib/index.js
+```
+
+Ce lot ne change ni le formulaire ni la production. À vérifier : deux éditions concurrentes, interaction avec les anciennes écritures directes et le rejeu, puis traitement explicite des ajouts/suppressions si le futur écran les permet. Ce chemin d’édition ne recrée pas un repas absent ; le risque de résurrection dans le chemin distinct de création/rejeu reste ouvert.
