@@ -83,4 +83,6 @@ La maquette FR/EN présente la saisie locale et la version synchronisée, avec l
 npm run test:e2e -- tests/e2e/nutrition-conflict-review-audit.spec.js --project=desktop-chromium
 ```
 
-Avant intégration, raccorder la lecture et le retrait déjà validés séparément, définir la projection utilisateur des notes et références de voyages et empêcher que l’ancien client écrive dans la file pendant la transition.
+Le banc REST peut également lancer un Chromium local avec le chemin du navigateur comme quatrième argument. Il ouvre la maquette sur une origine de test interceptée. La seule lecture réseau distante du point de vue de la maquette passe par un callback Node sans paramètre, lié au repas fictif ; aucun jeton ni identifiant de connexion ne parvient au navigateur. Le test relie la vraie lecture PostgREST et le vrai magasin IndexedDB : laisser en attente conserve la saisie, une édition entre aperçu et confirmation invalide le choix, et l’acceptation explicite après actualisation retire la saisie sans écrire dans PostgreSQL.
+
+Avant intégration dans TravelBudget, définir la projection utilisateur des notes et références de voyages et sécuriser la coexistence avec les anciennes écritures localStorage pendant la transition. Le parcours du banc n’est pas accessible depuis l’application.

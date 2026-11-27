@@ -10,9 +10,9 @@ import { atomicMealRpc, replayAtomicMeal } from './atomic-meal-client.mjs';
 import { loadNutritionAuditFixture, userA } from './fixture.mjs';
 import { localPort, startNutritionAuditPostgres } from './local-postgres.mjs';
 
-const [pgBin, driverPath, postgrestBin] = process.argv.slice(2);
+const [pgBin, driverPath, postgrestBin, chromiumBin] = process.argv.slice(2);
 if (!pgBin || !driverPath || !postgrestBin) {
-  throw new Error('Usage: node test-atomic-meal-rest.mjs PG_BIN_DIR PG_NODE_MODULE POSTGREST_BIN');
+  throw new Error('Usage: node test-atomic-meal-rest.mjs PG_BIN_DIR PG_NODE_MODULE POSTGREST_BIN [CHROMIUM_BIN]');
 }
 const db = await startNutritionAuditPostgres(pgBin, driverPath);
 const password = randomBytes(24).toString('hex');
@@ -188,6 +188,20 @@ try {
   }), 'accepted-remote');
   assert.equal(draft, null);
   assert.deepEqual(await readRemote(identity), current, 'resolution never writes the remote meal');
+  if (chromiumBin) {
+    const { verifyConflictInBrowser } = await import('./test-meal-conflict-browser.mjs');
+    await verifyConflictInBrowser({
+      executablePath: resolve(chromiumBin), pending, replay: conflict,
+      readRemote: () => readRemote(identity),
+      editRemote: async snapshot => {
+        const target = snapshot.snapshot.items.at(-1);
+        const changed = await editor.query('update public.nutrition_meal_items set grams = 96 where id = $1',
+          [target.id]);
+        assert.equal(changed.rowCount, 1);
+      },
+    });
+    console.log('Chromium + IndexedDB + PostgREST + PostgreSQL: stale preview retained draft, explicit choice committed it.');
+  }
   console.log('PostgREST: lost response, retry, rollback, and refreshed conflict snapshot verified.');
 } finally {
   if (proxy) {
