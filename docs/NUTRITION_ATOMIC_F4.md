@@ -74,3 +74,13 @@ npm run test:e2e -- tests/e2e/nutrition-conflict-storage-audit.spec.js --project
 ```
 
 Ce magasin ne lit ni ne migre l’ancienne file du produit. Les écritures localStorage des anciennes versions ne participent pas à la transaction. Il reste à vérifier interface, transition et compatibilité avant tout raccordement.
+
+### Comparaison visuelle isolée
+
+La maquette FR/EN présente la saisie locale et la version synchronisée, avec leurs quantités, aliments et énergie. Le choix par défaut laisse la saisie en attente. Une version distante modifiée désactive la confirmation jusqu’à actualisation ; le nouveau choix revient à « laisser en attente ». Une lecture en échec n’affiche aucun succès. Trois parcours Chromium vérifient le clavier, le focus du résultat annoncé, une vue de 320 px sans défilement horizontal, l’actualisation et l’erreur. Le navigateur utilise des repas fictifs et ne monte pas l’application.
+
+```sh
+npm run test:e2e -- tests/e2e/nutrition-conflict-review-audit.spec.js --project=desktop-chromium
+```
+
+Avant intégration, raccorder la lecture et le retrait déjà validés séparément, définir la projection utilisateur des notes et références de voyages et empêcher que l’ancien client écrive dans la file pendant la transition.
