@@ -114,6 +114,38 @@
     }
   }
 
+  // Use an empty IndexedDB store as a same-origin write gate when Web Locks
+  // are missing. Keep the queue itself in localStorage for existing readers.
+  function withQueueWriteGate(apply) {
+    return new Promise((resolve, reject) => {
+      const unavailable = cause => reject(new Error(message(
+        "Stockage hors ligne indisponible. Action non enregistree.",
+        "Offline storage unavailable. Action was not saved.",
+      ), { cause }));
+      let open;
+      try { open = window.indexedDB.open("travelbudget_offline_queue_write_gate", 1); }
+      catch (cause) { unavailable(cause); return; }
+      let blocked = false;
+      open.onblocked = () => { blocked = true; unavailable(); };
+      open.onerror = () => unavailable(open.error);
+      open.onupgradeneeded = () => open.result.createObjectStore("queue");
+      open.onsuccess = () => {
+        const db = open.result;
+        if (blocked) { db.close(); return; }
+        try {
+          const transaction = db.transaction("queue", "readwrite");
+          transaction.oncomplete = () => db.close();
+          transaction.onabort = () => { db.close(); unavailable(transaction.error); };
+          transaction.objectStore("queue").get("gate").onsuccess = () => {
+            // The transaction schedules this synchronous critical section.
+            // No network request or async work belongs in the gate.
+            try { resolve(apply()); } catch (error) { reject(error); }
+          };
+        } catch (cause) { db.close(); unavailable(cause); }
+      };
+    });
+  }
+
   // The replay lock may span network I/O. This separate lock only covers
   // synchronous localStorage read/modify/write critical sections.
   function queueWrite(operation, scope = queueStore.scope(), stillAllowed) {
@@ -125,9 +157,10 @@
       if (stillAllowed && !stillAllowed()) return null;
       return operation();
     };
-    return typeof navigator.locks?.request === "function"
-      ? navigator.locks.request(`tb:offline-write:${scope}`, apply)
-      : apply();
+    if (typeof navigator.locks?.request === "function") {
+      return navigator.locks.request(`tb:offline-write:${scope}`, apply);
+    }
+    return window.indexedDB ? withQueueWriteGate(apply) : apply();
   }
 
   const protectQueueWrite = operation => (...args) => queueWrite(() => operation(...args));

@@ -121,3 +121,89 @@ test('another tab can enqueue while a previous action awaits the server', async 
   expect(await second.evaluate(() => window.tbOfflineQueueSync('manual'))).toMatchObject({ synced: 1 });
   expect(await second.evaluate(() => window.replayed)).toEqual([20]);
 });
+
+test('without Web Locks, two tabs wait for the write gate and keep the old queue', async ({ context }) => {
+  await context.addInitScript(() => Object.defineProperty(navigator, 'locks', { value: undefined }));
+  const first = await context.newPage();
+  const second = await context.newPage();
+  await prepare(first);
+  await prepare(second);
+  await first.evaluate(async () => {
+    localStorage.setItem('travelbudget_offline_queue_v2_synthetic-tabs', JSON.stringify({
+      version: 3,
+      items: [{ id: 'older-action', kind: 'trip.expense.create', status: 'pending', payload: { amount: 5 } }],
+    }));
+    const db = await new Promise((resolve, reject) => {
+      const open = indexedDB.open('travelbudget_offline_queue_write_gate', 1);
+      open.onupgradeneeded = () => open.result.createObjectStore('queue');
+      open.onsuccess = () => resolve(open.result);
+      open.onerror = () => reject(open.error);
+    });
+    const transaction = db.transaction('queue', 'readwrite');
+    transaction.oncomplete = () => db.close();
+    transaction.onabort = () => db.close();
+    const store = transaction.objectStore('queue');
+    await new Promise(resolve => {
+      let hold = true;
+      window.releaseWriteGate = () => { hold = false; };
+      const next = () => {
+        const r = store.get('fixture');
+        r.onsuccess = () => { if (hold) next(); };
+      };
+      const initial = store.get('fixture');
+      initial.onsuccess = () => { next(); resolve(); };
+    });
+  });
+  const enqueue = (page, amount) => page.evaluate(amount => {
+    window.writeState = 'waiting';
+    window.writeResult = Promise.resolve(window.tbOfflineQueueEnqueue('trip.expense.create', { amount }))
+      .then(() => { window.writeState = 'saved'; }, error => { window.writeState = error.message; });
+  }, amount);
+
+  try {
+    await Promise.all([enqueue(first, 10), enqueue(second, 20)]);
+    expect(await first.evaluate(() => window.writeState)).toBe('waiting');
+    expect(await second.evaluate(() => window.writeState)).toBe('waiting');
+    expect(await second.evaluate(() => window.tbOfflineQueuePending().map(x => x.id))).toEqual(['older-action']);
+    // Changing account while a write waits must not put the action in either account.
+    await second.evaluate(() => { window.sbUser = { id: 'other-account' }; });
+  } finally {
+    await first.evaluate(() => window.releaseWriteGate());
+  }
+  await first.evaluate(() => window.writeResult);
+  await second.evaluate(() => window.writeResult);
+  expect(await first.evaluate(() => window.writeState)).toBe('saved');
+  expect(await second.evaluate(() => window.writeState)).toContain('compte a change');
+  expect(await second.evaluate(() => window.tbOfflineQueueCount())).toBe(0);
+  await second.evaluate(() => { window.sbUser = { id: 'synthetic-tabs' }; });
+
+  await Promise.all([enqueue(first, 15), enqueue(second, 20)]);
+  await Promise.all([first.evaluate(() => window.writeResult), second.evaluate(() => window.writeResult)]);
+  await second.reload();
+  expect(await second.evaluate(() => JSON.parse(localStorage.getItem('travelbudget_offline_queue_v2_synthetic-tabs')).items
+    .map(item => item.payload.amount).sort((a, b) => a - b))).toEqual([5, 10, 15, 20]);
+  expect(await second.evaluate(() => JSON.parse(localStorage.getItem('travelbudget_offline_queue_v2_synthetic-tabs')).items[0].id))
+    .toBe('older-action');
+});
+
+test('without Web Locks, an unavailable write gate leaves the saved queue intact', async ({ context }) => {
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'locks', { value: undefined });
+    Object.defineProperty(window, 'indexedDB', {
+      value: { open() { throw new Error('Fixture: gate unavailable'); } },
+    });
+  });
+  const page = await context.newPage();
+  await prepare(page);
+  expect(await page.evaluate(async () => {
+    const key = 'travelbudget_offline_queue_v2_synthetic-tabs';
+    const original = JSON.stringify({ version: 3, items: [{ id: 'kept' }] });
+    localStorage.setItem(key, original);
+    let acknowledged = false;
+    let error;
+    window.toastOk = () => { acknowledged = true; };
+    try { await window.tbOfflineQueueEnqueue('trip.expense.create', { amount: 25 }); }
+    catch (cause) { error = cause.message; }
+    return { same: original === localStorage.getItem(key), acknowledged, error };
+  })).toEqual({ same: true, acknowledged: false, error: expect.stringMatching(/Offline storage unavailable|Stockage hors ligne indisponible/) });
+});
