@@ -186,3 +186,16 @@ par l’utilisateur et ne pas présenter le cadre blanc comme un aperçu
 fonctionnel. Pour une correction, comparer une ouverture externe
 Android explicite et un vrai moteur d’aperçu ; vérifier téléchargement,
 erreur et retour dans l’app avant d’en faire le chemin par défaut.
+
+
+### Comparer R8 sur la source de la version 10.5.398
+
+Le workflow DEX est désormais épinglé à la source 10.5.398,
+`c3af4a40472e053b1cd008997f1974115a838fb8`, utilisée pour la version
+soumise au test fermé. Les deux variantes utilisent la même source, sans
+Firebase et sans signature de publication. Seule la configuration R8 du
+candidat change ; l’émulateur vérifie nom 10.5.398 et code 10050398 avant
+de mesurer démarrage et mémoire. Les mesures .397 ci-dessus restent le
+repère historique. Les scores et mesures .398 expérimentaux restent à
+lire après CI ; ils ne sont ni les scores du fichier signé en ligne
+ni une confirmation de résolution d’Android Vitals.

@@ -6,6 +6,10 @@ variant="${2:?baseline or r8 required}"
 case "$variant" in baseline|r8) ;; *) exit 2 ;; esac
 round="${3:-1}"
 case "$round" in 1|2|3) ;; *) exit 2 ;; esac
+expected_version="${4:?expected versionName required}"
+expected_code="${5:?expected versionCode required}"
+[[ "$expected_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+[[ "$expected_code" =~ ^[1-9][0-9]*$ ]]
 pkg=fr.pecloud.travelbudget
 activity="$pkg/com.travelbudget.app.MainActivity"
 device() { "${ANDROID_HOME:?}/platform-tools/adb" -s emulator-5554 "$@"; }
@@ -17,8 +21,11 @@ trap 'device uninstall "$pkg" >/dev/null' EXIT
 dir="${RUNNER_TEMP:?}/tb-emulator-$variant-$round"
 mkdir -p "$dir"
 device shell dumpsys package "$pkg" > "$dir/package.txt"
-grep -F 'versionName=10.5.397' "$dir/package.txt"
-grep -F 'versionCode=10050397' "$dir/package.txt"
+awk -v name="$expected_version" -v code="$expected_code" '
+  $1 == "versionName=" name { found_name = 1; print }
+  $1 == "versionCode=" code { found_code = 1; print }
+  END { exit !(found_name && found_code) }
+' "$dir/package.txt"
 device shell cmd package resolve-activity --brief -a android.intent.action.VIEW \
   -c android.intent.category.BROWSABLE -d "$pkg://auth-callback" -p "$pkg" > "$dir/oauth-route.txt"
 grep -Fx "$activity" "$dir/oauth-route.txt"
