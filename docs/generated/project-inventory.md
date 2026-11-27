@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `3875732c9168f27ad89dfa2adf82e42fad78edd6`
-> Empreinte du snapshot : `45dd6a1156088ca179f928a24dcf3123355afbb9cdaef55c63139fc3d495e9cf`
-> Généré le : `2026-11-26T18:49:07.103Z`
+> Commit analysé : `2bb0299e258b47fe29f20154c0f4daf456e15bad`
+> Empreinte du snapshot : `7fccf432fcbad507f57a3bffa429ea381877f79e714623f860a30c3a6d8f9a4d`
+> Généré le : `2026-11-26T23:57:51.648Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.397` |
+| Version | `10.5.398` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 65 |
-| Fichiers de tests | 209 |
+| Fichiers de tests | 210 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -346,6 +346,7 @@ Modules :
 - `tests/ui/projectPageVisualContract.test.js`
 - `tests/ui/publicLinksContract.test.js`
 - `tests/ui/recurringRulesSubcategoriesContract.test.js`
+- `tests/ui/repereBrandContract.test.js`
 - `tests/ui/settingsModalContract.test.js`
 - `tests/ui/settingsViewContract.test.js`
 - `tests/ui/sportDomainContract.test.js`
@@ -583,6 +584,7 @@ Modules :
 - `tests/ui/projectPageVisualContract.test.js`
 - `tests/ui/publicLinksContract.test.js`
 - `tests/ui/recurringRulesSubcategoriesContract.test.js`
+- `tests/ui/repereBrandContract.test.js`
 - `tests/ui/settingsModalContract.test.js`
 - `tests/ui/settingsViewContract.test.js`
 - `tests/ui/sportDomainContract.test.js`

@@ -69,24 +69,6 @@ body:not(.theme-dark) .brand h1 {
   letter-spacing: 0;
 }
 
-body:not(.theme-dark) .brand h1::before {
-  background: linear-gradient(145deg, var(--tb-coral), #ff8b58) !important;
-  border: 0 !important;
-  box-shadow: 0 9px 22px rgba(255, 107, 74, .24) !important;
-}
-
-body:not(.theme-dark) .brand h1::after {
-  content: "";
-  position: absolute;
-  left: 17px;
-  width: 16px;
-  height: 8px;
-  border-left: 2px solid #fff;
-  border-bottom: 2px solid #fff;
-  border-radius: 0 0 0 8px;
-  transform: rotate(-18deg);
-}
-
 body:not(.theme-dark) .btn {
   border-color: var(--tb-line);
   border-radius: var(--tb-radius-sm);

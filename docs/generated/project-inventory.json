@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "3875732c9168f27ad89dfa2adf82e42fad78edd6",
-  "snapshotFingerprint": "45dd6a1156088ca179f928a24dcf3123355afbb9cdaef55c63139fc3d495e9cf",
-  "generatedAt": "2026-11-26T18:49:07.103Z",
+  "commit": "2bb0299e258b47fe29f20154c0f4daf456e15bad",
+  "snapshotFingerprint": "7fccf432fcbad507f57a3bffa429ea381877f79e714623f860a30c3a6d8f9a4d",
+  "generatedAt": "2026-11-26T23:57:51.648Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.397"
+    "version": "10.5.398"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -470,6 +470,7 @@
     "tests/ui/projectPageVisualContract.test.js",
     "tests/ui/publicLinksContract.test.js",
     "tests/ui/recurringRulesSubcategoriesContract.test.js",
+    "tests/ui/repereBrandContract.test.js",
     "tests/ui/settingsModalContract.test.js",
     "tests/ui/settingsViewContract.test.js",
     "tests/ui/sportDomainContract.test.js",
@@ -526,6 +527,7 @@
     "tests/ui/projectPageVisualContract.test.js",
     "tests/ui/publicLinksContract.test.js",
     "tests/ui/recurringRulesSubcategoriesContract.test.js",
+    "tests/ui/repereBrandContract.test.js",
     "tests/ui/settingsModalContract.test.js",
     "tests/ui/settingsViewContract.test.js",
     "tests/ui/sportDomainContract.test.js",

@@ -3,15 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Travel Budget</title>
+  <title>TravelBudget</title>
   <link rel="icon" href="/favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="/pwa-icon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#163b8f">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="BudgetPacker">
+  <meta name="apple-mobile-web-app-title" content="TravelBudget">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.397";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.398";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -2774,22 +2776,15 @@
       line-height:1;
     }
     .brand h1::before{
-      content:"BP";
+      content:"";
       position:absolute;
       left:0;
       top:50%;
       transform:translateY(-50%);
       width:40px;
       height:40px;
-      display:grid;
-      place-items:center;
-      border-radius:14px;
-      color:#fff;
-      background:linear-gradient(135deg, #0f172a, var(--bp-demo-blue), var(--bp-demo-cyan));
-      box-shadow:0 14px 34px rgba(37,99,235,.22);
-      font-size:13px;
-      font-weight:950;
-      letter-spacing:0;
+      border-radius:12px;
+      background:url("/pwa-icon.svg") center / contain no-repeat;
     }
     .brand .sub{ padding-left:52px; color:var(--bp-demo-muted) !important; }
     body.theme-dark .brand .sub{ color:#94a3b8 !important; }
@@ -3922,7 +3917,7 @@
     <div class="wrap">
       <header>
         <div class="brand">
-          <h1 data-t="app.title">Travel Budget</h1>
+          <h1 data-t="app.title">TravelBudget</h1>
           <div class="sub" data-t="app.subtitle">Outil de suivi de budget pendant tes voyages</div>
         </div>
 

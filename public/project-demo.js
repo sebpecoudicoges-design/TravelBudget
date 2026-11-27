@@ -47,6 +47,11 @@
     render();
     get('demo-review-title').focus();
   });
+  get('demo-edit')?.addEventListener('click', () => {
+    stage = 0;
+    render();
+    amountField.focus();
+  });
   reset.addEventListener('click', () => {
     paidCents = 0;
     stage = 0;
