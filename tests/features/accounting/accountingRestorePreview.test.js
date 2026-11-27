@@ -12,6 +12,7 @@ const candidate = {
     debts: [], archivedDebts: [], positions: [], assetLinks: [], positionAudit: [],
   },
 };
+const ordinary = { isInternal: false, internalTransferId: null };
 const raw = (changes = {}) => JSON.stringify({ ...candidate, ...changes });
 const preview = (changes, activeScope = scope) => previewAccountingRestore(raw(changes), activeScope);
 
@@ -136,9 +137,9 @@ describe('typed debt and position source review', () => {
   const sources = { ...scope, complete: true,
     transactionIds: ['funding', 'repayment', 'deposit'], assetIds: [], walletIds: [], asOfDay: '2026-01-31',
     transactionMetadata: [
-      { id: 'funding', currency: 'eur', type: 'income', amount: 350, cashDate: '2026-01-15', payNow: true },
-      { id: 'repayment', currency: 'EUR', type: 'expense', amount: 30, cashDate: '2026-01-20', payNow: true },
-      { id: 'deposit', currency: 'NZD', type: 'expense', amount: 80, cashDate: '2026-01-31', payNow: true },
+      { ...ordinary, id: 'funding', currency: 'eur', type: 'income', amount: 350, cashDate: '2026-01-15', payNow: true },
+      { ...ordinary, id: 'repayment', currency: 'EUR', type: 'expense', amount: 30, cashDate: '2026-01-20', payNow: true },
+      { ...ordinary, id: 'deposit', currency: 'NZD', type: 'expense', amount: 80, cashDate: '2026-01-31', payNow: true },
     ],
   };
   const review = (inventory = sources, data = settings) =>
@@ -217,7 +218,7 @@ describe('typed debt and position source review', () => {
   it('cannot claim compatibility if metadata is missing or ambiguous', () => {
     for (const rows of [
       sources.transactionMetadata.slice(0, 2),
-      [...sources.transactionMetadata, { id: 'deposit', currency: 'AUD', type: 'expense' }],
+      [...sources.transactionMetadata, { ...ordinary, id: 'deposit', currency: 'AUD', type: 'expense' }],
       sources.transactionMetadata.map(row => ({ ...row, currency: null })),
     ]) expect(review({ ...sources, transactionMetadata: rows })).toEqual({ status: 'sources-unavailable' });
   });
@@ -232,7 +233,7 @@ describe('typed purchases in the accounting restore review', () => {
   const settings = { ...candidate.settings,
     assetLinks: [{ asset_id: 'synthetic-bike', transaction_id: 'synthetic-payment' }],
   };
-  const txn = { id: 'synthetic-payment', type: 'expense', currency: 'EUR', amount: 400,
+  const txn = { ...ordinary, id: 'synthetic-payment', type: 'expense', currency: 'EUR', amount: 400,
     cashDate: '2026-01-15', payNow: true };
   const asset = { id: 'synthetic-bike', currency: 'EUR', purchaseValue: 400, purchaseDate: '2026-01-16' };
   const sources = { ...scope, complete: true, asOfDay: '2026-01-31',
@@ -274,8 +275,8 @@ describe('typed debt balance history', () => {
   const sources = { ...scope, complete: true, asOfDay: '2026-01-31',
     transactionIds: ['payment-1', 'payment-2'], assetIds: [], walletIds: [],
     transactionMetadata: [
-      { id: 'payment-2', currency: 'EUR', type: 'expense', amount: 55, payNow: true, cashDate: '2026-01-20' },
-      { id: 'payment-1', currency: 'EUR', type: 'expense', amount: 65, payNow: true, cashDate: '2026-01-10' },
+      { ...ordinary, id: 'payment-2', currency: 'EUR', type: 'expense', amount: 55, payNow: true, cashDate: '2026-01-20' },
+      { ...ordinary, id: 'payment-1', currency: 'EUR', type: 'expense', amount: 65, payNow: true, cashDate: '2026-01-10' },
     ],
   };
   const adjust = (date, amount) => ({ id: 'synthetic-adjustment', date, amount, reason: 'Correction privée fictive' });
@@ -316,5 +317,45 @@ describe('typed debt balance history', () => {
     const [first, second] = sources.transactionMetadata;
     expect(review(debt, { ...sources, transactionMetadata: [{ ...first, payNow: false }, second] }))
       .toEqual({ status: 'incompatible-references', incompatible: { transaction: 1 } });
+  });
+});
+
+describe('trusted transfer classification in the typed restore preview', () => {
+  const tx = { ...ordinary, id: 'synthetic-source', currency: 'EUR', type: 'income', amount: 80,
+    cashDate: '2026-01-15', payNow: true };
+  const inventory = { ...scope, complete: true, asOfDay: '2026-01-31',
+    transactionIds: [tx.id], assetIds: [], walletIds: [],
+  };
+  const review = (changes, settings = { positions: [{ currency: 'EUR', transactionIds: [tx.id] }] }) =>
+    previewAccountingRestore(raw({ settings: { ...candidate.settings, ...settings } }), scope,
+      { ...inventory, transactionMetadata: [{ ...tx, ...changes }] });
+  const linkedShare = { isInternal: true, tripShareLinkId: 'synthetic-share', tripExpenseId: null,
+    label: null, affectsBudget: true, outOfBudget: false };
+  const rejected = { status: 'incompatible-references', incompatible: { transaction: 1 } };
+
+  it('rejects an explicit wallet transfer even when its type and budget fields look eligible', () => {
+    expect(review({ ...linkedShare, internalTransferId: 'synthetic-transfer' })).toEqual(rejected);
+    expect(review({ internalTransferId: 'synthetic-transfer' })).toEqual(rejected);
+  });
+
+  it('does not classify an eligible Trip income share as a wallet transfer just because the legacy flag is set', () => {
+    expect(review(linkedShare)).toMatchObject({ status: 'references-present', requiresFurtherValidation: true });
+    expect(review({ ...linkedShare, tripShareLinkId: null, label: '[Trip] Part entrée - Fixture' }))
+      .toMatchObject({ status: 'references-present', requiresFurtherValidation: true });
+    expect(review({ ...linkedShare, affectsBudget: false })).toEqual(rejected);
+  });
+
+  it.each([{ internalTransferId: undefined }, { isInternal: undefined }, { isInternal: 'false' },
+    { ...linkedShare, tripShareLinkId: undefined }, { ...linkedShare, label: undefined }])(
+    'distinguishes incomplete trusted classification from incompatibility: %j', changes => {
+      expect(review(changes)).toEqual({ status: 'sources-unavailable' });
+    },
+  );
+
+  it('applies the same transfer exclusion to a debt source, before calculating its timeline', () => {
+    expect(review({ internalTransferId: 'synthetic-transfer' }, { debts: [{
+      currency: 'EUR', openingDate: '2026-01-15', openingAmount: 80,
+      originTransactionId: tx.id, repayments: [],
+    }] })).toEqual(rejected);
   });
 });

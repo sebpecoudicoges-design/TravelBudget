@@ -1,4 +1,4 @@
-import { settledAt, validDay } from './accountingRecognition.js';
+import { internalAccounting, settledAt, validDay } from './accountingRecognition.js';
 
 // Internal prototype. The result is not a restore authorization and carries no settings.
 const MAX_BYTES = 500_000;
@@ -68,6 +68,16 @@ function negativeDebtBalance(debt, transactionById) {
     balance += BigInt(e.delta);
     return balance < 0n;
   });
+}
+
+function hasTransferClassification(row) {
+  const nullableId = id => id === null || isId(id);
+  if (typeof row.isInternal !== 'boolean' || !nullableId(row.internalTransferId)) return false;
+  // A legacy internal flag without an explicit transfer ID can describe a Trip share.
+  return !row.isInternal || row.internalTransferId !== null
+    || (typeof row.affectsBudget === 'boolean' && typeof row.outOfBudget === 'boolean'
+      && nullableId(row.tripShareLinkId) && nullableId(row.tripExpenseId)
+      && (row.label === null || typeof row.label === 'string'));
 }
 
 // An incomplete, unscoped, or malformed inventory cannot prove absence.
@@ -165,7 +175,11 @@ function reviewActiveReferences(settings, scope, sources) {
     let incompatible = 0;
     for (const [id, rule] of transactionRules) {
       const row = byId.get(id);
-      if (!row) return { status: 'sources-unavailable' };
+      if (!row || !hasTransferClassification(row)) return { status: 'sources-unavailable' };
+      if (internalAccounting(row)) {
+        incompatible++;
+        continue;
+      }
       if (rule.role === 'purchase') {
         const asset = assetById.get(rule.assetId);
         if (!asset) return { status: 'sources-unavailable' };
