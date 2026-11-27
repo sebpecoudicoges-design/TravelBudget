@@ -98,3 +98,38 @@ test('abort after the delete request succeeded rolls back, rather than reporting
   expect(await b.evaluate(async () => (await audit.all())[0].revision)).toBe('r1');
   expect(await b.evaluate(() => audit.accept())).toBe('accepted-remote');
 });
+
+test('an existing tab still writes its legacy draft while the audit store is in use', async ({ context }) => {
+  const existingTab = await auditTab(context);
+  const reviewingTab = await auditTab(context);
+  await reviewingTab.evaluate(() => audit.put());
+
+  const legacy = await existingTab.evaluate(async () => {
+    const repo = await import('/src/data/nutritionRepository.js');
+    const userId = '00000000-0000-4000-8000-000000000001';
+    const key = 'travelbudget_nutrition_local_meals_v1::' + userId;
+    const make = (syncId, grams) => repo.makeLocalNutritionRow({
+      userId, syncId, grams, travelId: null, mealDate: '2026-11-01',
+      label: 'Riz fictif', now: () => new Date('2026-11-01T09:00:00Z'),
+    });
+    const row = make('audit-nutrition', 80);
+    const next = make('legacy-next', 35);
+    repo.saveLocalNutritionRowsOnce({ storage: localStorage, key, rows: [row, next] });
+    const edited = make(row.syncId, 95);
+    repo.saveLocalNutritionRowOnce({ storage: localStorage, key, row: edited });
+    return { key, rows: [edited, next], serialized: localStorage.getItem(key) };
+  });
+
+  expect(await reviewingTab.evaluate(() => audit.accept())).toBe('accepted-remote');
+  expect(await reviewingTab.evaluate(() => audit.all())).toEqual([]);
+  await existingTab.reload();
+  const after = await existingTab.evaluate(async key => {
+    const { loadLocalNutritionRows } = await import('/src/data/nutritionRepository.js');
+    return {
+      serialized: localStorage.getItem(key),
+      rows: loadLocalNutritionRows({ storage: localStorage, key, strict: true }),
+    };
+  }, legacy.key);
+  expect(after.rows).toEqual(legacy.rows);
+  expect(after.serialized).toBe(legacy.serialized);
+});
