@@ -151,7 +151,7 @@
       display: none;
     }
 
-    .btn, .lang-btn, .tab-btn, .scenario-btn {
+    .btn, .lang-btn, .scenario-btn {
       min-height: 42px;
       border: 1px solid var(--line);
       border-radius: 999px;
@@ -166,7 +166,7 @@
       box-shadow: 0 10px 26px rgba(15, 23, 42, .06);
       cursor: pointer;
     }
-    .btn.primary, .tab-btn.active, .scenario-btn.active {
+    .btn.primary, .scenario-btn.active {
       border-color: transparent;
       color: #fff;
       background: linear-gradient(135deg, var(--tb-coral-strong), var(--tb-coral));
@@ -852,7 +852,7 @@
       gap: 16px;
       align-items: stretch;
     }
-    .control-card, .result-card, .module-card, .workflow-card, .tech-card {
+    .control-card, .result-card, .workflow-card, .tech-card {
       border: 1px solid rgba(15, 23, 42, .09);
       border-radius: 24px;
       background: rgba(255,255,255,.88);
@@ -896,23 +896,7 @@
     .kpi strong { display: block; font-size: 22px; line-height: 1.1; }
     .demo-table { display: grid; gap: 8px; margin-top: 12px; }
 
-    .modules-layout { display: grid; grid-template-columns: 260px 1fr; gap: 16px; }
-    .tabs { display: grid; gap: 8px; align-self: start; }
-    .tab-btn { justify-content: flex-start; border-radius: 16px; min-height: 48px; }
-    .module-card { padding: 22px; min-height: 360px; }
-    .module-card h3 { margin: 0 0 8px; font-size: 34px; }
-    .module-card p { margin: 0; color: var(--muted); line-height: 1.62; max-width: 760px; }
-    .module-proof { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-top: 18px; }
-    .proof {
-      border: 1px solid rgba(15, 23, 42, .08);
-      border-radius: 18px;
-      padding: 14px;
-      background: #f8fafc;
-    }
-    .proof strong { display: block; font-size: 15px; }
-    .proof span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.45; }
-
-    .workflow-grid, .tech-grid, .app-grid, .case-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+    .workflow-grid, .tech-grid, .app-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
     .workflow-card, .tech-card, .app-card { padding: 18px; }
     .app-card {
       border: 1px solid rgba(15, 23, 42, .09);
@@ -946,15 +930,6 @@
     }
     .workflow-card h3, .tech-card h3 { margin: 0 0 8px; font-size: 20px; }
     .workflow-card p, .tech-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
-    .case-card {
-      border: 1px solid rgba(15, 23, 42, .09);
-      border-radius: 22px;
-      padding: 18px;
-      background: rgba(255,255,255,.82);
-    }
-    .case-card strong { display: block; color: var(--tb-coral-strong); font-size: 12px; text-transform: uppercase; letter-spacing: 0; margin-bottom: 9px; }
-    .case-card h3 { margin: 0 0 8px; font-size: 21px; }
-    .case-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
     .tech-stack {
       margin-top: 16px;
       display: grid;
@@ -1217,13 +1192,10 @@
     :root[data-theme-resolved="dark"] .feed-row,
     :root[data-theme-resolved="dark"] .control-card,
     :root[data-theme-resolved="dark"] .result-card,
-    :root[data-theme-resolved="dark"] .module-card,
     :root[data-theme-resolved="dark"] .workflow-card,
     :root[data-theme-resolved="dark"] .app-card,
-    :root[data-theme-resolved="dark"] .case-card,
     :root[data-theme-resolved="dark"] .range-line,
     :root[data-theme-resolved="dark"] .kpi,
-    :root[data-theme-resolved="dark"] .proof,
     :root[data-theme-resolved="dark"] .release-filter,
     :root[data-theme-resolved="dark"] .release-spotlight,
     :root[data-theme-resolved="dark"] .release-card,
@@ -1240,7 +1212,6 @@
     :root[data-theme-resolved="dark"] .lab-head,
     :root[data-theme-resolved="dark"] .release-pulse-head,
     :root[data-theme-resolved="dark"] .trust-head { color: var(--tb-ink); }
-    :root[data-theme-resolved="dark"] .module-panel,
     :root[data-theme-resolved="dark"] .cta { border-color: var(--tb-line); }
     :root[data-theme-resolved="dark"] .mock-side,
     :root[data-theme-resolved="dark"] .lang-btn.active { background: #102229; color: #fff; border-color: var(--tb-line); }
@@ -1250,7 +1221,7 @@
 
     @media (max-width: 960px) {
       .nav-links { display: none; }
-      .hero, .interactive, .modules-layout { grid-template-columns: 1fr; }
+      .hero, .interactive { grid-template-columns: 1fr; }
       .hero { min-height: auto; }
       .mock-screen { grid-template-columns: 1fr; }
       .mock-screen { grid-template-columns: 1fr; }
@@ -1262,7 +1233,7 @@
       }
       .mock-side strong { display: none; }
       .mock-side button { width: auto; white-space: nowrap; margin: 0; }
-      .workflow-grid, .tech-grid, .app-grid, .case-grid, .tech-stack { grid-template-columns: 1fr; }
+      .workflow-grid, .tech-grid, .app-grid, .tech-stack { grid-template-columns: 1fr; }
       .atlas-shell { grid-template-columns: 1fr; }
       .atlas-stage { min-height: 560px; border-right: 0; border-bottom: 1px solid rgba(148, 163, 184, .11); }
       .atlas-panel { min-height: 380px; }
@@ -1276,7 +1247,7 @@
       .nav { align-items: flex-start; padding: 12px 0; }
       .nav-actions { flex-wrap: wrap; justify-content: flex-end; }
       .product-frame { padding: 8px; border-radius: 22px; }
-      .mock-grid, .result-kpis, .module-proof { grid-template-columns: 1fr; }
+      .mock-grid, .result-kpis { grid-template-columns: 1fr; }
       .hero-actions .btn { width: 100%; }
       .auth-entry { grid-template-columns: 1fr; }
       .auth-entry-actions { justify-content: flex-start; }
@@ -1331,7 +1302,6 @@
       </a>
       <nav class="nav-links" aria-label="Sections">
         <a href="#demo" data-i18n="nav.demo">Demo</a>
-        <a href="#modules" data-i18n="nav.modules">Modules</a>
         <a href="#workflow" data-i18n="nav.workflow">Parcours</a>
         <a href="#atlas" data-i18n="nav.atlas">Atlas</a>
         <a href="#app" data-i18n="nav.app">App</a>
@@ -1404,6 +1374,7 @@
             <p data-i18n="demo.hub.lead">Choisis un parcours. Saisis quelques valeurs fictives, vérifie le détail, puis observe le résultat.</p>
           </div>
           <span id="lab" aria-hidden="true"></span>
+          <span id="modules" aria-hidden="true"></span>
           <p class="tb-demo-kicker" data-i18n="demo.hub.step">Choisis une démo</p>
           <nav id="demo-selection" class="demo-switch" data-demo-switch hidden aria-label="Démonstrations">
             <a href="#demo-trip" data-scenario="trip" data-i18n="demo.tab.trip">Dépense partagée</a>
@@ -1487,40 +1458,6 @@
             <a class="project-video-link" href="./demo-media/travelbudget-taupo-demo.mp4" data-i18n="demo.video.open">Ouvrir la vidéo séparément</a>
           </figure>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="modules" class="band">
-      <div class="shell">
-        <div class="section-head">
-          <h2 data-i18n="modules.title">Les modules couvrent le pilotage personnel complet.</h2>
-          <p data-i18n="modules.lead">Budget, conversions, documents, patrimoine, sport, alimentation, sommeil et notifications : chaque brique nourrit les autres au lieu de rester isolee.</p>
-        </div>
-        <div class="case-grid" aria-label="Cas d'usage principaux">
-          <article class="case-card"><strong data-i18n="case.one.kicker">Cashflow</strong><h3 data-i18n="case.one.title">Savoir ce qu'il reste vraiment</h3><p data-i18n="case.one.body">Wallets, transactions, budget journalier et projections donnent une lecture rapide de la tresorerie.</p></article>
-          <article class="case-card"><strong data-i18n="case.two.kicker">Conversions</strong><h3 data-i18n="case.two.title">Decider quand convertir</h3><p data-i18n="case.two.body">Le suivi des taux sert a arbitrer les conversions, pas a raconter un scenario pays unique.</p></article>
-          <article class="case-card"><strong data-i18n="case.three.kicker">Objectifs</strong><h3 data-i18n="case.three.title">Relier energie et charge</h3><p data-i18n="case.three.body">Alimentation, sommeil, sport et travail alimentent Nutrition sans creer de module separe.</p></article>
-        </div>
-        <div class="modules-layout">
-          <div class="tabs" role="tablist">
-            <button class="tab-btn active" type="button" data-module="dashboard">Dashboard</button>
-            <button class="tab-btn" type="button" data-module="transactions">Transactions</button>
-            <button class="tab-btn" type="button" data-module="subscriptions">Abonnements</button>
-            <button class="tab-btn" type="button" data-module="documents">Documents</button>
-            <button class="tab-btn" type="button" data-module="sport">Sport</button>
-            <button class="tab-btn" type="button" data-module="nutrition">Alimentation</button>
-            <button class="tab-btn" type="button" data-module="sleep">Sommeil</button>
-            <button class="tab-btn" type="button" data-module="work">Travail</button>
-            <button class="tab-btn" type="button" data-module="assets">Patrimoine</button>
-            <button class="tab-btn" type="button" data-module="split">Trip</button>
-            <button class="tab-btn" type="button" data-module="assistant">Assistant</button>
-          </div>
-          <article class="module-card">
-            <h3 id="moduleTitle">Dashboard</h3>
-            <p id="moduleText"></p>
-            <div class="module-proof" id="moduleProof"></div>
-          </article>
         </div>
       </div>
     </section>
@@ -2160,7 +2097,7 @@
           "alpha.requestCta": "Envoyer mon adresse Google Play",
           "alpha.access": "Une fois ton compte Google autorisé, connecte-toi avec cette même adresse et ouvre le lien Play. Ce lien ne t’ajoute pas à la liste des testeurs.",
           "alpha.join": "Déjà autorisé ? Rejoindre sur Google Play",
-          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.atlas": "Atlas", "nav.app": "App", "nav.privacy": "Confidentialite", "nav.tech": "Technique", "nav.cta": "Tester la demo",
+          "nav.demo": "Demo", "nav.workflow": "Parcours", "nav.atlas": "Atlas", "nav.app": "App", "nav.privacy": "Confidentialite", "nav.tech": "Technique", "nav.cta": "Tester la demo",
           "hero.eyebrow": "TravelBudget · Démo publique, données fictives",
           "hero.title": "Ton budget, tes documents et tes objectifs. Un seul cockpit.",
           "hero.lead": "Une app modulaire pour relier cashflow, transactions, taux de change, documents, patrimoine, sport, alimentation, sommeil et charge de travail dans une lecture simple.",
@@ -2215,11 +2152,6 @@
           "demo.category": "Ta part · Repas",
           "demo.left": "Reste à dépenser",
           "demo.local": "La démo de cette page ne se connecte pas à l’app et ne sauvegarde aucune donnée. Elle illustre certains parcours avec des données fictives.",
-          "modules.title": "Les modules couvrent le pilotage personnel complet.",
-          "modules.lead": "Budget, conversions, documents, patrimoine, sport, alimentation, sommeil et notifications : chaque brique nourrit les autres au lieu de rester isolee.",
-          "case.one.kicker": "Cashflow", "case.one.title": "Savoir ce qu'il reste vraiment", "case.one.body": "Wallets, transactions, budget journalier et projections donnent une lecture rapide de la tresorerie.",
-          "case.two.kicker": "Conversions", "case.two.title": "Decider quand convertir", "case.two.body": "Le suivi des taux sert a arbitrer les conversions, pas a raconter un scenario pays unique.",
-          "case.three.kicker": "Objectifs", "case.three.title": "Relier energie et charge", "case.three.body": "Alimentation, sommeil, sport et travail alimentent Nutrition sans creer de module separe.",
           "workflow.title": "Un parcours simple : capturer, classer, decider.",
           "workflow.lead": "Le projet vise a reduire la friction : une transaction, un document, une seance ou une entree nutrition arrive, puis rejoint le bon module.",
           "workflow.one.title": "Capturer", "workflow.one.body": "Transaction, recu WhatsApp, facture PDF, seance sport, sommeil, repas ou mouvement interne.",
@@ -2446,7 +2378,7 @@
           "alpha.requestCta": "Send my Google Play email",
           "alpha.access": "Once your Google account has access, sign in with that same email address and open the Google Play link. The link does not add your account to the tester list.",
           "alpha.join": "Already approved? Join on Google Play",
-          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Journeys", "nav.atlas": "Atlas", "nav.app": "App", "nav.privacy": "Privacy", "nav.tech": "Tech", "nav.cta": "Try the demo",
+          "nav.demo": "Demo", "nav.workflow": "Journeys", "nav.atlas": "Atlas", "nav.app": "App", "nav.privacy": "Privacy", "nav.tech": "Tech", "nav.cta": "Try the demo",
           "hero.eyebrow": "TravelBudget · Public demo, fictional data",
           "hero.title": "Your budget, documents and goals. One cockpit.",
           "hero.lead": "A modular app connecting cashflow, transactions, exchange-rate analysis, conversions, documents, assets, sport, nutrition, sleep and work load.",
@@ -2501,11 +2433,6 @@
           "demo.category": "Your share · Meals",
           "demo.left": "Left to spend",
           "demo.local": "This page does not connect to the app or save demo data. It uses fictional data to illustrate selected workflows.",
-          "modules.title": "Modules cover full personal steering.",
-          "modules.lead": "Budget, conversions, documents, assets, sport, nutrition, sleep and notifications: each block feeds the others instead of staying isolated.",
-          "case.one.kicker": "Cashflow", "case.one.title": "Know what is really left", "case.one.body": "Wallets, transactions, daily budget and projections give a fast read of cashflow.",
-          "case.two.kicker": "Conversions", "case.two.title": "Decide when to convert", "case.two.body": "Rate tracking helps arbitrate conversions; it is not a single-country travel story.",
-          "case.three.kicker": "Goals", "case.three.title": "Connect energy and load", "case.three.body": "Nutrition, sleep, sport and work feed Nutrition without creating a separate module.",
           "workflow.title": "A simple flow: capture, classify, decide.",
           "workflow.lead": "The project reduces friction: a transaction, document, workout or nutrition entry arrives, then joins the right module.",
           "workflow.one.title": "Capture", "workflow.one.body": "Transaction, WhatsApp receipt, PDF invoice, workout, sleep, meal or internal transfer.",
@@ -2706,36 +2633,7 @@
         }
       };
 
-      const modules = {
-        fr: {
-          dashboard: ["Dashboard", "Vue cashflow, budget quotidien, rentrees attendues et projections pour savoir ou tu en es vraiment.", ["Solde multi-wallet", "Budget restant", "Courbe de tresorerie"]],
-          transactions: ["Transactions", "Creation, filtres, categories, factures liees, mouvements internes et protections pour les lignes Trip ou wallet.", ["Verrouillages metier", "Bulk classification", "Factures liees"]],
-          subscriptions: ["Abonnements", "Separe entrees et sorties, compare prevu et reel et permet de reclasser une echeance avec un garde explicite.", ["Prevu / reel / difference", "Entrees vs sorties", "Reclassification sure"]],
-          documents: ["Documents", "Hub transversal pour factures, contrats, garanties, tags, sous-dossiers et partages temporaires.", ["Tags proposes", "Liens financiers", "Partage public"]],
-          sport: ["Sport", "Construis une seance simple, lance un timer guide ou un circuit AMRAP, estime les kcal et garde l'historique.", ["Circuit / AMRAP", "Kcal estimees", "Historique"]],
-          nutrition: ["Alimentation", "Compare le consomme au besoin reel, avec repas par moment, eau bue, macros et historique.", ["Anneau kcal", "Timeline repas", "Eau + macros"]],
-          sleep: ["Sommeil", "Saisie simple rattachee a la nuit precedente, objectif visible et historique en barres.", ["Nuit precedente", "Objectif 7h30", "Historique"]],
-          work: ["Travail", "Fresque professionnelle reliant missions, journees physiques, revenus recus, taux net reel, chomage et dossiers.", ["Parcours", "Taux net", "Dossiers lies"]],
-          assets: ["Patrimoine", "Valeur, coproprietaires et cout mensuel estime inclus dans Budget et Analyse sans modifier la tresorerie.", ["Valeur actuelle", "Cout budget", "Documents"]],
-          split: ["Trip", "Depenses partagees, participants, matching transaction et recap des remboursements.", ["Parts", "Avances", "Solde par personne"]],
-          assistant: ["Assistant", "Aide locale contextuelle : signaux rapides, navigation et reponses simples sans appeler d'API externe.", ["Contexte vue", "Signaux", "Guidage"]]
-        },
-        en: {
-          dashboard: ["Dashboard", "Cashflow, daily budget, expected income and projections to understand where you really stand.", ["Multi-wallet balance", "Remaining budget", "Cash curve"]],
-          transactions: ["Transactions", "Creation, filters, categories, linked invoices, internal transfers and safeguards for Trip or wallet rows.", ["Business locks", "Bulk classification", "Linked invoices"]],
-          subscriptions: ["Subscriptions", "Separate income and expenses, compare forecast with actuals and safely reclassify an occurrence.", ["Forecast / actual / difference", "Income vs expenses", "Safe reclassification"]],
-          documents: ["Documents", "Cross-module hub for invoices, contracts, warranties, tags, subfolders and temporary sharing.", ["Suggested tags", "Financial links", "Public sharing"]],
-          sport: ["Sport", "Build a simple workout, start a guided timer or AMRAP circuit, estimate kcal and keep history.", ["Circuit / AMRAP", "Estimated kcal", "History"]],
-          nutrition: ["Nutrition", "Compare consumed food against real needs, with meal moments, drunk water, macros and history.", ["Kcal ring", "Meal timeline", "Water + macros"]],
-          sleep: ["Sleep", "Simple entry attached to the previous night, visible target and bar history.", ["Previous night", "7.5h target", "History"]],
-          work: ["Work", "Career timeline linking jobs, physical days, received income, actual net rate, unemployment and folders.", ["Career", "Net rate", "Linked folders"]],
-          assets: ["Assets", "Value, co-owners and estimated monthly cost included in Budget and Analysis without changing cashflow.", ["Current value", "Budget cost", "Documents"]],
-          split: ["Trip", "Shared expenses, participants, transaction matching and reimbursement recap.", ["Shares", "Advances", "Balance by person"]],
-          assistant: ["Assistant", "Local contextual help: quick signals, navigation and simple answers without external API calls.", ["View context", "Signals", "Guidance"]]
-        }
-      };
-
-      const state = { lang: "fr", module: "dashboard", atlasGroup: "all", atlasSelected: "budget.transaction", atlasMeta: null, releaseFilter: "all", activeRelease: "" };
+      const state = { lang: "fr", atlasGroup: "all", atlasSelected: "budget.transaction", atlasMeta: null, releaseFilter: "all", activeRelease: "" };
       let atlasVisual = null;
       const $ = (id) => document.getElementById(id);
       const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
@@ -2758,7 +2656,6 @@
           }
         });
         document.querySelectorAll("[data-lang]").forEach((btn) => btn.classList.toggle("active", btn.dataset.lang === lang));
-        renderModule();
         renderAtlas();
         renderReleaseTimeline();
       }
@@ -3156,21 +3053,7 @@
         };
       }
 
-      function renderModule() {
-        const [title, text, proof] = modules[state.lang][state.module];
-        $("moduleTitle").textContent = title;
-        $("moduleText").textContent = text;
-        $("moduleProof").replaceChildren(...proof.map((label) => {
-          const detail = document.createElement("div");
-          detail.className = "proof";
-          detail.textContent = label;
-          return detail;
-        }));
-        document.querySelectorAll("[data-module]").forEach((btn) => btn.classList.toggle("active", btn.dataset.module === state.module));
-      }
-
       document.querySelectorAll("[data-lang]").forEach((btn) => btn.addEventListener("click", () => applyLang(btn.dataset.lang)));
-      document.querySelectorAll("[data-module]").forEach((btn) => btn.addEventListener("click", () => { state.module = btn.dataset.module; renderModule(); }));
       applyLang("fr");
       loadPublicAtlasMeta();
     })();

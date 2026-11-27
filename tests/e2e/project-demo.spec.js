@@ -125,6 +125,8 @@ for (const [width, colorScheme] of [[1440, 'dark'], [390, 'light']]) {
     });
     await page.goto('/projet.html#demo-fx');
     const hub = page.locator('#demo');
+    await expect(page.locator('section#modules, a[href="#modules"]')).toHaveCount(0);
+    await expect(hub.locator('#modules')).toHaveCount(1);
     const journeys = page.locator('#demo-journey');
     await expect(hub.locator('#video-demo video')).toHaveCount(1);
     await expect(hub.getByRole('navigation', { name: 'Démonstrations' }).getByRole('link')).toHaveCount(6);
