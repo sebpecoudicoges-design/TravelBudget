@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
   "commit": "6c5cf024f5e286a59fbb25116172537db15bbf9b",
-  "snapshotFingerprint": "9a9968c1ed2fb96405346174640296c8a1fc0e390516f1fc8b2e0b17afc260df",
-  "generatedAt": "2026-11-27T02:58:19.954Z",
+  "snapshotFingerprint": "34c3e494c0d2f4d98c3a67e62b121695e2bbfbd0b468d634d58b2b4c4e2f5d55",
+  "generatedAt": "2026-11-27T04:00:50.877Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
@@ -362,6 +362,7 @@
     "tests/e2e/assistant-ai.spec.js",
     "tests/e2e/cashflow-controls.spec.js",
     "tests/e2e/critical-flows.spec.js",
+    "tests/e2e/document-preview-audit.spec.js",
     "tests/e2e/financial-trip-budget.spec.js",
     "tests/e2e/first-setup.spec.js",
     "tests/e2e/kpi-account-scope.spec.js",
@@ -568,6 +569,7 @@
     "tests/e2e/assistant-ai.spec.js",
     "tests/e2e/cashflow-controls.spec.js",
     "tests/e2e/critical-flows.spec.js",
+    "tests/e2e/document-preview-audit.spec.js",
     "tests/e2e/financial-trip-budget.spec.js",
     "tests/e2e/first-setup.spec.js",
     "tests/e2e/kpi-account-scope.spec.js",

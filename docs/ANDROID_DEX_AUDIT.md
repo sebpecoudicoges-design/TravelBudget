@@ -144,3 +144,12 @@ bascule dans WebView et ne renseigne ni ne soumet aucun champ. Le relevé
 mémoire est fait avant cette interaction. Il reste à tester les écrans
 authentifiés et les documents à partir d’un environnement fictif séparé ;
 les contrôles ne déclenchent pas de connexion ni de récupération réelle.
+
+La CI [45931471995](https://github.com/sebpecoudicoges-design/TravelBudget/actions/runs/45931471995)
+confirme ce parcours sur les deux versions. Un contrôle Chromium distinct
+ouvre le vrai coffre documentaire avec des réponses fictives : affichage
+d’une image, fermeture de l’aperçu, création d’un lien de courte durée
+et présence du lien de repli pour le PDF à 390 et 1 440 px en clair et
+sombre. Il ne contacte pas le stockage et ne valide pas le rendu PDF
+dans Android WebView. Ce dernier reste à reproduire dans un environnement
+de démonstration séparé avec un fichier PDF fictif.

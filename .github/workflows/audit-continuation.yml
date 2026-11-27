@@ -19,6 +19,7 @@ on:
       - 'public/legacy/js/29_trip_v1.js'
       - 'scripts/fixtures/connectedStartup.mjs'
       - 'tests/e2e/financial-trip-budget.spec.js'
+      - 'tests/e2e/document-preview-audit.spec.js'
       - 'tests/data/mutationQueue*.test.js'
       - 'tests/e2e/offline-queue-*.spec.js'
       - 'tests/data/nutrition*.test.js'
@@ -57,3 +58,5 @@ jobs:
       - run: npm run test:e2e -- tests/e2e/nutrition-edit-storage.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/financial-trip-budget.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/offline-queue-tabs.spec.js tests/e2e/offline-queue-revision.spec.js --project=desktop-chromium
+
+      - run: npm run test:e2e -- tests/e2e/document-preview-audit.spec.js --project=desktop-chromium
