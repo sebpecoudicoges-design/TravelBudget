@@ -122,7 +122,31 @@ try {
       assert.deepEqual(after.snapshot.items, proposed.map((item, i) => ({ ...item, sort_order: i })));
     }
   }
-  console.log('Nutrition edit audit: rollback, exact item set, stale forms, competing whole-meal edits and direct item edit ordered on PostgreSQL.');
+  const replay = (syncId, contents) => one(writer,
+    'select * from public.audit_nutrition_create_meal_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+    [syncId, null, '2026-11-27', 'meal', 'Synthetic portion', null, 0, null, JSON.stringify(contents)]);
+  const portion = await replay('one-portion', [initialItems[0]]);
+  const removedItem = await writer.query('delete from public.nutrition_meal_items where meal_id = $1 and user_id = $2',
+    [portion.meal_id, userA]);
+  assert.equal(removedItem.rowCount, 1);
+  assert.deepEqual(await replay('one-portion', [initialItems[0]]), {
+    meal_id: portion.meal_id, status: 'conflict',
+  });
+  const afterPortion = await one(observer,
+    'select snapshot from public.audit_nutrition_read_meal_v1($1,$2)', [portion.meal_id, 'one-portion']);
+  assert.deepEqual(afterPortion.snapshot.items, [], 'replay does not re-add an intentionally removed last food');
+  assert.equal((await replay('hydration-without-items', [])).status, 'created');
+
+  const beforeDelete = await read(observer);
+  const removedMeal = await writer.query('delete from public.nutrition_meals where id = $1 and user_id = $2',
+    [created.meal_id, userA]);
+  assert.equal(removedMeal.rowCount, 1);
+  assert.deepEqual(await editAs(observer, beforeDelete.revision), { status: 'unavailable', revision: null });
+  assert.equal(await read(observer), undefined, 'the edit never creates a missing meal');
+  const remaining = await one(observer, 'select count(*)::int as n from public.nutrition_meal_items where meal_id = $1',
+    [created.meal_id]);
+  assert.equal(remaining.n, 0);
+  console.log('Nutrition edit audit: rollback, concurrent edits, last-food removal and missing meal verified on PostgreSQL.');
 } finally {
   await close();
 }
