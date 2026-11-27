@@ -233,7 +233,7 @@ function tbEnsureAuthMarkup() {
             <li>${tbAuthText("Invitations Trip et validations visibles dans les notifications.", "Trip invites and approvals visible in notifications.")}</li>
           </ul>
         </div>
-        <p class="auth-muted" style="color:rgba(255,255,255,.70);">BudgetPacker · ${window.TB_BUILD_LABEL || "V10"}</p>
+        <p class="auth-muted" style="color:rgba(255,255,255,.70);"><img src="/pwa-icon.svg" width="20" height="20" alt="" style="vertical-align:middle;margin-right:.4rem">TravelBudget · ${window.TB_BUILD_LABEL || "V10"}</p>
       </section>
       <section class="auth-panel">
         <div class="auth-tabs" role="tablist">

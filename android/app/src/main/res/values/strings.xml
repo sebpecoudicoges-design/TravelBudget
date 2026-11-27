@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Travel Budget</string>
-    <string name="title_activity_main">Travel Budget</string>
+    <string name="app_name">TravelBudget</string>
+    <string name="title_activity_main">TravelBudget</string>
     <string name="package_name">fr.pecloud.travelbudget</string>
     <string name="custom_url_scheme">fr.pecloud.travelbudget</string>
 </resources>
