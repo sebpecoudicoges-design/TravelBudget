@@ -43,3 +43,17 @@ rejoue les fonctions SQL réelles dans PostgreSQL en mémoire (PGlite 0.3.15,
 schéma de test minimal) et vérifie qu’un seul mouvement est créé et que deux
 annulations préservent une transaction indépendante. Aucun projet connecté
 n’est utilisé par ces scénarios.
+
+### Réintégration d’une dépense Wallet (F3)
+
+Un parcours navigateur fictif, à 1 440 px en clair et 390 px en sombre, édite une
+dépense payée de 24 EUR depuis Transactions : hors budget, réintégrée, puis à
+nouveau hors budget. Le budget passe de 10 à 18 puis à 10 EUR nets par jour
+sur les 21–23 octobre, et Analyse de 30 à 54 puis à 30 EUR. Le solde Wallet
+reste à 371 EUR. Les sorties payées de 144 EUR (dépense de 24 + avance
+Trip de 120) restent datées du 20 octobre, pas des jours budgétaires. La
+ligne d’avance Trip reste accessible depuis Trip et non éditable depuis le
+même formulaire. Le test vérifie que seul l’identifiant de la dépense Wallet
+est envoyé, avec les deux jeux de dates préservés. Il simule la réponse
+du serveur ; ce contrôle est complémentaire de la preuve SQL historique
+et ne valide ni les RPC du projet connecté ni un appareil réel.

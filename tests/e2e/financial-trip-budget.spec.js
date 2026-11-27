@@ -508,3 +508,91 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     await expect(view.getByRole('heading', { name: 'Partage clos' })).toHaveCount(0);
   });
 }
+
+for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
+  test(`re-includes a Wallet expense without moving its cash or Trip payment (${width}px, ${theme})`, async ({ page, baseURL }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: theme });
+    const ordinary = row('ordinary-wallet-expense', 24, cashDate, {
+      label: 'Dépense Wallet fictive', out_of_budget: true, affects_budget: false,
+    });
+    const scopedTables = {
+      ...structuredClone(tables),
+      fx_rates: [], transaction_documents: [],
+      profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
+      settings: fixtureTables.settings.map(setting => ({ ...setting, theme })),
+    };
+    scopedTables.transactions.push(ordinary);
+    await installConnectedFixture(page, baseURL, { tables: scopedTables });
+    await page.routeWebSocket(url => url.origin === new URL(baseURL).origin.replace(/^http/, 'ws'), ws => ws.connectToServer());
+    const accepted = [];
+    // Model only the legitimate edit of this fixture; no RPC reaches a server.
+    await page.route('**/rest/v1/rpc/update_transaction_v2', route => {
+      const args = route.request().postDataJSON();
+      accepted.push(args);
+      if (args.p_id !== ordinary.id || typeof args.p_out_of_budget !== 'boolean') {
+        return route.fulfill({ status: 400, json: { message: 'Unexpected synthetic edit' } });
+      }
+      ordinary.out_of_budget = args.p_out_of_budget;
+      ordinary.affects_budget = !args.p_out_of_budget;
+      return route.fulfill({ status: 204 });
+    });
+    await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
+    await page.goto('/');
+    await expect(page.locator('body')).toHaveClass(new RegExp(`theme-${theme}`));
+
+    const account = page.locator(`#wallets-container [data-wallet-id="${wallet.id}"] .tb-wallet-card-main p strong`).first();
+    const budget = page.locator('#daily-budget-container');
+    const summary = page.locator('#analysis-summary');
+    const walletRow = page.locator('[data-tx-id="ordinary-wallet-expense"]');
+    const tripRow = page.locator('[data-tx-id="trip-advance"]');
+
+    async function assertBudget(allocation, total) {
+      await navigate(page, 'dashboard');
+      await expect(account).toHaveText(/^371[,.]00(?:\s*(?:EUR|€))?$/);
+      const today = budget.locator('#db-today');
+      if (!(await budget.locator('.day').filter({ hasText: expenseStart }).isVisible())) await today.click();
+      for (const date of [expenseStart, '2026-10-22', expenseEnd]) {
+        await expect(budget.locator('.day').filter({ hasText: date }).locator('.row b').first()).toHaveText(`−${allocation} EUR`);
+      }
+      await navigate(page, 'analysis');
+      await page.locator('#analysis-period').selectOption('active');
+      await page.locator('#analysis-scope').selectOption('budget');
+      await expect(summary.locator('.analysis-stat--glass-blue .analysis-stat-value').first()).toHaveText(
+        new RegExp(`^${total}[,.]00`),
+      );
+    }
+
+    async function update(outOfBudget, count) {
+      await navigate(page, 'transactions');
+      await expect(tripRow.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
+      await expect(tripRow.getByRole('button', { name: /Trip/i })).toBeVisible();
+      await walletRow.getByRole('button', { name: 'Edit', exact: true }).click();
+      await expect(page.locator('#m-cash-date')).toHaveValue(cashDate);
+      await expect(page.locator('#m-budget-start')).toHaveValue(expenseStart);
+      await expect(page.locator('#m-budget-end')).toHaveValue(expenseEnd);
+      await page.locator('#m-out').setChecked(outOfBudget);
+      await page.locator('[data-tx-save]').click();
+      await expect.poll(() => accepted.length).toBe(count);
+      expect(accepted.at(-1)).toMatchObject({ p_id: ordinary.id, p_wallet_id: wallet.id, p_amount: 24,
+        p_date_start: cashDate, p_budget_date_start: expenseStart, p_budget_date_end: expenseEnd,
+        p_out_of_budget: outOfBudget, p_trip_expense_id: null, p_trip_share_link_id: null });
+      await expect(page.locator('#tx-modal-form')).toBeHidden();
+    }
+
+    await assertBudget(10, 30);
+    await update(false, 1);
+    await assertBudget(18, 54);
+    await page.locator('#analysis-scope').selectOption('all');
+    await page.locator('#analysis-period').selectOption('range');
+    await page.locator('#analysis-range-start').fill(cashDate);
+    await page.locator('#analysis-range-end').fill('2026-10-22');
+    const outflow = summary.locator('.analysis-stat--cash-only').getByText('Sorties payees').locator('..');
+    await expect(outflow).toHaveText(/Sorties payees\s*144[,.]00/);
+    await page.locator('#analysis-range-start').fill(expenseStart);
+    await expect(outflow).toHaveText(/Sorties payees\s*0[,.]00/);
+    await update(true, 2);
+    await assertBudget(10, 30);
+  });
+}
