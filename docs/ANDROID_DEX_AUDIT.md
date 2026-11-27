@@ -155,3 +155,17 @@ l’URL attendue, à laquelle le banc sert un PDF fictif réel. Il ne
 contacte pas le stockage et ne vérifie ni le rendu visuel du PDF dans
 l’onglet ni l’ouverture et le rendu dans Android WebView. Le parcours
 Android reste à reproduire dans un environnement isolé.
+
+### Banc PDF Android isolé
+
+Le workflow d’audit PDF embarque uniquement une page de test et un PDF
+fictif dans le shell Capacitor de référence 10.5.397. La page utilise le
+gabarit documentaire de cette version ; son style est simplifié. L’APK
+debug utilise un identifiant d’application de test distinct et reste
+sur le runner. L’émulateur API 35 est hors ligne. Le test capture la
+WebView avant et après le clic sur le lien de repli et note l’activité
+Android au premier plan. Le rectangle rouge du PDF permet de vérifier
+visuellement son rendu, séparément du simple clic. Une exécution verte
+prouve la capture, pas le rendu. L’URL du PDF est locale au shell :
+l’ouverture d’un document signé via un lecteur externe et un stockage
+réel reste une validation distincte. Aucun compte ni service réel n’est utilisé.

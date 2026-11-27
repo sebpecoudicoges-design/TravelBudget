@@ -1,0 +1,91 @@
+name: Isolated Android PDF preview audit
+
+on:
+  push:
+    branches: [codex/handoff-audit-2026-11-25-cloud]
+    paths:
+      - '.github/workflows/android-pdf-preview-audit.yml'
+      - 'scripts/audit-android-pdf/pdf_preview_fixture.mjs'
+      - 'scripts/audit-android-pdf/pdf_preview_emulator.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-pdf:
+    if: github.ref == 'refs/heads/codex/handoff-audit-2026-11-25-cloud'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Build an emulator-only Capacitor shell with a synthetic PDF
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_sha=6a66c81aaa50317cb8b6b5be0b37f772ac08cd8d
+          checkout="$RUNNER_TEMP/tb-pdf-fixture"
+          git worktree add --detach "$checkout" "$source_sha"
+          cd "$checkout"
+          test "$(git rev-parse HEAD)" = "$source_sha"
+          test ! -e android/app/google-services.json
+          npm ci
+          node "$GITHUB_WORKSPACE/scripts/audit-android-pdf/pdf_preview_fixture.mjs" src/features/documents/documentView.js dist
+          sed -i 's/variant.applicationId.set("com.travelbudget.app")/variant.applicationId.set("org.travelbudget.audit.pdf")/' android/app/build.gradle
+          grep -F 'variant.applicationId.set("org.travelbudget.audit.pdf")' android/app/build.gradle
+          ./node_modules/.bin/cap sync android
+          export JAVA_HOME="${JAVA_HOME_21_X64:?JDK 21 missing}"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          cd android
+          env -u TB_ANDROID_KEYSTORE_PATH -u TB_ANDROID_KEYSTORE_PASSWORD \
+            -u TB_ANDROID_KEY_ALIAS -u TB_ANDROID_KEY_PASSWORD \
+            bash gradlew --no-daemon :app:assembleDebug
+          apk="$PWD/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$apk"
+          aapt=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
+          "$aapt" dump badging "$apk" > "$RUNNER_TEMP/tb-pdf-badging.txt"
+          grep -F "package: name='org.travelbudget.audit.pdf'" "$RUNNER_TEMP/tb-pdf-badging.txt"
+          cp "$apk" "$RUNNER_TEMP/tb-pdf-debug.apk"
+      - name: Boot an isolated offline API 35 emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo chmod a+rw /dev/kvm
+          sdk=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)
+          image='system-images;android-35;google_apis;x86_64'
+          "$sdk" --install platform-tools "$image"
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/tb-pdf-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          "$(dirname "$sdk")/avdmanager" create avd --force -n tb-pdf -k "$image" <<< no
+          "$ANDROID_HOME/emulator/emulator" -avd tb-pdf -port 5554 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on >"$RUNNER_TEMP/tb-pdf-emulator.log" 2>&1 &
+          device() { "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 "$@"; }
+          timeout 240 "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 wait-for-device || { tail -80 "$RUNNER_TEMP/tb-pdf-emulator.log"; exit 1; }
+          for retry in $(seq 1 100); do
+            if [ "$(device shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; then break; fi
+            sleep 2
+          done
+          test "$(device shell getprop sys.boot_completed | tr -d '\r')" = 1
+          device shell cmd connectivity airplane-mode enable
+          device shell svc wifi disable
+          device shell svc data disable
+          device shell input keyevent KEYCODE_WAKEUP
+          device shell wm dismiss-keyguard
+      - name: Observe the iframe and tap the fallback link
+        run: bash scripts/audit-android-pdf/pdf_preview_emulator.sh "$RUNNER_TEMP/tb-pdf-debug.apk" "$RUNNER_TEMP/tb-pdf-evidence"
+      - name: Retain only synthetic screenshots and diagnostics for review
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: android-pdf-fixture-evidence
+          path: ${{ runner.temp }}/tb-pdf-evidence/
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Stop the emulator
+        if: always()
+        run: '"$ANDROID_HOME/platform-tools/adb" -s emulator-5554 emu kill || true'
