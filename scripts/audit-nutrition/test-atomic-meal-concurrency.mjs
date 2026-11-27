@@ -74,7 +74,50 @@ try {
     { sync_id: 'rolled-back', label: 'Synthetic meal', grams: [82, 120] },
     { sync_id: 'same-key', label: 'Edited remotely', grams: [80, 120] },
   ]);
-  console.log('PostgreSQL concurrency: real blocking observed, committed replay, rollback handoff and legitimate edit OK.');
+  for (const action of ['edit', 'delete', 'cancel-edit']) {
+    const key = 'item-' + action;
+    const created = await call(a, key);
+    const item = await row(a, 'select id from public.nutrition_meal_items where meal_id = $1 and sort_order = 0', [created.meal_id]);
+    await a.query('begin');
+    const applied = await a.query(action === 'delete'
+      ? 'delete from public.nutrition_meal_items where id = $1 and user_id = $2'
+      : 'update public.nutrition_meal_items set grams = 91 where id = $1 and user_id = $2', [item.id, userA]);
+    assert.equal(applied.rowCount, 1);
+    const retry = startRacing(b, key);
+    await observeBlocked(admin, pidB, pidA);
+    await a.query(action === 'cancel-edit' ? 'rollback' : 'commit');
+    assert.deepEqual(await result(retry), {
+      meal_id: created.meal_id, status: action === 'cancel-edit' ? 'already_applied' : 'conflict',
+    });
+    const stored = (await a.query('select grams::int from public.nutrition_meal_items where meal_id = $1 order by sort_order',
+      [created.meal_id])).rows.map(value => value.grams);
+    assert.deepEqual(stored, action === 'delete' ? [120] : [action === 'edit' ? 91 : 80, 120]);
+  }
+
+  const replayFirst = await call(b, 'replay-first');
+  const firstItem = await row(a, 'select id from public.nutrition_meal_items where meal_id = $1 and sort_order = 0', [replayFirst.meal_id]);
+  await b.query('begin');
+  assert.deepEqual(await call(b, 'replay-first'), { meal_id: replayFirst.meal_id, status: 'already_applied' });
+  const laterEdit = a.query('update public.nutrition_meal_items set grams = 95 where id = $1 and user_id = $2',
+    [firstItem.id, userA]).then(value => ({ value }), error => ({ error }));
+  await observeBlocked(admin, pidA, pidB);
+  await b.query('commit');
+  assert.equal((await result(laterEdit)).rowCount, 1);
+  assert.deepEqual(await call(b, 'replay-first'), { meal_id: replayFirst.meal_id, status: 'conflict' });
+  assert.equal((await row(admin, 'select grams::int from public.nutrition_meal_items where id = $1', [firstItem.id])).grams, 95);
+  // An old client can still add an item to an existing meal. The FK's parent
+  // lock orders that insert with the replay's parent lock.
+  const legacyAdd = await call(a, 'item-add');
+  await a.query('begin');
+  await a.query(`insert into public.nutrition_meal_items (user_id, meal_id, label, grams, sort_order)
+    values ($1, $2, 'Extra portion', 30, 2)`, [userA, legacyAdd.meal_id]);
+  const retryAdd = startRacing(b, 'item-add');
+  await observeBlocked(admin, pidB, pidA);
+  await a.query('commit');
+  assert.deepEqual(await result(retryAdd), { meal_id: legacyAdd.meal_id, status: 'conflict' });
+  assert.equal((await row(a, 'select count(*)::int as n from public.nutrition_meal_items where meal_id = $1',
+    [legacyAdd.meal_id])).n, 3);
+  console.log('PostgreSQL concurrency: replay, rollback, header update and independent item insert/update/delete serialized.');
 } finally {
   await close();
 }

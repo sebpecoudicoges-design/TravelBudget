@@ -23,6 +23,7 @@ Le second banc démarre un PostgreSQL 17.12 vierge sur l’adresse locale, avec 
 1. Après validation de la première transaction, le rejeu concurrent retrouve la même opération sans écrire de nouveau.
 2. Après annulation de la première transaction, la session en attente crée un seul repas avec ses propres quantités.
 3. Si l’autre session modifie l’en-tête du repas pendant le rejeu, celui-ci signale un conflit et ne touche ni l’édition ni les aliments.
+4. Le rejeu verrouille aussi les lignes d’aliments existantes. Il attend une écriture directe en cours sur un aliment : ajout, modification ou suppression validée donne un conflit ; modification annulée permet de confirmer. Si le rejeu a déjà verrouillé les aliments, une modification directe attend sa fin, puis s’applique normalement. Aucun changement n’est perdu. Ces cas utilisent l’isolation PostgreSQL `READ COMMITTED` et le compte fictif existant.
 
 Avec les binaires PostgreSQL et le module Node `pg` 8.16.3 installés hors du dépôt :
 ```sh
@@ -48,4 +49,4 @@ Le transport du banc est lié au jeton synthétique d’un seul compte, pas à l
 node --test scripts/audit-nutrition/test-atomic-meal-client.mjs
 ```
 
-Il reste à vérifier la coordination avec une ancienne édition qui modifie uniquement les aliments sans verrouiller l’en-tête, puis le branchement réel de la file et le parcours de résolution d’un conflit. Aucun changement de schéma ni d’application en production.
+Ces tests ne rendent pas atomique l’ancienne édition qui envoie l’en-tête et l’aliment dans deux requêtes. Ils ne couvrent pas non plus le déplacement entre repas ou la suppression de l’en-tête au moment du rejeu. Il reste à concevoir une édition à transaction unique, à traiter la suppression d’un repas en attente de rejeu, puis à valider le branchement de la file et le choix de résolution d’un conflit. Aucun changement de schéma ni d’application en production.

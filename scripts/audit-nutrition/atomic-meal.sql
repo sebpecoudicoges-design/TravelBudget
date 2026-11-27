@@ -84,8 +84,15 @@ begin
   select coalesce(jsonb_agg(jsonb_build_array(
     i.food_key, i.label, i.grams, i.kcal, i.protein_g, i.carbs_g, i.fat_g, i.fiber_g, i.sort_order
   ) order by i.sort_order, i.id), '[]'::jsonb)
-  into v_stored from public.nutrition_meal_items i
-    where i.user_id = v_user and i.meal_id = v_meal.id;
+  into v_stored
+  from (
+    -- The parent lock protects membership against later FK inserts. Protect
+    -- existing rows too so a direct item update/delete is ordered before or
+    -- after confirmation, rather than comparing an earlier committed value.
+    select item.* from public.nutrition_meal_items item
+    where item.user_id = v_user and item.meal_id = v_meal.id
+    order by item.id for update
+  ) i;
 
   if row(v_meal.travel_id, v_meal.meal_date, v_meal.meal_type, v_meal.label,
     v_meal.notes, v_meal.water_ml, v_meal.consumed_time) is distinct from
