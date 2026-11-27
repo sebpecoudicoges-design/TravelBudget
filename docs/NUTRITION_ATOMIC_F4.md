@@ -55,7 +55,7 @@ Ces tests ne rendent pas atomique l’ancienne édition qui envoie l’en-tête 
 
 Le protocole client prépare une prévisualisation pour un seul compte, une seule saisie et deux révisions : celle de la saisie locale et celle du repas distant complet, aliments compris. Sans choix, la saisie reste en attente. Si la personne choisit « garder la version distante », le protocole relit le repas distant puis demande à la file de retirer la seule saisie conflictuelle revue, à condition que sa révision corresponde toujours. Si le repas distant est absent ou différent, il faut revoir la prévisualisation ; une erreur de lecture, un changement de compte ou de saisie et un échec de stockage ne sont pas des confirmations. Le protocole ne modifie jamais le repas distant et ne crée ni nouvelle saisie ni nouvel identifiant. Une édition distante après la relecture reste une édition distante normale : cette procédure n’est pas une transaction répartie.
 
-Les premiers tests utilisent des adaptateurs fictifs. Le banc PostgREST vérifie désormais une lecture cohérente de l’ensemble du repas. L’intégration devra encore vérifier compte, conflit et révision dans la même transaction locale que le retrait. Ce contrat ne prouve pas que l’ancien localStorage réalise cette transaction ni qu’une interface affiche déjà le choix.
+Les premiers tests utilisent des adaptateurs fictifs. Le banc PostgREST vérifie désormais une lecture cohérente de l’ensemble du repas. Le banc IndexedDB ci-dessous vérifie compte, conflit et révision dans la même transaction locale que le retrait. Ce contrat ne prouve pas que l’ancien localStorage réalise cette transaction ni qu’une interface affiche déjà le choix.
 
 ```sh
 node --test scripts/audit-nutrition/test-atomic-meal-conflict.mjs
@@ -63,4 +63,14 @@ node --test scripts/audit-nutrition/test-atomic-meal-conflict.mjs
 
 ### Instantané de comparaison
 
-La fonction de lecture d’audit projette en une requête l’en-tête et les aliments triés par ordre puis identifiant. Elle utilise le compte authentifié, l’identifiant du repas et la clé de synchronisation, avec les politiques SQL existantes comme garde supplémentaire. La révision `meal-v1:` est une empreinte des valeurs projetées, non un historique des modifications. Elle ne dépend pas de l’horodatage de l’en-tête et change si un aliment ou son ordre change. Le banc REST vérifie qu’une édition non validée n’est pas visible, qu’une édition validée force une nouvelle prévisualisation, puis qu’un nouveau choix confirmé ne change pas le repas distant. Le retrait local reste simulé.
+La fonction de lecture d’audit projette en une requête l’en-tête et les aliments triés par ordre puis identifiant. Elle utilise le compte authentifié, l’identifiant du repas et la clé de synchronisation, avec les politiques SQL existantes comme garde supplémentaire. La révision `meal-v1:` est une empreinte des valeurs projetées, non un historique des modifications. Elle ne dépend pas de l’horodatage de l’en-tête et change si un aliment ou son ordre change. Le banc REST vérifie qu’une édition non validée n’est pas visible, qu’une édition validée force une nouvelle prévisualisation, puis qu’un nouveau choix confirmé ne change pas le repas distant. Dans ce banc REST le retrait local reste simulé ; le banc navigateur le teste séparément.
+
+### Retrait local transactionnel
+
+Le magasin d’audit IndexedDB identifie une saisie par compte et clé de synchronisation. Une transaction lit la révision et le statut `conflict`, contrôle le contexte et ne retire que la saisie revue. Le client attend la validation de la transaction, pas le seul succès de la requête de suppression. Dans Chromium avec deux onglets, un seul peut confirmer un retrait ; la clé identique d’un autre compte est conservée. Une révision ou un statut changé n’est pas supprimé. Un abandon de transaction après succès de la requête de suppression garde le brouillon pour le prochain onglet.
+
+```sh
+npm run test:e2e -- tests/e2e/nutrition-conflict-storage-audit.spec.js --project=desktop-chromium
+```
+
+Ce magasin ne lit ni ne migre l’ancienne file du produit. Les écritures localStorage des anciennes versions ne participent pas à la transaction. Il reste à vérifier interface, transition et compatibilité avant tout raccordement.
