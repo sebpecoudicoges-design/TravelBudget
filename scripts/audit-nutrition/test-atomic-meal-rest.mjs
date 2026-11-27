@@ -5,6 +5,7 @@ import { createHmac, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { prepareMealConflict, resolveMealConflict } from './atomic-meal-conflict.mjs';
 import { atomicMealRpc, replayAtomicMeal } from './atomic-meal-client.mjs';
 import { loadNutritionAuditFixture, userA } from './fixture.mjs';
 import { localPort, startNutritionAuditPostgres } from './local-postgres.mjs';
@@ -122,7 +123,8 @@ try {
     mealId: created.meal_id, status: 'already_applied', disposition: 'confirmed',
   });
   const edited = { ...row, items: [{ ...row.items[0], grams: 81 }, row.items[1]] };
-  assert.deepEqual(await replay(url, edited), {
+  const conflict = await replay(url, edited);
+  assert.deepEqual(conflict, {
     mealId: created.meal_id, status: 'conflict', disposition: 'pending',
   });
   const invalid = await request(url, {
@@ -134,7 +136,59 @@ try {
   assert.deepEqual(await counts(), { meals: 1, items: 2 });
   assert.deepEqual((await admin.query('select grams::int from public.nutrition_meal_items where meal_id=$1 order by sort_order', [created.meal_id])).rows,
     [{ grams: 80 }, { grams: 120 }]);
-  console.log('PostgREST and audit client: lost response, confirmed identical retry, pending conflict and rollback verified.');
+  const snapshotUrl = origin + '/rpc/audit_nutrition_read_meal_v1';
+  const readRemote = async ({ userId, syncId, mealId }) => {
+    assert.equal(userId, userA); // This transport is bound to the same synthetic token as replay.
+    const rows = await json(await request(snapshotUrl, { p_meal_id: mealId, p_sync_id: syncId }));
+    assert.ok(Array.isArray(rows) && rows.length <= 1);
+    if (!rows.length) return null;
+    const [value] = rows;
+    assert.match(value.revision, /^meal-v1:[a-f0-9]{64}$/);
+    assert.ok(value.snapshot?.header && Array.isArray(value.snapshot.items));
+    return { userId: value.user_id, syncId: value.sync_id, mealId: value.meal_id,
+      revision: value.revision, snapshot: value.snapshot };
+  };
+  const pending = { userId: userA, syncId: row.syncId, revision: 'local-r1' };
+  const identity = { ...pending, mealId: created.meal_id };
+  const originalSnapshot = await readRemote(identity);
+  assert.equal(originalSnapshot.snapshot.header.label, 'Synthetic dinner');
+  assert.deepEqual(originalSnapshot.snapshot.items.map(item => item.grams), [80, 120]);
+  assert.deepEqual(await readRemote(identity), originalSnapshot);
+  assert.equal(await readRemote({ ...identity, syncId: 'another-local-draft' }), null);
+  const review = prepareMealConflict({ pending, replay: conflict, remote: originalSnapshot });
+
+  // Ordinary edit sent as a separate authenticated transaction by another client.
+  const editor = await db.connect();
+  await editor.query('set role authenticated');
+  await editor.query("select set_config('request.jwt.claim.sub',$1,false)", [userA]);
+  await editor.query('begin');
+  const update = await editor.query(
+    'update public.nutrition_meal_items set grams = 95, sort_order = 2 where id = $1',
+    [originalSnapshot.snapshot.items[0].id]);
+  assert.equal(update.rowCount, 1);
+  assert.deepEqual(await readRemote(identity), originalSnapshot, 'the new item is not visible until commit');
+  await editor.query('commit');
+  const options = { preview: review, readRemote, contextCurrent: () => true, choice: 'accept-remote',
+    removeLocalIfCurrent: () => assert.fail('A stale review must not drop the draft') };
+  assert.equal(await resolveMealConflict(options), 'refresh-preview');
+
+  const current = await readRemote(identity);
+  assert.notEqual(current.revision, originalSnapshot.revision);
+  assert.deepEqual(current.snapshot.header, originalSnapshot.snapshot.header);
+  assert.deepEqual(current.snapshot.items.map(item => item.grams), [120, 95]);
+  let draft = { ...pending, status: 'conflict' };
+  assert.equal(await resolveMealConflict({
+    ...options, preview: prepareMealConflict({ pending, replay: conflict, remote: current }),
+    removeLocalIfCurrent: expected => {
+      if (draft?.status !== 'conflict' || expected.userId !== draft.userId
+        || expected.syncId !== draft.syncId || expected.localRevision !== draft.revision) return false;
+      draft = null;
+      return true;
+    },
+  }), 'accepted-remote');
+  assert.equal(draft, null);
+  assert.deepEqual(await readRemote(identity), current, 'resolution never writes the remote meal');
+  console.log('PostgREST: lost response, retry, rollback, and refreshed conflict snapshot verified.');
 } finally {
   if (proxy) {
     proxy.closeAllConnections();

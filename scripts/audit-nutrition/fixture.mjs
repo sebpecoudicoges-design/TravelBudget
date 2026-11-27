@@ -29,4 +29,5 @@ export async function loadNutritionAuditFixture(db) {
   const itemIndex = migration('20260625101456_dedupe_exact_nutrition_items.sql');
   await db.exec(itemIndex.slice(itemIndex.indexOf('create unique index if not exists nutrition_meal_items_exact_dedupe_idx')));
   await db.exec(readFileSync(new URL('./atomic-meal.sql', import.meta.url), 'utf8'));
+  await db.exec(readFileSync(new URL('./meal-conflict-snapshot.sql', import.meta.url), 'utf8'));
 }
