@@ -42,6 +42,8 @@ on:
       - 'tests/e2e/legacy-script-evaluation.spec.js'
       - 'src/main.js'
       - 'scripts/measure-startup.mjs'
+      - 'scripts/check-legacy-flow-semantics.mjs'
+      - 'package.json'
   workflow_dispatch:
 
 permissions:
@@ -67,6 +69,8 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - name: Check legacy flows before browser runs
+        run: npm run lint:legacy-flow
       - run: node --test scripts/audit-nutrition/test-atomic-meal-client.mjs scripts/audit-nutrition/test-atomic-meal-conflict.mjs
       - run: npm test -- --maxWorkers=2
       - run: npm run docs:check
@@ -84,3 +88,10 @@ jobs:
       - run: npm run test:e2e -- tests/e2e/trip-pagination-audit.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/legacy-script-evaluation.spec.js --project=desktop-chromium
       - run: npm run perf:startup
+      - name: Retain the synthetic startup report
+        uses: actions/upload-artifact@v5
+        with:
+          name: audit-startup-report
+          path: test-results/startup.json
+          if-no-files-found: error
+          retention-days: 7

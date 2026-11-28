@@ -187,3 +187,7 @@ Tests synthétiques : refus de suppression individuelle/groupée et fusion somme
 Limites : validation sur stockage réellement saturé et appareil physique restante ; les modifications échouées sont conservées dans les champs de la page, sans export dédié. Concurrence entre synchronisation et nouvelles éditions, écritures serveur multiétapes et reprise distante du sommeil restent distinctes. Ce lot ne certifie pas tous les usages du module Nutrition.
 
 Validation finale du 5 novembre : chaîne quality complète réussie, 1 169 tests / 172 fichiers ; huit parcours Chromium ciblés réussis, clair/sombre et 1440/390 inclus. Build, docs et budgets validés : JS initial 277,8/278 KiB, total 860,6/861 KiB, CSS sous 81 KiB. Preuves : .codex/releases/10.5.388/nutrition-edits-quality.log et nutrition-edits-e2e.log. Captures examinées. Aucune nouvelle compilation Android ni validation sur téléphone.
+
+## Actualisation du 28 novembre 2026 — contrôle continu de la branche d’audit
+
+La branche de travail d’audit exécute maintenant le contrôle sémantique ciblé du legacy avant ses longues suites navigateur. Une modification de ce contrôle ou des commandes npm déclenche le workflow. À la fin d’un parcours réussi, le workflow conserve pendant sept jours le JSON des quatre démarrages fictifs, avec environnement, temps et volumes ; l’absence du fichier fait échouer l’étape d’archivage. Aucun autre fichier de test ni donnée réelle n’est envoyé. Le contrôle n’élargit pas encore la couverture legacy et ne concerne pas les déploiements.
