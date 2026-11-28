@@ -451,6 +451,16 @@
   function openFirstSteps() {
     const address = new URL("premiers-pas/index.html", document.baseURI);
     address.searchParams.set("theme", document.body.classList.contains("theme-dark") || document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+    try {
+      const key = "tb-first-steps-handoff";
+      sessionStorage.removeItem(key);
+      const { id, email } = window.sbUser || {};
+      if (id && typeof email === "string" && email) {
+        const ticket = crypto.randomUUID();
+        sessionStorage.setItem(key, JSON.stringify({ ticket, email, until: Date.now() + 60000 }));
+        address.hash = ticket;
+      }
+    } catch {}
     window.location.assign(address);
   }
 

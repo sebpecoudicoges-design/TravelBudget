@@ -13,6 +13,9 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark'], [320, 'light']]) {
     const submit = name => page.locator(`#${name} button[type=submit]`).click();
     await expect(page.getByText('Exercice · données fictives')).toBeVisible();
     await page.evaluate(() => localStorage.setItem('tb-test-normal-app-sentinel', 'keep'));
+    await page.getByRole('searchbox', { name: 'Rechercher une devise' }).fill('au');
+    await expect(page.locator('[name=demoBase] option').first()).toHaveAttribute('value', 'AUD');
+    await expect(page.locator('[name=demoBase]')).toHaveValue('EUR');
     await action('start').click();
     await submit('journey');
     await expect(page.getByLabel('Devise du moyen de paiement')).toHaveJSProperty('tagName', 'SELECT');
@@ -29,7 +32,7 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark'], [320, 'light']]) {
     await expect(currency).toHaveValue('NZD');
     await submit('share');
     await action('setup').click();
-    await expect(page.getByLabel(/E-mail de connexion/)).toHaveValue('voyageur@example.test');
+    await expect(page.getByLabel(/E-mail de connexion/)).toHaveValue('');
     await page.getByLabel(/WhatsApp/).fill('+00012345678');
     await submit('profile');
     await expect(page.getByRole('heading', { name: 'Prépare ton premier voyage' })).toBeVisible();
@@ -38,7 +41,7 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark'], [320, 'light']]) {
       app: localStorage.getItem('tb-test-normal-app-sentinel'),
       stored: localStorage.getItem('travelbudget-first-steps-demo-v1')
     }))).toMatchObject({ app: 'keep', stored: expect.not.stringContaining('00012345678') });
-    expect(requests.every(([method, path]) => method === 'GET' && (/^\/premiers-pas\//.test(path) || path === '/pwa-icon.svg'))).toBe(true);
+    expect(requests.every(([method, path]) => method === 'GET' && (/^\/premiers-pas\//.test(path) || ['/pwa-icon.svg', '/guided-setup/currency-picker.js'].includes(path)))).toBe(true);
   });
 }
 
@@ -50,6 +53,18 @@ test('a connected French account can replay from Help without resetting the prof
   await page.getByRole('button', { name: 'Ouvrir le tutoriel Premiers pas' }).click();
   await expect(page).toHaveURL(/\/premiers-pas\/index\.html/);
   await expect(page.getByText('Exercice · données fictives')).toBeVisible();
+  await page.locator('[data-action="start"]').click();
+  for (const id of ['journey', 'wallet', 'personal']) await page.locator(`#${id} button[type=submit]`).click();
+  await page.locator('[data-action="finish"]').click();
+  await page.locator('[data-action="setup"]').click();
+  const email = page.getByLabel('E-mail de connexion');
+  await expect(email).toHaveValue('startup@example.invalid');
+  await expect(email).toHaveAttribute('readonly', '');
+  expect(new URL(page.url()).hash).toBe('');
+  expect(await page.evaluate(() => sessionStorage.getItem('tb-first-steps-handoff'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('travelbudget-first-steps-demo-v1'))).not.toContain('startup@example.invalid');
+  await page.reload();
+  await expect(email).toHaveValue('');
 });
 
 test('leaving the exercise saves real Settings only after explicit confirmation', async ({ page, baseURL }) => {
@@ -123,7 +138,13 @@ test('guided settings reopen in English without saving anything on cancel', asyn
   const dialog = page.getByRole('dialog', { name: 'Your account', exact: true });
   await expect(dialog.getByLabel('Sign-in email')).toHaveValue('startup@example.invalid', { timeout: 20_000 });
   await expect(dialog.getByLabel('Account base currency')).toHaveValue('EUR');
-  await dialog.getByLabel('Account base currency').selectOption('AUD');
+  const search = dialog.getByRole('searchbox', { name: 'Search for a currency' });
+  await search.fill('au');
+  await expect(dialog.locator('[name=currency] option').first()).toHaveAttribute('value', 'AUD');
+  await search.fill('aud');
+  await search.press('Enter');
+  await expect(dialog.getByLabel('Account base currency')).toHaveValue('AUD');
+  expect(writes).toEqual([]);
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   const replay = page.getByRole('button', { name: 'Restart guided setup' });
   if (!await replay.isVisible()) await page.locator('#tb-account-card .tb-settings-panel-head').click();

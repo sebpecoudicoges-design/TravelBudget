@@ -1,3 +1,5 @@
+import { addCurrencySearch } from './currency-picker.js';
+
 const errors = {
   session: ["Session modifiée. Reconnecte-toi.", "Your session changed. Sign in again."],
   offline: ["Réglages indisponibles. Réessaie en ligne.", "Settings are unavailable. Try again when online."],
@@ -102,6 +104,7 @@ export async function openGuidedAccount({ uid, getUid, sb, tables, currencies, o
       currency.append(option);
     }
     currency.value = initial.baseCurrency;
+    addCurrencySearch(currency, english ? 'en' : 'fr');
     form.hidden = false;
     status.textContent = '';
     let saving = false;
