@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "c19e2e1c3f8bf2aeb8d398612fe1af0b50e46000",
-  "snapshotFingerprint": "1d821314a1f0efbbe165519e904e5d44811ba47bcaea1196953c3a8ebab82c24",
-  "generatedAt": "2026-11-28T19:03:29.435Z",
+  "commit": "67d397e51c2040a964e74f31d32085cda3333b30",
+  "snapshotFingerprint": "13a1a9811ac734034620772534d026034da18454407fca5a2df79a3add9a8e85",
+  "generatedAt": "2026-11-28T19:33:16.638Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
@@ -366,6 +366,7 @@
     "tests/e2e/assistant-ai.spec.js",
     "tests/e2e/cashflow-controls.spec.js",
     "tests/e2e/critical-flows.spec.js",
+    "tests/e2e/csp-consent-audit.spec.js",
     "tests/e2e/document-preview-audit.spec.js",
     "tests/e2e/financial-trip-budget.spec.js",
     "tests/e2e/first-setup.spec.js",
@@ -581,6 +582,7 @@
     "tests/e2e/assistant-ai.spec.js",
     "tests/e2e/cashflow-controls.spec.js",
     "tests/e2e/critical-flows.spec.js",
+    "tests/e2e/csp-consent-audit.spec.js",
     "tests/e2e/document-preview-audit.spec.js",
     "tests/e2e/financial-trip-budget.spec.js",
     "tests/e2e/first-setup.spec.js",

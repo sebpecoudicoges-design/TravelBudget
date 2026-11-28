@@ -32,3 +32,7 @@ python3 scripts/audit-web/check-csp-staging.py --dist dist
 ```
 
 Le contrôle parse le TOML et le HTML, vérifie la distinction report-only/bloquante, le contrat du consentement, l’absence d’un second fichier d’en-têtes et la présence de ses ressources locales dans le build. Il ne simule ni Netlify ni la totalité de l’application dans un navigateur. Le périmètre général ne doit pas être promu sur ce seul résultat : faire passer les parcours normaux en prévisualisation isolée, noter les dépendances observées, limiter le premier lot bloquant à un périmètre vérifié et prévoir le retour en Report-Only. Aucune règle de production modifiée.
+
+### Ouverture du consentement sous les deux politiques, sur la boucle locale
+
+Après compilation, `tests/e2e/csp-consent-audit.spec.js` sert le HTML et ses ressources exactes depuis `dist` et applique à ce HTML les deux politiques lues dans `netlify.toml`. Chromium en profil bureau et tactile ouvre la page sans session, lit une configuration fictive, garde l’autorisation désactivée et applique le thème sombre depuis les ressources locales. Aucun événement CSP ni requête imprévue n’est attendu sur ce parcours ; aucun appel réel, rapport de navigateur, compte ou jeton n’est collecté. La CI d’audit exécute ce contrôle et le contrôle statique après compilation. Cela ne vérifie pas l’assemblage des réponses Netlify, le retour OAuth, le consentement signé ni la politique générale de l’application en mise en ligne.
