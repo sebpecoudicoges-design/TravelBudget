@@ -1,0 +1,43 @@
+name: F13 admin reset audit fixtures
+
+on:
+  push:
+    branches: [codex/handoff-audit-2026-11-25-cloud]
+    paths:
+      - '.github/workflows/admin-reset-audit.yml'
+      - 'scripts/audit-admin-reset/**'
+      - 'scripts/audit-nutrition/local-postgres.mjs'
+      - 'supabase/migrations/20260712004235_asset_transaction_links_budget_policy.sql'
+      - 'supabase/migrations/20261030082844_wallet_transaction_reconciliation.sql'
+
+permissions:
+  contents: read
+
+jobs:
+  local-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Prepare disposable PostgreSQL fixtures
+        shell: bash
+        run: |
+          pg_bin=/usr/lib/postgresql/16/bin
+          if [[ ! -x "$pg_bin/initdb" ]]; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends postgresql-16
+          fi
+          "$pg_bin/postgres" --version
+          npm install --prefix "$RUNNER_TEMP/tb-audit-pg" --no-save --ignore-scripts --no-audit --no-fund pg@8.16.3
+      - name: Preview, reset semantics and migrated links on loopback
+        shell: bash
+        run: |
+          driver="$RUNNER_TEMP/tb-audit-pg/node_modules/pg/lib/index.js"
+          for fixture in check modes migrated-links; do
+            node "scripts/audit-admin-reset/$fixture.mjs" /usr/lib/postgresql/16/bin "$driver"
+          done
