@@ -191,9 +191,9 @@ function render(){
    html=hd('Configuration · 2 sur 2','Prépare ton premier voyage','Choisis ton pays, tes dates et le budget qui te convient. Tu pars d’un nouveau formulaire, sans les opérations d’exemple.')+
     journeyFields(s.setup?.journey||setupJourneyDefaults(),true);
  }else{
-   html=hd('Récapitulatif','Ton espace est prêt à simuler','Voici ce que tu as configuré. Tu peux maintenant retourner dans TravelBudget et ouvrir Réglages pour appliquer tes vrais choix. Rien n’a été modifié pendant l’exercice.');
+   html=hd('Récapitulatif','Ton espace est prêt à simuler','Voici ce que tu as configuré. Tu peux maintenant ouvrir le paramétrage guidé de ton compte. Rien de ce que tu as saisi dans l’exercice ne sera repris automatiquement. Rien n’a été modifié pendant l’exercice.');
    html+='<p class="hint">Devise de base du compte : <strong>'+esc(s.setup.baseCurrency)+'</strong>. Devise du premier budget : <strong>'+esc(s.setup.journey.currency)+'</strong>.</p>'+
-   '<div class="actions">'+'<a class="btn primary" href="../index.html?premiers-pas=reglages">Ouvrir les vrais réglages</a>'+btn('Revoir le voyage','back')+btn('Revenir à la démo','finish-demo')+btn('Tout recommencer','reset','button','subtle')+'</div>';
+   '<div class="actions">'+'<a class="btn primary" href="../index.html?premiers-pas=configuration">Démarrer le vrai paramétrage guidé</a>'+btn('Revoir le voyage','back')+btn('Revenir à la démo','finish-demo')+btn('Tout recommencer','reset','button','subtle')+'</div>';
  }
  main.innerHTML=html;
  analysisCurrency=s.wallet?.currency||s.journey?.currency||'NZD';

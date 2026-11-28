@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { installConnectedFixture } from '../../scripts/fixtures/connectedStartup.mjs';
+import { fixtureTables, fixtureUser, installConnectedFixture } from '../../scripts/fixtures/connectedStartup.mjs';
 
 test.use({ serviceWorkers: 'block', locale: 'fr-FR' });
 
@@ -52,8 +52,23 @@ test('a connected French account can replay from Help without resetting the prof
   await expect(page.getByText('Exercice · données fictives')).toBeVisible();
 });
 
-test('leaving the exercise opens the real Settings for the existing account', async ({ page, baseURL }) => {
-  await installConnectedFixture(page, baseURL);
+test('leaving the exercise saves real Settings only after explicit confirmation', async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 850 });
+  const settings = { ...fixtureTables.settings[0], birth_date: '1990-01-01' };
+  const profile = { ...fixtureTables.profiles[0], whatsapp_phone_e164: null };
+  const updates = [];
+  await installConnectedFixture(page, baseURL, { tables: { ...fixtureTables, settings: [settings], profiles: [profile] } });
+  await page.route('**/rest/v1/{settings,profiles}?*', async route => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    const url = new URL(route.request().url());
+    const table = url.pathname.split('/').at(-1);
+    const draft = route.request().postDataJSON();
+    expect(url.searchParams.get(table === 'settings' ? 'user_id' : 'id')).toBe('eq.' + fixtureUser);
+    updates.push([table, draft]);
+    const target = table === 'settings' ? settings : profile;
+    Object.assign(target, draft);
+    return route.fulfill({ json: target });
+  });
   await page.goto('/premiers-pas/index.html');
   await page.locator('[data-action="start"]').click();
   for (const id of ['journey', 'wallet', 'personal']) await page.locator(`#${id} button[type=submit]`).click();
@@ -67,8 +82,21 @@ test('leaving the exercise opens the real Settings for the existing account', as
   await journey.locator('[name="end"]').fill('2027-01-15');
   await journey.locator('[name="goal"]').fill('60');
   await journey.locator('button[type=submit]').click();
-  await page.getByRole('link', { name: 'Ouvrir les vrais réglages' }).click();
+  await page.getByRole('link', { name: 'Démarrer le vrai paramétrage guidé' }).click();
   await expect(page.locator('#view-settings')).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator('#tb-account-email')).toHaveValue('startup@example.invalid');
-  await expect(page).not.toHaveURL(/premiers-pas=reglages/);
+  const dialog = page.getByRole('dialog', { name: '1 sur 2 · Ton compte' });
+  await expect(dialog.getByLabel('E-mail de connexion')).toHaveValue('startup@example.invalid');
+  await expect(dialog.getByLabel('Devise de base du compte')).toHaveValue('EUR');
+  await expect(dialog.getByLabel('Date de naissance (facultatif)')).toHaveValue('1990-01-01');
+  expect(updates).toEqual([]);
+  await dialog.getByLabel('Devise de base du compte').selectOption('AUD');
+  await dialog.getByRole('button', { name: 'Enregistrer sur mon compte' }).click();
+  await expect(page.getByRole('dialog', { name: '2 sur 2 · Tes voyages' })).toBeVisible();
+  expect(updates).toEqual([['settings', { base_currency: 'AUD' }]]);
+  await page.getByRole('button', { name: 'Voir voyages et périodes' }).click();
+  await expect(page.locator('#tb-travel-card')).toBeVisible();
+  await expect(page).not.toHaveURL(/premiers-pas=configuration/);
+  await page.goto('/index.html?premiers-pas=configuration');
+  await expect(page.getByRole('dialog').getByLabel('Devise de base du compte')).toHaveValue('AUD');
+  expect(updates).toHaveLength(1);
 });

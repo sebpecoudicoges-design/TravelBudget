@@ -469,3 +469,54 @@ export function bindSettingsAccountPanel({
     });
   }
 }
+
+export async function readGuidedAccount(sb, tables, accountId) {
+  const auth = await sb.auth.getUser();
+  const user = auth.data?.user;
+  if (auth.error || !accountId || user?.id !== accountId) throw new Error('Session modifiée. Reconnecte-toi.');
+  const [prefs, profile] = await Promise.all([
+    sb.from(tables.settings).select('base_currency,birth_date').eq('user_id', accountId).single(),
+    sb.from(tables.profiles).select('whatsapp_phone_e164').eq('id', accountId).single(),
+  ]);
+  if (prefs.error || profile.error || !prefs.data || !profile.data) throw new Error('Réglages indisponibles. Réessaie en ligne.');
+  return {
+    email: user.email || '',
+    baseCurrency: String(prefs.data.base_currency || 'EUR').toUpperCase(),
+    birthDate: prefs.data.birth_date || '',
+    phone: profile.data.whatsapp_phone_e164 || '',
+  };
+}
+
+export async function saveGuidedAccount(sb, tables, accountId, initial, draft) {
+  const baseCurrency = String(draft.baseCurrency || '').toUpperCase();
+  const birthDate = draft.birthDate || '';
+  const phone = normalizeWhatsappPhone(draft.phone);
+  const today = new Date();
+  const cutoff = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+  const iso = /^\d{4}-\d{2}-\d{2}$/.test(birthDate) ? new Date(birthDate + 'T00:00:00Z') : null;
+  if (!/^[A-Z]{3}$/.test(baseCurrency) || !isValidWhatsappPhone(phone)
+    || (birthDate && (!iso || !Number.isFinite(+iso) || iso.toISOString().slice(0, 10) !== birthDate || birthDate > cutoff))) {
+    throw new Error('Vérifie la devise, le format international du numéro et la date de naissance.');
+  }
+  const current = await readGuidedAccount(sb, tables, accountId);
+  if (['baseCurrency', 'birthDate', 'phone'].some(key => current[key] !== initial[key])) {
+    throw new Error('Les réglages ont changé. Relance le guide pour revoir les valeurs actuelles.');
+  }
+  const update = {};
+  if (baseCurrency !== current.baseCurrency) update.base_currency = baseCurrency;
+  if (birthDate !== current.birthDate) update.birth_date = birthDate || null;
+  const changed = Object.keys(update).length > 0;
+  if (changed) {
+    const result = await sb.from(tables.settings).update(update).eq('user_id', accountId).select('base_currency,birth_date').single();
+    if (result.error || !result.data) throw new Error('Les préférences n’ont pas pu être confirmées. Relance le guide avant de réessayer.');
+  }
+  if (phone !== current.phone) {
+    const result = await sb.from(tables.profiles).update({ whatsapp_phone_e164: phone || null }).eq('id', accountId).select('whatsapp_phone_e164').single();
+    if (result.error || !result.data) throw new Error('Le numéro n’a pas pu être confirmé. Les préférences précédentes ont peut-être été enregistrées.');
+  }
+  const verified = changed || phone !== current.phone ? await readGuidedAccount(sb, tables, accountId) : current;
+  if (verified.baseCurrency !== baseCurrency || verified.birthDate !== birthDate || verified.phone !== phone) {
+    throw new Error('Les valeurs enregistrées n’ont pas pu être confirmées. Relance le guide.');
+  }
+  return verified;
+}

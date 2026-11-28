@@ -363,10 +363,12 @@ window.onload = async function () {
     } catch (_) {}
     try {
       const url = new URL(location.href);
-      if (window.sbUser?.id && url.searchParams.get("premiers-pas") === "reglages") {
+      const next = url.searchParams.get("premiers-pas");
+      if (window.sbUser?.id && (next === "reglages" || next === "configuration")) {
         url.searchParams.delete("premiers-pas");
         history.replaceState(history.state, "", url);
         window.showView?.("settings");
+        if (next === "configuration") void window.tbOpenGuidedAccountSetup?.();
       }
     } catch (_) {}
     try { if (typeof window.tbMaybeStartGuidedTour === "function") window.tbMaybeStartGuidedTour(); } catch (_) {}
