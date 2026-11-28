@@ -145,3 +145,87 @@ test('a real Chromium storage quota rejection preserves pending meals for an exp
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('nutrition-quota-pending')).map(row => row.syncId)))
     .toEqual(['retry', ...Array.from({ length: 201 }, (_, index) => `meal-${index}`)]);
 });
+
+test('the general queue preserves the Nutrition tail across backoff, a lost response and reload', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-24T12:00:00.000Z'));
+  await page.route('**/nutrition-multi-batch', route => route.fulfill({
+    contentType: 'text/html', body: '<!doctype html><title>Isolated multi-batch replay</title>',
+  }));
+  const committed = new Set(), requests = [];
+  let loseResponse = true;
+  await page.route('**/nutrition-test-ack/*', async route => {
+    const key = new URL(route.request().url()).pathname.split('/').at(-1);
+    requests.push(key);
+    committed.add(key);
+    if (key === 'synthetic-25' && loseResponse) {
+      loseResponse = false;
+      return route.abort('connectionreset');
+    }
+    return route.fulfill({ json: { key } });
+  });
+  const source = readFileSync('public/legacy/js/48_nutrition_ui.js', 'utf8');
+  const section = (from, to) => source.slice(source.indexOf(from), source.indexOf(to, source.indexOf(from)));
+  const key = 'multi-batch-meals';
+  const install = async () => {
+    await page.evaluate(async key => {
+      const Data = await import('/src/data/mutationQueueStore.js');
+      const repo = await import('/src/data/nutritionRepository.js');
+      Object.assign(window, {
+        Data, CACHE: {}, sbUser: { id: 'synthetic-multi-batch' },
+        client: () => ({}), localMealKey: () => key, uid: () => window.sbUser.id,
+        table: name => name, localDateISO: value => value, activeTravelId: () => null,
+        publishNutrition: () => {}, discardNutritionQueue: () => {},
+        isOfflineSkipError: () => true, txt: (_, en) => en, n: value => Number(value) || 0,
+        tbShouldUseOfflineMode: async () => false,
+        repository: () => ({ ...repo, syncLocalRow: async ({ row, isCurrent }) => {
+          if (!isCurrent()) throw new Error('Not the current draft');
+          return fetch('/nutrition-test-ack/' + row.syncId, { method: 'POST' }).then(response => response.json());
+        } }),
+      });
+    }, key);
+    await page.addScriptTag({ content:
+      section('  function loadLocalMeals(', '  function localNutritionRowKey(') +
+      section('  async function syncLocalNutritionRows(', '  function loadFoodKeys(') +
+      section('  window.tbNutritionSyncLocal =', '  window.tbNutritionRefreshAfterSync ='),
+    });
+    await page.addScriptTag({ url: '/legacy/js/00_offline_queue.js' });
+  };
+  await page.goto('/nutrition-multi-batch');
+  await install();
+  const rows = Array.from({ length: 26 }, (_, index) => ({
+    syncId: `synthetic-${index}`, meal: { meal_date: '2026-11-24', label: `Fixture ${index}` },
+  }));
+  const started = await page.evaluate(async ({ key, rows }) => {
+    localStorage.setItem(key, JSON.stringify(rows));
+    const queued = await window.tbOfflineQueueEnqueue('nutrition.sync_local', {});
+    const result = await window.tbOfflineQueueSync('online');
+    const skipped = await window.tbOfflineQueueSync('online');
+    return { id: queued.id, result, skipped, pending: window.tbOfflineQueuePending(), drafts: loadLocalMeals(true) };
+  }, { key, rows });
+  expect(started.result).toMatchObject({ ok: false, synced: 0, failed: 1 });
+  expect(started.skipped).toMatchObject({ ok: true, synced: 0 });
+  expect(started.pending).toEqual([expect.objectContaining({
+    id: started.id, attempts: 1, error: 'Nutrition sync incomplete: pending local rows remain', nextAttemptAt: '2026-11-24T12:00:05.000Z',
+  })]);
+  expect(started.drafts).toEqual([rows[25]]);
+  expect(requests).toEqual(rows.slice(0, 25).map(row => row.syncId));
+
+  await page.reload();
+  await install();
+  const interrupted = await page.evaluate(async () => {
+    const result = await window.tbOfflineQueueSync('diagnostic');
+    return { result, pending: window.tbOfflineQueuePending(), drafts: loadLocalMeals(true) };
+  });
+  expect(interrupted.result).toMatchObject({ ok: false, synced: 0, failed: 1 });
+  expect(interrupted.pending).toEqual([expect.objectContaining({ id: started.id, attempts: 2, nextAttemptAt: '2026-11-24T12:00:30.000Z' })]);
+  expect(interrupted.drafts).toEqual([expect.objectContaining({ syncId: rows[25].syncId, syncAttempts: 1 })]);
+  expect(committed.size).toBe(26);
+
+  const resumed = await page.evaluate(async () => {
+    const result = await window.tbOfflineQueueSync('diagnostic');
+    return { result, pending: window.tbOfflineQueuePending(), drafts: loadLocalMeals(true) };
+  });
+  expect(resumed).toEqual({ result: { ok: true, synced: 1, failed: 0 }, pending: [], drafts: [] });
+  expect(requests).toEqual([...rows.map(row => row.syncId), rows[25].syncId]);
+  expect(committed.size).toBe(26);
+});
