@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHmac, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { prepareMealConflict, resolveMealConflict } from './atomic-meal-conflict.mjs';
@@ -47,6 +48,7 @@ const json = async response => {
 try {
   const admin = await db.connect();
   await loadNutritionAuditFixture({ exec: sql => admin.query(sql), query: (...args) => admin.query(...args) });
+  await admin.query(readFileSync(new URL('./meal-key-lifecycle.sql', import.meta.url), 'utf8'));
   // Password is freshly generated hex, never inherited from another environment.
   await admin.query(`create role audit_authenticator login noinherit password '${password}';
     grant authenticated, anon to audit_authenticator;`);
@@ -188,8 +190,20 @@ try {
   }), 'accepted-remote');
   assert.equal(draft, null);
   assert.deepEqual(await readRemote(identity), current, 'resolution never writes the remote meal');
+  const deletedDraft = { ...row, syncId: 'retired-after-lost-ack' };
+  const old = await replay(url, deletedDraft);
+  assert.equal(old.status, 'created');
+  assert.equal((await editor.query('delete from public.nutrition_meals where id = $1', [old.mealId])).rowCount, 1);
+  const retired = await request(url, { ...firstPayload, p_sync_id: deletedDraft.syncId });
+  assert.equal(retired.status, 400);
+  assert.equal((await retired.json()).code, 'TBM01');
+  const deleted = await replay(url, deletedDraft);
+  assert.deepEqual(deleted, { mealId: null, status: 'deleted', disposition: 'pending' });
+  assert.deepEqual(await counts(), { meals: 1, items: 2 }, 'a replay cannot restore a deliberately deleted meal');
+  assert.equal(await readRemote({ userId: userA, syncId: deletedDraft.syncId, mealId: old.mealId }), null);
+
   if (chromiumBin) {
-    const { verifyConflictInBrowser } = await import('./test-meal-conflict-browser.mjs');
+    const { verifyConflictInBrowser, verifyDeletedDraftInBrowser } = await import('./test-meal-conflict-browser.mjs');
     await verifyConflictInBrowser({
       executablePath: resolve(chromiumBin), pending, replay: conflict,
       readRemote: () => readRemote(identity),
@@ -200,9 +214,11 @@ try {
         assert.equal(changed.rowCount, 1);
       },
     });
+    await verifyDeletedDraftInBrowser({ executablePath: resolve(chromiumBin), userId: userA,
+      syncId: deletedDraft.syncId, replay: deleted, draft: deletedDraft });
     console.log('Chromium + IndexedDB + PostgREST + PostgreSQL: stale preview retained draft, explicit choice committed it.');
   }
-  console.log('PostgREST: lost response, retry, rollback, and refreshed conflict snapshot verified.');
+  console.log('PostgREST: lost response, retry, rollback, refreshed conflict snapshot and retired key verified.');
 } finally {
   if (proxy) {
     proxy.closeAllConnections();

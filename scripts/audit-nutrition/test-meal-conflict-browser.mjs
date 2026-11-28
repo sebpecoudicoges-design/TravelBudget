@@ -90,3 +90,57 @@ export async function verifyConflictInBrowser({ executablePath, pending, replay,
     await browser.close();
   }
 }
+
+export async function verifyDeletedDraftInBrowser({ executablePath, userId, syncId, replay, draft }) {
+  const browser = await chromium.launch({ executablePath });
+  try {
+    const context = await browser.newContext();
+    const origin = 'http://127.0.0.1:41872';
+    const script = await readFile(new URL('local-conflict-store.mjs', import.meta.url));
+    await context.route('**/*', route => {
+      if (route.request().method() !== 'GET') return route.abort();
+      const url = route.request().url();
+      if (url === origin + '/') return route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Local fixture</title>' });
+      if (url === origin + '/store.mjs') return route.fulfill({ contentType: 'text/javascript', body: script });
+      return route.abort();
+    });
+    const page = await context.newPage();
+    const open = async () => {
+      await page.goto(origin);
+      await page.evaluate(async () => {
+        const api = await import('/store.mjs');
+        const db = await new Promise((resolve, reject) => {
+          const req = indexedDB.open('audit-deleted-draft', 1);
+          req.onupgradeneeded = () => req.result.createObjectStore(api.auditConflictStore, { keyPath: ['userId', 'syncId'] });
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        window.fixture = { api, db, transact: (mode, act) => new Promise((resolve, reject) => {
+          const tx = db.transaction(api.auditConflictStore, mode);
+          const req = act(tx.objectStore(api.auditConflictStore));
+          tx.oncomplete = () => resolve(req.result);
+          tx.onabort = () => reject(tx.error);
+        }) };
+      });
+    };
+    const entry = { userId, syncId, revision: 'synthetic-r1', status: 'pending', snapshot: draft };
+    await open();
+    assert.deepEqual(await page.evaluate(async ({ entry, replay }) => {
+      const { api, db, transact } = window.fixture;
+      const { userId, syncId } = entry;
+      await transact('readwrite', store => store.add(entry));
+      const reviewed = { userId, syncId, localRevision: entry.revision };
+      const options = { db, reviewed, replay, contextCurrent: () => true };
+      const stale = await api.recordDeletedMealConflict({ ...options, reviewed: { ...reviewed, localRevision: 'stale' } });
+      const wrongContext = await api.recordDeletedMealConflict({ ...options, contextCurrent: () => false });
+      const marked = await api.recordDeletedMealConflict(options);
+      const removed = await api.removeReviewedMealConflict(options);
+      return { stale, wrongContext, marked, removed };
+    }, { entry, replay }), { stale: false, wrongContext: false, marked: true, removed: false });
+    await open();
+    const stored = await page.evaluate(({ userId, syncId }) => window.fixture.transact('readonly', store => store.get([userId, syncId])), entry);
+    assert.deepEqual(stored, { ...entry, status: 'deleted-conflict' });
+  } finally {
+    await browser.close();
+  }
+}

@@ -134,3 +134,9 @@ node scripts/audit-nutrition/test-meal-key-lifecycle.mjs /chemin/vers/pg/bin /ch
 ```
 
 **Restent ouverts :** les très anciens clients qui ne transmettent pas `sync_id`, les suppressions précédant toute collecte, le message et l’issue explicite côté brouillon après `TBM01`, l’activation sur un schéma exhaustif et la suppression dans la procédure F13 réelle. La cascade Auth testée n’est pas ce dernier parcours. Il n’y a pas d’expiration dans ce banc : définir un horizon de rejeu qui conserve ou isole les anciennes saisies avant toute expiration des marques. Le banc n’est pas une migration et ne change ni le client ni les droits réels.
+
+### Réponse d’une clé retirée et conservation du brouillon
+
+Dans le banc local, PostgREST 14.7 transmet `TBM01` en échec HTTP 400. Le client d’audit reconnaît uniquement ce code, après avoir revérifié le compte et la révision : il indique « repas supprimé » et garde l’opération en attente, sans nouvel identifiant ni écriture de secours. Une réponse vide, une RPC absente ou une erreur réseau ne prouvent pas une suppression. Chromium confirme que le magasin IndexedDB isolé marque le brouillon sans modifier son contenu, qu’un contexte ou une révision périmés ne peuvent pas le marquer, et qu’après rechargement la copie reste lisible avec la même clé. Sans version distante à accepter, l’action d’acceptation d’un conflit ordinaire ne peut pas le retirer.
+
+Les deux scripts de création et de conflit restent réservés au banc, avec un compte et des repas fictifs. Pas de branchement à la file Nutrition réelle ni d’écran produit ; aucune migration ou suppression distante. Les brouillons antérieurs à l’installation du registre et les chemins sans clé ne peuvent toujours pas être classés à partir d’une réponse vide. La rétention demeure à définir.

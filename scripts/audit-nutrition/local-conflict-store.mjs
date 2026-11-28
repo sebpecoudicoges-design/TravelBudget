@@ -3,7 +3,7 @@ export const auditConflictStore = 'audit-meal-conflicts';
 
 // A caller provides an already open, isolated IndexedDB database, with a
 // store keyed by [userId, syncId]. Never fall back to an unlocked write.
-export function removeReviewedMealConflict({ db, reviewed, contextCurrent, signal }) {
+function compareAndChange({ db, reviewed, contextCurrent, signal }, apply) {
   return new Promise((resolve, reject) => {
     const { userId, syncId, localRevision } = reviewed ?? {};
     if (![userId, syncId, localRevision].every(value => typeof value === 'string' && value.length > 0)
@@ -36,13 +36,32 @@ export function removeReviewedMealConflict({ db, reviewed, contextCurrent, signa
       try {
         const stored = read.result;
         if (contextCurrent(reviewed) !== true || stored?.userId !== userId || stored?.syncId !== syncId
-          || stored?.revision !== localRevision || stored?.status !== 'conflict') return;
-        store.delete(key);
-        matched = true;
+          || stored?.revision !== localRevision) return;
+        matched = apply(store, key, stored);
       } catch (error) {
         failure = error;
         abort();
       }
     };
+  });
+}
+
+export function removeReviewedMealConflict(options) {
+  return compareAndChange(options, (store, key, stored) => {
+    if (stored.status !== 'conflict') return false;
+    store.delete(key);
+    return true;
+  });
+}
+
+export function recordDeletedMealConflict(options) {
+  const replay = options?.replay;
+  if (replay?.status !== 'deleted' || replay.disposition !== 'pending' || replay.mealId !== null) {
+    throw new TypeError('Deleted meal evidence required');
+  }
+  return compareAndChange(options, (store, _key, stored) => {
+    if (!['pending', 'conflict'].includes(stored.status)) return false;
+    store.put({ ...stored, status: 'deleted-conflict' });
+    return true;
   });
 }

@@ -71,6 +71,9 @@ export async function replayAtomicMeal({ transport, row, userId, isCurrent }) {
   confirmCurrent();
   const response = await transport.rpc(atomicMealRpc, payload);
   confirmCurrent();
+  // Only the explicit audit lifecycle code proves the key was retired.
+  // An absent row, transport failure or unavailable RPC proves nothing.
+  if (response?.error?.code === 'TBM01') return { mealId: null, status: 'deleted', disposition: 'pending' };
   const data = unwrap(response);
   if (!Array.isArray(data) || data.length !== 1 || !isRecord(data[0])) {
     throw new Error('Unconfirmed atomic nutrition response');

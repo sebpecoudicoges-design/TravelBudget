@@ -99,3 +99,27 @@ test('malformed response and unavailable RPC never confirm or fall back', async 
   }), error => error === unavailable);
   assert.equal(calls, 1);
 });
+
+test('a retired key keeps the draft pending, with no new ID or legacy fallback', async () => {
+  const row = saved();
+  const snapshots = [];
+  for (let retry = 0; retry < 2; retry++) {
+    const state = await replay(async (name, payload) => {
+      assert.equal(name, atomicMealRpc);
+      snapshots.push(payload);
+      return { error: { code: 'TBM01', message: 'Meal key is no longer available' } };
+    }, { row });
+    assert.deepEqual(state, { mealId: null, status: 'deleted', disposition: 'pending' });
+  }
+  assert.equal(snapshots.length, 2);
+  assert.equal(snapshots[0].p_sync_id, row.syncId);
+  assert.deepEqual(snapshots[0], snapshots[1]);
+  await assert.rejects(replay(async () => ({
+    error: { code: 'PGRST202', message: 'Meal key is no longer available' },
+  })), error => error.code === 'PGRST202');
+  let current = true;
+  await assert.rejects(replay(async () => {
+    current = false;
+    return { error: { code: 'TBM01' } };
+  }, { isCurrent: () => current }), /changed/);
+});
