@@ -1,0 +1,36 @@
+name: F14 accounting restore snapshot fixture
+
+on:
+  push:
+    branches: [codex/handoff-audit-2026-11-25-cloud]
+    paths:
+      - '.github/workflows/f14-restore-audit.yml'
+      - 'scripts/audit-accounting/**'
+      - 'scripts/audit-nutrition/local-postgres.mjs'
+      - 'src/features/accounting/accountingRestore*.js'
+
+permissions:
+  contents: read
+
+jobs:
+  local-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Run the F14 read-only restore fixture on loopback
+        shell: bash
+        run: |
+          pg_bin=/usr/lib/postgresql/16/bin
+          if [[ ! -x "$pg_bin/initdb" ]]; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends postgresql-16
+          fi
+          "$pg_bin/postgres" --version
+          npm install --prefix "$RUNNER_TEMP/tb-audit-pg" --no-save --ignore-scripts --no-audit --no-fund pg@8.16.3
+          node scripts/audit-accounting/restore-snapshot.mjs "$pg_bin" "$RUNNER_TEMP/tb-audit-pg/node_modules/pg/lib/index.js"
