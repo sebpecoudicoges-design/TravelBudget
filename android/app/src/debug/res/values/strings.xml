@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The direct APK has a separate package and launcher identity. -->
+    <string name="app_name">TravelBudget APK</string>
+    <string name="title_activity_main">TravelBudget APK</string>
+</resources>
