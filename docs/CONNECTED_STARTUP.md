@@ -28,3 +28,8 @@ Premier essai complet : connecté à 47 scripts et 2 353,6 KiB JS, contre 44 et 
 Huit tests vérifient la pagination, les identifiants distincts, les filtres de compte, la projection des colonnes et le rejet des requêtes non prévues. Le parcours lui-même est exécuté par la CI et son JSON conservé dans `startup-report`. Le code de l’application et l’APK 10.5.380 ne sont pas modifiés par ce lot d’outillage ; la page Projet et l’Atlas web sont actualisés séparément.
 
 La recherche de code mort sur le script a conduit au remplacement de la mesure globale ambiguë et à la correction de l’argument de délai de `waitForFunction`. Le serveur de mesure se ferme aussi si Chromium ne démarre pas. Aucun chargeur applicatif supprimé. Les essais sur compte réel, SQL/RLS, téléphone, autres navigateurs et avec davantage de domaines restent distincts. F9 progresse, sans clôturer l’ensemble de la phase architecture/qualité.
+
+
+## Profil tactile et tâches longues (F9)
+
+Le profil à 390 px utilise également un contexte Chromium mobile à écran tactile (DPR 2) ; le profil 1440 px conserve un contexte ordinateur. Le rapport vérifie le mode d’entrée et enregistre, si Chromium les expose, le nombre, le cumul et la durée maximale des tâches longues observées au démarrage. Ces durées sont informatives, pas des seuils CI, et dépendent du runner. Les seuils déterministes de requêtes et de volume restent identiques. Le workflow de la branche d’audit rejoue les quatre démarrages de la compilation. La simulation ne mesure ni la mémoire Vitals, ni les performances d’un appareil Android, ni celles d’un compte réel.

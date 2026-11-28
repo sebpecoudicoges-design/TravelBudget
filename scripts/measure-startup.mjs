@@ -24,10 +24,29 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 let browser;
 const reports = [];
 try {
-  browser = await chromium.launch();
-  for (const journey of ['anonymous', 'connected-fixture']) for (const profile of [{ name: 'desktop', width: 1440, cpu: 1 }, { name: 'mobile-simulated', width: 390, cpu: 4 }]) {
-    const context = await browser.newContext({ viewport: { width: profile.width, height: 900 }, serviceWorkers: 'block' });
+  browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined });
+  const profiles = [
+    { name: 'desktop', width: 1440, cpu: 1, touch: false, deviceScaleFactor: 1 },
+    { name: 'mobile-simulated', width: 390, cpu: 4, touch: true, deviceScaleFactor: 2 },
+  ];
+  for (const journey of ['anonymous', 'connected-fixture']) for (const profile of profiles) {
+    const context = await browser.newContext({
+      viewport: { width: profile.width, height: 900 }, serviceWorkers: 'block',
+      isMobile: profile.touch, hasTouch: profile.touch, deviceScaleFactor: profile.deviceScaleFactor,
+    });
     const page = await context.newPage();
+    await page.addInitScript(() => {
+      if (!globalThis.PerformanceObserver?.supportedEntryTypes.includes('longtask')) return;
+      const stats = { count: 0, totalMs: 0, longestMs: 0 };
+      window.__tbStartupLongTasks = stats;
+      new PerformanceObserver(list => {
+        for (const { duration } of list.getEntries()) {
+          stats.count++;
+          stats.totalMs += duration;
+          stats.longestMs = Math.max(stats.longestMs, duration);
+        }
+      }).observe({ type: 'longtask', buffered: true });
+    });
     const localOrigin = `http://127.0.0.1:${server.address().port}`;
     const fixture = journey === 'connected-fixture' ? await installConnectedFixture(page, localOrigin) : null;
     const unexpectedRequests = [];
@@ -84,13 +103,20 @@ try {
       fs.mkdirSync(path.dirname(output), { recursive: true });
       fs.writeFileSync(`${output}.${journey}.${profile.name}.cpuprofile`, JSON.stringify(cpuProfile));
     }
-    const timings = await page.evaluate(() => ({ legacyReadyMs: performance.getEntriesByName('tb:legacy-ready')[0]?.startTime, connectedReadyMs: performance.getEntriesByName('tb:connected-ready')[0]?.startTime, authVisible: !!document.querySelector('#auth-email') && getComputedStyle(document.querySelector('#auth-overlay')).display !== 'none' }));
+    const timings = await page.evaluate(() => ({
+      legacyReadyMs: performance.getEntriesByName('tb:legacy-ready')[0]?.startTime,
+      connectedReadyMs: performance.getEntriesByName('tb:connected-ready')[0]?.startTime,
+      authVisible: !!document.querySelector('#auth-email') && getComputedStyle(document.querySelector('#auth-overlay')).display !== 'none',
+      touchPoints: navigator.maxTouchPoints,
+      startupLongTasks: window.__tbStartupLongTasks || null,
+    }));
     const metrics = Object.fromEntries((await session.send('Performance.getMetrics')).metrics.map(m => [m.name, m.value]));
     const resources = [...requests.values()];
     const scripts = resources.filter(r => r.type === 'Script');
     const report = { journey, profile, ...timings, fixture, unexpectedRequests, scriptExecutionMs: metrics.ScriptDuration * 1000, scripts: scripts.length, scriptDecodedKiB: scripts.reduce((n, r) => n + r.decodedBytes, 0) / 1024, localTransferredKiB: resources.filter(r => new URL(r.url).origin === localOrigin).reduce((n, r) => n + r.transferredBytes, 0) / 1024, fixtureResponseKiB: fixture ? fixture.calls.reduce((n, call) => n + call.responseBytes, 0) / 1024 : 0, errors, resources };
     reports.push(report);
-    // Size/request gates are deterministic; timings are recorded, not hardware-dependent CI gates.
+    if ((timings.touchPoints > 0) !== profile.touch) throw new Error(`Unexpected input mode: ${profile.name}`);
+    // Size/request gates are deterministic; timings and long tasks are recorded, not hardware-dependent CI gates.
     if (!Number.isFinite(timings.legacyReadyMs) || (fixture && (!Number.isFinite(timings.connectedReadyMs) || fixture.calls.length > 40)) || timings.authVisible === Boolean(fixture) || errors.length || unexpectedRequests.length || fixture?.failures.length || scripts.some(r => !r.finished || r.status !== 200 || new URL(r.url).origin !== localOrigin) || report.scriptDecodedKiB <= 0 || report.scriptDecodedKiB > (fixture ? 2450 : 1500) || scripts.length > 60 || scripts.some(r => (fixture ? /echarts/ : /apexcharts|echarts/).test(r.url))) throw new Error(`Startup contract failed: ${journey}/${profile.name}`);
     await context.close();
   }
