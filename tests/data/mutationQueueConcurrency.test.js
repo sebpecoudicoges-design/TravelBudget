@@ -433,3 +433,34 @@ it.each(['similar-expense', 'lookup-error', 'clear'])(
     }
   },
 );
+
+it('does not schedule a Nutrition continuation from a superseded revision', async () => {
+  const values = new Map();
+  const localStorage = {
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: key => values.delete(key),
+  };
+  const schedule = vi.fn();
+  const window = {
+    Data: { createMutationQueueStore, flushMutationQueue }, sbUser: { id: 'synthetic' },
+    addEventListener() {}, dispatchEvent() {}, toastOk() {},
+    async tbNutritionSyncLocal(reason, mayReplay) {
+      expect(reason).toBe('offline-queue');
+      expect(mayReplay()).toBe(true);
+      await window.tbOfflineQueueEnqueue('nutrition.sync_local', { marker: 'new draft' });
+      expect(mayReplay()).toBe(false);
+      // Even a stale continuation reaching the generic queue may not reset it.
+      return 'continue';
+    },
+  };
+  vm.runInNewContext(fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8'), {
+    window, localStorage, navigator: { language: 'fr' }, setTimeout: schedule, setInterval, clearInterval, console,
+  });
+  const initial = await window.tbOfflineQueueEnqueue('nutrition.sync_local', {});
+  expect(await window.tbOfflineQueueSync('online')).toEqual({ ok: true, synced: 0, failed: 0 });
+  expect(window.tbOfflineQueuePending()).toEqual([expect.objectContaining({
+    id: initial.id, revision: 2, status: 'pending', attempts: 0, payload: { marker: 'new draft' },
+  })]);
+  expect(schedule).not.toHaveBeenCalled();
+});

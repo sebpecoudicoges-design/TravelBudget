@@ -353,8 +353,7 @@
       if (typeof window.tbNutritionSyncLocal !== "function") {
         throw new Error("Nutrition indisponible pour synchroniser les donnees hors ligne.");
       }
-      await window.tbNutritionSyncLocal("offline-queue");
-      return true;
+      return window.tbNutritionSyncLocal("offline-queue", mayReplay);
     }
     if (item.kind === "trip.expense.create" || item.kind === "trip.expense.update") {
       if (typeof window.tbTripReplayOfflineExpenseMutation !== "function" && typeof window.tbLoadLegacyDomain === "function") {
@@ -402,6 +401,7 @@
     const leaseTimer = setInterval(renewLease, 10_000);
     let synced = 0;
     let failed = 0;
+    let progress = false;
     try {
       try {
         if (typeof window.tbShouldUseOfflineMode === "function" && await window.tbShouldUseOfflineMode(`offline-queue:${reason || "sync"}`)) {
@@ -417,6 +417,7 @@
       if (!todo.length) return { ok: true, synced: 0 };
 
       const syncedKinds = [];
+      const progressing = new Set();
       const isCurrentAttempt = (attempt) => queueStore.scope() === syncScope && renewLease()
         && queueStore.read().some(item => item.id === attempt.id
           && item.revision === attempt.revision && item.attemptToken === attempt.attemptToken);
@@ -425,12 +426,28 @@
           ...queueStore,
           beginAttempt: (...args) => queueWrite(() => queueStore.beginAttempt(...args), syncScope, renewLease),
           markFailure: (...args) => queueWrite(() => queueStore.markFailure(...args), syncScope, () => true),
-          remove: (...args) => queueWrite(() => queueStore.remove(...args), syncScope, () => true),
+          remove: (id, attempt) => {
+            if (!progressing.delete(attempt.attemptToken)) {
+              return queueWrite(() => queueStore.remove(id, attempt), syncScope, () => true);
+            }
+            // A clean Nutrition batch is progress, not acknowledgement of the whole action.
+            return queueWrite(() => {
+              const items = queueStore.read();
+              const item = items.find(row => row.id === id && row.revision === attempt.revision
+                && row.attemptToken === attempt.attemptToken);
+              if (!item) return false;
+              Object.assign(item, { status: "pending", attempts: 0, attemptToken: null, attemptOwner: null });
+              queueStore.write(items, { type: "progress", id });
+              progress = true;
+              return false;
+            }, syncScope, renewLease);
+          },
         },
-        run: item => {
+        run: async item => {
           const current = () => isCurrentAttempt(item);
           if (!current()) throw new Error("Synchronisation interrompue : action, compte ou verrou modifie.");
-          return runItem(item, current);
+          const result = await runItem(item, current);
+          if (item.kind === "nutrition.sync_local" && result === "continue") progressing.add(item.attemptToken);
         },
         force,
         canContinue: renewLease,
@@ -472,6 +489,9 @@
       syncing = false;
       releaseLock();
       dispatchChanged(queueStore.scope() === syncScope ? { synced, failed } : undefined);
+      if (progress && !leaseLost) setTimeout(() => {
+        if (queueStore.scope() === syncScope) sync("nutrition-progress").catch(e => console.warn("[OfflineQueue] sync failed", e?.message || e));
+      }, 50);
     }
   }
 

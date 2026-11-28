@@ -840,7 +840,7 @@
     const userId = uid();
     if (!c || !userId || CACHE.syncingLocal) return 0;
     const scope = localMealKey();
-    const sameScope = () => uid() === userId && localMealKey() === scope;
+    const sameScope = () => uid() === userId && localMealKey() === scope && (!options.mayReplay || options.mayReplay());
     const run = () => syncNutritionBatch(reason, options, userId, sameScope);
     return navigator?.locks?.request ? navigator.locks.request(`travelbudget:nutrition-replay:${scope}`, run) : run();
   }
@@ -910,7 +910,8 @@
         ? txt(`${synced} synchronise(s), ${remaining.length} encore en attente.`, `${synced} synced, ${remaining.length} still pending.`)
         : (synced ? txt(`${synced} ajout(s) synchronise(s).`, `${synced} entry/entries synced.`) : "");
       CACHE.syncPhase = remaining.length ? "pending" : "done";
-      if (!remaining.length) discardNutritionQueue();
+      if (!options.mayReplay && !remaining.length) discardNutritionQueue();
+      if (options.mayReplay && remaining.length < allRows.length && synced === rows.length) options.progress = true;
       return synced;
     } catch (error) {
       if (!sameScope()) throw error;
@@ -2620,9 +2621,14 @@
       if (Object.values(loadSleepRows(true)).some(row => row.pending)) requestNutritionRefreshWhenIdle("sleep-online");
     });
   } catch (_) {}
-  window.tbNutritionSyncLocal = async function tbNutritionSyncLocal(reason) {
-    const synced = await syncLocalNutritionRows(reason || "offline-queue");
-    if (loadLocalMeals(true).length) throw new Error("Nutrition sync incomplete: pending local rows remain");
+  window.tbNutritionSyncLocal = async function tbNutritionSyncLocal(reason, mayReplay) {
+    const options = { mayReplay };
+    const synced = await syncLocalNutritionRows(reason || "offline-queue", options);
+    if (mayReplay && !mayReplay()) throw new Error("Nutrition sync interrupted");
+    if (loadLocalMeals(true).length) {
+      if (options.progress) return "continue";
+      throw new Error("Nutrition sync incomplete: pending local rows remain");
+    }
     return synced;
   };
   window.tbNutritionRefreshAfterSync = async function tbNutritionRefreshAfterSync() {
