@@ -66,13 +66,12 @@ it('compares only the covered share of a spread expense and its refund', () => {
   });
 });
 
-it.each([['planned', 70], ['expenses', 40]])('shows the same day totals in cadence and heatmap in %s mode', (mode, expected) => {
+it.each([['planned', 70], ['expenses', 40]])('shows the correct daily cadence totals in %s mode', (mode, expected) => {
   const model = computeAnalysis({ mode, transactions: [
     transaction({ amount: 40 }),
     transaction({ amount: 30, pay_now: false }),
   ] });
   expect(model.velocity).toEqual([expected, 0, 0]);
-  expect(model.heat.map((point) => point[2])).toEqual(model.velocity);
 });
 
 

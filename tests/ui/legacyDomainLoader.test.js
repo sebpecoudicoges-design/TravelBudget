@@ -53,7 +53,6 @@ describe('legacy domain loader', () => {
     for (const deferredScript of [
       '/legacy/js/29_trip_v1.js',
       '/legacy/js/30_members_admin.js',
-      '/legacy/js/34_fx_decision.js',
       '/legacy/js/45_sport_ui.js',
       '/legacy/js/47_work_ui.js',
       '/legacy/js/48_nutrition_ui.js',
@@ -89,15 +88,16 @@ describe('legacy domain loader', () => {
     expect(navigation).toContain('window.tbEnsureCashflowCurve("navigation:dashboard")');
   });
 
-  it('keeps FX decision out of boot and loads it with the Analysis domain', () => {
+  it('does not mount the optional FX decision widget in Analysis', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
     const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainLoader'));
 
     expect(bootList).not.toContain('/legacy/js/34_fx_decision.js');
     expect(domains).toContain('analysis:');
-    expect(domains).toContain('/legacy/js/34_fx_decision.js');
+    expect(domains).not.toContain('/legacy/js/34_fx_decision.js');
     expect(navigation).toContain('window.tbLoadLegacyDomain("analysis")');
-    expect(navigation).toContain('window.renderFxDecision(false)');
+    expect(navigation).not.toContain('window.renderFxDecision(false)');
+    expect(fs.readFileSync('public/legacy/js/18_main_render.js', 'utf8')).not.toContain('window.renderFxDecision(false)');
   });
 
   it('waits for the Vite bridge before loading boot or deferred legacy scripts', () => {

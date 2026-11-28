@@ -146,7 +146,7 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).toContain('window.TBAnalysisCharts?.buildAnalysisCategoryPieOption');
     expect(legacy).toContain('window.TBAnalysisCharts?.buildAnalysisCategoryBarsOption');
     expect(legacy).toContain('window.TBAnalysisCharts?.buildAnalysisVelocityOption');
-    expect(legacy).toContain('window.TBAnalysisCharts?.buildAnalysisHeatmapOption');
+    expect(legacy).not.toContain('analysis-heatmap-chart');
     expect(legacy).not.toContain("legend: { top: 6");
     expect(legacy).not.toContain("roseType: 'area'");
     expect(legacy).not.toContain('visualMap: { min: 0');
