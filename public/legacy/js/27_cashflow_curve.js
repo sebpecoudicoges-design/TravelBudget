@@ -965,7 +965,7 @@ function buildSeries() {
               ${escapeHTML(T("cashflow.pending_income"))}
             </label>
             ${catsDetails}
-            <button class="btn" id="cf-reset-zoom">Reset zoom</button>
+            <button class="btn" id="cf-reset-zoom">${window.tbGetLang?.() === "en" ? "Reset zoom" : "Réinitialiser le zoom"}</button>
           </div>
         </div>
 

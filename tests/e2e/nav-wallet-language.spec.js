@@ -28,6 +28,14 @@ for (const width of [1440, 390]) {
       if (width === 390) await page.keyboard.press('Escape');
     };
     await checkNav(['Overview', 'Finance', 'Daily life', 'Resources'], 'Subscriptions', 'Inbox');
+    await expect(page.locator('#kpi .kpi-mini-title', { hasText: 'Sport logged' })).toBeVisible();
+    await expect(page.locator('#kpi .kpi-mini-title', { hasText: 'Work logged' })).toBeVisible();
+    const health = page.locator('#kpi .kpi-health-card');
+    await expect(health).toContainText('Today’s overview');
+    await expect(health).toContainText('Sleep');
+    await expect(health).toContainText('Not logged');
+    await expect(health).not.toContainText('Sommeil');
+    await expect(page.locator('#cf-reset-zoom')).toHaveText('Reset zoom');
 
     const create = page.locator('[data-dashboard-action="create-wallet"]');
     await create.click();
@@ -50,6 +58,9 @@ for (const width of [1440, 390]) {
 
     await page.locator('#tbLangFr').click();
     await checkNav(['Vue d’ensemble', 'Finances', 'Quotidien', 'Ressources'], 'Abonnements', 'À traiter');
+    await expect(page.locator('#kpi .kpi-mini-title', { hasText: 'Sport fait' })).toBeVisible();
+    await expect(health).toContainText('Suivi du jour');
+    await expect(page.locator('#cf-reset-zoom')).toHaveText('Réinitialiser le zoom');
     await create.click();
     dialog = page.getByRole('dialog', { name: 'Créer un wallet' });
     await expect(dialog.getByLabel('Solde initial')).toBeVisible();
