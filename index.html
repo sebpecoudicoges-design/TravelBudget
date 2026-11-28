@@ -4299,7 +4299,7 @@
       background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
       box-shadow:0 20px 40px rgba(2,6,23,.06);
       backdrop-filter: blur(14px);" id="tb-periods-card">
-          <h2>Périodes du voyage</h2>
+          <h2 data-t="settings.card.periods_title">Périodes du voyage</h2>
           <div class="muted" style="margin-bottom:10px;">
             Chaque période rassemble dates, devise, budget/jour et référence pays. Ouvre seulement la période à ajuster.</div>
 
@@ -4319,18 +4319,18 @@
 
           <div class="row" style="margin-bottom:10px;">
             <div class="field" style="min-width:220px;">
-              <label>Preset</label>
+              <label for="p-preset" data-t="settings.palette.preset">Préréglage</label>
               <select id="p-preset"></select>
             </div>
             <div class="field">
               <label></label>
-              <button class="btn" onclick="resetPalette()">Reset</button>
+              <button class="btn" onclick="resetPalette()" data-t="settings.palette.reset">Réinitialiser</button>
             </div>
           </div>
 
           <div class="palette-grid">
             <div class="field">
-              <label>Accent</label>
+              <label for="p-accent" data-t="settings.palette.accent">Accent</label>
               <div class="colorchip">
                 <span class="chipdot" id="chip-accent"></span>
                 <input id="p-accent" type="color" />
@@ -4338,7 +4338,7 @@
             </div>
 
             <div class="field">
-              <label>Success</label>
+              <label for="p-good" data-t="settings.palette.success">Succès</label>
               <div class="colorchip">
                 <span class="chipdot" id="chip-good"></span>
                 <input id="p-good" type="color" />
@@ -4346,7 +4346,7 @@
             </div>
 
             <div class="field">
-              <label>Warning</label>
+              <label for="p-warn" data-t="settings.palette.warning">Avertissement</label>
               <div class="colorchip">
                 <span class="chipdot" id="chip-warn"></span>
                 <input id="p-warn" type="color" />
@@ -4354,7 +4354,7 @@
             </div>
 
             <div class="field">
-              <label>Danger</label>
+              <label for="p-bad" data-t="settings.palette.danger">Danger</label>
               <div class="colorchip">
                 <span class="chipdot" id="chip-bad"></span>
                 <input id="p-bad" type="color" />
@@ -4363,7 +4363,7 @@
           </div>
 
           <div class="row" style="justify-content:flex-end; margin-top:12px;">
-            <button class="btn primary" onclick="savePaletteFromUI()">Enregistrer palette</button>
+            <button class="btn primary" onclick="savePaletteFromUI()" data-t="settings.palette.save">Enregistrer la palette</button>
           </div>
         </div>
 
@@ -4374,7 +4374,7 @@
       background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
       box-shadow:0 20px 40px rgba(2,6,23,.06);
       backdrop-filter: blur(14px);">
-          <h2>Catégories</h2>
+          <h2 data-t="settings.card.categories_title">Catégories</h2>
           <div class="muted" style="margin-bottom:10px;">
             Les catégories pilotent les listes côté Budget + Trip. Elles sont sauvegardées sur Supabase.
           </div>

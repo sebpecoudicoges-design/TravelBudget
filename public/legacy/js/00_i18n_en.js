@@ -172,7 +172,7 @@
       "help.quick_start.documents": "Add important documents",
       "help.quick_start.assets": "Add assets",
       "help.guide.create_trip.title": "Create your trip",
-      "help.guide.create_trip.body": "Go to <b>Settings > Trip</b>, set the dates, then adjust your periods.",
+      "help.guide.create_trip.body": "Go to <b>Settings → Trip</b>, set the dates, then adjust your periods.",
       "help.guide.create_periods.title": "Create / adjust periods",
       "help.guide.create_periods.body": "Add or adjust periods. The app keeps the timeline clean.",
       "help.guide.fx.title": "Auto vs custom rate",
@@ -221,7 +221,7 @@
 
       "assistant.intent.category_create": "Create a category:\n• Open Settings\n• Go to Categories / Subcategories\n• Add the category or subcategory\n• Then use it in Transactions or Analysis.",
       "assistant.intent.wallet_create": "Add a wallet:\n- Dashboard > Wallets\n- + Wallet\n- Currency (e.g., LAK) > Save",
-      "assistant.intent.voyage_rename": "Rename:\n- Settings > Trip\n- Name field > edit",
+      "assistant.intent.voyage_rename": "Rename:\n- Settings → Trip\n- Name field > edit",
       "assistant.intent.documents": "Documents:\n? Open Documents\n? Add passport, visa, insurance or ticket\n? Set folder, tags, favorite and expiry date\n? Recommended next step: Renewal required Yes/No",
       "assistant.intent.assets": "Assets:\n? Open Assets\n? Add an asset with purchase value and estimated value\n? Add co-owners if needed\n? Create a transaction only if cash actually moves",
       "assistant.intent.analysis": "Analysis:\n- Open Analysis\n- Check period/currency filter\n- Compare actuals, reference budget, paid/pending items and remaining budget\n- Check category/subcategory mapping if a delta looks wrong",
@@ -642,6 +642,15 @@
       "settings.account.deletion_help": "This request covers synced data and files. You have seven days to cancel it. Export your data before confirming.",
       "settings.account.delete": "Request deletion",
       "settings.account.cancel_delete": "Cancel the request",
+      "settings.palette.preset": "Preset",
+      "settings.palette.accent": "Accent",
+      "settings.palette.success": "Success",
+      "settings.palette.warning": "Warning",
+      "settings.palette.danger": "Danger",
+      "settings.palette.reset": "Reset",
+      "settings.palette.save": "Save palette",
+      "settings.card.periods_title": "Trip periods",
+      "settings.card.categories_title": "Categories",
       "settings.account.guided_setup": "Restart guided setup",
       "settings.account.summary": "Base currency, interface mode, alert threshold and password.",
       "settings.account.email": "Email",
@@ -1020,7 +1029,7 @@
       "help.guide.dashboard_scope.title": "Dashboard: filter KPIs / curve",
       "help.guide.dashboard_scope.body": "Pick a filter at the top: KPIs + curve follow.",
       "help.guide.rename_voyage.title": "Rename the trip",
-      "help.guide.rename_voyage.body": "Settings > Trip: Name field.",
+      "help.guide.rename_voyage.body": "Settings → Trip: Name field.",
     };
   if (window.tbRegisterI18nDict) window.tbRegisterI18nDict('en', dict);
   else window.TB_I18N_EN = dict;
