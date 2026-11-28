@@ -5,11 +5,13 @@ test.setTimeout(60_000);
 
 const html = fs.readFileSync('index.html', 'utf8');
 const styles = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]).join('\n');
-const nav = html.slice(html.indexOf('<div class="tabs app-tabs">'), html.indexOf('<!-- DASHBOARD -->'));
+const nav = html.slice(html.indexOf('<div class="tabs app-tabs" id="tb-app-navigation"'), html.indexOf('<!-- DASHBOARD -->'));
+const menu = html.match(/<button[^>]*id="tb-mobile-nav-toggle"[^>]*>[\s\S]*?<\/button>/)?.[0];
+if (!nav.includes('id="tab-accounting"') || !menu) throw new Error('Accounting navigation fixture is missing app markup.');
 async function setup(page, width = 1440, theme = 'light') {
   await page.setViewportSize({ width, height: 1000 });
   await page.clock.setFixedTime(new Date('2026-01-31T12:00:00'));
-  await page.route('**/accounting-test', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style></head><body><div class="wrap"><header><h1>TravelBudget</h1></header><div id="kpi"></div>${nav}<div id="view-dashboard"></div><div id="view-validation" class="hidden"></div><div id="view-accounting" class="hidden"><div id="accounting-root"></div></div></div></body></html>` }));
+  await page.route('**/accounting-test', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style></head><body><div id="app-root" data-tb-nav-ready>${menu}<div class="wrap"><header><h1>TravelBudget</h1></header><div id="kpi"></div>${nav}<div id="view-dashboard"></div><div id="view-validation" class="hidden"></div><div id="view-accounting" class="hidden"><div id="accounting-root"></div></div></div></div></body></html>` }));
   await page.goto('/accounting-test');
   await page.addStyleTag({ url: '/src/ui/premium-theme.css' });
   await page.evaluate(async theme => {
