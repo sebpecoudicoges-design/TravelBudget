@@ -56,7 +56,15 @@ const tables = {
 async function navigate(page, tab) {
   const item = page.locator(`#tab-${tab}`);
   const menu = page.locator('#tb-mobile-nav-toggle');
-  if (await menu.isVisible() && await menu.getAttribute('aria-expanded') !== 'true') await menu.click();
+  const usesMobileMenu = await page.evaluate(() =>
+    matchMedia('(max-width: 760px), (max-height: 600px) and (pointer: coarse)').matches
+  );
+  if (usesMobileMenu) {
+    await expect(menu).toBeVisible();
+    await expect(menu).toBeEnabled();
+    if (await menu.getAttribute('aria-expanded') !== 'true') await menu.click();
+    await expect(menu).toHaveAttribute('aria-expanded', 'true');
+  }
   await item.click();
   await expect(page.locator(`#view-${tab}`)).toBeVisible();
 }
