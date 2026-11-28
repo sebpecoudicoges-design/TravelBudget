@@ -34,7 +34,7 @@ function tbEnsureBootOverlay() {
     el.innerHTML = `
       <div class="tb-boot-card">
         <div class="tb-boot-head">
-          <div class="tb-boot-mark">TB</div>
+          <img class="tb-boot-mark" src="/pwa-icon.svg" width="46" height="46" alt="" />
           <div class="tb-boot-copy">
             <div class="tb-boot-title">Préparation de votre espace</div>
             <div id="tb-boot-version" class="tb-boot-version">Version TB ${window.TB_VERSION || window.__TB_BUILD || "dev"}</div>
@@ -49,7 +49,7 @@ function tbEnsureBootOverlay() {
     if (!document.getElementById("tb-boot-overlay-style")) {
       const style = document.createElement("style");
       style.id = "tb-boot-overlay-style";
-      style.textContent = '#tb-boot-overlay .tb-boot-card{min-width:240px;max-width:86vw;padding:18px 20px;border-radius:26px;background:#fff;color:#20313a;display:flex;flex-direction:column;gap:12px;border:1px solid #f0dccb;box-shadow:0 18px 46px rgba(80,55,37,.12)}#tb-boot-overlay .tb-boot-head{display:flex;align-items:center;justify-content:space-between;gap:12px}#tb-boot-overlay .tb-boot-mark{font-weight:900;color:#fff;background:#ff6b4a;border-radius:14px;padding:9px}#tb-boot-overlay .tb-boot-progress,#tb-boot-overlay .tb-boot-track{height:10px;border-radius:999px;background:#fff1e3;overflow:hidden}#tb-boot-overlay .tb-boot-bar{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff6b4a,#23b5af);transition:width .28s ease}#tb-boot-overlay .tb-boot-steps{display:none}#tb-boot-overlay .tb-boot-note{color:#687c86;font-size:11px}';
+      style.textContent = '#tb-boot-overlay .tb-boot-card{min-width:240px;max-width:86vw;padding:18px 20px;border-radius:26px;background:#fff;color:#20313a;display:flex;flex-direction:column;gap:12px;border:1px solid #f0dccb;box-shadow:0 18px 46px rgba(80,55,37,.12)}#tb-boot-overlay .tb-boot-head{display:flex;align-items:center;justify-content:space-between;gap:12px}#tb-boot-overlay .tb-boot-mark{width:46px;height:46px;flex:0 0 46px;display:block}#tb-boot-overlay .tb-boot-progress,#tb-boot-overlay .tb-boot-track{height:10px;border-radius:999px;background:#fff1e3;overflow:hidden}#tb-boot-overlay .tb-boot-bar{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff6b4a,#23b5af);transition:width .28s ease}#tb-boot-overlay .tb-boot-steps{display:none}#tb-boot-overlay .tb-boot-note{color:#687c86;font-size:11px}';
       document.head.appendChild(style);
     }
     document.body.appendChild(el);

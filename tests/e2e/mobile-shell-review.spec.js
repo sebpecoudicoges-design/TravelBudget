@@ -39,6 +39,9 @@ for (const { width, theme, native, buildId, initialTransactions } of cases) {
     try {
       await expect.poll(() => loadStarted).toBe(true);
       await expect(page.locator('#tb-boot-overlay')).toBeVisible();
+      const bootLogo = page.locator('#tb-boot-overlay img.tb-boot-mark');
+      await expect(bootLogo).toBeVisible();
+      await expect.poll(() => bootLogo.evaluate(el => el.complete && el.naturalWidth > 0)).toBe(true);
       if (width === 390) {
         await expect(menu).toBeHidden();
         await expect(nav).toBeHidden();
@@ -49,6 +52,7 @@ for (const { width, theme, native, buildId, initialTransactions } of cases) {
       finishLoad();
     }
 
+    await expect.poll(() => page.evaluate(() => window.__TB_BOOT_COMPLETED__ === true && !window.__TB_AUTH_TRANSITION_ACTIVE__)).toBe(true);
     await expect(page.locator('#tb-boot-overlay')).toHaveCount(0);
     await expect(page.locator('#wallets-container [data-wallet-id]').first()).toBeVisible();
     await expect(page.locator('#daily-budget-container')).not.toBeEmpty();

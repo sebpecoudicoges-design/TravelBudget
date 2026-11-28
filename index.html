@@ -716,10 +716,7 @@
   }
   #tb-boot-overlay .tb-boot-head{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
   #tb-boot-overlay .tb-boot-mark{
-    width:46px; height:46px; border-radius:16px; display:grid; place-items:center;
-    color:#fff; font-weight:950; letter-spacing:.02em;
-    background:linear-gradient(145deg,var(--tb-coral-strong,#e94f32),var(--tb-coral,#ff6b4a));
-    border:1px solid rgba(255,255,255,.42); box-shadow:0 12px 26px rgba(233,79,50,.20);
+    width:46px; height:46px; flex:0 0 46px; border-radius:11px; display:block;
   }
   #tb-boot-overlay .tb-boot-copy{ min-width:0; flex:1; }
   #tb-boot-overlay .tb-boot-title{ font-weight:900; font-size:19px; line-height:1.12; }
@@ -3621,7 +3618,7 @@
   <div id="tb-boot-overlay" aria-live="polite">
     <div class="tb-boot-card">
       <div class="tb-boot-head">
-        <div class="tb-boot-mark">TB</div>
+        <img class="tb-boot-mark" src="/pwa-icon.svg" width="46" height="46" alt="" />
         <div class="tb-boot-copy">
           <div class="tb-boot-title">Préparation de votre espace</div>
           <div id="tb-boot-version" class="tb-boot-version">Version TB <script>document.write(window.TB_VERSION || window.__TB_BUILD || "dev")</script></div>
