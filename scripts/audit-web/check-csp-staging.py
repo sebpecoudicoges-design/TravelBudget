@@ -51,6 +51,8 @@ class ConsentMarkup(HTMLParser):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dist", type=Path, help="Also verify the output of npm run build")
+    parser.add_argument("--print-global-report-only", action="store_true",
+                        help="Print only the validated global policy for the local browser fixture")
     args = parser.parse_args()
     with (ROOT / "netlify.toml").open("rb") as file:
         config = tomllib.load(file)
@@ -89,7 +91,10 @@ def main():
         for paths in built.resources.values():
             for path in paths:
                 require((args.dist / path).is_file(), f"Missing built consent resource: {path}")
-    print("F12: Report-Only global scope, enforced consent headers and local consent assets verified.")
+    if args.print_global_report_only:
+        print(rules["/*"][report_only])
+    else:
+        print("F12: Report-Only global scope, enforced consent headers and local consent assets verified.")
 
 
 if __name__ == "__main__":

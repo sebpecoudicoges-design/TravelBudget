@@ -101,6 +101,8 @@ jobs:
       - run: python3 scripts/audit-web/check-csp-staging.py --dist dist
       - run: npm run test:e2e -- tests/e2e/csp-consent-audit.spec.js --project=desktop-chromium --project=mobile-chromium
       - run: npm run perf:startup
+        env:
+          TB_AUDIT_CSP_REPORT_ONLY: "1"
       - name: Retain the synthetic startup report
         uses: actions/upload-artifact@v5
         with:

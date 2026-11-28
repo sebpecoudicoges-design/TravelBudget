@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import zlib from 'node:zlib';
+import { execFileSync } from 'node:child_process';
 import { installConnectedFixture, fixtureLogin, fixtureUser, transactionCount } from './fixtures/connectedStartup.mjs';
 
 // Cold compiled journeys; connected uses synthetic HTTP, not a live account or TTI.
@@ -10,6 +11,9 @@ const { chromium } = await import('playwright');
 const dist = path.resolve('dist');
 const output = process.argv[2] || 'test-results/startup.json';
 const captureCpu = process.env.TB_CPU_PROFILE === '1';
+const reportOnlyCsp = process.env.TB_AUDIT_CSP_REPORT_ONLY === '1'
+  ? execFileSync('python3', ['scripts/audit-web/check-csp-staging.py', '--print-global-report-only'], { encoding: 'utf8' }).trim()
+  : null;
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
   const file = path.resolve(dist, '.' + (pathname === '/' ? '/index.html' : pathname));
@@ -17,6 +21,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(404).end(); return;
   }
   const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml' };
+  if (reportOnlyCsp && pathname === '/') res.setHeader('Content-Security-Policy-Report-Only', reportOnlyCsp);
   res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream', 'Content-Encoding': 'gzip', 'Cache-Control': 'no-store' });
   res.end(zlib.gzipSync(fs.readFileSync(file)));
 });
@@ -46,6 +51,14 @@ try {
           stats.longestMs = Math.max(stats.longestMs, duration);
         }
       }).observe({ type: 'longtask', buffered: true });
+    });
+    if (reportOnlyCsp) await page.addInitScript(() => {
+      const counts = Object.create(null);
+      window.__tbAuditCspCounts = counts;
+      document.addEventListener('securitypolicyviolation', ({ effectiveDirective, disposition }) => {
+        const key = disposition + ':' + effectiveDirective;
+        counts[key] = (counts[key] || 0) + 1;
+      });
     });
     const localOrigin = `http://127.0.0.1:${server.address().port}`;
     const fromForm = journey === 'signin-fixture';
@@ -80,7 +93,9 @@ try {
     page.on('pageerror', e => errors.push(e.message));
     let stage = 'navigation';
     try {
-      await page.goto(`${localOrigin}/`, { waitUntil: 'load', timeout: 60000 });
+      const response = await page.goto(`${localOrigin}/`, { waitUntil: 'load', timeout: 60000 });
+      if (reportOnlyCsp && (response?.headers()['content-security-policy-report-only'] !== reportOnlyCsp
+        || response.headers()['content-security-policy'])) throw new Error('Unexpected startup CSP headers');
       stage = 'legacy-ready';
       await page.waitForFunction(() => window.__tbBootReady === true, null, { timeout: 30000 });
       if (!fixture || fromForm) {
@@ -161,6 +176,7 @@ try {
         authVisible: !!document.querySelector('#auth-email') && getComputedStyle(document.querySelector('#auth-overlay')).display !== 'none',
         touchPoints: navigator.maxTouchPoints,
         startupLongTasks: window.__tbStartupLongTasks || null,
+        ...(window.__tbAuditCspCounts ? { cspPolicyEvents: window.__tbAuditCspCounts } : {}),
       };
     });
     const metrics = Object.fromEntries((await session.send('Performance.getMetrics')).metrics.map(m => [m.name, m.value]));
