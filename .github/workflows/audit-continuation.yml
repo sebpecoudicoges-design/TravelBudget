@@ -7,6 +7,7 @@ on:
       - '.github/workflows/audit-continuation.yml'
       - 'config/module-size-budgets.json'
       - 'docs/generated/project-inventory.json'
+      - 'public/legacy/js/00_i18n*.js'
       - 'public/legacy/js/00_offline_queue.js'
       - 'public/legacy/js/33_budget_analysis.js'
       - 'public/legacy/js/48_nutrition_ui.js'
@@ -40,6 +41,7 @@ on:
       - 'tests/e2e/sport-sync-audit.spec.js'
       - 'src/data/tripRepository.js'
       - 'tests/e2e/trip-pagination-audit.spec.js'
+      - 'tests/e2e/trip-context-help.spec.js'
       - 'tests/e2e/legacy-script-evaluation.spec.js'
       - 'src/main.js'
       - 'scripts/measure-startup.mjs'
@@ -86,7 +88,7 @@ jobs:
       - run: npm run test:e2e -- tests/e2e/assistant-ai.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/analysis-chart-labels.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/sport-sync-audit.spec.js --project=desktop-chromium
-      - run: npm run test:e2e -- tests/e2e/trip-pagination-audit.spec.js --project=desktop-chromium
+      - run: npm run test:e2e -- tests/e2e/trip-pagination-audit.spec.js tests/e2e/trip-context-help.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/legacy-script-evaluation.spec.js --project=desktop-chromium
       - run: npm run perf:startup
       - name: Retain the synthetic startup report

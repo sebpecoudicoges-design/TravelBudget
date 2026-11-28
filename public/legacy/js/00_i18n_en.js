@@ -841,7 +841,7 @@
 "trip.help.open": "Help",
 "trip.help.paid_by_me": "Paid by me: the wallet can be debited for the total.",
       "trip.help.budget": "Budget: only your share should remain in your daily budget.",
-      "trip.help.settlement": "Settlement: used to settle between participants; with a wallet, it also creates a real movement.",
+      "trip.help.settlement": "A settlement clears what participants owe each other. If you select a wallet, it also records a movement in that wallet.",
       "trip.help.hide": "Hide",
 
       // Recurring rules

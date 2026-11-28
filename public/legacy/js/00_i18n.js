@@ -851,7 +851,7 @@
 "trip.help.open": "Aide",
 "trip.help.paid_by_me": "Payé par moi : la wallet peut être débitée du total.",
       "trip.help.budget": "Budget : seule ta part doit rester dans ton budget journalier.",
-      "trip.help.settlement": "R?glement : sert ? solder entre participants ; avec wallet, il cr?e aussi un vrai mouvement.",
+      "trip.help.settlement": "Le règlement solde les comptes entre participants. Si tu choisis un wallet, il enregistre aussi un mouvement dans ce wallet.",
       "trip.help.hide": "Masquer",
 
       // Recurring rules
