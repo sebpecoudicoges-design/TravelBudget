@@ -371,7 +371,6 @@ window.onload = async function () {
         if (next === "configuration") void window.tbOpenGuidedAccountSetup?.();
       }
     } catch (_) {}
-    try { if (typeof window.tbMaybeStartGuidedTour === "function") window.tbMaybeStartGuidedTour(); } catch (_) {}
   }
 };
 

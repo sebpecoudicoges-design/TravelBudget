@@ -2,8 +2,6 @@
    Guided tour (FR/EN)
    ========================= */
 (function () {
-  const TOUR_VERSION = "v2";
-  const BASE_KEY = "travelbudget_guided_tour_done_";
   let active = false;
   let index = 0;
   let steps = [];
@@ -141,22 +139,6 @@
   function t(k) {
     const l = lang();
     return (I18N[l] && I18N[l][k]) || (I18N.fr && I18N.fr[k]) || k;
-  }
-
-  function uid() {
-    try { return window.sbUser?.id || "anonymous"; } catch (_) { return "anonymous"; }
-  }
-
-  function doneKey() {
-    return BASE_KEY + TOUR_VERSION + "_" + uid();
-  }
-
-  function isDone() {
-    try { return localStorage.getItem(doneKey()) === "1"; } catch (_) { return false; }
-  }
-
-  function markDone() {
-    try { localStorage.setItem(doneKey(), "1"); } catch (_) {}
   }
 
   function visible(el) {
@@ -488,18 +470,7 @@
   function stop() {
     if (!active && !els.overlay) return;
     active = false;
-    markDone();
     if (els.overlay) els.overlay.style.display = "none";
-  }
-
-  function maybeAutoStart() {
-    if (lang() === "fr" || active || isDone()) return;
-    if (!window.sbUser) return;
-    const overlay = document.getElementById("auth-overlay");
-    if (overlay && overlay.style.display !== "none") return;
-    setTimeout(() => {
-      if (!active && !isDone() && window.sbUser) start();
-    }, 900);
   }
 
   function injectHelpButton() {
@@ -532,7 +503,6 @@
   }
 
   window.tbStartGuidedTour = start;
-  window.tbMaybeStartGuidedTour = maybeAutoStart;
   window.tbInjectGuidedTourHelpButton = injectHelpButton;
 
   try {
@@ -553,6 +523,4 @@
     }
   } catch (_) {}
 
-  document.addEventListener("DOMContentLoaded", () => setTimeout(maybeAutoStart, 1200));
-  window.addEventListener("load", () => setTimeout(maybeAutoStart, 1400));
 })();
