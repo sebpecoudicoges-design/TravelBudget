@@ -4,6 +4,7 @@ import { internalAccounting, settledAt, validDay } from './accountingRecognition
 // Internal prototype. The result is not a restore authorization and carries no settings.
 const MAX_BYTES = 500_000;
 const MAX_DEPTH = 16;
+const RECURRING_SOURCE_STATES = new Set([null, 'generated', 'confirmed', 'detached', 'skipped']);
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const positiveAmount = value => Number.isFinite(value) && value > 0;
 const cents = value => Math.round(value * 100);
@@ -179,8 +180,10 @@ function reviewActiveReferences(settings, scope, sources) {
       if (!row || !hasTransferClassification(row)) return { status: 'sources-unavailable' };
       const debtSource = rule.role === 'funding' || rule.role === 'repayment';
       if (debtSource && ((row.tripExpenseId !== null && !isId(row.tripExpenseId))
-          || typeof row.detachedTripPayment !== 'boolean')) return { status: 'sources-unavailable' };
-      if (internalAccounting(row) || (debtSource && hasTripPaymentOrigin(row))) {
+          || typeof row.detachedTripPayment !== 'boolean' || typeof row.virtualBudgetOnly !== 'boolean'
+          || !RECURRING_SOURCE_STATES.has(row.recurringInstanceStatus))) return { status: 'sources-unavailable' };
+      if (internalAccounting(row) || (debtSource && (hasTripPaymentOrigin(row)
+          || row.virtualBudgetOnly || row.recurringInstanceStatus === 'skipped'))) {
         incompatible++;
         continue;
       }

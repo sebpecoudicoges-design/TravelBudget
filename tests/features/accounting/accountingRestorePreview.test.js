@@ -12,7 +12,7 @@ const candidate = {
     debts: [], archivedDebts: [], positions: [], assetLinks: [], positionAudit: [],
   },
 };
-const ordinary = { isInternal: false, internalTransferId: null, tripExpenseId: null, detachedTripPayment: false };
+const ordinary = { isInternal: false, internalTransferId: null, tripExpenseId: null, detachedTripPayment: false, virtualBudgetOnly: false, recurringInstanceStatus: null };
 const raw = (changes = {}) => JSON.stringify({ ...candidate, ...changes });
 const preview = (changes, activeScope = scope) => previewAccountingRestore(raw(changes), activeScope);
 
@@ -197,6 +197,36 @@ describe('typed debt and position source review', () => {
       expect(review({ ...sources, transactionMetadata: rows })).toEqual({ status: 'sources-unavailable' });
     },
   );
+
+  it.each([
+    [0, { virtualBudgetOnly: true }],
+    [1, { virtualBudgetOnly: true }],
+    [0, { recurringInstanceStatus: 'skipped' }],
+    [1, { recurringInstanceStatus: 'skipped' }],
+    [0, { recurringInstanceStatus: 'confirmed' }],
+    [1, { recurringInstanceStatus: 'detached' }],
+  ])('agrees with the ledger on simulated and recurring debt entries: %j', (index, evidence) => {
+    const rows = sources.transactionMetadata.map((row, i) => i === index ? { ...row, ...evidence } : row);
+    const eligible = index === 0 ? debtOriginEligible : repaymentEligible;
+    const canAttach = eligible(rows[index], settings.debts[0], sources.asOfDay);
+    expect(canAttach).toBe(evidence.virtualBudgetOnly !== true && evidence.recurringInstanceStatus !== 'skipped');
+    expect(review({ ...sources, transactionMetadata: rows }).status)
+      .toBe(canAttach ? 'references-present' : 'incompatible-references');
+  });
+
+  it.each([
+    { virtualBudgetOnly: undefined }, { virtualBudgetOnly: 'false' },
+    { recurringInstanceStatus: undefined }, { recurringInstanceStatus: 'unexpected-status' },
+  ])('requires reliable evidence for simulation and recurring status on debt entries: %j', evidence => {
+    const rows = sources.transactionMetadata.map((row, i) => i === 0 ? { ...row, ...evidence } : row);
+    expect(review({ ...sources, transactionMetadata: rows })).toEqual({ status: 'sources-unavailable' });
+  });
+
+  it('does not require debt-only metadata for a position', () => {
+    const rows = sources.transactionMetadata.map((row, i) => i === 2
+      ? { ...row, virtualBudgetOnly: undefined, recurringInstanceStatus: undefined } : row);
+    expect(review({ ...sources, transactionMetadata: rows })).toMatchObject({ status: 'references-present' });
+  });
 
   it('accepts only the principal as repayment, using the same cents check as the ledger', () => {
     const rows = sources.transactionMetadata.map((row, i) => i === 1 ? { ...row, amount: 24.999 } : row);
