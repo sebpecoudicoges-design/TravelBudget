@@ -5,6 +5,7 @@ const travel = '22222222-2222-4222-8222-222222222222';
 const period = '33333333-3333-4333-8333-333333333333';
 const wallet = '44444444-4444-4444-8444-444444444444';
 export const transactionCount = 1200;
+export const fixtureLogin = Object.freeze({ email: 'startup@example.invalid', password: 'synthetic-startup-password' });
 export const projectOrigin = 'https://obznbrzarhvmlbprcfie.supabase.co';
 const common = { user_id: fixtureUser, travel_id: travel, period_id: period };
 export const fixtureTables = {
@@ -61,9 +62,15 @@ export function fixtureResponse(url, method = 'GET', headers = {}, tables = fixt
   return headers.accept?.includes('application/vnd.pgrst.object+json') ? (rows[0] || null) : rows;
 }
 
-export async function installConnectedFixture(page, localOrigin, { tables = fixtureTables } = {}) {
+export async function installConnectedFixture(page, localOrigin, { tables = fixtureTables, seedSession = true } = {}) {
   const calls = [];
   const failures = [];
+  const payload = { sub: fixtureUser, aud: 'authenticated', role: 'authenticated', exp: 4070908800 };
+  const token = [Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url'), Buffer.from(JSON.stringify(payload)).toString('base64url'), 'synthetic-signature'].join('.');
+  const session = {
+    access_token: token, refresh_token: 'synthetic-refresh', token_type: 'bearer', expires_at: 4070908800,
+    user: { id: fixtureUser, email: fixtureLogin.email, aud: 'authenticated', role: 'authenticated' },
+  };
   // Shift calendar time only; keep native performance marks and real timers.
   await page.addInitScript(time => {
     const NativeDate = Date;
@@ -77,9 +84,26 @@ export async function installConnectedFixture(page, localOrigin, { tables = fixt
     const req = route.request();
     if (new URL(req.url()).origin === localOrigin) return route.continue();
     try {
-      const body = fixtureResponse(req.url(), req.method(), req.headers(), tables);
+      const target = new URL(req.url());
+      let body;
+      if (!seedSession && target.origin === projectOrigin && target.pathname === '/auth/v1/token'
+          && target.search === '?grant_type=password' && req.method() === 'POST') {
+        let credentials;
+        try { credentials = req.postDataJSON(); } catch { throw new Error('Fixture login request could not be parsed'); }
+        if (credentials?.email !== fixtureLogin.email || credentials?.password !== fixtureLogin.password) {
+          throw new Error('Fixture login requires the configured synthetic credentials');
+        }
+        body = { ...session, expires_in: 3600 };
+      } else if (!seedSession && target.origin === projectOrigin
+          && target.pathname === '/rest/v1/rpc/trip_pending_invites_for_current_user'
+          && !target.search && req.method() === 'POST') {
+        // This RPC is a read of the fixture account's empty inbox.
+        body = [];
+      } else {
+        body = fixtureResponse(req.url(), req.method(), req.headers(), tables);
+      }
       const json = JSON.stringify(body);
-      calls.push({ path: new URL(req.url()).pathname, query: new URL(req.url()).search, method: req.method(), responseBytes: Buffer.byteLength(json) });
+      calls.push({ path: target.pathname, query: target.search, method: req.method(), responseBytes: Buffer.byteLength(json) });
       return route.fulfill({ status: 200, contentType: 'application/json', body: req.method() === 'HEAD' ? '' : json });
     } catch (error) {
       failures.push(error.message);
@@ -87,10 +111,8 @@ export async function installConnectedFixture(page, localOrigin, { tables = fixt
     }
   });
   await page.routeWebSocket('**/*', ws => { failures.push('Unexpected WebSocket request'); ws.close(); });
-  const payload = { sub: fixtureUser, aud: 'authenticated', role: 'authenticated', exp: 4070908800 };
-  const token = [Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url'), Buffer.from(JSON.stringify(payload)).toString('base64url'), 'synthetic-signature'].join('.');
-  await page.addInitScript(({ token, fixtureUser }) => {
-    localStorage.setItem('sb-obznbrzarhvmlbprcfie-auth-token', JSON.stringify({ access_token: token, refresh_token: 'synthetic-refresh', token_type: 'bearer', expires_at: 4070908800, user: { id: fixtureUser, email: 'startup@example.invalid', aud: 'authenticated', role: 'authenticated' } }));
-  }, { token, fixtureUser });
+  if (seedSession) await page.addInitScript(session => {
+    localStorage.setItem('sb-obznbrzarhvmlbprcfie-auth-token', JSON.stringify(session));
+  }, session);
   return { calls, failures };
 }

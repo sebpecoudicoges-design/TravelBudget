@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import zlib from 'node:zlib';
-import { installConnectedFixture, fixtureUser, transactionCount } from './fixtures/connectedStartup.mjs';
+import { installConnectedFixture, fixtureLogin, fixtureUser, transactionCount } from './fixtures/connectedStartup.mjs';
 
 // Cold compiled journeys; connected uses synthetic HTTP, not a live account or TTI.
 process.env.PLAYWRIGHT_BROWSERS_PATH ||= '.ms-playwright';
@@ -29,7 +29,7 @@ try {
     { name: 'desktop', width: 1440, cpu: 1, touch: false, deviceScaleFactor: 1 },
     { name: 'mobile-simulated', width: 390, cpu: 4, touch: true, deviceScaleFactor: 2 },
   ];
-  for (const journey of ['anonymous', 'connected-fixture']) for (const profile of profiles) {
+  for (const journey of ['anonymous', 'connected-fixture', 'signin-fixture']) for (const profile of profiles) {
     const context = await browser.newContext({
       viewport: { width: profile.width, height: 900 }, serviceWorkers: 'block',
       isMobile: profile.touch, hasTouch: profile.touch, deviceScaleFactor: profile.deviceScaleFactor,
@@ -48,7 +48,8 @@ try {
       }).observe({ type: 'longtask', buffered: true });
     });
     const localOrigin = `http://127.0.0.1:${server.address().port}`;
-    const fixture = journey === 'connected-fixture' ? await installConnectedFixture(page, localOrigin) : null;
+    const fromForm = journey === 'signin-fixture';
+    const fixture = journey === 'anonymous' ? null : await installConnectedFixture(page, localOrigin, { seedSession: !fromForm });
     const unexpectedRequests = [];
     if (!fixture) {
       await page.route('**/*', route => {
@@ -82,7 +83,7 @@ try {
       await page.goto(`${localOrigin}/`, { waitUntil: 'load', timeout: 60000 });
       stage = 'legacy-ready';
       await page.waitForFunction(() => window.__tbBootReady === true, null, { timeout: 30000 });
-      if (!fixture) {
+      if (!fixture || fromForm) {
         stage = 'anonymous-ready';
         await page.waitForFunction(() => {
           const overlay = document.querySelector('#auth-overlay');
@@ -96,7 +97,19 @@ try {
         // Check actionability, not just styles: the boot overlay must not intercept input.
         stage = 'anonymous-actionable';
         await page.locator('#auth-email').click({ trial: true, timeout: 5000 });
-      } else {
+      }
+      if (fromForm) {
+        stage = 'signin-submit';
+        await page.evaluate(() => {
+          document.addEventListener('submit', event => {
+            if (event.target?.matches('.auth-form')) performance.mark('tb:signin-submitted');
+          }, { capture: true });
+        });
+        await page.locator('#auth-email').fill(fixtureLogin.email);
+        await page.locator('#auth-pass').fill(fixtureLogin.password);
+        await page.locator('#auth-submit').click();
+      }
+      if (fixture) {
         stage = 'connected-ready';
         await page.waitForFunction(({ fixtureUser, transactionCount }) => {
           const ready = window.__TB_BOOT_COMPLETED__ && window.sbUser?.id === fixtureUser
@@ -131,25 +144,34 @@ try {
       reports.push({ journey, profile, failure: { stage, name: error.name }, state, errors, fixture, unexpectedRequests, resources: [...requests.values()] });
       throw new Error(`Startup failed: ${journey}/${profile.name} at ${stage}`, { cause: error });
     }
-    await page.waitForTimeout(1500); // same observation window for deferred KPI imports in both profiles
+    await page.waitForTimeout(1500); // same observation window for deferred KPI imports in all profiles
     if (captureCpu) {
       const { profile: cpuProfile } = await session.send('Profiler.stop');
       fs.mkdirSync(path.dirname(output), { recursive: true });
       fs.writeFileSync(`${output}.${journey}.${profile.name}.cpuprofile`, JSON.stringify(cpuProfile));
     }
-    const timings = await page.evaluate(() => ({
-      legacyReadyMs: performance.getEntriesByName('tb:legacy-ready')[0]?.startTime,
-      anonymousReadyMs: performance.getEntriesByName('tb:anonymous-ready')[0]?.startTime,
-      connectedReadyMs: performance.getEntriesByName('tb:connected-ready')[0]?.startTime,
-      authVisible: !!document.querySelector('#auth-email') && getComputedStyle(document.querySelector('#auth-overlay')).display !== 'none',
-      touchPoints: navigator.maxTouchPoints,
-      startupLongTasks: window.__tbStartupLongTasks || null,
-    }));
+    const timings = await page.evaluate(() => {
+      const submitted = performance.getEntriesByName('tb:signin-submitted')[0]?.startTime;
+      const connected = performance.getEntriesByName('tb:connected-ready')[0]?.startTime;
+      return {
+        legacyReadyMs: performance.getEntriesByName('tb:legacy-ready')[0]?.startTime,
+        anonymousReadyMs: performance.getEntriesByName('tb:anonymous-ready')[0]?.startTime,
+        connectedReadyMs: connected,
+        signinToDashboardMs: submitted === undefined || connected === undefined ? undefined : connected - submitted,
+        authVisible: !!document.querySelector('#auth-email') && getComputedStyle(document.querySelector('#auth-overlay')).display !== 'none',
+        touchPoints: navigator.maxTouchPoints,
+        startupLongTasks: window.__tbStartupLongTasks || null,
+      };
+    });
     const metrics = Object.fromEntries((await session.send('Performance.getMetrics')).metrics.map(m => [m.name, m.value]));
     const resources = [...requests.values()];
     const scripts = resources.filter(r => r.type === 'Script');
     const report = { journey, profile, ...timings, fixture, unexpectedRequests, scriptExecutionMs: metrics.ScriptDuration * 1000, scripts: scripts.length, scriptDecodedKiB: scripts.reduce((n, r) => n + r.decodedBytes, 0) / 1024, localTransferredKiB: resources.filter(r => new URL(r.url).origin === localOrigin).reduce((n, r) => n + r.transferredBytes, 0) / 1024, fixtureResponseKiB: fixture ? fixture.calls.reduce((n, call) => n + call.responseBytes, 0) / 1024 : 0, errors, resources };
     reports.push(report);
+    if (fromForm && (!(timings.signinToDashboardMs > 0) || !Number.isFinite(timings.anonymousReadyMs)
+        || fixture.calls.filter(call => call.path === '/auth/v1/token').length !== 1)) {
+      throw new Error(`Expected exactly one form sign-in: ${profile.name}`);
+    }
     if ((timings.touchPoints > 0) !== profile.touch) throw new Error(`Unexpected input mode: ${profile.name}`);
     // Size/request gates are deterministic; timings and long tasks are recorded, not hardware-dependent CI gates.
     if (!Number.isFinite(timings.legacyReadyMs) || (fixture ? (!Number.isFinite(timings.connectedReadyMs) || fixture.calls.length > 40) : !Number.isFinite(timings.anonymousReadyMs)) || timings.authVisible === Boolean(fixture) || errors.length || unexpectedRequests.length || fixture?.failures.length || scripts.some(r => !r.finished || r.status !== 200 || new URL(r.url).origin !== localOrigin) || report.scriptDecodedKiB <= 0 || report.scriptDecodedKiB > (fixture ? 2450 : 1500) || scripts.length > 60 || scripts.some(r => (fixture ? /echarts/ : /apexcharts|echarts/).test(r.url))) throw new Error(`Startup contract failed: ${journey}/${profile.name}`);
