@@ -76,9 +76,21 @@ try {
     session.on('Network.dataReceived', e => { const r = requests.get(e.requestId); if (r) r.decodedBytes += e.dataLength; });
     session.on('Network.loadingFinished', e => { const r = requests.get(e.requestId); if (r) { r.transferredBytes = e.encodedDataLength; r.finished = true; } });
     page.on('pageerror', e => errors.push(e.message));
-    await page.goto(`${localOrigin}/${fixture ? '' : '?freeze=1'}`, { waitUntil: 'load', timeout: 60000 });
+    await page.goto(`${localOrigin}/`, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => window.__tbBootReady === true, null, { timeout: 30000 });
-    if (fixture) {
+    if (!fixture) {
+      await page.waitForFunction(() => {
+        const overlay = document.querySelector('#auth-overlay');
+        const email = document.querySelector('#auth-email');
+        const ready = window.__TB_BOOT_COMPLETED__ === true && !window.sbUser
+          && overlay && getComputedStyle(overlay).display !== 'none'
+          && email && !email.disabled && email.getClientRects().length > 0;
+        if (ready && !performance.getEntriesByName('tb:anonymous-ready').length) performance.mark('tb:anonymous-ready');
+        return Boolean(ready);
+      }, null, { timeout: 30000 });
+      // Check actionability, not just styles: the boot overlay must not intercept input.
+      await page.locator("#auth-email").click({ trial: true, timeout: 5000 });
+    } else {
       try {
         await page.waitForFunction(({ fixtureUser, transactionCount }) => {
           const ready = window.__TB_BOOT_COMPLETED__ && window.sbUser?.id === fixtureUser
@@ -105,6 +117,7 @@ try {
     }
     const timings = await page.evaluate(() => ({
       legacyReadyMs: performance.getEntriesByName('tb:legacy-ready')[0]?.startTime,
+      anonymousReadyMs: performance.getEntriesByName('tb:anonymous-ready')[0]?.startTime,
       connectedReadyMs: performance.getEntriesByName('tb:connected-ready')[0]?.startTime,
       authVisible: !!document.querySelector('#auth-email') && getComputedStyle(document.querySelector('#auth-overlay')).display !== 'none',
       touchPoints: navigator.maxTouchPoints,
@@ -117,7 +130,7 @@ try {
     reports.push(report);
     if ((timings.touchPoints > 0) !== profile.touch) throw new Error(`Unexpected input mode: ${profile.name}`);
     // Size/request gates are deterministic; timings and long tasks are recorded, not hardware-dependent CI gates.
-    if (!Number.isFinite(timings.legacyReadyMs) || (fixture && (!Number.isFinite(timings.connectedReadyMs) || fixture.calls.length > 40)) || timings.authVisible === Boolean(fixture) || errors.length || unexpectedRequests.length || fixture?.failures.length || scripts.some(r => !r.finished || r.status !== 200 || new URL(r.url).origin !== localOrigin) || report.scriptDecodedKiB <= 0 || report.scriptDecodedKiB > (fixture ? 2450 : 1500) || scripts.length > 60 || scripts.some(r => (fixture ? /echarts/ : /apexcharts|echarts/).test(r.url))) throw new Error(`Startup contract failed: ${journey}/${profile.name}`);
+    if (!Number.isFinite(timings.legacyReadyMs) || (fixture ? (!Number.isFinite(timings.connectedReadyMs) || fixture.calls.length > 40) : !Number.isFinite(timings.anonymousReadyMs)) || timings.authVisible === Boolean(fixture) || errors.length || unexpectedRequests.length || fixture?.failures.length || scripts.some(r => !r.finished || r.status !== 200 || new URL(r.url).origin !== localOrigin) || report.scriptDecodedKiB <= 0 || report.scriptDecodedKiB > (fixture ? 2450 : 1500) || scripts.length > 60 || scripts.some(r => (fixture ? /echarts/ : /apexcharts|echarts/).test(r.url))) throw new Error(`Startup contract failed: ${journey}/${profile.name}`);
     await context.close();
   }
 } finally {
