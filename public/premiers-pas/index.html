@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; connect-src 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>TravelBudget · Premiers pas</title>
+<link rel="stylesheet" href="guide.css">
+
+</head>
+<body>
+<div class="wrap">
+<header class="brand"><div class="identity"><img class="logo" src="../pwa-icon.svg" width="34" height="34" alt="">TravelBudget</div><span class="badge">Exercice · données fictives</span></header>
+<nav class="guide-return" aria-label="Retour à TravelBudget"><a href="../">Retour à l’application</a></nav>
+<ol id="tape" class="tape" aria-label="Étapes du tutoriel"></ol>
+<div id="mobile-summary" class="mobile-summary" hidden></div>
+<div class="layout">
+<main id="main" class="card"></main>
+<aside id="story" class="card story" aria-label="Résultats de la simulation"></aside>
+</div>
+<dialog id="calendar" class="cal" aria-labelledby="calendar-label">
+<p id="calendar-label" class="kicker">Choisir une date</p>
+<div class="cal-head"><button type="button" id="cal-prev" aria-label="Mois précédent">‹</button><strong id="cal-month" aria-live="polite"></strong><button type="button" id="cal-next" aria-label="Mois suivant">›</button></div>
+<label id="cal-year-wrap" class="field" hidden>Année<select id="cal-year"></select></label>
+<div class="cal-grid" id="cal-days"></div>
+<div class="actions"><button type="button" class="btn" id="cal-clear" hidden>Effacer la date</button><button type="button" class="btn" id="cal-close">Fermer</button></div>
+</dialog>
+<footer>Exercice indépendant du compte. Aucun réglage, voyage, paiement ni invitation n’est enregistré dans TravelBudget. La progression reste sur cet appareil.</footer>
+</div>
+<script src="guide.js" defer></script>
+</body>
+</html>

@@ -361,6 +361,14 @@ window.onload = async function () {
         TB_PERF.flush("boot");
       }
     } catch (_) {}
+    try {
+      const url = new URL(location.href);
+      if (window.sbUser?.id && url.searchParams.get("premiers-pas") === "reglages") {
+        url.searchParams.delete("premiers-pas");
+        history.replaceState(history.state, "", url);
+        window.showView?.("settings");
+      }
+    } catch (_) {}
     try { if (typeof window.tbMaybeStartGuidedTour === "function") window.tbMaybeStartGuidedTour(); } catch (_) {}
   }
 };

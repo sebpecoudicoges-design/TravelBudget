@@ -32,7 +32,7 @@
       s6t: "Settings",
       s6b: "Regle les voyages, periodes, devises, categories, recurrentes et preferences ici.",
       s7t: "Analyse",
-      s7b: "L'analyse sert a comparer reel, budget, rythme, categories et decisions de change.",
+      s7b: "L'analyse sert a comparer reel, budget, rythme et categories.",
       s8t: "Aide",
       s8b: "Tu peux relancer ce guide depuis l'aide, puis ouvrir des mini-guides par module.",
       m_dashboard_t: "Lire le dashboard",
@@ -51,8 +51,6 @@
       m_settings_rec_b: "Ajoute salaires, abonnements ou loyers recurrents pour fiabiliser la projection.",
       m_analysis_t: "Analyse budget",
       m_analysis_b: "Lis les ecarts entre reel, budget source, cadence et categories dominantes.",
-      m_fx_t: "Decision de change",
-      m_fx_b: "Compare deux devises, choisis ton horizon et vois si convertir maintenant est pertinent.",
       m_documents_t: "Classer les documents",
       m_documents_b: "Range les fichiers par dossier, ajoute des tags et lie-les aux transactions, trips ou assets.",
       m_assets_t: "Patrimoine",
@@ -68,7 +66,6 @@
       actionBulk: "Classer en lot",
       actionSettings: "Parametrer",
       actionRecurring: "Nouvelle regle",
-      actionFx: "Comparer les devises",
       actionDocs: "Ajouter un document",
       actionAsset: "Ajouter un asset",
       actionTripMember: "Ajouter un membre",
@@ -96,7 +93,7 @@
       s6t: "Settings",
       s6b: "Manage trips, periods, currencies, categories, recurring rules and preferences here.",
       s7t: "Analysis",
-      s7b: "Analysis compares actuals, budget, pace, categories and FX decisions.",
+      s7b: "Analysis compares actuals, budget, pace and categories.",
       s8t: "Help",
       s8b: "You can replay this guide from Help, then open module-specific mini-guides.",
       m_dashboard_t: "Read the dashboard",
@@ -115,8 +112,6 @@
       m_settings_rec_b: "Add salaries, subscriptions or rent to make projections more reliable.",
       m_analysis_t: "Budget analysis",
       m_analysis_b: "Read gaps between actuals, reference budget, pace and dominant categories.",
-      m_fx_t: "FX decision",
-      m_fx_b: "Compare two currencies, choose your horizon and see whether converting now makes sense.",
       m_documents_t: "Organize documents",
       m_documents_b: "File documents by folder, add tags and link them to transactions, trips or assets.",
       m_assets_t: "Assets",
@@ -132,7 +127,6 @@
       actionBulk: "Bulk classify",
       actionSettings: "Configure",
       actionRecurring: "New rule",
-      actionFx: "Compare currencies",
       actionDocs: "Add document",
       actionAsset: "Add asset",
       actionTripMember: "Add member",
@@ -213,7 +207,6 @@
       ],
       analysis: [
         { view: "analysis", selectors: ["#view-analysis", "#analysis-root"], title: "m_analysis_t", body: "m_analysis_b" },
-        { view: "analysis", selectors: ["#fx-decision-root", ".fx-decision-card", "#view-analysis"], title: "m_fx_t", body: "m_fx_b", action: "analysis_fx", actionLabel: "actionFx" }
       ],
       documents: [
         { view: "documents", selectors: ["#documents-root", "#view-documents"], title: "m_documents_t", body: "m_documents_b", action: "documents_upload", actionLabel: "actionDocs" }
@@ -451,10 +444,6 @@
       });
       return;
     }
-    if (action === "analysis_fx") {
-      afterView("analysis", () => highlight(["#fx-decision-root", ".fx-decision-card", "#view-analysis"]));
-      return;
-    }
     if (action === "documents_upload") {
       afterView("documents", () => highlight(["#documents-root input[type='file']", ".tb-doc-drop", "#documents-root", "#view-documents"]));
       return;
@@ -477,7 +466,15 @@
     }
   }
 
+  function openFirstSteps() {
+    const address = new URL("premiers-pas/index.html", document.baseURI);
+    address.searchParams.set("theme", document.body.classList.contains("theme-dark") || document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+    window.location.assign(address);
+  }
+
   function start(opts) {
+    const mode = opts?.mode || opts?.module || opts?.view || "";
+    if (lang() === "fr" && (!mode || mode === "dashboard")) return openFirstSteps();
     if (active) return;
     steps = makeSteps(opts?.mode || opts?.module || opts?.view || "");
     if (!steps.length) return;
@@ -496,7 +493,7 @@
   }
 
   function maybeAutoStart() {
-    if (active || isDone()) return;
+    if (lang() === "fr" || active || isDone()) return;
     if (!window.sbUser) return;
     const overlay = document.getElementById("auth-overlay");
     if (overlay && overlay.style.display !== "none") return;
@@ -516,10 +513,10 @@
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <div>
           <div style="font-weight:800;">${t("restart")}</div>
-          <div class="muted" style="margin-top:4px;">${lang() === "en" ? "A short overlay tour of the main app areas." : "Un tour rapide par bulles des zones principales de l'app."}</div>
+          <div class="muted" style="margin-top:4px;">${lang() === "en" ? "A short overlay tour of the main app areas." : "Un exercice guidé sur des données fictives, sans modifier ton compte."}</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn primary" type="button" data-tour-mode="">${t("guideAll")}</button>
+          <button class="btn primary" type="button" data-tour-mode="">${lang() === "en" ? t("guideAll") : "Ouvrir le tutoriel Premiers pas"}</button>
           <button class="btn" type="button" data-tour-mode="transactions">Transactions</button>
           <button class="btn" type="button" data-tour-mode="analysis">${lang() === "en" ? "Analysis" : "Analyse"}</button>
           <button class="btn" type="button" data-tour-mode="documents">Documents</button>
