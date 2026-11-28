@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { makeLocalNutritionRow } from '../../src/data/nutritionRepository.js';
+import { reviewLegacyMealDrafts } from './legacy-draft-review.mjs';
 import { atomicMealRpc, replayAtomicMeal } from './atomic-meal-client.mjs';
 
 const userId = '00000000-0000-4000-8000-000000000001';
@@ -122,4 +123,32 @@ test('a retired key keeps the draft pending, with no new ID or legacy fallback',
     current = false;
     return { error: { code: 'TBM01' } };
   }, { isCurrent: () => current }), /changed/);
+});
+
+test('legacy inventory keeps unkeyed meal contents readable but never sends or rewrites them', async () => {
+  const { syncId, meal: { sync_id, ...meal }, ...rest } = saved();
+  const row = { ...rest, meal };
+  const raw = JSON.stringify([row, saved(), { ...row, meal: { ...meal, user_id: mealId } }]);
+  const storage = { getItem: () => raw, setItem: () => assert.fail('Read only') };
+  const read = () => reviewLegacyMealDrafts({ storage, key: 'fixture', userId });
+  assert.deepEqual(read(), {
+    withheldCount: 1,
+    drafts: [{ row, status: 'legacy-unkeyed' }, { row: JSON.parse(raw)[1], status: 'explicit-key' }],
+  });
+  assert.deepEqual(read().drafts[0].row, row);
+  assert.equal(typeof meal.id, 'string');
+  assert.match(meal.notes, /tb_sync:/);
+  await assert.rejects(replay(async () => assert.fail('No request for legacy snapshot'), { row }), /unambiguous sync ID/);
+});
+
+test('duplicate or conflicting explicit keys stay visible but are marked ambiguous', () => {
+  const row = saved();
+  const raw = JSON.stringify([row, { ...row, item: null }, { ...row, syncId: 'different' }]);
+  const review = reviewLegacyMealDrafts({ storage: { getItem: () => raw }, key: 'fixture', userId });
+  assert.deepEqual(review.drafts.map(draft => draft.status), Array(3).fill('identity-ambiguous'));
+  assert.equal(review.drafts[1].row.item, null);
+  const conflicting = JSON.stringify([row, { ...row, syncId: 'different' }]);
+  assert.deepEqual(reviewLegacyMealDrafts({ storage: { getItem: () => conflicting }, key: 'fixture', userId })
+    .drafts.map(draft => draft.status), Array(2).fill('identity-ambiguous'));
+  assert.throws(() => reviewLegacyMealDrafts({ storage: { getItem: () => '{}' }, key: 'fixture', userId }), /unreadable/);
 });
