@@ -2642,63 +2642,16 @@ window.saveAnalyticSubcategoryMapping = saveAnalyticSubcategoryMapping;
 
 async function tbOpenGuidedAccountSetup() {
   const uid = window.sbUser?.id;
-  if (!uid || document.querySelector('.tb-guided-account')) return;
-  const dialog = document.createElement('dialog');
-  dialog.className = 'card tb-guided-account';
-  dialog.setAttribute('aria-labelledby', 'tb-guided-account-title');
-  dialog.innerHTML = `
-    <h2 id="tb-guided-account-title">1 sur 2 · Ton compte</h2>
-    <p>Ces réglages s’appliquent à ton vrai compte. Tes voyages, wallets et transactions restent intacts.</p>
-    <form hidden>
-      <label class="field">E-mail de connexion<input name="email" type="email" readonly></label>
-      <label class="field">Devise de base du compte<select name="currency" required></select></label>
-      <p class="muted">Cette devise sert à lire le compte, indépendamment des devises de tes voyages.</p>
-      <label class="field">WhatsApp (facultatif)<input name="phone" type="tel" placeholder="+ suivi de l’indicatif"></label>
-      <label class="field">Date de naissance (facultatif)<input name="birth" type="date"></label>
-      <button class="btn primary" type="submit">Enregistrer sur mon compte</button>
-    </form>
-    <p data-setup-status role="status">Chargement de tes réglages…</p>
-    <button class="btn" type="button" data-setup-close>Fermer</button>`;
-  document.body.append(dialog);
-  const status = dialog.querySelector('[data-setup-status]');
-  const form = dialog.querySelector('form');
-  const close = dialog.querySelector('[data-setup-close]');
-  close.onclick = () => dialog.close();
-  dialog.addEventListener('close', () => dialog.remove(), { once: true });
-  dialog.showModal();
+  if (!uid) return;
   try {
-    const controller = await window.TBLoadSettingsAccountController?.();
-    if (!controller || !dialog.isConnected) throw new Error('Réglages indisponibles.');
-    const sb = _tbGetSB();
-    const tables = TB_CONST.TABLES;
-    const initial = await controller.readGuidedAccount(sb, tables, uid);
-    if (!dialog.isConnected || window.sbUser?.id !== uid) return;
-    form.elements.email.value = initial.email;
-    form.elements.phone.value = initial.phone;
-    form.elements.birth.value = initial.birthDate;
-    const currency = form.elements.currency;
-    for (const code of new Set([initial.baseCurrency, ...(window.tbGetAvailableCurrencies?.() || ['EUR', 'AUD', 'NZD', 'USD'])])) {
-      const option = document.createElement('option');
-      option.value = code;
-      option.textContent = code;
-      currency.append(option);
-    }
-    currency.value = initial.baseCurrency;
-    form.hidden = false;
-    status.textContent = '';
-    let saving = false;
-    dialog.addEventListener('cancel', event => { if (saving) event.preventDefault(); });
-    form.onsubmit = async (event) => {
-      event.preventDefault();
-      if (saving || window.sbUser?.id !== uid) return;
-      const submit = form.querySelector('button[type="submit"]');
-      saving = close.disabled = submit.disabled = true;
-      status.textContent = 'Enregistrement…';
-      try {
-        const saved = await controller.saveGuidedAccount(sb, tables, uid, initial, {
-          baseCurrency: currency.value, birthDate: form.elements.birth.value, phone: form.elements.phone.value,
-        });
-        if (!dialog.isConnected || window.sbUser?.id !== uid) return;
+    const account = await import(new URL('guided-setup/account.js', document.baseURI).href);
+    await account.openGuidedAccount({
+      uid,
+      getUid: () => window.sbUser?.id,
+      sb: _tbGetSB(),
+      tables: TB_CONST.TABLES,
+      currencies: window.tbGetAvailableCurrencies?.(),
+      onSave(saved) {
         state.profile = { ...state.profile, whatsapp_phone_e164: saved.phone };
         state.user = { ...state.user, baseCurrency: saved.baseCurrency, whatsappPhone: saved.phone, birthDate: saved.birthDate };
         try {
@@ -2708,31 +2661,16 @@ async function tbOpenGuidedAccountSetup() {
             else localStorage.removeItem(key);
           }
         } catch (_) {}
-        status.remove();
-        form.remove();
-        dialog.querySelector('h2').textContent = '2 sur 2 · Tes voyages';
-        dialog.querySelector('p').textContent = 'Tes réglages ont été confirmés. Tu peux ouvrir tes voyages et périodes, ou créer volontairement un nouveau voyage. Les exemples du tuto ne sont pas copiés.';
-        close.textContent = 'Terminer';
-        const travel = document.createElement('button');
-        travel.className = 'btn primary';
-        travel.type = 'button';
-        travel.textContent = 'Voir voyages et périodes';
-        travel.onclick = () => {
-          dialog.close();
-          document.getElementById('tb-travel-card')?.scrollIntoView({ block: 'start' });
-        };
-        close.before(travel);
-        travel.focus();
         try { window.tbSaveOfflineSnapshot?.('settings:guided_account'); } catch (_) {}
-        try { window.tbRequestRenderAll?.('settings:guided_account'); } catch (_) {}
-      } catch (error) {
-        status.textContent = error?.message || 'Impossible de confirmer l’enregistrement.';
-      } finally {
-        saving = close.disabled = submit.disabled = false;
+      },
+      canOpenTravels: () => !document.body.classList.contains('tb-role-restricted'),
+      openTravels() {
+        window.showView?.('settings');
+        document.getElementById('tb-travel-card')?.scrollIntoView({ block: 'start' });
       }
-    };
-  } catch (error) {
-    status.textContent = error?.message || 'Réglages indisponibles.';
+    });
+  } catch (_) {
+    alert('Le paramétrage guidé n’a pas pu s’ouvrir. Réessaie depuis le tutoriel.');
   }
 }
 window.tbOpenGuidedAccountSetup = tbOpenGuidedAccountSetup;

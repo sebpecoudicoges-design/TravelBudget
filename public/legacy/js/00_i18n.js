@@ -628,6 +628,7 @@
       "settings.help.period_name": "Nom simple (ex: Asie 2026). Si non stockable en DB, c’est local au navigateur.",
       "settings.help.segments": "Chaque période porte ses dates, sa devise et son budget/jour.",
       "settings.help.fx": "Taux automatique si disponible. Sinon, tu peux saisir un taux perso.",
+      "settings.account.guided_setup": "Relancer le paramétrage guidé",
       "settings.account.summary": "Devise de base, mode d’interface, seuil d’alerte et mot de passe.",
       "settings.account.email": "Email",
       "settings.account.base_currency": "Devise de base",

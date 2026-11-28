@@ -55,8 +55,9 @@ test('a connected French account can replay from Help without resetting the prof
 test('leaving the exercise saves real Settings only after explicit confirmation', async ({ page, baseURL }) => {
   await page.setViewportSize({ width: 390, height: 850 });
   const settings = { ...fixtureTables.settings[0], birth_date: '1990-01-01' };
-  const profile = { ...fixtureTables.profiles[0], whatsapp_phone_e164: null };
+  const profile = { ...fixtureTables.profiles[0], role: 'test', whatsapp_phone_e164: null };
   const updates = [];
+  let rejectNext = true;
   await installConnectedFixture(page, baseURL, { tables: { ...fixtureTables, settings: [settings], profiles: [profile] } });
   await page.route('**/rest/v1/{settings,profiles}?*', async route => {
     if (route.request().method() !== 'PATCH') return route.fallback();
@@ -64,6 +65,10 @@ test('leaving the exercise saves real Settings only after explicit confirmation'
     const table = url.pathname.split('/').at(-1);
     const draft = route.request().postDataJSON();
     expect(url.searchParams.get(table === 'settings' ? 'user_id' : 'id')).toBe('eq.' + fixtureUser);
+    if (rejectNext) {
+      rejectNext = false;
+      return route.fulfill({ status: 503, json: { message: 'Synthetic temporary failure' } });
+    }
     updates.push([table, draft]);
     const target = table === 'settings' ? settings : profile;
     Object.assign(target, draft);
@@ -91,12 +96,17 @@ test('leaving the exercise saves real Settings only after explicit confirmation'
   expect(updates).toEqual([]);
   await dialog.getByLabel('Devise de base du compte').selectOption('AUD');
   await dialog.getByRole('button', { name: 'Enregistrer sur mon compte' }).click();
+  await expect(dialog.getByRole('status')).toContainText('n’ont pas pu être confirmées');
+  expect(updates).toEqual([]);
+  await dialog.getByRole('button', { name: 'Enregistrer sur mon compte' }).click();
   await expect(page.getByRole('dialog', { name: '2 sur 2 · Tes voyages' })).toBeVisible();
   expect(updates).toEqual([['settings', { base_currency: 'AUD' }]]);
   await page.getByRole('button', { name: 'Voir voyages et périodes' }).click();
   await expect(page.locator('#tb-travel-card')).toBeVisible();
   await expect(page).not.toHaveURL(/premiers-pas=configuration/);
-  await page.goto('/index.html?premiers-pas=configuration');
+  const replay = page.getByRole('button', { name: 'Relancer le paramétrage guidé' });
+  if (!await replay.isVisible()) await page.locator('#tb-account-card .tb-settings-panel-head').click();
+  await replay.click();
   await expect(page.getByRole('dialog').getByLabel('Devise de base du compte')).toHaveValue('AUD');
   expect(updates).toHaveLength(1);
 });
