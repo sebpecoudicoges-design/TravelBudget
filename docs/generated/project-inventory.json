@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "2e0c48815f0384df19a815d16dcc33ec55b2d4c0",
-  "snapshotFingerprint": "a69ca24928f71cc9e66c2396339350cc1865a42d155df95e0b756a97b317643f",
-  "generatedAt": "2026-11-28T06:13:44.035Z",
+  "commit": "e18247e017cc962564bc95efe54fe18bcb85b1a6",
+  "snapshotFingerprint": "f2e451c0b61f9c28eefc5f3f312de3f4ce52c063d584586d2e2328550d1c04d1",
+  "generatedAt": "2026-11-28T06:31:28.135Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
@@ -230,6 +230,7 @@
     "src/features/accounting/accountingMapping.js",
     "src/features/accounting/accountingPositions.js",
     "src/features/accounting/accountingRecognition.js",
+    "src/features/accounting/accountingRestoreInventory.js",
     "src/features/accounting/accountingRestorePreview.js",
     "src/features/accounting/accountingRules.js",
     "src/features/accounting/accountingView.js",
@@ -392,6 +393,7 @@
     "tests/features/accounting/accountingPositions.test.js",
     "tests/features/accounting/accountingRecognition.test.js",
     "tests/features/accounting/accountingRestoreContract.test.js",
+    "tests/features/accounting/accountingRestoreInventory.test.js",
     "tests/features/accounting/accountingRestorePreview.test.js",
     "tests/features/accounting/accountingRules.test.js",
     "tests/features/analysis/analysisCashBreakdown.test.js",
