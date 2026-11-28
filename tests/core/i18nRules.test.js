@@ -2,20 +2,22 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-function loadDictionaries() {
+function loadI18n(initialLanguage = null) {
+  const storage = new Map(initialLanguage ? [['tb_lang_v1', initialLanguage]] : []);
   const code = fs.readFileSync('public/legacy/js/00_i18n.js', 'utf8');
   const enCode = fs.readFileSync('public/legacy/js/00_i18n_en.js', 'utf8');
   const sandbox = {
     window: {},
     document: {
+      documentElement: { lang: 'fr' },
       querySelectorAll: () => [],
       getElementById: () => null,
       createElement: () => ({ set src(value) { this._src = value; }, get src() { return this._src; } }),
       head: { appendChild: () => {} },
     },
     localStorage: {
-      getItem: () => null,
-      setItem: () => {},
+      getItem: key => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value),
     },
   };
   sandbox.window.window = sandbox.window;
@@ -23,10 +25,23 @@ function loadDictionaries() {
   sandbox.window.localStorage = sandbox.localStorage;
   vm.runInNewContext(code, sandbox);
   vm.runInNewContext(enCode, sandbox);
-  return sandbox.window.TB_I18N;
+  return sandbox;
+}
+
+function loadDictionaries() {
+  return loadI18n().window.TB_I18N;
 }
 
 describe('i18n dictionaries', () => {
+  it('sets document language on English-first startup and supported language changes', () => {
+    const { document, window } = loadI18n('en');
+
+    expect(document.documentElement.lang).toBe('en');
+    window.tbSetLang('fr');
+    expect(document.documentElement.lang).toBe('fr');
+    window.tbSetLang('en');
+    expect(document.documentElement.lang).toBe('en');
+  });
   it('keeps French and English keys in sync', () => {
     const dicts = loadDictionaries();
     const fr = Object.keys(dicts.fr).sort();

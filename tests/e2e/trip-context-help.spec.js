@@ -38,6 +38,7 @@ for (const { lang, title, settlement, openLabel, faqQuestion } of [
     await page.goto('/');
     await page.waitForFunction(() => window.__TB_BOOT_COMPLETED__ === true);
     expect(await page.evaluate(() => window.tbGetLang())).toBe(lang);
+    await expect(page.locator('html')).toHaveAttribute('lang', lang);
     const menu = page.locator('#tb-mobile-nav-toggle');
     if (width < 600) {
       await expect(menu).toBeVisible();

@@ -966,6 +966,7 @@
     if (!isSupportedLang(lang)) return;
     try { localStorage.setItem(LANG_KEY, lang); } catch (_) {}
     window.TB_LANG = lang;
+    document.documentElement.lang = lang;
   }
 
   function loadLangDict(lang) {
@@ -1053,6 +1054,7 @@
   }
 
   window.TB_LANG = getLang();
+  document.documentElement.lang = window.TB_LANG;
   window.tbT = t;
   window.tbOnLangChange = window.tbOnLangChange || [];
 
