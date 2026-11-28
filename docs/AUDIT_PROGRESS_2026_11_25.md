@@ -19,3 +19,5 @@
 Aucune modification de F13, de la production ou du Play Store.
 
 - **F5, file Nutrition au-delà de 200 brouillons** : Chromium conserve exactement 201 et 5 000 brouillons après rechargement. Avec stockage réel du navigateur et serveur simulé, les 25 premières reprises échouent ; le lot suivant atteint le 201ᵉ repas, confirme seulement celui-ci et garde les 200 autres sans vider la file générique. La reprise signale encore que des éléments restent en attente. Le workflow d’audit relance ces tests. Cela ne valide pas la reprise intégrale de 5 000 repas sur un vrai serveur, le quota d’un appareil ni les courses restant dans F4.
+
+- **F5, quota natif du navigateur** : sur une origine Chromium isolée, la vraie limite localStorage est atteinte. La sauvegarde signale `NUTRITION_STORAGE_FAILED`, rend le brouillon à réessayer et préserve les 201 anciens brouillons octet pour octet. Une fois l’espace libéré, deux tentatives avec la même clé ne créent qu’un brouillon ; le rechargement confirme les 202. Le test n’emploie ni serveur ni cache de récupération de l’app et ne garantit pas le comportement WebView ou les quotas d’un téléphone.

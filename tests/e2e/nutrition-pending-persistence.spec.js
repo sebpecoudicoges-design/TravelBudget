@@ -88,3 +88,60 @@ test('replay reaches the 201st meal after a failed batch without losing the pend
   expect(result.second).toBe(result.first);
   expect(result.discards).toBe(0);
 });
+
+test('a real Chromium storage quota rejection preserves pending meals for an explicit retry', async ({ page }) => {
+  await page.route('**/nutrition-quota-test', route => route.fulfill({
+    contentType: 'text/html', body: '<!doctype html><title>Isolated Nutrition quota</title>'
+  }));
+  await page.goto('/nutrition-quota-test');
+
+  const result = await page.evaluate(async () => {
+    const { saveLocalNutritionRowOnce } = await import('/src/data/nutritionRepository.js');
+    const storage = localStorage;
+    const key = 'nutrition-quota-pending';
+    const filler = 'nutrition-quota-filler';
+    const rows = Array.from({ length: 201 }, (_, index) => ({
+      syncId: `meal-${index}`, meal: { label: `Fictitious meal ${index}` }
+    }));
+    const row = { syncId: 'retry', meal: { label: 'Fictitious new meal', notes: 'x'.repeat(2048) } };
+    const original = JSON.stringify(rows);
+    storage.setItem(key, original);
+    const fits = units => {
+      try { storage.setItem(filler, 'x'.repeat(units * 1024)); return true; }
+      catch (error) {
+        if (error.name !== 'QuotaExceededError') throw error;
+        return false;
+      }
+    };
+    let low = 0, high = 16 * 1024;
+    if (fits(high)) throw new Error('No quota boundary observed below the isolated test ceiling');
+    while (high - low > 1) {
+      const mid = Math.floor((low + high) / 2);
+      if (fits(mid)) low = mid;
+      else high = mid;
+    }
+    if (!fits(low) || fits(high)) throw new Error('Storage quota changed during the test');
+
+    let failure;
+    try { saveLocalNutritionRowOnce({ storage, key, row }); }
+    catch (error) {
+      failure = { code: error.code, retained: JSON.stringify(error.pendingRows) === JSON.stringify([row, ...rows]) };
+    }
+    const originalPreserved = storage.getItem(key) === original;
+    storage.removeItem(filler);
+    saveLocalNutritionRowOnce({ storage, key, row });
+    saveLocalNutritionRowOnce({ storage, key, row });
+    return {
+      failure, originalPreserved,
+      afterRetry: JSON.stringify(JSON.parse(storage.getItem(key))) === JSON.stringify([row, ...rows])
+    };
+  });
+
+  expect(result).toEqual({
+    failure: { code: 'NUTRITION_STORAGE_FAILED', retained: true },
+    originalPreserved: true, afterRetry: true
+  });
+  await page.reload();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('nutrition-quota-pending')).map(row => row.syncId)))
+    .toEqual(['retry', ...Array.from({ length: 201 }, (_, index) => `meal-${index}`)]);
+});
