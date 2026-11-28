@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { debtLedger } from '../../../src/features/accounting/accountingDebts.js';
+import { debtLedger, debtOriginEligible, repaymentEligible } from '../../../src/features/accounting/accountingDebts.js';
 import { previewAccountingRestore } from '../../../src/features/accounting/accountingRestorePreview.js';
 
 const scope = Object.freeze({ userId: 'synthetic-user', travelId: 'synthetic-travel' });
@@ -12,7 +12,7 @@ const candidate = {
     debts: [], archivedDebts: [], positions: [], assetLinks: [], positionAudit: [],
   },
 };
-const ordinary = { isInternal: false, internalTransferId: null };
+const ordinary = { isInternal: false, internalTransferId: null, tripExpenseId: null, detachedTripPayment: false };
 const raw = (changes = {}) => JSON.stringify({ ...candidate, ...changes });
 const preview = (changes, activeScope = scope) => previewAccountingRestore(raw(changes), activeScope);
 
@@ -168,6 +168,35 @@ describe('typed debt and position source review', () => {
     expect(review({ ...sources, transactionMetadata: rows }))
       .toEqual({ status: 'incompatible-references', incompatible: { transaction: 1 } });
   });
+
+  it.each([350, 349.999, 349.99])('matches the ledger on the exact origin amount %d', amount => {
+    const [funding, ...rest] = sources.transactionMetadata;
+    const operation = { ...funding, amount };
+    const eligible = debtOriginEligible(operation, settings.debts[0], sources.asOfDay);
+    expect(eligible).toBe(amount === 350);
+    expect(review({ ...sources, transactionMetadata: [operation, ...rest] }).status)
+      .toBe(eligible ? 'references-present' : 'incompatible-references');
+  });
+
+  it.each([
+    [0, { tripExpenseId: 'synthetic-trip-payment' }],
+    [0, { detachedTripPayment: true }],
+    [1, { tripExpenseId: 'synthetic-trip-payment' }],
+    [1, { detachedTripPayment: true }],
+  ])('matches the ledger when a debt source is a current or historical Trip payment: %j', (index, origin) => {
+    const rows = sources.transactionMetadata.map((row, i) => i === index ? { ...row, ...origin } : row);
+    const eligible = index === 0 ? debtOriginEligible : repaymentEligible;
+    expect(eligible(rows[index], settings.debts[0], sources.asOfDay)).toBe(false);
+    expect(review({ ...sources, transactionMetadata: rows }))
+      .toEqual({ status: 'incompatible-references', incompatible: { transaction: 1 } });
+  });
+
+  it.each([[0, { tripExpenseId: undefined }], [1, { detachedTripPayment: undefined }]])(
+    'does not assume missing Trip payment evidence means ordinary debt source: %j', (index, origin) => {
+      const rows = sources.transactionMetadata.map((row, i) => i === index ? { ...row, ...origin } : row);
+      expect(review({ ...sources, transactionMetadata: rows })).toEqual({ status: 'sources-unavailable' });
+    },
+  );
 
   it('accepts only the principal as repayment, using the same cents check as the ledger', () => {
     const rows = sources.transactionMetadata.map((row, i) => i === 1 ? { ...row, amount: 24.999 } : row);

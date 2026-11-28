@@ -1,3 +1,4 @@
+import { hasTripPaymentOrigin } from '../../core/tripPaymentOrigin.js';
 import { internalAccounting, settledAt, validDay } from './accountingRecognition.js';
 
 // Internal prototype. The result is not a restore authorization and carries no settings.
@@ -176,7 +177,10 @@ function reviewActiveReferences(settings, scope, sources) {
     for (const [id, rule] of transactionRules) {
       const row = byId.get(id);
       if (!row || !hasTransferClassification(row)) return { status: 'sources-unavailable' };
-      if (internalAccounting(row)) {
+      const debtSource = rule.role === 'funding' || rule.role === 'repayment';
+      if (debtSource && ((row.tripExpenseId !== null && !isId(row.tripExpenseId))
+          || typeof row.detachedTripPayment !== 'boolean')) return { status: 'sources-unavailable' };
+      if (internalAccounting(row) || (debtSource && hasTripPaymentOrigin(row))) {
         incompatible++;
         continue;
       }
