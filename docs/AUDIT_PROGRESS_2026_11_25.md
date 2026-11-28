@@ -17,3 +17,5 @@
 - **Partage sans groupe** : un compte sans voyage partagé peut ouvrir l’onglet Partage et accéder au formulaire de création. La date de clôture transmise à l’affichage reste vide sans groupe ; les actions exigeant un groupe restent désactivées. Deux parcours Chromium, à 390 et 1 440 px, avec compte fictif et sans écriture serveur.
 
 Aucune modification de F13, de la production ou du Play Store.
+
+- **F5, file Nutrition au-delà de 200 brouillons** : Chromium conserve exactement 201 et 5 000 brouillons après rechargement. Avec stockage réel du navigateur et serveur simulé, les 25 premières reprises échouent ; le lot suivant atteint le 201ᵉ repas, confirme seulement celui-ci et garde les 200 autres sans vider la file générique. La reprise signale encore que des éléments restent en attente. Le workflow d’audit relance ces tests. Cela ne valide pas la reprise intégrale de 5 000 repas sur un vrai serveur, le quota d’un appareil ni les courses restant dans F4.
