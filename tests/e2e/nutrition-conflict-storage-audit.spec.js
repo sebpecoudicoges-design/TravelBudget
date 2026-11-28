@@ -133,3 +133,43 @@ test('an existing tab still writes its legacy draft while the audit store is in 
   expect(after.rows).toEqual(legacy.rows);
   expect(after.serialized).toBe(legacy.serialized);
 });
+
+test('a historical unkeyed meal stays readable after reload and a change of review scope without rewriting the queue', async ({ context, page, baseURL }) => {
+  const unexpectedRequests = [];
+  await context.route(url => url.origin !== new URL(baseURL).origin, route => {
+    unexpectedRequests.push(new URL(route.request().url()).origin);
+    return route.abort();
+  });
+  await page.goto('/f4-audit-idb');
+  const owner = '00000000-0000-4000-8000-000000000001';
+  const other = '00000000-0000-4000-8000-000000000002';
+  const storageKey = userId => 'travelbudget_nutrition_local_meals_v1::' + userId;
+  const key = storageKey(owner);
+  const row = {
+    meal: { id: 'local_meal_123', user_id: owner, label: 'Soupe', notes: 'tb_sync:historical-marker' },
+    item: { label: 'Lentilles', grams: 90 },
+  };
+  const otherRow = { meal: { id: 'local_meal_456', user_id: other, label: 'Fruit' }, item: null };
+  const raw = JSON.stringify([row, { ...otherRow, item: { label: 'Ligne hors compte' } }], null, 2);
+  const otherRaw = JSON.stringify([otherRow]);
+  await page.evaluate(captures => {
+    for (const [name, value] of captures) localStorage.setItem(name, value);
+  }, [[key, raw], [storageKey(other), otherRaw]]);
+
+  const read = (tab, userId) => tab.evaluate(async ({ key, userId }) => {
+    const { reviewLegacyMealDrafts } = await import('/scripts/audit-nutrition/legacy-draft-review.mjs');
+    const storage = { getItem: name => localStorage.getItem(name) };
+    return reviewLegacyMealDrafts({ storage, key, userId });
+  }, { key: storageKey(userId), userId });
+
+  expect(await read(page, owner)).toEqual({ withheldCount: 1, drafts: [{ row, status: 'legacy-unkeyed' }] });
+  const reloaded = await context.newPage();
+  await reloaded.goto('/f4-audit-idb');
+  await page.close();
+  expect(await read(reloaded, other)).toEqual({ withheldCount: 0, drafts: [{ row: otherRow, status: 'legacy-unkeyed' }] });
+  await reloaded.reload();
+  expect(await read(reloaded, owner)).toEqual({ withheldCount: 1, drafts: [{ row, status: 'legacy-unkeyed' }] });
+  expect(await reloaded.evaluate(keys => keys.map(name => localStorage.getItem(name)), [key, storageKey(other)]))
+    .toEqual([raw, otherRaw]);
+  expect(unexpectedRequests).toEqual([]);
+});

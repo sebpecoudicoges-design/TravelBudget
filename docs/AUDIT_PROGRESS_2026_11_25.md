@@ -61,3 +61,7 @@ La branche d’audit reprend aussi la synchronisation de la langue du document d
 ## F8, récupération d’un module partiellement chargé
 
 Le parcours Chromium de Patrimoine part du tableau de bord et interrompt une seule fois la requête de son second script classique, après chargement du noyau. La vue signale l’échec et n’est pas déclarée prête. Après retour au tableau de bord et réouverture de Patrimoine, l’écran s’affiche sans recharger ni remplacer le noyau. Ce test qualifie une panne de transport sur une dépendance du module. Il ne couvre ni les rejets asynchrones après chargement, ni les autres moteurs, ni Android physique.
+
+## F4, lecture des anciens brouillons sans clé
+
+Le lecteur d’audit récupère un repas historique sans clé explicite depuis le stockage local Chromium après fermeture de l’onglet et rechargement. Il sépare deux périmètres fictifs, écarte une ligne d’un autre compte trouvée dans le mauvais espace et ne confond pas l’identifiant local ou une note de synchronisation avec une identité de rejeu. Les deux files historiques restent identiques octet par octet. Ce test n’ouvre pas de session réelle et ne raccorde aucune reprise, migration ou commande à l’application.
