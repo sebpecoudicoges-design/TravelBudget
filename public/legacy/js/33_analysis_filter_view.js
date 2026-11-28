@@ -28,20 +28,31 @@
       .join('');
     return `<option value="all">${esc(tr(t, 'common.all'))}</option><option value="__none__">${esc(tr(t, 'analysis.filter.no_subcategory'))}</option>${rows}`;
   }
-  function renderPeriodFilterOptions({ periods = [], activeLabel = 'Période active' } = {}) {
+  function renderPeriodFilterOptions({ periods = [], isEn = false, activeLabel = isEn ? 'Active period' : 'Période active' } = {}) {
+    const shortcuts = isEn
+      ? ['Whole trip', 'This month', 'Previous month', 'This week', 'Previous week', 'Custom range']
+      : ['Tout le voyage', 'Ce mois', 'Mois précédent', 'Cette semaine', 'Semaine précédente', 'Date à date'];
+    const option = (value, label) => `<option value="${esc(value)}">${esc(label)}</option>`;
     const rows = (Array.isArray(periods) ? periods : []).map((period, idx) => {
       const id = String(period?.id ?? '');
       const start = String(period?.start ?? '');
       const end = String(period?.end ?? '');
       const base = String(period?.base ?? '').trim().toUpperCase();
-      const label = `Période ${idx + 1} • ${start} → ${end}${base ? ' • ' + base : ''}`;
+      const label = `${isEn ? 'Period' : 'Période'} ${idx + 1} • ${start} → ${end}${base ? ' • ' + base : ''}`;
       return `<option value="${esc(id)}">${esc(label)}</option>`;
     }).join('');
-    return `<option value="active">${esc(activeLabel)}</option><option value="all">Tout le voyage</option><option value="month">Ce mois</option><option value="previous-month">Mois précédent</option><option value="week">Cette semaine</option><option value="previous-week">Semaine précédente</option>${rows}<option value="range">Date à date</option>`;
+    return option('active', activeLabel)
+      + ['all', 'month', 'previous-month', 'week', 'previous-week'].map((value, idx) => option(value, shortcuts[idx])).join('')
+      + rows + option('range', shortcuts[5]);
   }
-  function buildCategoryExcludeSummary({ total = 0, count = 0 } = {}) {
+  function buildCategoryExcludeSummary({ total = 0, count = 0, isEn = false } = {}) {
     const safeTotal = Math.max(0, Math.round(num(total)));
     const safeCount = Math.max(0, Math.round(num(count)));
+    if (isEn) {
+      if (!safeTotal) return 'No categories';
+      if (!safeCount) return `No category excluded • ${safeTotal} available`;
+      return `${safeCount} excluded • ${Math.max(safeTotal - safeCount, 0)} included`;
+    }
     if (!safeCount) return safeTotal ? `Aucune catégorie exclue • ${safeTotal} catégories disponibles` : 'Aucune catégorie';
     const included = Math.max(safeTotal - safeCount, 0);
     return `${safeCount} catégorie${safeCount > 1 ? 's' : ''} exclue${safeCount > 1 ? 's' : ''} • ${included} incluse${included > 1 ? 's' : ''}`;

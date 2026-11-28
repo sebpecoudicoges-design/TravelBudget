@@ -607,10 +607,10 @@ function _analysisBucketOrder(){
     const total = _allAnalysisCategories().length;
     const count = excludedCats.size;
     if (summary) {
-      summary.textContent = window.TBAnalysisFilterView?.buildCategoryExcludeSummary?.({ total, count }) || '';
+      summary.textContent = window.TBAnalysisFilterView?.buildCategoryExcludeSummary?.({ total, count, isEn: _analysisIsEnglish() }) || '';
     }
     if (badge) badge.textContent = String(count);
-    if (toggle) toggle.textContent = excludePanelOpen ? 'Masquer' : 'Gérer';
+    if (toggle) toggle.textContent = _t(excludePanelOpen ? 'common.hide' : 'analysis.exclusions.manage');
     const panel = _el('analysis-category-panel');
     if (panel) panel.style.display = excludePanelOpen ? 'block' : 'none';
   }
@@ -1432,13 +1432,14 @@ function _entryTripLabel(tx){
 }
 
 function _entryBudgetLabel(tx){
-  return _txOut(tx) ? 'Hors budget' : 'Budget';
+  return _txOut(tx) ? (_analysisIsEnglish() ? 'Out of budget' : 'Hors budget') : 'Budget';
 }
 
 function _entryPaidLabel(tx){
-  if (_txPaid(tx)) return 'Payé';
-  if (_isTripAnalyticRealExpense(tx)) return 'Part Trip réelle';
-  return 'À payer';
+  const isEn = _analysisIsEnglish();
+  if (_txPaid(tx)) return isEn ? 'Paid' : 'Payé';
+  if (_isTripAnalyticRealExpense(tx)) return isEn ? 'Actual split share' : 'Part Trip réelle';
+  return isEn ? 'To pay' : 'À payer';
 }
 
 function _ensureTxDrilldownStyles(){
@@ -1459,7 +1460,8 @@ function _openTxDrilldown(kind, key, model, opener){
   const entries = map instanceof Map ? (map.get(key) || []) : [];
   const base = sourceModel.base || _currency();
 
-  const title = window.TBAnalysisDrilldownView?.buildTransactionDrilldownTitle?.(kind, key)
+  const isEn = _analysisIsEnglish();
+  const title = window.TBAnalysisDrilldownView?.buildTransactionDrilldownTitle?.(kind, key, isEn)
     || String(key || 'Catégorie');
 
   const total = entries.reduce((sum, row) => sum + _safeNum(row?.visibleAmount), 0);
@@ -1495,12 +1497,12 @@ function _openTxDrilldown(kind, key, model, opener){
       budgetLabel: _entryBudgetLabel(tx),
       tripLabel: _entryTripLabel(tx),
       visibleAmount: _fmtMoney(row.visibleAmount, base),
-      originalAmount: `${_safeNum(tx.amount).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} ${_upper(tx.currency || base)}`,
+      originalAmount: `${_safeNum(tx.amount).toLocaleString(isEn ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 2 })} ${_upper(tx.currency || base)}`,
     };
   });
 
   overlay.innerHTML = window.TBAnalysisDrilldownView?.renderTransactionDrilldown?.({
-    title,
+    title, isEn,
     rows,
     total: _fmtMoney(total, base),
     start: sourceModel.start,
@@ -1647,6 +1649,7 @@ function _openTxDrilldown(kind, key, model, opener){
     model,
     formatCurrency: _fmtMoney,
     accent: _theme('accent'),
+    isEn: _analysisIsEnglish(),
   }) || '';
 
   if (!(model.subcategorySeries || []).length) return;
@@ -1688,7 +1691,7 @@ function _openTxDrilldown(kind, key, model, opener){
     if (chart && chart.dispose) { try { chart.dispose(); } catch(_) {} delete charts.referenceMix; }
     if (!chartEl) return;
     chartEl.innerHTML = analysisView?.renderAnalysisReferenceMix?.({
-      model,
+      model, isEn,
       formatCurrency: _fmtMoney,
     }) || '';
   }
@@ -1697,7 +1700,7 @@ function _openTxDrilldown(kind, key, model, opener){
     const host = _el('analysis-night-covered');
     if (!host) return;
     host.innerHTML = window.TBAnalysisView?.renderAnalysisNightCovered?.({
-      model,
+      model, isEn: _analysisIsEnglish(),
       formatCurrency: _fmtMoney,
     }) || '';
   }
@@ -1803,7 +1806,7 @@ function _openTxDrilldown(kind, key, model, opener){
     const view = _el('view-analysis');
     const summaryHostPre = _el('analysis-summary');
     if (summaryHostPre && model && Array.isArray(model.txs) && model.txs.length === 0) {
-      summaryHostPre.innerHTML = `<div class="muted">Aucune dépense visible pour ce scope, cette plage, ou ces filtres.</div>`;
+      summaryHostPre.innerHTML = `<div class="muted">${_analysisIsEnglish() ? 'No expenses match this scope, date range or filters.' : 'Aucune dépense pour ce périmètre, cette plage ou ces filtres.'}</div>`;
     }
     if (summaryHostPre && usesExchangeRates) {
       const note = document.createElement('p');
@@ -1937,11 +1940,13 @@ function _openTxDrilldown(kind, key, model, opener){
     if (!sel) return;
     const periods = _periodList(travelId).slice().sort((a,b)=>String(a.start_date || a.start || '').localeCompare(String(b.start_date || b.start || '')));
     const activePeriod = _getActivePeriodForTravel(travelId);
+    const isEn = _analysisIsEnglish();
+    const active = isEn ? 'Active period' : 'Période active';
     const activeLabel = activePeriod
-      ? `Période active (${_norm(activePeriod.start_date || activePeriod.start)} → ${_norm(activePeriod.end_date || activePeriod.end)})`
-      : 'Période active';
+      ? `${active} (${_norm(activePeriod.start_date || activePeriod.start)} → ${_norm(activePeriod.end_date || activePeriod.end)})`
+      : active;
     sel.innerHTML = window.TBAnalysisFilterView?.renderPeriodFilterOptions?.({
-      activeLabel,
+      activeLabel, isEn,
       periods: periods.map((p) => ({
         id: p.id,
         start: _norm(p.start_date || p.start),
