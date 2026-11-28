@@ -466,11 +466,11 @@ export function renderTripSettlementModalContent({ escapeHTML = fallbackEscape }
           <div class="muted" id="tripSettleWalletNote"></div>
         </div>
         <div class="field">
-          <label for="tripSettleCurrency">${escapeHTML('Devise transaction')}</label>
-          <select id="tripSettleCurrency" class="input"></select>
+          <label for="tripSettleCurrency">${escapeHTML('Devise du wallet')}</label>
+          <input id="tripSettleCurrency" class="input" type="text" readonly aria-describedby="tripSettleWalletNote" />
         </div>
         <div class="field">
-          <label for="tripSettleAmount">${escapeHTML('Montant dans la devise choisie')}</label>
+          <label for="tripSettleAmount">${escapeHTML('Montant dans la devise du wallet')}</label>
           <input id="tripSettleAmount" class="input" type="number" step="0.01" />
         </div>
         <div class="field hidden" id="tripSettleDebtRow">

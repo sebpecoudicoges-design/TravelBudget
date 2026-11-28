@@ -129,10 +129,10 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).not.toContain('oldParent.style.display = "none"');
   });
 
-  it('keeps the premium Dashboard hero and cashflow chart synchronized with dark mode', () => {
-    expect(premiumTheme).toContain('body.theme-dark .tb-premium-overview');
-    expect(premiumTheme).toContain('body.theme-dark .tb-overview-budget');
-    expect(premiumTheme).toContain('body.theme-dark .tb-premium-overview .dashboard-focus-card');
+  it('does not remount the removed Dashboard greeting and preserves themed cashflow', () => {
+    expect(main).not.toContain('renderDashboardOverview');
+    expect(legacy).not.toContain('dashboard-hero-shell');
+    expect(premiumTheme).not.toContain('.tb-premium-overview');
     expect(cashflow).toContain('const chartTheme = document.body.classList.contains("theme-dark") ? "dark" : "light";');
     expect(cashflow).toContain('window.tbRequestCashflowCurveRender = queueRenderCashflow;');
     expect(cashflow).toContain('tooltip: {\n        theme: chartTheme,');

@@ -17,6 +17,14 @@ describe('Android release bundle contract', () => {
     expect(manifest).not.toContain('android:scheme="com.travelbudget.app"');
   });
 
+  it('keeps R8 explicit and scoped to release builds', () => {
+    const gradle = fs.readFileSync(path.join(root, 'android/app/build.gradle'), 'utf8');
+    expect(gradle).toContain('providers.gradleProperty("tbEnableR8").orNull == "true"');
+    expect(gradle).toMatch(/release\s*\{\s*minifyEnabled enableReleaseR8/);
+    expect(gradle).toContain("enableReleaseR8 ? 'proguard-android-optimize.txt' : 'proguard-android.txt'");
+    expect(gradle).not.toContain('shrinkResources true');
+  });
+
   it('keeps Play Store AAB generation scripted without committing signing secrets', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     const gradle = fs.readFileSync(path.join(root, 'android/app/build.gradle'), 'utf8');

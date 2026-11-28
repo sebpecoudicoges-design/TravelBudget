@@ -14,6 +14,8 @@ def releaseKeystorePassword = System.getenv("TB_ANDROID_KEYSTORE_PASSWORD")
 def releaseKeyAlias = System.getenv("TB_ANDROID_KEY_ALIAS")
 def releaseKeyPassword = System.getenv("TB_ANDROID_KEY_PASSWORD")
 def hasReleaseSigning = releaseKeystorePath && releaseKeystorePassword && releaseKeyAlias && releaseKeyPassword
+// Keep the release baseline unchanged unless the optimized candidate is requested.
+def enableReleaseR8 = providers.gradleProperty("tbEnableR8").orNull == "true"
 
 android {
     namespace = "com.travelbudget.app"
@@ -43,11 +45,11 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled enableReleaseR8
             if (hasReleaseSigning) {
                 signingConfig signingConfigs.release
             }
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile(enableReleaseR8 ? 'proguard-android-optimize.txt' : 'proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 }
@@ -68,6 +70,9 @@ repositories {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.activity:activity:$androidxActivityVersion"
+    implementation "com.google.android.play:app-update:2.1.0"
+    implementation "com.google.android.material:material:1.13.0"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')

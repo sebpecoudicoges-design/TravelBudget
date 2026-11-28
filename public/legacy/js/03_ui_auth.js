@@ -351,7 +351,11 @@ function showAuth(show, msg = "") {
     document.body?.classList?.toggle("tb-auth-visible", !!show);
   } catch (_) {}
   if (overlay) overlay.style.display = show ? "block" : "none";
-  if (app) app.style.display = show ? "none" : "block";
+  if (app) {
+    app.style.display = show ? "none" : "block";
+    app.toggleAttribute("data-tb-nav-ready", !show);
+  }
+  if (show) window.dispatchEvent(new Event("tb:nav-suspend"));
 }
 
 function tbAuthValues() {

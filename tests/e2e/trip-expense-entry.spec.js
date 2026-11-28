@@ -13,6 +13,7 @@ test('Trip form: a 60 NZD advance debits cash once and budgets only the personal
   const friend = '3e5aded3-109f-455d-af81-06a447915b30';
   const exp = '3e5aded3-109f-455d-af81-06a447915b31';
   const wallet = { ...fixtureTables.wallets[0], name: 'Carte voyage', currency: 'NZD', balance: 300 };
+  const walletEur = { ...wallet, id: "44444444-4444-4444-8444-444444444445", name: "Carte EUR", currency: "EUR" };
   const tables = {
    ...structuredClone(fixtureTables),
    profiles: [{ ...fixtureTables.profiles[0], role: 'test' }],
@@ -21,7 +22,7 @@ test('Trip form: a 60 NZD advance debits cash once and budgets only the personal
    periods: [{ ...fixtureTables.periods[0], name:'Taupō', base_currency:'NZD', eur_base_rate:1.95, daily_budget_base:150, start_date:'2026-10-23', end_date:'2026-10-25' }],
    budget_segments: [{ ...fixtureTables.budget_segments[0], base_currency:'NZD', eur_base_rate_fixed:1.95, daily_budget_base:150, start_date:'2026-10-23', end_date:'2026-10-25' }],
    categories: [{ ...fixtureTables.categories[0], name:'Repas', color:'#e77d54', icon:'🍽️' }],
-   wallets:[wallet],
+   wallets:[wallet,walletEur],
    fx_manual_rates:[{ user_id:fixtureUser, base_currency:'EUR', currency:'NZD', rate:1.95 }],
    transactions: [],
    trip_groups:[{ id:tripId, name:'Week-end à Taupō', base_currency:'NZD', user_id:fixtureUser }],
@@ -35,7 +36,7 @@ test('Trip form: a 60 NZD advance debits cash once and budgets only the personal
    v_wallet_balances:[], budget_segment_budget_reference_override:[], v_country_budget_reference_latest:[], travel_budget_reference_profile:[], v_transaction_analytic_expenses:[], fx_rates:[],
   };
 
-  const failures = [];
+  const failures = [], settlementRequests = [];
   const routeFixture = await installConnectedFixture(page, base, { tables });
   await page.routeWebSocket(u => u.origin === base.replace('http', 'ws'), ws => ws.connectToServer());
   await page.addInitScript(user => localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1'), fixtureUser);
@@ -47,6 +48,10 @@ test('Trip form: a 60 NZD advance debits cash once and budgets only the personal
    if (method === 'POST' && path === '/rest/v1/rpc/trip_pending_invites_for_current_user') return route.fulfill({json:[]});
    if (method === 'POST' && ['/rest/v1/rpc/bind_trip_member_to_auth','/rest/v1/rpc/trip_bind_member_to_auth','/rest/v1/app_error_logs','/rest/v1/rpc/trip_request_payer_approval'].includes(path)) return route.fulfill({status:204});
    const put = (table,row) => tables[table].push(row);
+   if (method === 'POST' && path === '/rest/v1/rpc/trip_apply_settlement_v2') {
+    settlementRequests.push(data);
+    return route.fulfill({json:'3e5aded3-109f-455d-af81-06a447915b32'});
+   }
    if (method === 'POST' && path === '/rest/v1/rpc/trip_apply_expense_v2') {
     const d = data.p_payload;
     if (data.p_trip_id !== tripId || d.amount !== 60 || d.currency !== 'NZD' || d.shares?.length !== 2 || d.shares.some(s => s.share_amount !== 30)) throw Error('unexpected trip payload');
@@ -94,7 +99,11 @@ test('Trip form: a 60 NZD advance debits cash once and budgets only the personal
   await label.fill('Dîner partagé');
   await page.locator('#trip-exp-amount').fill('60');
   await page.locator('#trip-exp-paidby').selectOption(me);
+  await page.locator('#trip-exp-wallet').selectOption(walletEur.id);
+  await expect(page.locator('#trip-exp-currency')).toHaveValue('EUR');
+  await expect(page.locator('#trip-exp-currency')).toBeDisabled();
   await page.locator('#trip-exp-wallet').selectOption(wallet.id);
+  await expect(page.locator('#trip-exp-currency')).toBeDisabled();
   await expect(page.locator('#trip-exp-currency')).toHaveValue('NZD');
   await page.locator('#trip-exp-category').selectOption('Repas');
   await expect(page.locator('#trip-split-mode')).toHaveValue('equal');
@@ -127,6 +136,30 @@ test('Trip form: a 60 NZD advance debits cash once and budgets only the personal
     const options = window.echarts?.getInstanceByDom(element)?.getOption();
     return { labels: options?.yAxis?.[0]?.data, amounts: options?.series?.[0]?.data?.map(point => point.value) };
   })).toEqual({ labels: ['Repas'], amounts: [30] });
+  await navigate('trip');
+  await page.locator('[data-settle-from]:not([data-settle-only])').first().click();
+  const settle = page.locator('#tripSettleModal');
+  const settleCurrency = settle.locator('#tripSettleCurrency');
+  await settle.locator('#tripSettleWallet').selectOption(wallet.id);
+  await expect(settleCurrency).toHaveValue('NZD');
+  await expect(settleCurrency).not.toBeEditable();
+  await expect(settle.locator('#tripSettleAmount')).toHaveValue('30');
+  await expect(settle.locator('#tripSettleDebtAmount')).toBeHidden();
+  await settle.locator('#tripSettleWallet').selectOption(walletEur.id);
+  await expect(settleCurrency).toHaveValue('EUR');
+  await expect(settleCurrency).not.toBeEditable();
+  await expect(settle.locator('#tripSettleAmount')).toHaveValue('');
+  await expect(settle.locator('#tripSettleDebtAmount')).toHaveValue('30');
+  await expect(settle.locator('#tripSettleDebtLabel')).toContainText('NZD');
+  await expect(settle.locator('#tripSettleOnly')).toBeEnabled();
+  await settle.locator('#tripSettleAmount').fill('15');
+  await settle.locator('#tripSettleConfirm').click();
+  await expect(settle).toBeHidden();
+  expect(settlementRequests).toEqual([expect.objectContaining({
+    p_wallet_id: walletEur.id, p_wallet_currency: 'EUR', p_wallet_amount: 15,
+    p_currency: 'NZD', p_amount: 30, p_from_member_id: friend, p_to_member_id: me,
+  })]);
+
   expect(failures).toEqual([]);
   expect(routeFixture.failures).toEqual([]);
 });
