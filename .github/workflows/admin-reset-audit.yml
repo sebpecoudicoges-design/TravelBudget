@@ -34,10 +34,10 @@ jobs:
           fi
           "$pg_bin/postgres" --version
           npm install --prefix "$RUNNER_TEMP/tb-audit-pg" --no-save --ignore-scripts --no-audit --no-fund pg@8.16.3
-      - name: Preview, reset semantics and migrated links on loopback
+      - name: Preview, reset semantics, migrated links and checkpoint on loopback
         shell: bash
         run: |
           driver="$RUNNER_TEMP/tb-audit-pg/node_modules/pg/lib/index.js"
-          for fixture in check modes migrated-links; do
+          for fixture in check modes migrated-links checkpoint; do
             node "scripts/audit-admin-reset/$fixture.mjs" /usr/lib/postgresql/16/bin "$driver"
           done
