@@ -164,3 +164,27 @@ for (const [language, question, answer, open, fallback, distinction] of [
     }
   });
 }
+
+for (const [lang, width, faq, assistant, hint] of [
+  ['fr', 1440, /documents expirés.*budget de référence/, /Pose une question sur les documents/, 'Je cherche une réponse…'],
+  ['en', 390, /expired documents.*reference budget/, /Ask about documents/, 'Looking for an answer…'],
+]) {
+  test(`FAQ and assistant render the real ${lang} dictionary at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 920 });
+    await page.route('**/assistant-copy-fixture', route => route.fulfill({
+      contentType: 'text/html; charset=utf-8',
+      body: '<!doctype html><html><head><meta charset="utf-8"></head><body><main id="help-root"><input id="help-search"></main></body></html>',
+    }));
+    await page.addInitScript(value => localStorage.setItem('tb_lang_v1', value), lang);
+    await page.goto('/assistant-copy-fixture');
+    await page.addScriptTag({ url: '/legacy/js/00_i18n.js' });
+    await expect.poll(() => page.evaluate(locale => Boolean(window.TB_I18N?.[locale]), lang)).toBe(true);
+    await page.addScriptTag({ url: '/legacy/js/31_help_faq.js' });
+    await page.addScriptTag({ url: '/legacy/js/32_help_assistant.js' });
+    await page.evaluate(() => window.renderHelpFaq());
+    await expect(page.locator('#help-search')).toHaveAttribute('placeholder', faq);
+    await page.locator('#tb-assist-btn').click();
+    await expect(page.locator('#tb-assist-input')).toHaveAttribute('placeholder', assistant);
+    await expect(page.locator('.tb-assist-hint')).toHaveText(hint);
+  });
+}
