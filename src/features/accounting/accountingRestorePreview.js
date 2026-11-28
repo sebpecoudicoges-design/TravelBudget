@@ -182,8 +182,15 @@ function reviewActiveReferences(settings, scope, sources) {
       if (debtSource && ((row.tripExpenseId !== null && !isId(row.tripExpenseId))
           || typeof row.detachedTripPayment !== 'boolean' || typeof row.virtualBudgetOnly !== 'boolean'
           || !RECURRING_SOURCE_STATES.has(row.recurringInstanceStatus))) return { status: 'sources-unavailable' };
+      // A linked expense may establish the opening debt and remain a charge in the ledger.
+      // A linked income may not establish the debt, and a linked repayment is never eligible.
+      const needsAssetLinkEvidence = rule.role === 'repayment' || (rule.role === 'funding' && row.type === 'income');
+      if (needsAssetLinkEvidence && typeof row.hasAssetTransactionLink !== 'boolean') {
+        return { status: 'sources-unavailable' };
+      }
       if (internalAccounting(row) || (debtSource && (hasTripPaymentOrigin(row)
-          || row.virtualBudgetOnly || row.recurringInstanceStatus === 'skipped'))) {
+          || row.virtualBudgetOnly || row.recurringInstanceStatus === 'skipped'))
+          || (needsAssetLinkEvidence && row.hasAssetTransactionLink)) {
         incompatible++;
         continue;
       }

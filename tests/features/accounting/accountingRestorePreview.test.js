@@ -12,7 +12,7 @@ const candidate = {
     debts: [], archivedDebts: [], positions: [], assetLinks: [], positionAudit: [],
   },
 };
-const ordinary = { isInternal: false, internalTransferId: null, tripExpenseId: null, detachedTripPayment: false, virtualBudgetOnly: false, recurringInstanceStatus: null };
+const ordinary = { isInternal: false, internalTransferId: null, tripExpenseId: null, detachedTripPayment: false, virtualBudgetOnly: false, recurringInstanceStatus: null, hasAssetTransactionLink: false };
 const raw = (changes = {}) => JSON.stringify({ ...candidate, ...changes });
 const preview = (changes, activeScope = scope) => previewAccountingRestore(raw(changes), activeScope);
 
@@ -227,6 +227,26 @@ describe('typed debt and position source review', () => {
       ? { ...row, virtualBudgetOnly: undefined, recurringInstanceStatus: undefined } : row);
     expect(review({ ...sources, transactionMetadata: rows })).toMatchObject({ status: 'references-present' });
   });
+
+  it.each([[0, 'income', false], [0, 'expense', true], [1, 'expense', false]])(
+    'matches the ledger for an existing asset link on a debt source: %j %s', (index, type, shouldAttach) => {
+      const rows = sources.transactionMetadata.map((row, i) => i === index
+        ? { ...row, type, hasAssetTransactionLink: true } : row);
+      const eligible = index === 0 ? debtOriginEligible : repaymentEligible;
+      expect(eligible(rows[index], settings.debts[0], sources.asOfDay, [{ transaction_id: rows[index].id }]))
+        .toBe(shouldAttach);
+      const result = review({ ...sources, transactionMetadata: rows });
+      if (shouldAttach) expect(result).toMatchObject({ status: 'references-present', requiresFurtherValidation: true });
+      else expect(result).toEqual({ status: 'incompatible-references', incompatible: { transaction: 1 } });
+    },
+  );
+
+  it.each([[0, undefined], [1, null], [1, 'false']])(
+    'does not infer absence of an asset link from unavailable evidence: %j', (index, evidence) => {
+      const rows = sources.transactionMetadata.map((row, i) => i === index ? { ...row, hasAssetTransactionLink: evidence } : row);
+      expect(review({ ...sources, transactionMetadata: rows })).toEqual({ status: 'sources-unavailable' });
+    },
+  );
 
   it('accepts only the principal as repayment, using the same cents check as the ledger', () => {
     const rows = sources.transactionMetadata.map((row, i) => i === 1 ? { ...row, amount: 24.999 } : row);
