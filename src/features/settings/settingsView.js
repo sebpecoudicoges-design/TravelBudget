@@ -118,17 +118,18 @@ export function renderSettingsAccountPanel({
   esc = defaultEsc,
 } = {}) {
   const tr = typeof t === 'function' ? t : fallbackT;
+  const account = (key, vars) => tr('settings.account.' + key, vars);
   const cur = String(baseCurrency || 'EUR').toUpperCase();
   const opts = Array.isArray(currencies) && currencies.length ? currencies : ['EUR', 'USD', 'THB'];
   const simpleSelected = !!simpleMode;
   const thresholdRef = Math.round(Number(thresholdEur) || 500);
 
   return `
-        <div class="muted" style="margin-bottom:10px;">${tr('settings.account.summary')}</div>
+        <div class="muted" style="margin-bottom:10px;">${account('summary')}</div>
 
         <div class="tb-settings-account-grid">
           <div class="field">
-            <label>${tr('settings.account.email')}</label>
+            <label>${account('email')}</label>
             <input id="tb-account-email" type="text" value="—" disabled />
           </div>
 
@@ -141,79 +142,79 @@ export function renderSettingsAccountPanel({
               value=""
               autocomplete="tel"
             />
-            <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">${tr('settings.account.phone_hint')}</small>
+            <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">${account('phone_hint')}</small>
           </div>
 
           <div class="field">
-            <label>${tr('settings.account.birth_date')}</label>
+            <label>${account('birth_date')}</label>
             <input id="tb-account-birthdate" type="date" value="${esc(savedBirthDate)}" />
-            <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">${tr('settings.account.birth_hint')}</small>
+            <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">${account('birth_hint')}</small>
           </div>
 
           <div class="field">
-            <label>${tr('settings.account.weight')}</label>
+            <label>${account('weight')}</label>
             <input id="tb-account-body-weight" type="number" min="1" step="0.1" value="${esc(savedBodyWeight)}" />
           </div>
 
           <div class="field">
-            <label>${tr('settings.account.height')}</label>
+            <label>${account('height')}</label>
             <input id="tb-account-body-height" type="number" min="60" step="1" value="${esc(savedBodyHeight)}" />
           </div>
 
           <div class="field">
-            <label>${tr('settings.account.base_currency')}</label>
+            <label>${account('base_currency')}</label>
             <select id="tb-user-basecur">
               ${opts.map((c) => `<option value="${esc(c)}" ${String(c).toUpperCase() === cur ? 'selected' : ''}>${esc(c)}</option>`).join('')}
             </select>
           </div>
 
           <div class="field">
-            <label>${tr('settings.account.ui_mode')}</label>
+            <label>${account('ui_mode')}</label>
             <select id="tb-user-uimode">
-              <option value="simple" ${simpleSelected ? 'selected' : ''}>${tr('settings.account.mode.simple')}</option>
-              <option value="advanced" ${!simpleSelected ? 'selected' : ''}>${tr('settings.account.mode.advanced')}</option>
+              <option value="simple" ${simpleSelected ? 'selected' : ''}>${account('mode.simple')}</option>
+              <option value="advanced" ${!simpleSelected ? 'selected' : ''}>${account('mode.advanced')}</option>
             </select>
           </div>
 
         </div>
 
         <div class="tb-settings-account-savebar">
-          <div><strong>${tr('settings.account.save_all')}</strong><span class="muted">${tr('settings.account.save_all_help')}</span></div>
-          <button class="btn primary" id="tb-user-account-save" type="button">${tr('settings.account.save_all')}</button>
+          <div><strong>${account('save_all')}</strong><span class="muted">${account('save_all_help')}</span></div>
+          <button class="btn primary" id="tb-user-account-save" type="button">${account('save_all')}</button>
         </div>
 
         <div class="tb-settings-account-proxies" hidden aria-hidden="true">
-          <button id="tb-user-basecur-save" type="button" tabindex="-1">${tr('settings.account.save')}</button>
-          <button id="tb-user-whatsapp-save" type="button" tabindex="-1">${tr('settings.account.save_phone')}</button>
-          <button id="tb-user-birthdate-save" type="button" tabindex="-1">${tr('settings.account.save_health')}</button>
-          <button id="tb-user-uimode-save" type="button" tabindex="-1">${tr('settings.account.save_mode')}</button>
-          <button id="tb-user-cfthr-save" type="button" tabindex="-1">${tr('settings.account.save_threshold')}</button>
+          <button id="tb-user-basecur-save" type="button" tabindex="-1">${account('save')}</button>
+          <button id="tb-user-whatsapp-save" type="button" tabindex="-1">${account('save_phone')}</button>
+          <button id="tb-user-birthdate-save" type="button" tabindex="-1">${account('save_health')}</button>
+          <button id="tb-user-uimode-save" type="button" tabindex="-1">${account('save_mode')}</button>
+          <button id="tb-user-cfthr-save" type="button" tabindex="-1">${account('save_threshold')}</button>
         </div>
 
         <div class="tb-settings-account-tools">
-          <button class="btn" id="tb-user-resetpwd" type="button">${tr('settings.account.reset_password')}</button>
-          <button class="btn" id="tb-user-export-all" type="button">${tr('settings.account.export')}</button>
-          <a class="btn" href="/privacy.html" target="_blank" rel="noopener">${tr('settings.account.privacy')}</a>
+          <button class="btn" id="tb-user-resetpwd" type="button">${account('reset_password')}</button>
+          <button class="btn" id="tb-user-export-all" type="button">${account('export')}</button>
+          <a class="btn" href="/privacy.html" target="_blank" rel="noopener">${account('privacy')}</a>
         </div>
 
         <div style="margin-top:14px;padding:12px;border:1px solid rgba(220,38,38,.35);border-radius:14px;background:rgba(220,38,38,.05);">
-          <strong>${tr('settings.account.deletion_title')}</strong>
+          <strong>${account('deletion_title')}</strong>
           <div class="muted" style="margin-top:4px;line-height:1.4;">
-${tr('settings.account.deletion_help')}
+${account('deletion_help')}
           </div>
           <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-            <button class="btn" id="tb-user-delete-account" type="button" style="border-color:rgba(220,38,38,.65);color:#b91c1c;">${tr('settings.account.delete')}</button>
-            <button class="btn" id="tb-user-cancel-deletion" type="button" hidden>${tr('settings.account.cancel_delete')}</button>
+            <button class="btn" id="tb-user-delete-account" type="button" style="border-color:rgba(220,38,38,.65);color:#b91c1c;">${account('delete')}</button>
+            <button class="btn" id="tb-user-cancel-deletion" type="button" hidden>${account('cancel_delete')}</button>
             <span id="tb-user-deletion-status" class="muted" style="font-size:12px;"></span>
           </div>
         </div>
 
         <div class="tb-settings-account-advanced tb-advanced-only">
           <div class="field">
-            <label>${tr('settings.account.cashflow_threshold')}</label>
+            <label>${account('cashflow_threshold')}</label>
             <input id="tb-user-cfthr" type="number" min="1" step="1" value="${esc(thresholdDisplay || '')}" />
           </div>
-          <div class="muted">${tr('settings.account.cashflow_reference', { amount: esc(String(thresholdRef)) })}</div>
+          <div class="muted">${account('cashflow_reference', { amount: esc(String(thresholdRef)) })}</div>
         </div>
       `;
 }

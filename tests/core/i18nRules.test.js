@@ -8,6 +8,7 @@ function loadDictionaries() {
   const sandbox = {
     window: {},
     document: {
+      documentElement: {},
       querySelectorAll: () => [],
       getElementById: () => null,
       createElement: () => ({ set src(value) { this._src = value; }, get src() { return this._src; } }),
@@ -33,6 +34,12 @@ describe('i18n dictionaries', () => {
     const en = Object.keys(dicts.en).sort();
 
     expect(en).toEqual(fr);
+  });
+
+  it('documents the account deletion cancellation period in both languages', () => {
+    const dicts = loadDictionaries();
+    expect(dicts.fr['settings.account.deletion_help']).toContain('délai de 7 jours');
+    expect(dicts.en['settings.account.deletion_help']).toContain('seven days');
   });
 
   it('contains the document module UI keys', () => {
