@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `318a2372f68598452487d0d7bcb5c4776608b4ca`
-> Empreinte du snapshot : `72339edb01c4d46557426713b2e354e86510ff7bd252b71ef627cc9c89bb842f`
-> Généré le : `2026-11-28T08:02:07.441Z`
+> Commit analysé : `0a9432dade0b8124ceb46a671e52abab0b3ccec0`
+> Empreinte du snapshot : `868649a755d36635924cb4b43e642ce4cd8f10d613e33fc23bf390d3edb64911`
+> Généré le : `2026-11-28T08:31:52.801Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 65 |
-| Fichiers de tests | 218 |
+| Fichiers de tests | 219 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -428,6 +428,7 @@ Modules :
 - `tests/core/notificationHealthTemplate.test.js`
 - `tests/core/notificationRules.test.js`
 - `tests/core/nutritionRules.test.js`
+- `tests/core/personalDocumentUploadClient.test.js`
 - `tests/core/prepaidProjection.test.js`
 - `tests/core/recurringRules.test.js`
 - `tests/core/refreshQueue.test.js`
