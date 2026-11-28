@@ -57,3 +57,7 @@ Dans Membres, seul un accusé serveur explicite confirme la réinitialisation. U
 Depuis une session fictive nouvellement chargée sur la route normale, le bouton Aide de Partage changeait bien de vue, mais le chargement différé remplaçait le formulaire et la liste de FAQ avant que leur script ne s’exécute. La navigation conserve maintenant le contenu de départ pour que le script puisse remplir la liste et activer la recherche. Le test ouvre la carte de règlement, puis la FAQ, et recherche la fiche Partage dans les deux langues, à 1 440 et 390 px. Les requêtes hors serveur local sont simulées ou bloquées. Aucun changement de calcul, de données ou de droits ; aucun déploiement.
 
 La branche d’audit reprend aussi la synchronisation de la langue du document déjà présente sur la branche principale. Une session qui démarre en anglais n’annonce plus la page comme française aux lecteurs d’écran ; le test contrôle aussi les changements FR → EN et EN → FR. Les traductions de la FAQ restent vérifiées séparément.
+
+## F8, récupération d’un module partiellement chargé
+
+Le parcours Chromium de Patrimoine part du tableau de bord et interrompt une seule fois la requête de son second script classique, après chargement du noyau. La vue signale l’échec et n’est pas déclarée prête. Après retour au tableau de bord et réouverture de Patrimoine, l’écran s’affiche sans recharger ni remplacer le noyau. Ce test qualifie une panne de transport sur une dépendance du module. Il ne couvre ni les rejets asynchrones après chargement, ni les autres moteurs, ni Android physique.
