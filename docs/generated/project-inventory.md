@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `fb1080e4ab593b1c77e6e40651beba1c3dd7a057`
-> Empreinte du snapshot : `a1aad2ed49c5decbf21847f05a5163be29a0312c5316181ab10b9ae4d0f05266`
-> Généré le : `2026-11-28T11:01:57.152Z`
+> Commit analysé : `28e83442480cfcad84b5f9c022926e68e8d92853`
+> Empreinte du snapshot : `63beca48f27593923c431dbdcfcb550794f4a23a5ae20a14c4e9811a471fb731`
+> Généré le : `2026-11-28T12:31:37.729Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 66 |
-| Fichiers de tests | 223 |
+| Fichiers de tests | 225 |
 | Migrations Supabase | 179 |
 | Fonctions Edge | 15 |
 | Projet Android présent | Oui |
@@ -377,6 +377,7 @@ Modules :
 ### Parcours Playwright
 
 - `tests/e2e/accounting.spec.js`
+- `tests/e2e/admin-member-reset-audit.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
 - `tests/e2e/analysis-chart-labels.spec.js`
 - `tests/e2e/android-ads.spec.js`
@@ -409,6 +410,7 @@ Modules :
 
 ### Tous les fichiers de tests
 
+- `tests/core/adminMemberReset.test.js`
 - `tests/core/adsSession.test.js`
 - `tests/core/assetRules.test.js`
 - `tests/core/assistantRules.test.js`
@@ -476,6 +478,7 @@ Modules :
 - `tests/data/testCampaignRepository.test.js`
 - `tests/data/tripRepository.test.js`
 - `tests/e2e/accounting.spec.js`
+- `tests/e2e/admin-member-reset-audit.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
 - `tests/e2e/analysis-chart-labels.spec.js`
 - `tests/e2e/android-ads.spec.js`

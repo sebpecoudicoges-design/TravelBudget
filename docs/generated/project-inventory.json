@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "542be56d220d5614f0e2e1ea35de566f5bfaf943",
-  "snapshotFingerprint": "8d53925e78f8124f8a2730ac65a62c613a0976130048aabae625e5b8f71b3591",
-  "generatedAt": "2026-11-28T12:03:22.460Z",
+  "commit": "28e83442480cfcad84b5f9c022926e68e8d92853",
+  "snapshotFingerprint": "63beca48f27593923c431dbdcfcb550794f4a23a5ae20a14c4e9811a471fb731",
+  "generatedAt": "2026-11-28T12:31:37.729Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
@@ -357,6 +357,7 @@
     "tests/data/testCampaignRepository.test.js",
     "tests/data/tripRepository.test.js",
     "tests/e2e/accounting.spec.js",
+    "tests/e2e/admin-member-reset-audit.spec.js",
     "tests/e2e/analysis-audit.spec.js",
     "tests/e2e/analysis-chart-labels.spec.js",
     "tests/e2e/android-ads.spec.js",
@@ -571,6 +572,7 @@
   ],
   "playwrightTests": [
     "tests/e2e/accounting.spec.js",
+    "tests/e2e/admin-member-reset-audit.spec.js",
     "tests/e2e/analysis-audit.spec.js",
     "tests/e2e/analysis-chart-labels.spec.js",
     "tests/e2e/android-ads.spec.js",

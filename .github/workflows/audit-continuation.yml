@@ -18,10 +18,13 @@ on:
       - 'src/features/trip/**'
       - 'public/legacy/js/27_cashflow_curve.js'
       - 'public/legacy/js/29_trip_v1.js'
+      - 'public/legacy/js/30_members_admin.js'
+      - 'tests/core/adminMemberReset.test.js'
       - 'scripts/fixtures/connectedStartup.mjs'
       - 'scripts/audit-nutrition/**'
       - 'tests/e2e/financial-trip-budget.spec.js'
       - 'tests/e2e/document-preview-audit.spec.js'
+      - 'tests/e2e/admin-member-reset-audit.spec.js'
       - 'tests/e2e/assistant-ai.spec.js'
       - 'public/legacy/js/31_help_faq.js'
       - 'public/legacy/js/32_help_assistant.js'
@@ -84,7 +87,7 @@ jobs:
       - run: npm run test:e2e -- tests/e2e/financial-trip-budget.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/offline-queue-tabs.spec.js tests/e2e/offline-queue-revision.spec.js --project=desktop-chromium
 
-      - run: npm run test:e2e -- tests/e2e/document-preview-audit.spec.js --project=desktop-chromium
+      - run: npm run test:e2e -- tests/e2e/document-preview-audit.spec.js tests/e2e/admin-member-reset-audit.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/assistant-ai.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/analysis-chart-labels.spec.js --project=desktop-chromium
       - run: npm run test:e2e -- tests/e2e/sport-sync-audit.spec.js --project=desktop-chromium
