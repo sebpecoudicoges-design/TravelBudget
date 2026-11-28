@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "318a2372f68598452487d0d7bcb5c4776608b4ca",
-  "snapshotFingerprint": "72339edb01c4d46557426713b2e354e86510ff7bd252b71ef627cc9c89bb842f",
-  "generatedAt": "2026-11-28T08:02:07.441Z",
+  "commit": "bce4a42ab07bba799b9052258a670a9e60129832",
+  "snapshotFingerprint": "c6120ffbb228d4ed6aab47829e1d61c1d992047946ce7ce12a29a39af88866fc",
+  "generatedAt": "2026-11-28T08:41:08.227Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.402"
+    "version": "10.5.403"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -306,6 +306,7 @@
     "tests/core/notificationHealthTemplate.test.js",
     "tests/core/notificationRules.test.js",
     "tests/core/nutritionRules.test.js",
+    "tests/core/personalDocumentUploadClient.test.js",
     "tests/core/prepaidProjection.test.js",
     "tests/core/recurringRules.test.js",
     "tests/core/refreshQueue.test.js",

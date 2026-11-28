@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `318a2372f68598452487d0d7bcb5c4776608b4ca`
-> Empreinte du snapshot : `72339edb01c4d46557426713b2e354e86510ff7bd252b71ef627cc9c89bb842f`
-> Généré le : `2026-11-28T08:02:07.441Z`
+> Commit analysé : `bce4a42ab07bba799b9052258a670a9e60129832`
+> Empreinte du snapshot : `c6120ffbb228d4ed6aab47829e1d61c1d992047946ce7ce12a29a39af88866fc`
+> Généré le : `2026-11-28T08:41:08.227Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.402` |
+| Version | `10.5.403` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 55 |
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 65 |
-| Fichiers de tests | 218 |
+| Fichiers de tests | 219 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -428,6 +428,7 @@ Modules :
 - `tests/core/notificationHealthTemplate.test.js`
 - `tests/core/notificationRules.test.js`
 - `tests/core/nutritionRules.test.js`
+- `tests/core/personalDocumentUploadClient.test.js`
 - `tests/core/prepaidProjection.test.js`
 - `tests/core/recurringRules.test.js`
 - `tests/core/refreshQueue.test.js`
