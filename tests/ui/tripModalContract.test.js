@@ -36,7 +36,7 @@ describe('Trip shared modal migration', () => {
     expect(source).toContain('tripView?.renderTripSplitBox');
     expect(source).toContain('Math.round((total - assigned) * 100) / 100');
     expect(tripView).toContain('data-auto="1"');
-    expect(source).toContain('Reste à attribuer');
+    expect(source).toContain('trip.expense.split.remaining');
     expect(source).toContain('statusEl.className = `pill ${remaining ?');
     expect(source).toContain('mode: mode === "amount" && _el("trip-split-box")?.dataset?.auto === "1" ? "amount_auto" : mode');
   });
@@ -44,7 +44,7 @@ describe('Trip shared modal migration', () => {
   it('keeps the Trip expense sheet adapted to mobile screens', () => {
     expect(tripView).toContain('trip-expense-form-grid--amount');
     expect(tripView).toContain('class="trip-split-table"');
-    expect(tripView).toContain('data-label="Montant"');
+    expect(tripView).toContain('data-label="${escapeHTML(labels.amount');
     expect(sharedCss).toContain('@media (max-width: 640px)');
     expect(sharedCss).toContain('.tb-trip-expense-modal');
     expect(sharedCss).toContain('max-height: 100dvh');

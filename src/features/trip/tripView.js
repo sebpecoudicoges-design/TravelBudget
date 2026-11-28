@@ -184,7 +184,7 @@ export function renderTripExpenseForm({
         </select>
       </div>
       <div class="field">
-        <label id="trip-exp-paidby-label">${escapeHTML(kind === 'income' ? (language === 'en' ? 'Received by' : 'Recu par') : translate('trip.expense.paid_by'))}</label>
+        <label id="trip-exp-paidby-label">${escapeHTML(kind === 'income' ? translate('trip.income.received_by') : translate('trip.expense.paid_by'))}</label>
         <select id="trip-exp-paidby">${memberOptions}</select>
       </div>
     </div>
@@ -228,21 +228,21 @@ export function renderTripExpenseForm({
       <div class="trip-expense-form-grid trip-expense-form-grid--advanced">
         <div class="field">
           <label>${escapeHTML(translate('trip.expense.out_budget'))}</label>
-          <select id="trip-exp-out"><option value="no">Non</option><option value="yes">Oui</option></select>
+          <select id="trip-exp-out"><option value="no">${escapeHTML(translate('common.no'))}</option><option value="yes">${escapeHTML(translate('common.yes'))}</option></select>
         </div>
         <div class="field">
-          <label>${escapeHTML(translate('trip.expense.budget_start'))}</label>
+          <label for="trip-exp-budget-start">${escapeHTML(translate('trip.expense.budget_start'))}</label>
           <input id="trip-exp-budget-start" type="date" value="${escapeHTML(budgetStart)}" />
         </div>
         <div class="field">
-          <label>${escapeHTML(translate('trip.expense.budget_end'))}</label>
+          <label for="trip-exp-budget-end">${escapeHTML(translate('trip.expense.budget_end'))}</label>
           <input id="trip-exp-budget-end" type="date" value="${escapeHTML(budgetEnd)}" />
         </div>
       </div>
     </details>
     <div class="trip-expense-form-grid trip-expense-form-grid--split">
       <div class="field">
-        <label>${escapeHTML(translate('trip.expense.split'))}</label>
+        <label for="trip-split-mode">${escapeHTML(translate('trip.expense.split'))}</label>
         <select id="trip-split-mode">
           <option value="equal">${escapeHTML(translate('trip.expense.split_equal'))}</option>
           <option value="percent">%</option>
@@ -255,7 +255,7 @@ export function renderTripExpenseForm({
     <div class="muted trip-expense-budget-hint">${escapeHTML(translate('trip.expense.budget_hint'))}</div>
     <div class="trip-expense-actions-row">
       ${editingExpenseId ? `<button class="btn" type="button" id="trip-cancel-edit-exp">${escapeHTML(translate('trip.expense.cancel_edit'))}</button>` : ''}
-      <button class="btn primary" id="trip-add-exp" data-expense-label="${escapeHTML(translate('trip.expense.add'))}" data-income-label="${escapeHTML(language === 'en' ? 'Add income' : 'Ajouter entree')}" ${submitDisabled}>${escapeHTML(editingExpenseId ? translate('trip.expense.save_edit') : (kind === 'income' ? (language === 'en' ? 'Add income' : 'Ajouter entree') : translate('trip.expense.add')))}</button>
+      <button class="btn primary" id="trip-add-exp" data-expense-label="${escapeHTML(translate('trip.expense.add'))}" data-income-label="${escapeHTML(translate('trip.income.add'))}" ${submitDisabled}>${escapeHTML(editingExpenseId ? translate('trip.expense.save_edit') : (kind === 'income' ? translate('trip.income.add') : translate('trip.expense.add')))}</button>
     </div>`;
 
   return modal
@@ -660,16 +660,17 @@ export function renderTripSplitBox({
   previousAmounts,
   seedPercents,
   seedAmounts,
+  labels = {},
   escapeHTML = fallbackEscape,
 }) {
   const rows = Array.isArray(members) ? members : [];
   const selected = new Set(Array.isArray(selectedMemberIds) ? selectedMemberIds.map(String) : []);
   const activeRows = Number(activeCount) || rows.filter((member) => selected.has(String(member?.id ?? ''))).length;
   const previousPct = previousPercents || {}, previousAmt = previousAmounts || {}, seededPct = seedPercents || {}, seededAmt = seedAmounts || {};
-  const nameCell = (member) => `${escapeHTML(member?.name || '—')}${member?.isMe ? " <span class='muted'>(moi)</span>" : ''}`;
+  const nameCell = (member) => `${escapeHTML(member?.name || '—')}${member?.isMe ? ` <span class='muted'>${escapeHTML(labels.me || '(moi)')}</span>` : ''}`;
 
   if (mode === 'equal') {
-    return `<div class="muted">Égal entre ${activeRows} participant(s) coché(s).</div>`;
+    return `<div class="muted">${escapeHTML(labels.equalSummary || `Égal entre ${activeRows} participant(s) coché(s).`)}</div>`;
   }
 
   if (mode === 'percent') {
@@ -680,7 +681,7 @@ export function renderTripSplitBox({
       const disabled = isActive ? '' : 'disabled';
       const value = (previousPct[id] ?? seededPct[id] ?? def).toString();
       return `<tr>
-            <td data-label="Participant">${nameCell(member)}</td>
+            <td data-label="${escapeHTML(labels.participant || 'Participant')}">${nameCell(member)}</td>
             <td data-label="%">
               <input id="trip-split-pct-${escapeHTML(id)}" type="number" step="0.01" min="0" value="${escapeHTML(isActive ? value : '0')}" ${disabled} />
             </td>
@@ -688,12 +689,12 @@ export function renderTripSplitBox({
     }).join('');
 
     return `
-          <div class="muted trip-split-table-note">Somme = 100%</div>
+          <div class="muted trip-split-table-note">${escapeHTML(labels.percentTotal || 'Somme = 100%')}</div>
           <table class="trip-split-table">
-            <thead><tr><th>Participant</th><th>%</th></tr></thead>
+            <thead><tr><th>${escapeHTML(labels.participant || 'Participant')}</th><th>%</th></tr></thead>
             <tbody>${body}</tbody>
           </table>
-          <div class="muted trip-split-table-note">Les montants seront arrondis au centime et ajustés pour retomber exactement sur le total.</div>
+          <div class="muted trip-split-table-note">${escapeHTML(labels.rounding || 'Les montants seront arrondis au centime et ajustés pour retomber exactement sur le total.')}</div>
         `;
   }
 
@@ -710,15 +711,15 @@ export function renderTripSplitBox({
         : (isActive ? Number(autoValue || 0).toFixed(2) : '0');
       const autoAttr = !hasManualValue && isActive ? 'data-auto="1"' : 'data-auto="0"';
       return `<tr>
-            <td data-label="Participant">${nameCell(member)}</td>
-            <td data-label="Montant">
+            <td data-label="${escapeHTML(labels.participant || 'Participant')}">${nameCell(member)}</td>
+            <td data-label="${escapeHTML(labels.amount || 'Montant')}">
               <input id="trip-split-amt-${escapeHTML(id)}" type="number" step="0.01" min="0" value="${escapeHTML(isActive ? value : '0')}" ${autoAttr} ${disabled} />
             </td>
           </tr>`;
     }).join('');
     return `
           <table class="trip-split-table">
-            <thead><tr><th>Participant</th><th>Montant</th></tr></thead>
+            <thead><tr><th>${escapeHTML(labels.participant || 'Participant')}</th><th>${escapeHTML(labels.amount || 'Montant')}</th></tr></thead>
             <tbody>${body}</tbody>
           </table>
         `;

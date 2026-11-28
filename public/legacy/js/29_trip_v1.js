@@ -3648,7 +3648,7 @@ async function _persistSettlementWithWallet(wallet) {
       : String(editingDraft?.paidByMemberId || members.find((member) => member?.isMe)?.id || members[0]?.id || "");
     const memberOptions = members
       .map(m => {
-        const meTag = m.isMe ? " (moi)" : "";
+        const meTag = m.isMe ? ` ${escapeHTML(_tripT("trip.member.me"))}` : "";
         const emailTag = m.email ? ` — ${escapeHTML(m.email)}` : "";
         const selected = String(m.id) === String(selectedPayerId) ? " selected" : "";
         return `<option value="${m.id}"${selected}>${escapeHTML(m.name)}${meTag}${emailTag}</option>`;
@@ -3755,7 +3755,7 @@ return `
     const editExpenseModalHTML = (editingExpenseId || addExpenseOpen)
       ? _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: true })
       : "";
-    const tripQuickAddLabel = escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "+ Shared expense" : "+ Depense partagee");
+    const tripQuickAddLabel = _tripT("trip.expense.quick_add");
     const tripHistoryToolbarHTML = window.UI?.tripRecapView?.renderTripHistoryToolbar?.({
       categories: historyCategoryOptions,
       members,
@@ -3794,8 +3794,9 @@ return `
       labels: {
         me: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "me" : "moi",
         mePill: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Me" : "Moi",
-        noParticipants: "Aucun participant.",
+        noParticipants: stxtSummary("Aucun participant.", "No participants."),
         quickAddExpense: tripQuickAddLabel,
+        quickAddIncome: _tripT("trip.income.quick_add"),
         manageSummary: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Manage split" : "Gerer le partage",
         activeTrip: _tripT("trip.active"),
         newTrip: _tripT("trip.new"),
@@ -3818,7 +3819,7 @@ return `
       globalNetHTML,
       pendingInvitesHTML,
       tripClosed,
-      closedAt: trip.closed_at || "",
+      closedAt: closedDate,
       myRole,
       labels: {
         closedTitle: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Closed split" : "Partage clos",
@@ -3826,6 +3827,7 @@ return `
         reopen: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Reopen" : "Réouvrir",
         expenseTitle: _tripT("trip.expense"),
         expenseHint: _tripT("trip.expense.quick_hint"),
+        quickAddIncome: _tripT("trip.income.quick_add"),
         recapHistoryTitle: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Recap / History" : "Récap / Historique",
       },
       tripManagementHTML,
@@ -4150,16 +4152,16 @@ toastOk("Participant ajouté.");
         curSel.innerHTML = _tripCurrencyOptionsHTML(currentCur);
         curSel.value = currentCur;
         curSel.disabled = false;
-        if (curHelp) curHelp.textContent = isIncome
-          ? "Reçu par un autre participant : choisis la devise dans la liste."
-          : "Payé par un autre participant : choisis la devise dans la liste.";
+        if (curHelp) curHelp.textContent = _tripT(isIncome
+          ? "trip.expense.wallet_help.received_by_other"
+          : "trip.expense.wallet_help.paid_by_other");
         return;
       }
 
       if (!wallets.length) {
-        if (curHelp) curHelp.textContent = isIncome
-          ? "Aucune wallet disponible : crée une wallet avant de saisir une entrée reçue par toi."
-          : "Aucune wallet disponible : crée une wallet avant de saisir une dépense payée par toi.";
+        if (curHelp) curHelp.textContent = _tripT(isIncome
+          ? "trip.expense.wallet_help.no_wallet_income"
+          : "trip.expense.wallet_help.no_wallet_expense");
         return;
       }
 
@@ -4183,8 +4185,8 @@ toastOk("Participant ajouté.");
 
       if (curHelp) {
         curHelp.textContent = walletCur
-          ? `${isIncome ? "Reçu par moi" : "Payé par moi"} : devise imposée par la wallet sélectionnée (${walletCur}).`
-          : `${isIncome ? "Reçu par moi" : "Payé par moi"} : sélectionne une wallet pour imposer la devise.`;
+          ? _tripT("trip.expense.wallet_help.currency_linked", { currency: walletCur })
+          : _tripT("trip.expense.wallet_help.select_wallet");
       }
     }
 
@@ -4199,12 +4201,12 @@ toastOk("Participant ajouté.");
       });
 
       const paidByLabel = _el("trip-exp-paidby-label");
-      if (paidByLabel) paidByLabel.textContent = isIncome ? "Reçu par" : _tripT("trip.expense.paid_by");
+      if (paidByLabel) paidByLabel.textContent = _tripT(isIncome ? "trip.income.received_by" : "trip.expense.paid_by");
 
       const submit = _el("trip-add-exp");
       if (submit && !tripState.editingExpenseId) {
         submit.textContent = isIncome
-          ? (submit.dataset.incomeLabel || "Ajouter entrée")
+          ? (submit.dataset.incomeLabel || _tripT("trip.income.add"))
           : (submit.dataset.expenseLabel || _tripT("trip.expense.add"));
       }
 
@@ -4220,6 +4222,9 @@ function _renderSplitParticipantsBox() {
   box.innerHTML = window.UI?.tripView?.renderTripSplitParticipants({
     members,
     selectedMemberIds: tripState.editingExpenseDraft?.split?.selectedMemberIds,
+    title: _tripT("trip.expense.split.participants"),
+    hint: _tripT("trip.expense.split.participants_hint"),
+    meLabel: _tripT("trip.member.me"),
     escapeHTML,
   }) || "";
 
@@ -4287,6 +4292,14 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
         previousAmounts: prevAmt,
         seedPercents: editingDraft?.split?.percents || {},
         seedAmounts,
+        labels: {
+          me: _tripT("trip.member.me"),
+          equalSummary: _tripT("trip.expense.split.equal_summary", { count: activeMembers.length }),
+          percentTotal: _tripT("trip.expense.split.percent_total"),
+          rounding: _tripT("trip.expense.split.rounding"),
+          participant: _tripT("trip.history.participant"),
+          amount: _tripT("trip.expense.amount"),
+        },
         escapeHTML,
       }) || "";
 
@@ -4304,8 +4317,10 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
           if (!statusEl) return;
           statusEl.className = `pill ${remaining ? (remaining > 0 ? "warn" : "bad") : "good"}`;
           statusEl.textContent = remaining
-            ? `${remaining > 0 ? "Reste à attribuer" : "Dépassement"} : ${Math.abs(remaining)}${currency ? ` ${currency}` : ""}`
-            : "Répartition complète";
+            ? _tripT(remaining > 0 ? "trip.expense.split.remaining" : "trip.expense.split.over", {
+                amount: `${Math.abs(remaining)}${currency ? ` ${currency}` : ""}`,
+              })
+            : _tripT("trip.expense.split.complete");
         };
         members.forEach(m => {
           const input = _el(`trip-split-amt-${m.id}`);
