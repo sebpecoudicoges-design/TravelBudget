@@ -92,6 +92,51 @@ for (const width of [1440, 390]) for (const dark of [false, true]) test(`transac
   await expect(stats).toBeEmpty();
 });
 
+test('Android transaction calendar filters include both boundary dates and can be cleared', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 850 });
+  await page.goto('/?freeze=1');
+  await expectBootShell(page);
+  await page.evaluate(() => {
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('app-root').style.display = 'block';
+    document.body.classList.add('tb-capacitor-app');
+    state.activeTravelId = 'calendar-travel';
+    state.travels = [{ id: 'calendar-travel', name: 'Test' }];
+    state.wallets = [{ id: 'calendar-wallet', name: 'Banque test', currency: 'EUR', balance: 100 }];
+    state.transactions = ['2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12'].map((dateStart, index) => ({
+      id: `calendar-${index}`, type: 'expense', amount: 12, currency: 'EUR', category: 'Transport',
+      label: `Synthetic calendar entry ${index}`, walletId: 'calendar-wallet',
+      travelId: 'calendar-travel', dateStart, payNow: true, createdAt: index,
+    }));
+    window.showView('transactions');
+    _txSetFilters({});
+    renderTransactions();
+  });
+  await expect(page.locator('body')).toHaveAttribute('data-tb-view', 'transactions');
+  const from = page.getByLabel(/^(Du|From)$/);
+  const to = page.getByLabel(/^(Au|To)$/);
+  for (const input of [from, to]) {
+    await expect(input).toBeVisible();
+    await expect(input).toBeEnabled();
+    await expect(input).toHaveAttribute('type', 'date');
+    const box = await input.boundingBox();
+    expect(box.width).toBeGreaterThan(100);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+  }
+
+  const rows = page.locator('#tx-list [data-tx-id]');
+  await expect(rows).toHaveCount(4);
+  await from.fill('2026-10-10');
+  await expect(rows).toHaveCount(3);
+  await to.fill('2026-10-11');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first()).toContainText('Synthetic calendar entry 2');
+  await expect(rows.last()).toContainText('Synthetic calendar entry 1');
+  await from.fill('');
+  await to.fill('');
+  await expect(rows).toHaveCount(4);
+});
+
 test('boots to auth without fatal errors and keeps core navigation usable', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));

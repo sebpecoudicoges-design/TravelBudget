@@ -97,7 +97,6 @@ function showView(view) {
         alert(`Analyse indisponible : ${e?.message || e}`);
       });
     }
-    try { if (typeof window.renderFxDecision === "function") window.renderFxDecision(false); } catch (_) {}
   }
   if (view === "assets") {
     if (typeof window.renderAssets === "function") window.renderAssets("navigation");

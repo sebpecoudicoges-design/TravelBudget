@@ -398,7 +398,7 @@ export function renderWalletCreateDialog({
         <div class="tb-dlg-h">${esc(labels.title || 'Créer un wallet')}</div>
         <div class="tb-dlg-b">
           <div class="tb-dlg-row">
-            <label>${esc(labels.name || 'Nom')}</label>
+            <label for="tbWName">${esc(labels.name || 'Nom')}</label>
             <input id="tbWName" type="text" placeholder="${esc(labels.namePlaceholder || 'ex: Cash (THB), Banque EUR')}" />
           </div>
           <div class="tb-dlg-row">
@@ -408,14 +408,14 @@ export function renderWalletCreateDialog({
             </select>
           </div>
           <div class="tb-dlg-row">
-            <label>${esc(labels.type || 'Type')}</label>
+            <label for="tbWType">${esc(labels.type || 'Type')}</label>
             <select id="tbWType">
               ${renderWalletTypeOptions({ labels: labels.typeOptions, esc })}
             </select>
             <div class="hint">${esc(labels.typeHint || 'Le type sert au calcul du KPI Cash et du runway.')}</div>
           </div>
           <div class="tb-dlg-row">
-            <label>${esc(labels.balance || 'Solde initial')}</label>
+            <label for="tbWBal">${esc(labels.balance || 'Solde initial')}</label>
             <input id="tbWBal" type="text" inputmode="decimal" placeholder="0" value="0" />
           </div>
           <div id="tbWErr" class="tb-dlg-err"></div>
@@ -438,18 +438,18 @@ export function renderWalletEditDialog({
       <div class="tb-dlg-h">${esc(labels.title || 'Modifier wallet')}</div>
       <div class="tb-dlg-b">
         <div class="tb-dlg-row">
-          <label>${esc(labels.name || 'Nom')}</label>
+          <label for="tbWEditName">${esc(labels.name || 'Nom')}</label>
           <input id="tbWEditName" type="text" value="${esc(wallet?.name || '')}" />
         </div>
 
         <div class="tb-dlg-row">
-          <label>${esc(labels.currency || 'Devise')}</label>
-          <input type="text" value="${esc(wallet?.currency || '')}" disabled />
+          <label for="tbWEditCur">${esc(labels.currency || 'Devise')}</label>
+          <input id="tbWEditCur" type="text" value="${esc(wallet?.currency || '')}" disabled />
           <div class="hint">${esc(labels.currencyLocked || "La devise n'est pas modifiable ici.")}</div>
         </div>
 
         <div class="tb-dlg-row">
-          <label>${esc(labels.type || 'Type')}</label>
+          <label for="tbWEditType">${esc(labels.type || 'Type')}</label>
           <select id="tbWEditType">
             ${renderWalletTypeOptions({ selected: type, labels: labels.typeOptions, esc })}
           </select>

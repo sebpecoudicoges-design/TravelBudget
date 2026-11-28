@@ -11,23 +11,23 @@ function round(value) {
   return Math.round(Number(value) || 0);
 }
 
-function hoursLabel(value) {
+function hoursLabel(value, tr) {
   const hours = Number(value) || 0;
-  if (hours <= 0) return 'Non saisi';
+  if (hours <= 0) return tr('Non saisi');
   return `${Math.round(hours * 10) / 10}h`;
 }
 
-function goalLabel(health) {
-  if (health?.nutritionGoalMode === 'bulk') return `prise de masse +${round(health?.nutritionSurplusKcal)} kcal`;
-  if (health?.nutritionGoalMode === 'cut') return `perte douce -${round(health?.nutritionDeficitKcal)} kcal`;
-  return 'maintien / recomposition';
+function goalLabel(health, tr) {
+  if (health?.nutritionGoalMode === 'bulk') return `${tr("prise de masse")} +${round(health?.nutritionSurplusKcal)} kcal`;
+  if (health?.nutritionGoalMode === 'cut') return `${tr("perte douce")} -${round(health?.nutritionDeficitKcal)} kcal`;
+  return tr('maintien / recomposition');
 }
 
-function sleepDetail(health, esc) {
+function sleepDetail(health, esc, tr) {
   const hours = Number(health?.sleepHours) || 0;
-  if (hours <= 0) return 'Non saisi';
+  if (hours <= 0) return tr('Non saisi');
   const night = String(health?.sleepNightDay || '').slice(5).replace('-', '/');
-  return `${Math.round(hours * 10) / 10}h · ${esc(health?.sleepQuality || '')} · nuit du ${esc(night)}`;
+  return `${Math.round(hours * 10) / 10}h · ${esc(health?.sleepQuality || '')} · ${tr("nuit du")} ${esc(night)}`;
 }
 
 export function renderKpiResponsiveStyles() {
@@ -37,13 +37,15 @@ export function renderKpiResponsiveStyles() {
 export function renderKpiHealthCard({
   healthToday = {},
   healthActions = [],
+  translate = text => text,
   esc = defaultEsc,
 } = {}) {
   const safe = typeof esc === 'function' ? esc : defaultEsc;
+  const tr = text => safe(translate(text));
   const actions = Array.isArray(healthActions) ? healthActions : [];
   const color = safe(healthToday.color || '#0ea5e9');
   const score = round(healthToday.score);
-  return `<div class="kpi-health-card"><div class="kpi-health-head"><div><div class="muted" style="font-size:12px;">Sante</div><div style="font-weight:900;font-size:22px;line-height:1.15;margin-top:3px;">Suivi du jour</div><div class="muted" style="font-size:12px;margin-top:4px;">Nutrition · sport · travail · sommeil</div></div><span class="pill ${safe(healthToday.level || '')}" style="border-color:${color};color:${color};">${safe(healthToday.label || '')}</span></div><div class="kpi-health-body"><div class="kpi-health-ring" style="background:conic-gradient(${color} ${score}%, rgba(148,163,184,.18) 0);"><div class="kpi-health-ring-inner">${score}<span class="muted" style="font-size:10px;font-weight:700;">/100</span></div></div><div><div class="kpi-health-grid"><div class="kpi-health-metric"><span>Energie a maintenant</span><strong>${round(healthToday.kcal)} / ${round(healthToday.expectedKcalNow)} kcal</strong></div><div class="kpi-health-metric"><span>Balance actuelle</span><strong>${round(healthToday.currentBalance)} kcal</strong></div><div class="kpi-health-metric"><span>Eau bue</span><strong>${round(healthToday.drinkWaterMl)} / 2000 ml</strong></div><div class="kpi-health-metric"><span>Sommeil</span><strong>${hoursLabel(healthToday.sleepHours)}</strong></div></div><div class="muted" style="font-size:12px;margin-top:9px;">${safe(healthToday.advice || '')} Charge: ${round(healthToday.activityKcal)} kcal · Eau aliments: ${round(healthToday.foodWaterMl)} ml.</div><div class="kpi-health-actions">${actions.map((row) => `<div class="kpi-health-action ${safe(row?.tone || '')}"><strong>${safe(row?.title || '')}</strong><span>${safe(row?.body || '')}</span></div>`).join('')}</div><details class="kpi-health-detail"><summary>Comprendre le score</summary><div class="kpi-health-detail-grid"><div>Besoin jour complet: <strong style="color:var(--text);">${round(healthToday.needsKcal)} kcal</strong></div><div>Objectif a cette heure: <strong style="color:var(--text);">${round((Number(healthToday.dayProgress) || 0) * 100)}%</strong></div><div>Score energie: <strong style="color:var(--text);">${round(healthToday.kcalScore)} / 42</strong></div><div>Score eau: <strong style="color:var(--text);">${round(healthToday.hydrationScore)} / 24</strong></div><div>Score proteines: <strong style="color:var(--text);">${round(healthToday.proteinScore)} / 18</strong></div><div>Score sommeil: <strong style="color:var(--text);">${round(healthToday.sleepScore)} / 18</strong></div><div>Score alcool: <strong style="color:var(--text);">${round(healthToday.alcoholScore)} / 10</strong></div><div>Alcool: <strong style="color:var(--text);">${Math.round((Number(healthToday.alcoholDrinks) || 0) * 10) / 10} jour / ${Math.round((Number(healthToday.alcoholWeeklyDrinks) || 0) * 10) / 10} semaine</strong></div><div>Base metabolique: <strong style="color:var(--text);">${round(healthToday.baseline)} kcal</strong></div><div>Sport + travail: <strong style="color:var(--text);">${round(healthToday.activityKcal)} kcal</strong></div><div>Objectif nutrition: <strong style="color:var(--text);">${goalLabel(healthToday)}</strong></div><div>Proteines: <strong style="color:var(--text);">${round(healthToday.protein)} / ${round(healthToday.proteinTarget)}g</strong></div><div>Sommeil: <strong style="color:var(--text);">${sleepDetail(healthToday, safe)}</strong></div></div></details></div></div></div>`;
+  return `<div class="kpi-health-card"><div class="kpi-health-head"><div><div class="muted" style="font-size:12px;">${tr("Sante")}</div><div style="font-weight:900;font-size:22px;line-height:1.15;margin-top:3px;">${tr("Suivi du jour")}</div><div class="muted" style="font-size:12px;margin-top:4px;">${tr("Nutrition \u00b7 sport \u00b7 travail \u00b7 sommeil")}</div></div><span class="pill ${safe(healthToday.level || '')}" style="border-color:${color};color:${color};">${tr(healthToday.label || '')}</span></div><div class="kpi-health-body"><div class="kpi-health-ring" style="background:conic-gradient(${color} ${score}%, rgba(148,163,184,.18) 0);"><div class="kpi-health-ring-inner">${score}<span class="muted" style="font-size:10px;font-weight:700;">/100</span></div></div><div><div class="kpi-health-grid"><div class="kpi-health-metric"><span>${tr("Energie a maintenant")}</span><strong>${round(healthToday.kcal)} / ${round(healthToday.expectedKcalNow)} kcal</strong></div><div class="kpi-health-metric"><span>${tr("Balance actuelle")}</span><strong>${round(healthToday.currentBalance)} kcal</strong></div><div class="kpi-health-metric"><span>${tr("Eau bue")}</span><strong>${round(healthToday.drinkWaterMl)} / 2000 ml</strong></div><div class="kpi-health-metric"><span>${tr("Sommeil")}</span><strong>${hoursLabel(healthToday.sleepHours, tr)}</strong></div></div><div class="muted" style="font-size:12px;margin-top:9px;">${tr(healthToday.advice || '')} ${tr("Charge")}: ${round(healthToday.activityKcal)} kcal · ${tr("Eau aliments")}: ${round(healthToday.foodWaterMl)} ml.</div><div class="kpi-health-actions">${actions.map((row) => `<div class="kpi-health-action ${safe(row?.tone || '')}"><strong>${tr(row?.title || '')}</strong><span>${tr(row?.body || '')}</span></div>`).join('')}</div><details class="kpi-health-detail"><summary>${tr("Comprendre le score")}</summary><div class="kpi-health-detail-grid"><div>${tr("Besoin jour complet")}: <strong>${round(healthToday.needsKcal)} kcal</strong></div><div>${tr("Objectif a cette heure")}: <strong>${round((Number(healthToday.dayProgress) || 0) * 100)}%</strong></div><div>${tr("Score energie")}: <strong>${round(healthToday.kcalScore)} / 42</strong></div><div>${tr("Score eau")}: <strong>${round(healthToday.hydrationScore)} / 24</strong></div><div>${tr("Score proteines")}: <strong>${round(healthToday.proteinScore)} / 18</strong></div><div>${tr("Score sommeil")}: <strong>${round(healthToday.sleepScore)} / 18</strong></div><div>${tr("Score alcool")}: <strong>${round(healthToday.alcoholScore)} / 10</strong></div><div>${tr("Alcool")}: <strong>${Math.round((Number(healthToday.alcoholDrinks) || 0) * 10) / 10} ${tr("jour")} / ${Math.round((Number(healthToday.alcoholWeeklyDrinks) || 0) * 10) / 10} ${tr("semaine")}</strong></div><div>${tr("Base metabolique")}: <strong>${round(healthToday.baseline)} kcal</strong></div><div>${tr("Sport + travail")}: <strong>${round(healthToday.activityKcal)} kcal</strong></div><div>${tr("Objectif nutrition")}: <strong>${goalLabel(healthToday, tr)}</strong></div><div>${tr("Proteines")}: <strong>${round(healthToday.protein)} / ${round(healthToday.proteinTarget)}g</strong></div><div>${tr("Sommeil")}: <strong>${sleepDetail(healthToday, safe, tr)}</strong></div></div></details></div></div></div>`;
 }
 
 export function renderKpiMiniCard({
@@ -63,6 +65,7 @@ export function renderKpiCards({
   cards = [],
   healthToday = {},
   healthActions = [],
+  translateHealth,
   pendingToggle = {},
   fxCalculatorTitle = 'Convertisseur',
   esc = defaultEsc,
@@ -70,7 +73,7 @@ export function renderKpiCards({
   const safe = typeof esc === 'function' ? esc : defaultEsc;
   const list = Array.isArray(cards) ? cards : [];
   const renderedCards = list.map((card) => renderKpiMiniCard({ esc: safe, ...card })).join('');
-  const healthCard = renderKpiHealthCard({ healthToday, healthActions, esc: safe });
+  const healthCard = renderKpiHealthCard({ healthToday, healthActions, translate: translateHealth, esc: safe });
   const pendingCard = pendingToggle?.card
     ? renderKpiMiniCard({
         esc: safe,

@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="TravelBudget">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.399";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.402";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -716,10 +716,7 @@
   }
   #tb-boot-overlay .tb-boot-head{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
   #tb-boot-overlay .tb-boot-mark{
-    width:46px; height:46px; border-radius:16px; display:grid; place-items:center;
-    color:#fff; font-weight:950; letter-spacing:.02em;
-    background:linear-gradient(145deg,var(--tb-coral-strong,#e94f32),var(--tb-coral,#ff6b4a));
-    border:1px solid rgba(255,255,255,.42); box-shadow:0 12px 26px rgba(233,79,50,.20);
+    width:46px; height:46px; flex:0 0 46px; border-radius:11px; display:block;
   }
   #tb-boot-overlay .tb-boot-copy{ min-width:0; flex:1; }
   #tb-boot-overlay .tb-boot-title{ font-weight:900; font-size:19px; line-height:1.12; }
@@ -843,6 +840,8 @@
     .analysis-stat-bar > span{ display:block; height:100%; border-radius:999px; background:linear-gradient(90deg, var(--accent), rgba(168,85,247,.95)); transform-origin:left center; animation:analysisGrow 1s ease; }
     @keyframes analysisGrow{ from{ transform:scaleX(.1); opacity:.35;} to{ transform:scaleX(1); opacity:1;} }
     .analysis-main-grid{ display:grid; grid-template-columns: minmax(0,1.55fr) minmax(340px,.88fr); gap:20px; }
+    #analysis-custom-layout{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    @media (max-width: 780px){ #analysis-custom-layout{ grid-template-columns:minmax(0,1fr); } }
     .analysis-side-stack{ display:grid; grid-template-rows:repeat(3,minmax(220px,1fr)); gap:20px; }
     .analysis-bottom-grid{ display:grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1.25fr); gap:20px; align-items:start; }
     .analysis-chart-card,.analysis-insights-card{ border-radius:28px; }
@@ -859,7 +858,6 @@
     .tb-analysis-category-detail{ display:flex; align-items:center; gap:8px; margin-top:8px; }
     .tb-analysis-category-detail[hidden]{ display:none; }
     #analysis-category-drilldown{ flex:1; min-width:0; }
-    .analysis-chart--heatmap{ height:300px; }
     .analysis-insight{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border); }
     .analysis-insight:last-child{ border-bottom:none; padding-bottom:0; }
     .analysis-insight-badge{ width:34px; height:34px; border-radius:14px; display:grid; place-items:center; font-size:16px; background:rgba(37,99,235,.14); flex:none; }
@@ -2724,27 +2722,25 @@
       background:rgba(15,23,42,.84) !important;
       border-color:rgba(226,232,240,.10) !important;
     }
-    .brand h1{
-      position:relative;
-      min-height:42px;
-      padding-left:52px;
-      display:flex;
+    #app-root .brand{
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr);
       align-items:center;
+      column-gap:10px;
+    }
+    .tb-app-brand-icon{
+      grid-row:1 / span 2;
+      width:40px;
+      height:40px;
+      display:block;
+    }
+    .tb-app-channel{ grid-column:2; font-size:10px; font-weight:800; color:var(--tb-muted); }
+    .brand h1{
+      display:block;
       font-size:22px !important;
       line-height:1;
     }
-    .brand h1::before{
-      content:"";
-      position:absolute;
-      left:0;
-      top:50%;
-      transform:translateY(-50%);
-      width:40px;
-      height:40px;
-      border-radius:12px;
-      background:url("/pwa-icon.svg") center / contain no-repeat;
-    }
-    .brand .sub{ padding-left:52px; color:var(--bp-demo-muted) !important; }
+    .brand .sub{ color:var(--bp-demo-muted) !important; }
     body.theme-dark .brand .sub{ color:#94a3b8 !important; }
     .top-actions .lang-switch{
       display:inline-flex;
@@ -3015,17 +3011,8 @@
       margin-bottom:12px !important;
       padding:10px 12px !important;
     }
-    .brand h1{
-      min-height:38px;
-      padding-left:48px;
-      font-size:20px !important;
-    }
-    .brand h1::before{
-      width:36px;
-      height:36px;
-      border-radius:13px;
-    }
-    .brand .sub{ padding-left:48px; }
+    .brand h1{ font-size:20px !important; }
+    .tb-app-brand-icon{ width:36px; height:36px; }
     #kpi.premium-kpi-shell{
       padding:16px 18px !important;
       margin-bottom:12px !important;
@@ -3529,6 +3516,10 @@
 </style>
 <style id="tb-critical-mobile-navigation">
   #tb-mobile-nav-toggle { display: none !important; }
+  @media (min-width: 1180px) {
+    #tb-app-navigation .tab:has(.tb-beta-badge--version) { flex-wrap: wrap; min-height: 43px; row-gap: 0; padding-block: 2px !important; }
+    #tb-app-navigation .tab:has(.tb-beta-badge--version) .tab-label { flex: 1 1 calc(100% - 37px); }
+  }
   body.tb-capacitor-app #kpi .kpi-health-card { display: none !important; }
   @media (max-width: 760px), (max-height: 600px) and (pointer: coarse) {
     #kpi .kpi-health-card, #tb-app-navigation { display: none !important; }
@@ -3596,7 +3587,39 @@
       background: var(--tb-lagoon-soft, var(--tb-surface-soft));
     }
     #tb-app-navigation .tab[data-icon]::before { display: none !important; }
-    #tb-app-navigation .tab-icon { flex: 0 0 18px; width: 18px; height: 18px; }
+    #tb-app-navigation .tab-icon {
+      display: inline-block;
+      flex: 0 0 26px;
+      width: 26px;
+      height: 26px;
+      box-sizing: border-box;
+      padding: 4px;
+      border-radius: 7px;
+      color: #fff;
+      background: var(--tb-nav-icon-tone, #44546a);
+    }
+    /* Shapes and text remain distinct independently of these high-contrast accent tiles. */
+    #tab-dashboard { --tb-nav-icon-tone: #075b64; }
+    #tab-transactions { --tb-nav-icon-tone: #1655aa; }
+    #tab-subscriptions { --tb-nav-icon-tone: #7436a3; }
+    #tab-analysis { --tb-nav-icon-tone: #ad431f; }
+    #tab-assets { --tb-nav-icon-tone: #2f683b; }
+    #tab-accounting { --tb-nav-icon-tone: #845426; }
+    #tab-sport { --tb-nav-icon-tone: #b31f54; }
+    #tab-nutrition { --tb-nav-icon-tone: #52691c; }
+    #tab-work { --tb-nav-icon-tone: #265078; }
+    #tab-documents { --tb-nav-icon-tone: #8d304a; }
+    #tab-inbox { --tb-nav-icon-tone: #8a4d09; }
+    #tab-notifications { --tb-nav-icon-tone: #633f89; }
+    #tab-help { --tb-nav-icon-tone: #196853; }
+    #tab-trip { --tb-nav-icon-tone: #14658c; }
+    #tab-settings { --tb-nav-icon-tone: #4c5066; }
+    #tab-testing { --tb-nav-icon-tone: #8c225f; }
+    #tab-members { --tb-nav-icon-tone: #3c53a4; }
+    @media (forced-colors: active) {
+      #tb-app-navigation .tab-icon { color: ButtonText; background: ButtonFace; }
+    }
+    #tb-app-navigation .tab-label { overflow-wrap: anywhere; }
     body.theme-dark #tb-mobile-nav-toggle,
     body.theme-dark #tb-app-navigation {
       background: var(--panel, #162536);
@@ -3626,7 +3649,7 @@
   <div id="tb-boot-overlay" aria-live="polite">
     <div class="tb-boot-card">
       <div class="tb-boot-head">
-        <div class="tb-boot-mark">TB</div>
+        <img class="tb-boot-mark" src="/pwa-icon.svg" width="46" height="46" alt="" />
         <div class="tb-boot-copy">
           <div class="tb-boot-title">Préparation de votre espace</div>
           <div id="tb-boot-version" class="tb-boot-version">Version TB <script>document.write(window.TB_VERSION || window.__TB_BUILD || "dev")</script></div>
@@ -3677,80 +3700,80 @@
 
     <div class="modal-grid">
       <div class="field">
-        <label for="m-type">Type <span class="tb-help" title="Dépense = sort du wallet. Entrée = ajoute au wallet.">?</span></label>
+        <label for="m-type"><span data-t="transactions.form.type">Type</span> <span class="tb-help" data-t-title="transactions.form.tip.type" title="Une dépense débite le wallet. Une entrée le crédite.">?</span></label>
         <select id="m-type">
-          <option value="expense">Dépense</option>
-          <option value="income">Entrée</option>
+          <option value="expense" data-t="transactions.form.expense">Dépense</option>
+          <option value="income" data-t="transactions.form.income">Entrée</option>
         </select>
       </div>
 
       <div class="field">
-        <label for="m-wallet">Wallet <span class="tb-help" title="Le wallet concerné par la transaction.">?</span></label>
+        <label for="m-wallet"><span data-t="transactions.form.wallet">Wallet</span> <span class="tb-help" data-t-title="transactions.form.tip.wallet" title="Choisis le wallet concerné par cette transaction.">?</span></label>
         <select id="m-wallet"></select>
       </div>
 
       <div class="field">
-        <label for="m-amount">Montant</label>
+        <label for="m-amount"><span data-t="transactions.form.amount">Montant</span></label>
         <input id="m-amount" type="number" step="0.01" placeholder="0" />
       </div>
 
       <div class="field">
-        <label for="m-category">Catégorie <span class="tb-help" title="Sert aux stats (camembert). Choisis 'Autre' si tu hésites.">?</span></label>
+        <label for="m-category"><span data-t="transactions.form.category">Catégorie</span> <span class="tb-help" data-t-title="transactions.form.tip.category" title="La catégorie sert à regrouper tes opérations dans Analyse.">?</span></label>
         <select id="m-category"></select>
       </div>
 
       <div class="field">
-        <label for="m-subcategory">Sous-catégorie</label>
+        <label for="m-subcategory"><span data-t="transactions.form.subcategory">Sous-catégorie</span></label>
         <select id="m-subcategory">
-          <option value="">Aucune</option>
+          <option value="" data-t="transactions.form.none">Aucune</option>
         </select>
       </div>
 
       <div class="field">
-        <label for="m-cash-date">Date trésorerie</label>
+        <label for="m-cash-date"><span data-t="transactions.form.cash-date">Date de trésorerie</span></label>
         <input id="m-cash-date" type="date" />
       </div>
 
       <div class="field">
-        <label for="m-budget-start">Date budget début</label>
+        <label for="m-budget-start"><span data-t="transactions.form.budget-start">Début de la période budgétaire</span></label>
         <input id="m-budget-start" type="date" />
       </div>
 
       <div class="field">
-        <label for="m-budget-end">Date budget fin</label>
+        <label for="m-budget-end"><span data-t="transactions.form.budget-end">Fin de la période budgétaire</span></label>
         <input id="m-budget-end" type="date" />
       </div>
 
       <div class="field" style="grid-column:1/-1;">
-        <label for="m-label">Label</label>
-        <input id="m-label" type="text" placeholder="Optionnel" />
+        <label for="m-label"><span data-t="transactions.form.label">Libellé</span></label>
+        <input id="m-label" type="text" data-t-placeholder="transactions.form.optional" placeholder="Facultatif" />
       </div>
 
       <div class="field" style="grid-column:1/-1;">
-        <label for="m-recurring-rule">Abonnement lié <span class="tb-help" title="Les échéances créées par une règle sont liées automatiquement. Pour une transaction manuelle, choisis ici l'abonnement correspondant.">?</span></label>
-        <select id="m-recurring-rule"><option value="">Aucun abonnement</option></select>
-        <small id="m-recurring-rule-help" class="muted">Optionnel pour une transaction créée manuellement.</small>
+        <label for="m-recurring-rule"><span data-t="transactions.form.recurring-rule">Abonnement lié</span> <span class="tb-help" data-t-title="transactions.form.tip.recurring-rule" title="Les échéances récurrentes sont liées automatiquement. Tu peux aussi associer une saisie manuelle.">?</span></label>
+        <select id="m-recurring-rule"><option value="" data-t="transactions.form.no_subscription">Aucun abonnement</option></select>
+        <small id="m-recurring-rule-help" class="muted" data-t="transactions.form.subscription_help">Facultatif pour une transaction manuelle.</small>
       </div>
 
       <div class="field tb-tx-create-docs" id="m-documents-block" style="grid-column:1/-1;">
-        <label for="m-documents">Documents <span class="tb-help" title="Ajoute une ou plusieurs factures, photos ou pièces justificatives. Elles seront enregistrées après la création de la transaction.">?</span></label>
+        <label for="m-documents"><span data-t="transactions.form.documents">Documents</span> <span class="tb-help" data-t-title="transactions.form.tip.documents" title="Les justificatifs seront enregistrés après la création de la transaction.">?</span></label>
         <input id="m-documents" type="file" multiple accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
         <div id="m-documents-list" class="tb-tx-create-docs__list muted" aria-live="polite">Aucun document sélectionné.</div>
-        <small class="muted">Optionnel · plusieurs fichiers possibles · connexion requise pour l’envoi.</small>
+        <small class="muted" data-t="transactions.form.files_help">Facultatif. L’envoi de fichiers nécessite une connexion.</small>
       </div>
 
       <div class="field">
-        <label for="m-paynow">Payé maintenant <span class="tb-help" title="Coché : impact immédiat sur le solde. Décoché : c'est à payer/recevoir plus tard (prévision).">?</span></label>
+        <label for="m-paynow"><span data-t="transactions.form.paynow">Payé maintenant</span> <span class="tb-help" data-t-title="transactions.form.tip.paynow" title="Coché : le solde est mis à jour immédiatement. Décoché : le règlement reste prévu.">?</span></label>
         <input id="m-paynow" type="checkbox" checked />
       </div>
 
       <div class="field">
-        <label for="m-out">Hors budget/jour <span class="tb-help" title="Coché : n'impacte pas le budget quotidien (ex: dépense exceptionnelle).">?</span></label>
+        <label for="m-out"><span data-t="transactions.form.out">Hors budget quotidien</span> <span class="tb-help" data-t-title="transactions.form.tip.out" title="Cette opération ne compte pas dans le budget quotidien.">?</span></label>
         <input id="m-out" type="checkbox" />
       </div>
 
       <div class="field hidden" id="m-night-block">
-        <label for="m-night">Remplace une nuit d'hébergement <span class="tb-help" title="Signal analytique uniquement : n'impacte ni le budget, ni les KPI, ni la projection. Sert à afficher une économie potentielle de logement.">?</span></label>
+        <label for="m-night"><span data-t="transactions.form.night">Remplace une nuit d’hébergement</span> <span class="tb-help" data-t-title="transactions.form.tip.night" title="Indication pour Analyse uniquement. Elle ne modifie ni le budget ni le solde.">?</span></label>
         <input id="m-night" type="checkbox" />
       </div>
     </div>
@@ -3764,6 +3787,7 @@
     <symbol id="tb-icon-transactions" viewBox="0 0 24 24"><path d="M7 7h13m0 0-3-3m3 3-3 3M17 17H4m0 0 3 3m-3-3 3-3"/></symbol>
     <symbol id="tb-icon-subscriptions" viewBox="0 0 24 24"><path d="M4 7h16v12H4V7Z"/><path d="M8 4v6m8-6v6M4 11h16m-12 4h3m2 0h3"/></symbol>
     <symbol id="tb-icon-analysis" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></symbol>
+    <symbol id="tb-icon-accounting" viewBox="0 0 24 24"><path d="M6 4h13v16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm2 0v16m3-11h5m-5 4h5"/></symbol>
     <symbol id="tb-icon-assets" viewBox="0 0 24 24"><path d="m3 10 9-6 9 6M5 10v8m5-8v8m4-8v8m5-8v8M3 20h18"/></symbol>
     <symbol id="tb-icon-sport" viewBox="0 0 24 24"><path d="M6 9v6m12-6v6M3 10v4m18-4v4M6 12h12"/></symbol>
     <symbol id="tb-icon-nutrition" viewBox="0 0 24 24"><path d="M12 8c-1.8-2.2-5.8-2-7.2.6C2.6 12.7 6.4 21 12 21s9.4-8.3 7.2-12.4C17.8 6 13.8 5.8 12 8Z"/><path d="M12 8c0-2.5 1.4-4.3 4-5"/></symbol>
@@ -3774,6 +3798,7 @@
     <symbol id="tb-icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.5 2.1c-.9.5-1.3 1-1.3 2M12 17h.01"/></symbol>
     <symbol id="tb-icon-trip" viewBox="0 0 24 24"><path d="m3 11 18-7-7 18-3-8-8-3Z"/><path d="m11 14 5-5"/></symbol>
     <symbol id="tb-icon-settings" viewBox="0 0 24 24"><path d="M4 6h10m4 0h2M4 12h2m4 0h10M4 18h7m4 0h5"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></symbol>
+    <symbol id="tb-icon-testing" viewBox="0 0 24 24"><path d="M9 3h6m-5 0v7l-5 8a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-8V3M8 14h8"/><path d="M10 17h.01m4 1h.01"/></symbol>
     <symbol id="tb-icon-members" viewBox="0 0 24 24"><path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-1a3 3 0 1 0 0-6m-8 9c-4 0-6 2-6 5v2h12v-2c0-3-2-5-6-5Zm8-1c3 0 5 2 5 5v2h-5"/></symbol>
   </svg>
 
@@ -3786,8 +3811,10 @@
     <div class="wrap">
       <header>
         <div class="brand">
+          <img class="tb-app-brand-icon" src="/pwa-icon.svg" width="40" height="40" alt="" />
           <h1 data-t="app.title">TravelBudget</h1>
           <div class="sub" data-t="app.subtitle">Outil de suivi de budget pendant tes voyages</div>
+          <div class="tb-app-channel" id="tb-direct-apk-channel" hidden><span class="tb-beta-badge">APK</span> <span id="tb-direct-apk-version"></span></div>
         </div>
 
         <div class="top-actions">
@@ -3806,26 +3833,26 @@
 
       <div id="kpi" class="card premium-kpi-shell"></div>
       <div class="tabs app-tabs" id="tb-app-navigation" role="navigation" aria-label="TravelBudget">
-        <div class="tab-group-label">Vue d’ensemble</div>
+        <div class="tab-group-label" data-t="nav.overview">Vue d’ensemble</div>
         <button type="button" id="tab-dashboard" class="tab active" aria-current="page" data-icon="🧭" onclick="showView('dashboard')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-dashboard"></use></svg><span class="tab-label" data-t="nav.dashboard">Dashboard</span></button>
-        <div class="tab-group-label">Finances</div>
+        <div class="tab-group-label" data-t="nav.finance">Finances</div>
         <button type="button" id="tab-transactions" class="tab" data-icon="💳" onclick="showView('transactions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-transactions"></use></svg><span class="tab-label" data-t="nav.transactions">Transactions</span></button>
-        <button type="button" id="tab-subscriptions" class="tab" data-icon="📅" onclick="showView('subscriptions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-subscriptions"></use></svg><span class="tab-label">Abonnements</span></button>
+        <button type="button" id="tab-subscriptions" class="tab" data-icon="📅" onclick="showView('subscriptions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-subscriptions"></use></svg><span class="tab-label" data-t="nav.subscriptions">Abonnements</span> <span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span></button>
         <button type="button" id="tab-analysis" class="tab" data-icon="📊" onclick="showView('analysis')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-analysis"></use></svg><span class="tab-label" data-t="nav.analysis">Analyse</span></button>
-        <button type="button" id="tab-assets" class="tab" data-icon="💎" onclick="showView('assets')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-assets"></use></svg><span class="tab-label" data-t="nav.assets">Patrimoine</span></button>
-        <button id="tab-accounting" type="button" class="tab" data-icon="📒" onclick="showView('accounting')"><span class="tab-icon" aria-hidden="true">📒</span><span class="tab-label">Comptabilité</span></button>
+        <button type="button" id="tab-assets" class="tab" data-icon="💎" onclick="showView('assets')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-assets"></use></svg><span class="tab-label" data-t="nav.assets">Patrimoine</span> <span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span></button>
+        <button id="tab-accounting" type="button" class="tab" data-icon="📒" onclick="showView('accounting')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-accounting"></use></svg><span class="tab-label" data-t="nav.accounting">Comptabilité</span> <span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span></button>
         <div class="tab-group-label" data-t="nav.daily">Quotidien</div>
         <button type="button" id="tab-sport" class="tab" data-icon="🏋️" onclick="showView('sport')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-sport"></use></svg><span class="tab-label" data-t="nav.sport">Sport</span> <span class="tb-beta-badge" data-t="common.beta">BÊTA</span></button>
         <button type="button" id="tab-nutrition" class="tab" data-icon="🍎" onclick="showView('nutrition')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-nutrition"></use></svg><span class="tab-label" data-t="nav.nutrition">Alimentation</span> <span class="tb-beta-badge" data-t="common.beta">BÊTA</span></button>
         <button type="button" id="tab-work" class="tab" data-icon="💼" onclick="showView('work')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-work"></use></svg><span class="tab-label" data-t="nav.work">Travail</span> <span class="tb-beta-badge" data-t="common.beta">BÊTA</span></button>
-        <div class="tab-group-label">Ressources</div>
-        <button type="button" id="tab-documents" class="tab" data-icon="📁" onclick="showView('documents')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-documents"></use></svg><span class="tab-label">Documents</span></button>
-        <button type="button" id="tab-inbox" class="tab" data-icon="📥" onclick="showView('inbox')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-inbox"></use></svg><span class="tab-label tb-inbox-tab-label">À traiter</span></button>
-        <button type="button" id="tab-notifications" class="tab" data-icon="🔔" onclick="showView('notifications')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-notifications"></use></svg><span class="tab-label">Notifications</span></button>
+        <div class="tab-group-label" data-t="nav.resources">Ressources</div>
+        <button type="button" id="tab-documents" class="tab" data-icon="📁" onclick="showView('documents')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-documents"></use></svg><span class="tab-label" data-t="nav.documents">Documents</span></button>
+        <button type="button" id="tab-inbox" class="tab" data-icon="📥" onclick="showView('inbox')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-inbox"></use></svg><span class="tab-label tb-inbox-tab-label" data-t="nav.inbox">À traiter</span></button>
+        <button type="button" id="tab-notifications" class="tab" data-icon="🔔" onclick="showView('notifications')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-notifications"></use></svg><span class="tab-label" data-t="nav.notifications">Notifications</span></button>
         <button type="button" id="tab-help" class="tab" data-icon="❓" onclick="showView('help')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-help"></use></svg><span class="tab-label" data-t="nav.help">Aide</span></button>
         <button type="button" id="tab-trip" class="tab" data-icon="✈️" onclick="showView('trip')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-trip"></use></svg><span class="tab-label" data-t="nav.trip">Partage</span></button>
         <button type="button" id="tab-settings" class="tab" data-icon="⚙️" onclick="showView('settings')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-settings"></use></svg><span class="tab-label" data-t="nav.settings">Settings</span></button>
-        <button type="button" id="tab-testing" class="tab" data-icon="🧪" style="display:none" onclick="showView('testing')"><span class="tab-icon" aria-hidden="true">🧪</span><span class="tab-label">Tests</span></button>
+        <button type="button" id="tab-testing" class="tab" data-icon="🧪" style="display:none" onclick="showView('testing')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-testing"></use></svg><span class="tab-label" data-t="nav.testing">Tests</span></button>
         <button type="button" id="tab-members" class="tab" data-icon="👥" style="display:none" onclick="showView('members')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-members"></use></svg><span class="tab-label" data-t="nav.members">Membres</span></button>
       </div>
 
@@ -3869,13 +3896,16 @@
 
       <!-- ASSETS / PATRIMOINE -->
       <div id="view-subscriptions" class="hidden">
+        <p class="tb-module-maturity"><span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span><span data-t="daily.beta_note">Module en cours de test</span></p>
         <div id="subscriptions-root"></div>
       </div>
 
       <div id="view-assets" class="hidden">
+        <p class="tb-module-maturity"><span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span><span data-t="daily.beta_note">Module en cours de test</span></p>
         <div id="assets-root" class="card"></div>
       </div>
       <div id="view-accounting" class="hidden">
+        <p class="tb-module-maturity"><span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span><span data-t="daily.beta_note">Module en cours de test</span></p>
         <div id="accounting-root"></div>
       </div>
 
@@ -3946,10 +3976,10 @@
               </div>
             </div>
             <div class="analysis-filter-group">
-              <label for="analysis-comparison">Comparaison</label>
+              <label for="analysis-comparison" data-t="analysis.filter.comparison">Comparaison</label>
               <select id="analysis-comparison">
-                <option value="none">Sans comparaison</option>
-                <option value="previous">Période précédente</option>
+                <option value="none" data-t="analysis.comparison.none">Sans comparaison</option>
+                <option value="previous" data-t="analysis.comparison.previous">Période précédente</option>
               </select>
             </div>
             <div class="analysis-filter-group">
@@ -3975,13 +4005,13 @@
               </select>
             </div>
             <div class="analysis-filter-group">
-              <label for="analysis-category-filter" data-t="analysis.filter.category">CatÃ©gorie</label>
+              <label for="analysis-category-filter" data-t="analysis.filter.category">Catégorie</label>
               <select id="analysis-category-filter">
                 <option value="all" data-t="common.all">Toutes</option>
               </select>
             </div>
             <div class="analysis-filter-group">
-              <label for="analysis-subcategory-filter" data-t="analysis.filter.subcategory">Sous-catÃ©gorie</label>
+              <label for="analysis-subcategory-filter" data-t="analysis.filter.subcategory">Sous-catégorie</label>
               <select id="analysis-subcategory-filter">
                 <option value="all" data-t="common.all">Toutes</option>
               </select>
@@ -3991,7 +4021,7 @@
               <div class="analysis-category-compact">
                 <div class="analysis-category-copy">
                   <strong data-t="analysis.exclusions.title">Exclusions catégories</strong>
-                  <span id="analysis-category-summary" data-t="analysis.exclusions.none">Aucune catégorie exclue</span>
+                  <span id="analysis-category-summary">Aucune catégorie exclue</span>
                 </div>
                 <div class="analysis-category-actions">
                   <span id="analysis-category-count" class="analysis-category-badge">0</span>
@@ -4079,15 +4109,6 @@
           </div>
 
           <div class="analysis-bottom-grid">
-            <div class="card analysis-chart-card">
-              <div class="analysis-card-head">
-                <div>
-                  <div class="analysis-card-kicker" data-t="analysis.card.time_split">Répartition temps</div>
-                  <h3 data-t="analysis.card.heatmap">Heatmap des dépenses</h3>
-                </div>
-              </div>
-              <div id="analysis-heatmap-chart" class="analysis-chart analysis-chart--heatmap"></div>
-            </div>
             <div class="card analysis-chart-card analysis-chart-card--reference">
               <div class="analysis-card-head">
                 <div>
@@ -4117,7 +4138,7 @@
               <div class="analysis-card-head">
                 <div>
                   <div class="analysis-card-kicker" data-t="analysis.card.quick_read">Lecture rapide</div>
-                  <h3>Insights</h3>
+                  <h3 data-t="analysis.card.insights">Points clés</h3>
                 </div>
               </div>
               <div id="analysis-insights"></div>
@@ -4135,12 +4156,12 @@
           </div>
           <div class="row">
             <div class="field">
-              <label data-t="transactions.filters.from">Du</label>
-              <input id="f-from" type="date" />
+              <label for="f-from" data-t="transactions.filters.from">Du</label>
+              <input id="f-from" class="tx-filter-date" type="date" />
             </div>
             <div class="field">
-              <label data-t="transactions.filters.to">Au</label>
-              <input id="f-to" type="date" />
+              <label for="f-to" data-t="transactions.filters.to">Au</label>
+              <input id="f-to" class="tx-filter-date" type="date" />
             </div>
             <div class="field">
               <label data-t="transactions.filters.wallet">Wallet</label>
@@ -4210,8 +4231,8 @@
           </div>
           <div class="tx-list-card tx-list-card--embedded">
           <div class="tx-list-head">
-            <h2>Liste</h2>
-            <span class="muted">Transactions filtrées</span>
+            <h2 data-t="transactions.list.title">Liste</h2>
+            <span class="muted" data-t="transactions.list.filtered">Transactions filtrées</span>
           </div>
           <div id="tx-list"></div>
         </div>
@@ -4230,6 +4251,7 @@
       box-shadow:0 20px 40px rgba(2,6,23,.06);
       backdrop-filter: blur(14px);" id="tb-account-card">
           <h2>Compte</h2>
+          <button class="btn" type="button" data-t="settings.account.guided_setup" onclick="window.tbOpenGuidedAccountSetup?.()">Relancer le paramétrage guidé</button>
           <div id="tb-account-box"></div>
         </div>
 
@@ -4277,7 +4299,7 @@
       background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
       box-shadow:0 20px 40px rgba(2,6,23,.06);
       backdrop-filter: blur(14px);" id="tb-periods-card">
-          <h2>Périodes du voyage</h2>
+          <h2 data-t="settings.card.periods_title">Périodes du voyage</h2>
           <div class="muted" style="margin-bottom:10px;">
             Chaque période rassemble dates, devise, budget/jour et référence pays. Ouvre seulement la période à ajuster.</div>
 
@@ -4297,18 +4319,18 @@
 
           <div class="row" style="margin-bottom:10px;">
             <div class="field" style="min-width:220px;">
-              <label>Preset</label>
+              <label for="p-preset" data-t="settings.palette.preset">Préréglage</label>
               <select id="p-preset"></select>
             </div>
             <div class="field">
               <label></label>
-              <button class="btn" onclick="resetPalette()">Reset</button>
+              <button class="btn" onclick="resetPalette()" data-t="settings.palette.reset">Réinitialiser</button>
             </div>
           </div>
 
           <div class="palette-grid">
             <div class="field">
-              <label>Accent</label>
+              <label for="p-accent" data-t="settings.palette.accent">Accent</label>
               <div class="colorchip">
                 <span class="chipdot" id="chip-accent"></span>
                 <input id="p-accent" type="color" />
@@ -4316,7 +4338,7 @@
             </div>
 
             <div class="field">
-              <label>Success</label>
+              <label for="p-good" data-t="settings.palette.success">Succès</label>
               <div class="colorchip">
                 <span class="chipdot" id="chip-good"></span>
                 <input id="p-good" type="color" />
@@ -4324,7 +4346,7 @@
             </div>
 
             <div class="field">
-              <label>Warning</label>
+              <label for="p-warn" data-t="settings.palette.warning">Avertissement</label>
               <div class="colorchip">
                 <span class="chipdot" id="chip-warn"></span>
                 <input id="p-warn" type="color" />
@@ -4332,7 +4354,7 @@
             </div>
 
             <div class="field">
-              <label>Danger</label>
+              <label for="p-bad" data-t="settings.palette.danger">Danger</label>
               <div class="colorchip">
                 <span class="chipdot" id="chip-bad"></span>
                 <input id="p-bad" type="color" />
@@ -4341,7 +4363,7 @@
           </div>
 
           <div class="row" style="justify-content:flex-end; margin-top:12px;">
-            <button class="btn primary" onclick="savePaletteFromUI()">Enregistrer palette</button>
+            <button class="btn primary" onclick="savePaletteFromUI()" data-t="settings.palette.save">Enregistrer la palette</button>
           </div>
         </div>
 
@@ -4352,7 +4374,7 @@
       background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
       box-shadow:0 20px 40px rgba(2,6,23,.06);
       backdrop-filter: blur(14px);">
-          <h2>Catégories</h2>
+          <h2 data-t="settings.card.categories_title">Catégories</h2>
           <div class="muted" style="margin-bottom:10px;">
             Les catégories pilotent les listes côté Budget + Trip. Elles sont sauvegardées sur Supabase.
           </div>
@@ -4802,14 +4824,17 @@
         margin:0!important;
         min-width:0!important;
       }
-      body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(1),
-      body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(2),
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(5),
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(8),
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(9),
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(10),
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field[data-tx-invoice-filter="1"]{
         display:none!important;
+      }
+      body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card .tx-filter-date{
+        width:100%;
+        min-width:0;
+        box-sizing:border-box;
       }
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .tx-filter-search{
         grid-column:1 / -1!important;

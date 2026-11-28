@@ -250,7 +250,10 @@ describe('Trip view', () => {
       modal: true,
       language: 'en',
       todayISO: '2026-07-05',
-      translate: (key) => key,
+      translate: (key) => ({
+        'trip.income.received_by': 'Received by',
+        'trip.income.add': 'Add income',
+      }[key] || key),
       currencyOptionsHTML: (currency) => `<option>${currency}</option>`,
     });
     expect(html).toContain('id="trip-expense-modal-template"');

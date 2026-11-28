@@ -98,9 +98,9 @@ function _txBulkSetMessage(message, type = 'warn') {
 
 function _txBulkSubcategoryOptionsHtml(category, selectedValue) {
   const current = String(category || '').trim();
-  if (!current) return '<option value="">Choisir d’abord une catégorie</option>';
+  if (!current) return `<option value="">${escapeHTML(_txT("transactions.action.choose_category"))}</option>`;
   const rows = (typeof getCategorySubcategories === 'function') ? getCategorySubcategories(current) : [];
-  const options = ['<option value="">Aucune</option>'];
+  const options = [`<option value="">${escapeHTML(_txT("transactions.form.none"))}</option>`];
   rows.forEach((row) => {
     const name = String(row?.name || '').trim();
     if (!name) return;
@@ -1467,14 +1467,14 @@ if (isBudgetOnlyInternalTransferFee) return false;
           : ""
         }
         <button class="btn small" type="button" data-tx-doc-btn="${escapeHTML(String(tx.id))}" onclick="window.tbTxDocOpen('${escapeHTML(String(tx.id))}')">${escapeHTML(_txT("transactions.action.invoice"))}</button>
-        ${sourceLock.locked ? '' : `<button class="btn small" type="button" onclick="openTxDuplicateModal('${escapeHTML(String(tx.id))}')">Dupliquer</button>`}
-        ${sourceLock.locked ? '' : `<button class="btn small" onclick="openTxEditModal('${tx.id}')">Edit</button>`}
+        ${sourceLock.locked ? '' : `<button class="btn small" type="button" onclick="openTxDuplicateModal('${escapeHTML(String(tx.id))}')">${escapeHTML(_txT("transactions.action.duplicate"))}</button>`}
+        ${sourceLock.locked ? '' : `<button class="btn small" onclick="openTxEditModal('${tx.id}')">${escapeHTML(_txT("transactions.action.edit"))}</button>`}
         ${
   sourceLock.locked && !isInternalTransfer
     ? ''
     : isInternalTransfer
-    ? `<button class="btn small danger" onclick="deleteInternalTransfer('${escapeHTML(String(internalTransferId))}')">Del</button>`
-    : `<button class="btn small danger" onclick="deleteTx('${tx.id}')">Del</button>`
+    ? `<button class="btn small danger" onclick="deleteInternalTransfer('${escapeHTML(String(internalTransferId))}')">${escapeHTML(_txT("transactions.action.delete"))}</button>`
+    : `<button class="btn small danger" onclick="deleteTx('${tx.id}')">${escapeHTML(_txT("transactions.action.delete"))}</button>`
 }
       </div>
     `;

@@ -17,6 +17,19 @@ describe('Android release bundle contract', () => {
     expect(manifest).not.toContain('android:scheme="com.travelbudget.app"');
   });
 
+  it('uses a distinct launcher name for the direct APK without renaming the Play app', () => {
+    const manifest = fs.readFileSync(path.join(root, 'android/app/src/main/AndroidManifest.xml'), 'utf8');
+    const playStrings = fs.readFileSync(path.join(root, 'android/app/src/main/res/values/strings.xml'), 'utf8');
+    const directStrings = fs.readFileSync(path.join(root, 'android/app/src/debug/res/values/strings.xml'), 'utf8');
+
+    expect(manifest).toMatch(/<application\b[^>]*android:label="@string\/app_name"/);
+    expect(manifest).toMatch(/<activity\b[^>]*android:label="@string\/title_activity_main"[^>]*>[\s\S]*?android.intent.category.LAUNCHER/);
+    for (const name of ['app_name', 'title_activity_main']) {
+      expect(playStrings).toContain(`<string name="${name}">TravelBudget</string>`);
+      expect(directStrings).toContain(`<string name="${name}">TravelBudget APK</string>`);
+    }
+  });
+
   it('keeps R8 explicit and scoped to release builds', () => {
     const gradle = fs.readFileSync(path.join(root, 'android/app/build.gradle'), 'utf8');
     expect(gradle).toContain('providers.gradleProperty("tbEnableR8").orNull == "true"');

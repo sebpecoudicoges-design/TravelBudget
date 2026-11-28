@@ -187,3 +187,14 @@ Tests synthétiques : refus de suppression individuelle/groupée et fusion somme
 Limites : validation sur stockage réellement saturé et appareil physique restante ; les modifications échouées sont conservées dans les champs de la page, sans export dédié. Concurrence entre synchronisation et nouvelles éditions, écritures serveur multiétapes et reprise distante du sommeil restent distinctes. Ce lot ne certifie pas tous les usages du module Nutrition.
 
 Validation finale du 5 novembre : chaîne quality complète réussie, 1 169 tests / 172 fichiers ; huit parcours Chromium ciblés réussis, clair/sombre et 1440/390 inclus. Build, docs et budgets validés : JS initial 277,8/278 KiB, total 860,6/861 KiB, CSS sous 81 KiB. Preuves : .codex/releases/10.5.388/nutrition-edits-quality.log et nutrition-edits-e2e.log. Captures examinées. Aucune nouvelle compilation Android ni validation sur téléphone.
+
+## Vérification FR / EN avant préparation d’un APK
+
+Ouvrir un compte fictif dans chaque langue sur ordinateur et à 390 px, vérifier la langue du document et parcourir navigation, Dashboard, Wallet, Transactions, Réglages, Analyse, Partage et Aide. Refaire un changement EN → FR sans recharger manuellement. Contrôler intitulés, boutons, options, erreurs et aide des formulaires, chiffres/dates et caractères parasites ; distinguer noms personnels, codes devises et flèches de navigation. Ne pas modifier la production ni envoyer de données de compte réel.
+
+Avant de compiler, exécuter :
+```sh
+npm run test:e2e -- tests/e2e/nav-wallet-language.spec.js tests/e2e/localization-finance.spec.js tests/e2e/analysis-language.spec.js tests/e2e/trip-localization.spec.js tests/e2e/first-steps-replay.spec.js --project=desktop-chromium
+```
+
+Le guide d’exercice « Premiers pas » et ses données fictives restent séparés du vrai paramétrage. En anglais, la visite générale historique est encore disponible sur commande et le vrai paramétrage du compte est traduit. Ce contrôle ciblé ne certifie pas chaque écran, un appareil Android ni toutes les traductions de l’application.

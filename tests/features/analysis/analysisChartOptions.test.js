@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   buildAnalysisCategoryBarsOption,
   buildAnalysisCategoryPieOption,
-  buildAnalysisHeatmapOption,
   buildAnalysisTrajectoryMeta,
   buildAnalysisTrajectoryOption,
   buildAnalysisVelocityOption,
@@ -44,11 +43,11 @@ describe('Analysis chart option builders', () => {
     expect(option.series[1].markPoint.data[0].coord).toEqual([1, 55]);
   });
 
-  it('keeps full dates on all three axes across years and marks today only if in range', () => {
+  it('keeps full dates on both date axes across years and marks today only if in range', () => {
     const days = ['2025-01-02', '2026-01-02'];
     const model = { days };
     const traj = buildAnalysisTrajectoryOption({ model, todayDate: '2026-01-02' });
-    for (const chart of [traj, buildAnalysisVelocityOption({ model }), buildAnalysisHeatmapOption({ model })]) {
+    for (const chart of [traj, buildAnalysisVelocityOption({ model })]) {
       expect(chart.xAxis.data).toEqual(days);
       expect(days.map(chart.xAxis.axisLabel.formatter)).toEqual(days);
     }
@@ -94,6 +93,7 @@ describe('Analysis chart option builders', () => {
 
     const option = buildAnalysisCategoryBarsOption({ model, theme, formatCurrency });
 
+    expect(option.xAxis.axisLabel.hideOverlap).toBe(true);
     expect(option.yAxis.data).toHaveLength(13);
     expect(option.yAxis.data[0]).toBe('Cat 13');
     expect(option.yAxis.data.at(-1)).toBe('Cat 1');
@@ -101,36 +101,21 @@ describe('Analysis chart option builders', () => {
     expect(option.tooltip.formatter([{ axisValue: 'Cat 13', value: -12.49 }])).toContain('-12 AUD');
   });
 
-  it('builds velocity and heatmap options from daily analysis data', () => {
+  it('builds signed cadence options from daily analysis data', () => {
     const model = {
       base: 'AUD',
       days: ['2026-07-01', '2026-07-02'],
-      velocity: [12, 24],
+      velocity: [-12, 24],
       budgetPerDay: 20,
-      heat: [[0, 0, 12], [1, 0, 24]],
     };
 
     const velocity = buildAnalysisVelocityOption({ model, theme, formatCurrency });
-    const heatmap = buildAnalysisHeatmapOption({ model, theme, formatCurrency });
 
     expect(velocity.series[0].type).toBe('bar');
     expect(velocity.series[1].lineStyle.type).toBe('dashed');
     expect(velocity.legend.data).toEqual(['Dépenses du jour', 'Budget moyen/jour']);
     expect(velocity.series[1].name).toBe('Budget moyen/jour');
     expect(velocity.series[1].data).toEqual([20, 20]);
-    expect(heatmap.visualMap.max).toBe(24);
-    expect(heatmap.tooltip.formatter({ data: [1, 0, 24] })).toContain('2026-07-02');
+    expect(velocity.series[0].data).toEqual([-12, 24]);
   });
-  it('shows a symmetric heat scale for net negative days and leaves zero neutral', () => {
-    const option = buildAnalysisHeatmapOption({
-      model: { base: 'AUD', days: ['2026-07-01', '2026-07-02', '2026-07-03'], heat: [[0, 0, -40], [1, 0, 12], [2, 0, 0]] },
-      theme, formatCurrency,
-    });
-    expect(option.visualMap).toMatchObject({ min: -40, max: 40, dimension: 2 });
-    expect(option.visualMap.inRange.color).toHaveLength(3);
-    expect(option.series[0].label.formatter({ data: [0, 0, -40] })).toBe('−');
-    expect(option.series[0].label.formatter({ data: [2, 0, 0] })).toBe('');
-    expect(option.tooltip.formatter({ data: [0, 0, -40] })).toContain('-40 AUD');
-  });
-
 });

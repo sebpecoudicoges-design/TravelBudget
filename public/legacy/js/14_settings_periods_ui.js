@@ -328,10 +328,12 @@ function renderSettings(){
 
   // labels
   // Settings view now has multiple cards (Compte + Voyage + ...).
-  // Ensure we only rename the Voyage card title.
+  // Use the current language before the accordion copies the headings.
   try {
+    const accountTitle = view.querySelector('#tb-account-card h2');
+    if (accountTitle) accountTitle.textContent = T("settings.card.account");
     const h2s = Array.from(view.querySelectorAll('h2'));
-    const voyageH2 = h2s.find(x => String(x.textContent||'').trim().toLowerCase() === 'voyage');
+    const voyageH2 = view.querySelector('#tb-travel-card h2') || h2s.find(x => String(x.textContent||'').trim().toLowerCase() === 'voyage');
     if (voyageH2) voyageH2.textContent = (window.tbT ? tbT("settings.title") : "Voyage");
   } catch(_) {}
 
@@ -2639,3 +2641,39 @@ window.moveSubcategory = moveSubcategory;
 window.importExistingSubcategory = importExistingSubcategory;
 window.saveAnalyticCategoryMapping = saveAnalyticCategoryMapping;
 window.saveAnalyticSubcategoryMapping = saveAnalyticSubcategoryMapping;
+
+async function tbOpenGuidedAccountSetup() {
+  const uid = window.sbUser?.id;
+  if (!uid) return;
+  try {
+    const account = await import(new URL('guided-setup/account.js', document.baseURI).href);
+    await account.openGuidedAccount({
+      uid,
+      getUid: () => window.sbUser?.id,
+      sb: _tbGetSB(),
+      tables: TB_CONST.TABLES,
+      currencies: window.tbGetAvailableCurrencies?.(),
+      language: _tbSettingsLang(),
+      onSave(saved) {
+        state.profile = { ...state.profile, whatsapp_phone_e164: saved.phone };
+        state.user = { ...state.user, baseCurrency: saved.baseCurrency, whatsappPhone: saved.phone, birthDate: saved.birthDate };
+        try {
+          const key = TB_CONST.LS_KEYS.body_birthdate;
+          if (key) {
+            if (saved.birthDate) localStorage.setItem(key, saved.birthDate);
+            else localStorage.removeItem(key);
+          }
+        } catch (_) {}
+        try { window.tbSaveOfflineSnapshot?.('settings:guided_account'); } catch (_) {}
+      },
+      canOpenTravels: () => !document.body.classList.contains('tb-role-restricted'),
+      openTravels() {
+        window.showView?.('settings');
+        document.getElementById('tb-travel-card')?.scrollIntoView({ block: 'start' });
+      }
+    });
+  } catch (_) {
+    alert(_tbSettingsLang() === 'en' ? 'Guided setup could not open. Try again from Settings.' : 'Le paramétrage guidé n’a pas pu s’ouvrir. Réessaie depuis les Réglages.');
+  }
+}
+window.tbOpenGuidedAccountSetup = tbOpenGuidedAccountSetup;

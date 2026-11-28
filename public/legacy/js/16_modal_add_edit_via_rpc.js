@@ -39,6 +39,7 @@ function _mountTxModal(title, saveLabel) {
     },
   });
   if (!txModalHandle) throw new Error("Shared modal unavailable.");
+  window.tbApplyI18nDom?.(txModalHandle.root);
   txModalHandle.root.querySelector("[data-tx-cancel]")?.addEventListener("click", closeModal);
   txModalHandle.root.querySelector("[data-tx-resnap]")?.addEventListener("click", resnapshotModal);
   txModalHandle.root.querySelector("#tx-modal-form")?.addEventListener("submit", (event) => {
@@ -132,7 +133,7 @@ function fillModalSubcategorySelect(categoryName, selectedValue) {
   if (!el) return;
   const selected = String(selectedValue || "").trim();
   const rows = (typeof getCategorySubcategories === "function") ? getCategorySubcategories(categoryName) : [];
-  const options = ['<option value="">Aucune</option>'];
+  const options = [`<option value="">${escapeHTML(_txModalT("transactions.form.none"))}</option>`];
   for (const row of rows) {
     const name = String(row?.name || "").trim();
     if (!name) continue;
@@ -159,15 +160,15 @@ function fillModalRecurringSelect(selectedValue, currentTx) {
   const rows = typeof listRules === "function"
     ? listRules(state?.recurringRules || [], { ...currentTx, type, currency, travelId: tid }, tid)
     : (state?.recurringRules || []).filter((rule) => !rule?.archived && (!tid || String(rule?.travelId || rule?.travel_id || "") === tid));
-  select.innerHTML = `<option value="">Aucun abonnement</option>${rows.map((rule) => {
+  select.innerHTML = `<option value="">${escapeHTML(_txModalT("transactions.form.no_subscription"))}</option>${rows.map((rule) => {
     const trackingOnly = !!(rule?.trackingOnly ?? rule?.tracking_only);
-    const flow = String(rule?.type || "expense").toLowerCase() === "income" ? "Entrée" : "Sortie";
-    const detail = trackingOnly ? `${flow} · suivi manuel` : `${flow} · ${fmtMoney(Number(rule.amount || 0), rule.currency || currency)}`;
-    return `<option value="${escapeHTML(rule.id)}">${escapeHTML(rule.label || rule.name || "Abonnement")} — ${escapeHTML(detail)}</option>`;
+    const flow = String(rule?.type || "expense").toLowerCase() === "income" ? _txModalText("Entrée", "Income") : _txModalText("Sortie", "Expense");
+    const detail = trackingOnly ? `${flow} · ${_txModalText("suivi manuel", "manual tracking")}` : `${flow} · ${fmtMoney(Number(rule.amount || 0), rule.currency || currency)}`;
+    return `<option value="${escapeHTML(rule.id)}">${escapeHTML(rule.label || rule.name || _txModalText("Abonnement", "Subscription"))} — ${escapeHTML(detail)}</option>`;
   }).join("")}`;
   if (selected && !rows.some((rule) => String(rule.id) === selected)) {
     const rule = (state?.recurringRules || []).find((row) => String(row?.id || "") === selected);
-    select.insertAdjacentHTML("beforeend", `<option value="${escapeHTML(selected)}">${escapeHTML(rule?.label || "Règle liée")}</option>`);
+    select.insertAdjacentHTML("beforeend", `<option value="${escapeHTML(selected)}">${escapeHTML(rule?.label || _txModalText("Règle liée", "Linked rule"))}</option>`);
   }
   select.value = selected;
   const generated = !!(currentTx?.generatedByRule || currentTx?.generated_by_rule);
@@ -176,8 +177,8 @@ function fillModalRecurringSelect(selectedValue, currentTx) {
   const differs = chosen && (String(chosen?.type || "").toLowerCase() !== type.toLowerCase()
     || String(chosen?.currency || "").toUpperCase() !== currency);
   if (help) help.textContent = differs
-    ? "Cet abonnement utilise un flux ou une devise différente. Il reste sélectionnable; une confirmation protégera ce choix."
-    : (generated ? "Lien automatique actuel. Tu peux le changer : une confirmation détachera cette échéance de sa règle d’origine." : "Optionnel : tous les abonnements actifs du voyage sont proposés.");
+    ? _txModalText("Cet abonnement utilise un flux ou une devise différente. Une confirmation sera demandée.", "This subscription uses a different transaction type or currency. You will be asked to confirm.")
+    : (generated ? _txModalText("Modifier le lien détachera cette échéance de sa règle d’origine après confirmation.", "Changing the link will detach this payment from its original rule after confirmation.") : _txModalText("Facultatif : tous les abonnements actifs du voyage sont proposés.", "Optional: all active subscriptions for this trip are available."));
 }
 
 function wireRecurringRuleLogic(currentTx) {

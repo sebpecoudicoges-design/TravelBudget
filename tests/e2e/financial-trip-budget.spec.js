@@ -394,22 +394,15 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     expect(await pie.evaluate(el => window.echarts.getInstanceByDom(el).getOption().series[0].data)).toEqual([]);
     await expect(picker.locator('option').last()).toContainText(/Remboursements fictifs.*-7/);
 
-    const heatmap = page.locator('#analysis-heatmap-chart');
-    const signedHeat = await heatmap.evaluate(el => {
-      const chart = window.echarts.getInstanceByDom(el);
-      const { visualMap: [scale], series: [cells], tooltip: [tooltip] } = chart.getOption();
-      const [data] = cells.data;
-      const zero = chart.getModel().getComponent('visualMap').targetVisuals.inRange.color.mapValueToVisual(0);
-      const negative = chart.getModel().getComponent('visualMap').targetVisuals.inRange.color.mapValueToVisual(data[2]);
-      return { min: scale.min, max: scale.max, value: data[2], label: cells.label.formatter({ data }), hover: tooltip.formatter({ data }), hasDistinctColor: zero !== negative };
-    });
-    expect(signedHeat).toMatchObject({ min: -7, max: 7, value: -7, label: '−', hasDistinctColor: true });
-    expect(signedHeat.hover).toMatch(/2026-10-23.*-7/);
+    const signedCadence = await page.locator('#analysis-velocity-chart').evaluate(el =>
+      window.echarts.getInstanceByDom(el).getOption().series[0].data,
+    );
+    expect(signedCadence).toEqual([-7]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }
 
-for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
+for (const [width, theme] of [[1440, 'light'], [1440, 'dark'], [390, 'light'], [390, 'dark']]) {
   test(`Analyse labels average budget and planned spending separately (${width}px, ${theme})`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ colorScheme: theme });
@@ -427,7 +420,7 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
         { ...segment, id: 'later-budget', sort_order: 1, start_date: end, end_date: end, daily_budget_base: 30 },
       ],
       transactions: [
-        row('paid-day', 12, start, { budget_date_start: start, budget_date_end: start }),
+        row('paid-day', 12, start, { subcategory: 'Essence', budget_date_start: start, budget_date_end: start }),
         row('planned-day', 8, end, { budget_date_start: end, budget_date_end: end, pay_now: false, paid_at: null }),
       ],
     };
@@ -463,7 +456,7 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
       { name: 'Avec prévisions', data: [12, 8] },
       { name: 'Budget moyen/jour', data: [25, 25] },
     ]);
-    for (const id of [trajectory, pace, '#analysis-heatmap-chart']) {
+    for (const id of [trajectory, pace]) {
       const dates = await page.locator(id).evaluate(el => {
         const [axis] = window.echarts.getInstanceByDom(el).getOption().xAxis;
         return { values: axis.data, labels: axis.data.map(axis.axisLabel.formatter) };
@@ -473,6 +466,35 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) {
     expect(await page.locator(trajectory).evaluate(el =>
       window.echarts.getInstanceByDom(el).getOption().series[0].markLine.data,
     )).toEqual([]);
+    const layout = page.locator('#analysis-custom-layout');
+    await expect(layout).toBeVisible();
+    await expect(page.locator('#analysis-heatmap-chart')).toHaveCount(0);
+    await expect(page.locator('#view-analysis #tb-fx-decision')).toHaveCount(0);
+    expect(await page.evaluate(() => typeof window.renderFxDecision)).toBe('undefined');
+    await expect(page.locator('#analysis-currency')).toBeVisible();
+    const cards = await layout.evaluate(el => {
+      const layoutBox = el.getBoundingClientRect();
+      const blocks = [
+        '#analysis-insights', '#analysis-category-chart', '#analysis-category-bars-chart',
+        '#analysis-subcategory-breakdown', '#analysis-velocity-chart',
+      ].map(id => {
+        const box = el.querySelector(id).closest('.card').getBoundingClientRect();
+        return { x: box.x, width: box.width, y: box.y };
+      });
+      return { x: layoutBox.x, width: layoutBox.width, blocks };
+    });
+    if (width === 390) {
+      for (const { x, width: cardWidth, y } of cards.blocks) {
+        expect(x).toBeCloseTo(cards.x, 0);
+        expect(cardWidth).toBeCloseTo(cards.width, 0);
+        expect(y).toBeGreaterThanOrEqual(cards.blocks[0].y);
+      }
+      expect(new Set(cards.blocks.map(({ y }) => y)).size).toBe(5);
+    } else {
+      expect(cards.blocks[0].y).toBeCloseTo(cards.blocks[1].y, 0);
+      expect(cards.blocks[2].y).toBeCloseTo(cards.blocks[3].y, 0);
+      expect(cards.blocks[0].width).toBeLessThan(cards.width);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }

@@ -186,6 +186,85 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
   }) || { score: 0, level: "bad", label: "A corriger", advice: "Module KPI sante indisponible." };
 }
 
+const TB_KPI_HEALTH_EN = Object.freeze({
+  "Sante": "Health",
+  "Suivi du jour": "Today’s overview",
+  "Nutrition · sport · travail · sommeil": "Nutrition · sport · work · sleep",
+  "Energie a maintenant": "Energy so far",
+  "Balance actuelle": "Current balance",
+  "Eau bue": "Water drunk",
+  "Sommeil": "Sleep",
+  "Charge": "Activity",
+  "Eau aliments": "Water from food",
+  "Comprendre le score": "Understand the score",
+  "Besoin jour complet": "Full-day needs",
+  "Objectif a cette heure": "Target at this time",
+  "Score energie": "Energy score",
+  "Score eau": "Hydration score",
+  "Score proteines": "Protein score",
+  "Score sommeil": "Sleep score",
+  "Score alcool": "Alcohol score",
+  "Alcool": "Alcohol",
+  "jour": "today",
+  "semaine": "this week",
+  "Base metabolique": "Metabolic baseline",
+  "Sport + travail": "Sport + work",
+  "Objectif nutrition": "Nutrition goal",
+  "Proteines": "Protein",
+  "Non saisi": "Not logged",
+  "nuit du": "night of",
+  "prise de masse": "muscle gain",
+  "perte douce": "gentle weight loss",
+  "maintien / recomposition": "maintenance / recomposition",
+  "Equilibre": "Balanced",
+  "A surveiller": "Watch closely",
+  "A corriger": "Needs attention",
+  "Module KPI sante indisponible.": "Health KPIs are unavailable.",
+  "Ajoute tes repas pour activer une lecture sante fiable.": "Log your meals for a more reliable health overview.",
+  "Saisir la journée": "Log today’s food",
+  "Ajoute au moins un repas pour fiabiliser le score et les conseils.": "Log at least one meal for a more reliable score and suggestions.",
+  "Energie maintenant": "Energy so far",
+  "Energie haute": "High energy intake",
+  "Energie stable": "Steady energy intake",
+  "Hydratation": "Hydration",
+  "Recuperation": "Recovery",
+  "Alcool semaine": "Weekly alcohol",
+  "Charge elevee": "High activity",
+  "Renseigne la nuit pour que le score recuperation soit fiable.": "Log last night’s sleep for a more reliable recovery score.",
+  "Nuit courte : garde la charge raisonnable et privilegie sommeil ce soir.": "After a short night, keep exertion moderate and prioritise sleep tonight.",
+  "Tu es deja haut pour l'heure. Garde le prochain apport plus leger, eau et legumes.": "Your intake is already high for this time of day. Keep the next meal light, with water and vegetables.",
+  "Tu depasses le repere jour de 2 verres standard. Vise eau, repas simple et pause alcool demain.": "You’re over the daily guide of two standard drinks. Prioritise water, a simple meal and taking a break from alcohol tomorrow.",
+  "La semaine depasse 10 verres standard. Planifie des jours sans alcool.": "You’re over ten standard drinks for the week. Plan some alcohol-free days.",
+  "Sport + travail sont hauts : pense glucides utiles, proteines et repos.": "Activity from sport and work is high. Consider carbohydrates, protein and rest.",
+  "Equilibre correct entre besoins, nutrition, eau et charge.": "Your intake, hydration and activity are in balance.",
+  "Hydratation a completer : l'objectif suit l'eau bue, pas l'eau des aliments.": "Aim for more drinking water. This target excludes water from food.",
+  "Deficit marque avec activite : prevois proteines et glucides utiles.": "Your intake is well below your activity-adjusted target. Consider protein and carbohydrates.",
+  "Journee haute en kcal : vise leger, eau et legumes au prochain repas.": "Energy intake is high today. Keep the next meal light, with water and vegetables.",
+  "Nuit courte : allege la charge et vise recuperation.": "After a short night, ease up on exertion and focus on recovery.",
+  "Charge forte : pense recuperation, sommeil et proteines.": "You’ve been active today. Prioritise recovery, sleep and protein.",
+  "energie eloignee de l'objectif actuel": "energy intake far from the current target",
+  "eau bue faible": "not enough water drunk",
+  "proteines sous cible": "protein below target",
+  "recuperation courte": "limited recovery",
+  "alcool au-dessus du repere jour": "alcohol above the daily guide",
+  "alcool au-dessus du repere semaine": "alcohol above the weekly guide",
+  "Il manque environ {n} kcal a cette heure. Vise un repas simple ou un encas utile.": "You’re about {n} kcal short at this time. Consider a simple meal or snack.",
+  "Tu es proche du rythme du jour. Reste environ {n} kcal sur la journee.": "You’re close to today’s target pace. About {n} kcal remain today.",
+  "Encore {n} ml d'eau bue a viser. L'eau des aliments reste separee.": "Aim for {n} ml more drinking water. Water from food is tracked separately.",
+  "Ajoute environ {n} g : fromage blanc, skyr, oeufs, poulet, thon ou whey.": "Aim for about {n} g more protein, for example from yoghurt, eggs, chicken, tuna or whey."
+});
+
+function _translateKpiHealthToEnglish(text) {
+  if (Object.hasOwn(TB_KPI_HEALTH_EN, text)) return TB_KPI_HEALTH_EN[text];
+  const number = text.match(/\d+/)?.[0];
+  if (number && Object.hasOwn(TB_KPI_HEALTH_EN, text.replace(number, "{n}"))) {
+    return TB_KPI_HEALTH_EN[text.replace(number, "{n}")].replace("{n}", number);
+  }
+  const reasons = text.match(/^Score bas surtout: (.+)\.$/)?.[1];
+  if (reasons) return "Main reasons for a low score: " + reasons.split(", ").map(reason => TB_KPI_HEALTH_EN[reason] || reason).join(", ") + ".";
+  return text;
+}
+
 function _kpiHealthActionRows(h) {
   return window.TBKpiHealthRules?.healthActionRows?.(h) || [];
 }
@@ -494,7 +573,7 @@ function _renderTodayDetailsHTML(dateStr) {
   return window.TBKpiView?.renderKpiTodayDetails?.({
     rows: details,
     fallbackBase,
-    emptyLabel: "Aucun détail",
+    emptyLabel: window.tbGetLang?.() === "en" ? "No details" : "Aucun détail",
   }) || "";
 }
 
@@ -689,23 +768,24 @@ function _pilotageInsights(scopeMeta) {
     : "—";
 
   // Décision courte
-  let decision = "Aligné";
+  const en = window.tbGetLang?.() === "en";
+  let decision = en ? "On track" : "Aligné";
   let decisionLevel = "good";
 
   if (currentDaily <= 0) {
-    decision = "Budget/j invalide";
+    decision = en ? "Invalid daily budget" : "Budget/j invalide";
     decisionLevel = "warn";
   } else {
     const ratio = recommendedDaily / currentDaily;
     if (ratio < 0.95) {
-      decision = "Réduire";
+      decision = en ? "Reduce" : "Réduire";
       decisionLevel = "warn";
       if (ratio < 0.75) decisionLevel = "bad";
     } else if (ratio > 1.05) {
-      decision = "Augmenter";
+      decision = en ? "Increase" : "Augmenter";
       decisionLevel = "good";
     } else {
-      decision = "Aligné";
+      decision = en ? "On track" : "Aligné";
       decisionLevel = "good";
     }
   }
@@ -1044,7 +1124,7 @@ const cashBurnBase  = (runway && isFinite(runway.burnPerDay))
   : 0;
 
 const criticalDays = runway ? runway.daysLeft : Infinity;
-const driver = "Dépenses";
+const driver = _lang === "en" ? "Expenses" : "Dépenses";
 
   const todayDetailsHTML = _renderTodayDetailsHTML(displayDateISO);
   const todayBudget = getDailyBudgetForDate(displayDateISO);
@@ -1092,12 +1172,13 @@ const driver = "Dépenses";
     cards: [
       { title: T("kpi.available_budget"), valueHtml: `${budgetToday.toFixed(0)} <span class="muted kpi-mini-unit">${escapeHTML(base)}</span>`, footerHtml: escapeHTML(T("kpi.today")) },
       { title: _lang === "en" ? "Wallet total" : "Total wallets", valueHtml: `${escapeHTML(fmtKPICompact(walletTotalEUR))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: `≈ ${escapeHTML(fmtKPICompact(walletTotalBase))} ${escapeHTML(displayCur)}` },
-      { title: "Sport fait", valueHtml: `${Math.round(activityToday.sportKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.sportCount)} séance(s)` },
-      { title: "Travail fait", valueHtml: `${Math.round(activityToday.workKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.workMinutes / 60 * 10) / 10}h · ${Math.round(activityToday.workCount)} journée(s)` },
+      { title: _lang === "en" ? "Sport logged" : "Sport fait", valueHtml: `${Math.round(activityToday.sportKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.sportCount)} ${_lang === "en" ? "workout(s)" : "séance(s)"}` },
+      { title: _lang === "en" ? "Work logged" : "Travail fait", valueHtml: `${Math.round(activityToday.workKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.workMinutes / 60 * 10) / 10}h · ${Math.round(activityToday.workCount)} ${_lang === "en" ? "day(s)" : "journée(s)"}` },
       { title: _lang === "en" ? "Period / account FX" : "FX période / compte", valueHtml: escapeHTML(fxRateText), footerHtml: `${escapeHTML(base)} vs ${escapeHTML(displayCurPivot)}`, compact: true },
     ],
     healthToday,
     healthActions,
+    translateHealth: _lang === "en" ? _translateKpiHealthToEnglish : undefined,
     pendingToggle: {
       card: { title: _lang === "en" ? "Wallet total at period end" : "Total wallets fin de période", valueHtml: `${escapeHTML(fmtKPICompact(projEndDisplay))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: escapeHTML(T("kpi.projection")) },
       toggle: {

@@ -3,10 +3,10 @@ import { fixtureTables, fixtureUser, installConnectedFixture } from '../../scrip
 
 test.use({ serviceWorkers: 'block' });
 
-for (const { lang, width, theme, beta, note } of [
-  { lang: 'fr', width: 1440, theme: 'light', beta: 'BÊTA', note: 'Module en cours de test' },
-  { lang: 'en', width: 390, theme: 'dark', beta: 'BETA', note: 'Module in testing' },
-]) test(`Only daily modules are marked beta in the nav and on their screens: ${lang} ${width}px`, async ({ page, baseURL }) => {
+for (const { lang, width, theme, beta, beta2, note } of [
+  { lang: 'fr', width: 1440, theme: 'light', beta: 'BÊTA', beta2: 'Bêta 2.0', note: 'Module en cours de test' },
+  { lang: 'en', width: 390, theme: 'dark', beta: 'BETA', beta2: 'Beta 2.0', note: 'Module in testing' },
+]) test(`Daily Beta labels and Finance Beta 2.0 labels appear on tabs and screens: ${lang} ${width}px`, async ({ page, baseURL }) => {
   const tables = structuredClone(fixtureTables);
   tables.profiles[0].role = 'test';
   tables.settings[0].theme = theme;
@@ -23,12 +23,12 @@ for (const { lang, width, theme, beta, note } of [
 
   const nav = page.locator('#tb-app-navigation');
   const menu = page.locator('#tb-mobile-nav-toggle');
-  await expect(nav.locator('.tb-beta-badge')).toHaveCount(3);
-  for (const key of ['sport', 'nutrition', 'work']) {
+  await expect(nav.locator('.tb-beta-badge')).toHaveCount(6);
+  for (const [key, label] of [...['sport', 'nutrition', 'work'].map(key => [key, beta]), ...['subscriptions', 'accounting', 'assets'].map(key => [key, beta2])]) {
     if (width === 390) await menu.click();
     const tab = nav.locator('#tab-' + key);
     const badge = tab.locator('.tb-beta-badge');
-    await expect(badge).toHaveText(beta);
+    await expect(badge).toHaveText(label);
     const contained = await badge.evaluate(el => {
       const { right, left } = el.getBoundingClientRect();
       const button = el.closest('button').getBoundingClientRect();
@@ -37,7 +37,7 @@ for (const { lang, width, theme, beta, note } of [
     expect(contained).toBe(true);
     await tab.click();
     const screen = page.locator('#view-' + key + ' .tb-beta-badge');
-    await expect(screen).toHaveText(beta);
+    await expect(screen).toHaveText(label);
     await expect(screen).toBeVisible();
     await expect(page.locator('#view-' + key + ' .tb-module-maturity')).toContainText(note);
   }

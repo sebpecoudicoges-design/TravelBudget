@@ -241,31 +241,32 @@ export function buildAnalysisNightCoveredRows(model = {}) {
 export function renderAnalysisNightCovered({
   model = {},
   formatCurrency,
+  isEn = false,
 } = {}) {
   const count = safeNum(model.nightCoveredCount);
   const money = (value) => formatMoney(formatCurrency, value, model.base);
 
   if (!count) {
-    return `<div class="muted">Aucun transport marqué comme remplaçant une nuit d'hébergement sur la plage analysée.</div>`;
+    return `<div class="muted">${isEn ? 'No transport replaced a night of accommodation in this date range.' : "Aucun transport marqué comme remplaçant une nuit d'hébergement sur la plage analysée."}</div>`;
   }
 
   const rows = buildAnalysisNightCoveredRows(model);
   return `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px;">
         <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(59,130,246,.08), rgba(255,255,255,.5));">
-          <div class="muted" style="font-size:12px;">Transports concernés</div>
+          <div class="muted" style="font-size:12px;">${isEn ? 'Covered transport' : 'Transports concernés'}</div>
           <div style="font-size:24px;font-weight:800;">${count}</div>
         </div>
         <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(16,185,129,.10), rgba(255,255,255,.5));">
-          <div class="muted" style="font-size:12px;">Économie potentielle logement</div>
+          <div class="muted" style="font-size:12px;">${isEn ? 'Potential accommodation savings' : 'Économie potentielle logement'}</div>
           <div style="font-size:24px;font-weight:800;">${escapeHtml(money(model.nightCoveredPotentialSavings))}</div>
         </div>
         <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(245,158,11,.10), rgba(255,255,255,.5));">
-          <div class="muted" style="font-size:12px;">Moyenne par nuit remplacée</div>
+          <div class="muted" style="font-size:12px;">${isEn ? 'Average per night replaced' : 'Moyenne par nuit remplacée'}</div>
           <div style="font-size:24px;font-weight:800;">${escapeHtml(money(model.nightCoveredAverageSaving))}</div>
         </div>
       </div>
-      <div class="muted" style="margin-bottom:10px;font-size:12px;line-height:1.45;">Signal analytique uniquement : ces montants n'altèrent ni le budget, ni les KPI, ni la projection. Ils servent à expliquer le logement potentiellement évité par des transports de nuit.</div>
+      <div class="muted" style="margin-bottom:10px;font-size:12px;line-height:1.45;">${isEn ? 'Analysis only: these amounts do not change the budget, indicators or forecast. They estimate accommodation costs avoided by using overnight transport.' : "Signal analytique uniquement : ces montants n'altèrent ni le budget, ni les KPI, ni la projection. Ils servent à expliquer le logement potentiellement évité par des transports de nuit."}</div>
       <div style="display:grid;gap:8px;">
         ${rows.map((row) => `
           <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--border);">
@@ -289,12 +290,13 @@ export function renderAnalysisSubcategoryBreakdown({
   model = {},
   formatCurrency,
   accent = '#3b82f6',
+  isEn = false,
 } = {}) {
   const rows = buildAnalysisSubcategoryRows(model);
   const money = (value) => formatMoney(formatCurrency, value, model.base);
 
   if (!rows.length) {
-    return `<div class="muted">Aucune sous-catégorie exploitée sur la plage actuelle.</div>`;
+    return `<div class="muted">${isEn ? 'No subcategories in this date range.' : 'Aucune sous-catégorie exploitée sur la plage actuelle.'}</div>`;
   }
 
   return rows.map((row, idx) => `
@@ -302,13 +304,13 @@ export function renderAnalysisSubcategoryBreakdown({
       <div style="display:flex;align-items:center;gap:10px;min-width:0;">
         <span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${escapeHtml(row?.color || accent)};flex:0 0 auto;"></span>
         <div style="min-width:0;">
-          <div style="font-weight:600;">${escapeHtml(row?.subcategoryName || 'Sans sous-catégorie')}</div>
-          <div class="muted" style="font-size:12px;">${escapeHtml(row?.categoryName || 'Autre')}</div>
+          <div style="font-weight:600;">${escapeHtml(row?.subcategoryName || (isEn ? 'No subcategory' : 'Sans sous-catégorie'))}</div>
+          <div class="muted" style="font-size:12px;">${escapeHtml(row?.categoryName || (isEn ? 'Other' : 'Autre'))}</div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
         <div style="font-weight:700;">${escapeHtml(money(row?.actual))}</div>
-        <button type="button" class="tb-analysis-detail-btn">Détail</button>
+        <button type="button" class="tb-analysis-detail-btn">${isEn ? 'Details' : 'Détail'}</button>
       </div>
     </div>
   `).join('');
@@ -450,10 +452,10 @@ export function renderAnalysisProgressPanels({
   return `${cards}${deltaCard}${cashflowBlock || ''}${unpaidBlock || ''}${cashOnlyBlock || ''}`;
 }
 
-export function buildAnalysisReferenceContext(model = {}) {
+export function buildAnalysisReferenceContext(model = {}, isEn = false) {
   const country = model.referenceContext?.countryLabel && model.referenceContext.countryLabel !== 'Pays —'
     ? model.referenceContext.countryLabel
-    : 'Aucune référence pays active';
+    : (isEn ? 'No active country reference' : 'Aucune référence pays active');
   const profile = model.referenceContext?.profileLabel && model.referenceContext.profileLabel !== 'Profil —'
     ? model.referenceContext.profileLabel
     : null;
@@ -461,15 +463,15 @@ export function buildAnalysisReferenceContext(model = {}) {
     ? model.referenceContext.styleLabel
     : null;
   const adults = model.referenceContext?.adultsLabel && model.referenceContext.adultsLabel !== 'ad. —'
-    ? String(model.referenceContext.adultsLabel).replace('ad.', 'adulte(s)')
+    ? String(model.referenceContext.adultsLabel).replace('ad.', isEn ? 'adult(s)' : 'adulte(s)')
     : null;
   const children = model.referenceContext?.childrenLabel && model.referenceContext.childrenLabel !== 'enf. —'
-    ? String(model.referenceContext.childrenLabel).replace('enf.', 'enfant(s)')
+    ? String(model.referenceContext.childrenLabel).replace('enf.', isEn ? 'child(ren)' : 'enfant(s)')
     : null;
 
   return [
     country,
-    profile && `Profil ${profile}`,
+    profile && `${isEn ? 'Profile' : 'Profil'} ${profile}`,
     style && `Style ${style}`,
     adults,
     children,
@@ -495,30 +497,30 @@ export function renderAnalysisReferenceSummary({
   }
   const money = (value) => formatMoney(formatCurrency, value, model.base);
   const days = Array.isArray(model.days) ? model.days.length : 0;
-  const coverage = model.referenceCoverageDays && days ? `${model.referenceCoverageDays}/${days} jours couverts` : 'Aucune source active';
+  const coverage = model.referenceCoverageDays && days ? `${model.referenceCoverageDays}/${days} ${isEn ? 'days covered' : 'jours couverts'}` : (isEn ? 'No active source' : 'Aucune source active');
   const delta = safeNum(model.comparablePerDay) - safeNum(model.referencePerDay);
-  const deltaTone = delta <= 0 ? 'Sous la référence' : 'Au-dessus de la référence';
-  const context = buildAnalysisReferenceContext(model);
+  const deltaTone = delta <= 0 ? (isEn ? 'Below reference' : 'Sous la référence') : (isEn ? 'Above reference' : 'Au-dessus de la référence');
+  const context = buildAnalysisReferenceContext(model, isEn);
 
   return `
         <div class="analysis-reference-stat">
-          <span>Sourcé / jour</span>
+          <span>${isEn ? 'Reference / day' : 'Sourcé / jour'}</span>
           <strong>${escapeHtml(money(model.referencePerDay))}</strong>
           <small>${escapeHtml(coverage)}</small>
         </div>
         <div class="analysis-reference-stat">
-          <span>Réel / jour</span>
+          <span>${isEn ? 'Actual / day' : 'Réel / jour'}</span>
           <strong>${escapeHtml(money(model.comparablePerDay))}</strong>
-          <small>Comparatif net des catégories exclues</small>
+          <small>${isEn ? 'Comparison net of excluded categories' : 'Comparatif net des catégories exclues'}</small>
         </div>
         <div class="analysis-reference-stat">
-          <span>Écart / jour</span>
+          <span>${isEn ? 'Difference / day' : 'Écart / jour'}</span>
           <strong>${escapeHtml(money(delta))}</strong>
           <small>${escapeHtml(deltaTone)}</small>
         </div>
                 <div class="analysis-reference-inline">
           <div class="analysis-reference-context" style="font-size:1rem;font-weight:700;line-height:1.35;padding:.7rem .9rem;border-radius:16px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);">
-            Contexte : ${escapeHtml(context)}
+            ${isEn ? 'Context:' : 'Contexte :'} ${escapeHtml(context)}
           </div>
         </div>`;
 }
@@ -526,13 +528,14 @@ export function renderAnalysisReferenceSummary({
 export function renderAnalysisReferenceMix({
   model = {},
   formatCurrency,
+  isEn = false,
 } = {}) {
   if (model.referenceStatus && model.referenceStatus !== 'available') return '';
   const rows = buildAnalysisReferenceRows(model);
   const money = (value) => formatMoney(formatCurrency, value, model.base);
 
   if (!rows.length) {
-    return `<div class="analysis-reference-empty">Aucune référence pays active sur cette plage.</div>`;
+    return `<div class="analysis-reference-empty">${isEn ? 'No active country reference in this date range.' : 'Aucune référence pays active sur cette plage.'}</div>`;
   }
 
   return `
@@ -548,29 +551,29 @@ export function renderAnalysisReferenceMix({
               <strong>${escapeHtml(money(diff))}</strong>
             </div>
             <div class="analysis-reference-metal-body">
-              <div><small>Réel / jour</small><b>${escapeHtml(money(actual))}</b></div>
-              <div><small>Sourcé / jour</small><b>${escapeHtml(money(ref))}</b></div>
+              <div><small>${isEn ? 'Actual / day' : 'Réel / jour'}</small><b>${escapeHtml(money(actual))}</b></div>
+              <div><small>${isEn ? 'Reference / day' : 'Sourcé / jour'}</small><b>${escapeHtml(money(ref))}</b></div>
             </div>
           </div>`;
         }).join('')}
         ${safeNum(model.unmappedPerDay) > 0 ? `<div class="analysis-reference-metal analysis-reference-metal--neutral">
           <div class="analysis-reference-metal-head">
-            <span>Non référencé</span>
+            <span>${isEn ? 'Unmapped' : 'Non référencé'}</span>
             <strong>${escapeHtml(money(model.unmappedPerDay))}</strong>
           </div>
           <div class="analysis-reference-metal-body">
-            <div><small>Réel / jour</small><b>${escapeHtml(money(model.unmappedPerDay))}</b></div>
-            <div><small>Sourcé / jour</small><b>${escapeHtml(money(0))}</b></div>
+            <div><small>${isEn ? 'Actual / day' : 'Réel / jour'}</small><b>${escapeHtml(money(model.unmappedPerDay))}</b></div>
+            <div><small>${isEn ? 'Reference / day' : 'Sourcé / jour'}</small><b>${escapeHtml(money(0))}</b></div>
           </div>
         </div>` : ''}
         ${safeNum(model.excludedPerDay) > 0 ? `<div class="analysis-reference-metal analysis-reference-metal--neutral">
           <div class="analysis-reference-metal-head">
-            <span>Exclu du comparatif</span>
+            <span>${isEn ? 'Excluded from comparison' : 'Exclu du comparatif'}</span>
             <strong>${escapeHtml(money(model.excludedPerDay))}</strong>
           </div>
           <div class="analysis-reference-metal-body">
-            <div><small>Réel / jour</small><b>${escapeHtml(money(model.excludedPerDay))}</b></div>
-            <div><small>Traitement</small><b>Hors comparaison sourcée</b></div>
+            <div><small>${isEn ? 'Actual / day' : 'Réel / jour'}</small><b>${escapeHtml(money(model.excludedPerDay))}</b></div>
+            <div><small>${isEn ? 'Treatment' : 'Traitement'}</small><b>${isEn ? 'Outside the reference comparison' : 'Hors comparaison sourcée'}</b></div>
           </div>
         </div>` : ''}
       </div>`;

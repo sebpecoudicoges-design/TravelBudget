@@ -154,7 +154,7 @@ export function buildAnalysisCategoryBarsOption({
       formatter: (p) => `${p?.[0]?.axisValue || ''}<br>${fmt(p?.[0]?.value || 0, model.base)}`,
     },
     grid: { left: 110, right: 20, top: 10, bottom: 20, containLabel: false },
-    xAxis: { type: 'value', axisLabel: { color: muted, formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: grid } } },
+    xAxis: { type: 'value', axisLabel: { color: muted, hideOverlap: true, formatter: (v) => fmt(v, model.base) }, splitLine: { lineStyle: { color: grid } } },
     yAxis: { type: 'category', data: rows.map((r) => r.name), axisLabel: { color: themeValue(theme, 'text', '#e5e7eb'), interval: 0, width: 100, overflow: 'truncate' } },
     series: [{
       name: 'Réel',
@@ -187,34 +187,5 @@ export function buildAnalysisVelocityOption({
       { id: 'spent', name: spent, type: 'bar', barMaxWidth: 22, data: velocity, itemStyle: { borderRadius: [8, 8, 0, 0], color: linearGradient([{ offset: 0, color: themeValue(theme, 'accent', '#3b82f6') }, { offset: 1, color: 'rgba(59,130,246,.25)' }]) } },
       { id: 'target', name: target, type: 'line', smooth: true, symbol: 'none', data: days.map(() => Number(safeNum(model.budgetPerDay).toFixed(2))), lineStyle: { color: themeValue(theme, 'warn', '#f59e0b'), width: 2, type: 'dashed' } },
     ],
-  };
-}
-
-export function buildAnalysisHeatmapOption({
-  model = {},
-  theme = {},
-  formatCurrency,
-} = {}) {
-  const fmt = moneyFormatter(formatCurrency);
-  const days = Array.isArray(model.days) ? model.days : [];
-  const heat = Array.isArray(model.heat) ? model.heat : [];
-  const values = heat.map((row) => row[2]);
-  const min = Math.min(0, ...values);
-  const max = Math.max(1, -min, ...values);
-  const colors = [theme.grid || '#94a3b866', theme.accent || '#3b82f6'];
-  if (min) colors.unshift(theme.good || '#22c55e');
-
-  return {
-    animationDuration: 950,
-    tooltip: { position: 'top', ...tooltipTheme, formatter: (p) => `${days[p.data?.[0]]}<br>${fmt(p.data?.[2], model.base)}` },
-    grid: { left: 8, right: 8, top: 10, bottom: 22, containLabel: true },
-    xAxis: { type: 'category', data: days, splitArea: { show: false }, axisLabel: { ...dateAxisLabels(days, theme), interval: Math.max(0, Math.floor(days.length / 10)) }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
-    yAxis: { type: 'category', data: ['Intensité'], axisLabel: { color: themeValue(theme, 'muted', '#94a3b8') }, axisLine: { lineStyle: { color: themeValue(theme, 'grid', 'rgba(148,163,184,.18)') } } },
-    visualMap: { min: min ? -max : 0, max, dimension: 2, show: false, inRange: { color: colors } },
-    series: [{
-      type: 'heatmap', data: heat,
-      label: { show: min < 0, formatter: ({ data }) => data[2] < 0 ? '−' : '', color: '#fff', textBorderColor: '#000', textBorderWidth: 1 },
-      itemStyle: { borderRadius: 8, borderColor: 'rgba(255,255,255,.05)', borderWidth: 2 },
-    }],
   };
 }

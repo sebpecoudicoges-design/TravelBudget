@@ -1399,3 +1399,22 @@ body.theme-dark .tb-nutrition-recovery { --tb-surface: var(--panel); --tb-ink: v
 .tb-ad-launch { position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; background: var(--tb-canvas); color: var(--tb-ink); font-size: 24px; font-weight: 800; }
 #tb-ad-privacy[hidden], #tb-ad-status[hidden] { display: none !important; }
 #tb-ad-status { overflow-wrap: anywhere; }
+
+
+.tb-guided-account {
+  box-sizing: border-box;
+  width: min(32rem, calc(100% - 24px));
+  max-height: 88dvh;
+  overflow: auto;
+  color: var(--tb-ink);
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-line);
+  border-radius: var(--tb-radius-md);
+  padding: 18px;
+}
+.tb-guided-account::backdrop { background: rgb(0 0 0 / .48); }
+.tb-guided-account .field { margin: 10px 0; }
+.tb-guided-account :is(input, select) { box-sizing: border-box; width: 100%; min-height: 44px; }
+.tb-guided-account .btn { margin: 3px; }
+
+.kpi-health-detail-grid strong { color: var(--text); }

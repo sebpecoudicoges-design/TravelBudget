@@ -10,6 +10,8 @@
     "vendorJsMaxKiB": 2340
   },
   "sourceGroups": [
+    { "name": "guided-currency-search", "maxKiB": 3, "paths": ["public/guided-setup/currency-picker.js"] },
+    { "name": "guided-setup-on-demand", "maxKiB": 10, "paths": ["public/guided-setup/account.js"] },
     {
       "name": "accounting-domain",
       "maxKiB": 139.5,

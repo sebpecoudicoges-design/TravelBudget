@@ -427,6 +427,31 @@ function renderDailyBudget() {
    Wallet Create Dialog (UI)
    - Lightweight modal (no external deps)
    ========================= */
+function _walletDialogLabels(mode) {
+  if (window.tbGetLang?.() !== "en") return {};
+  return {
+    title: { create: "Create a wallet", edit: "Edit wallet", fix: "Correct wallet types" }[mode],
+    name: "Name", namePlaceholder: "e.g. Cash (THB), EUR bank account",
+    currency: "Currency", currencyLocked: "You cannot change the currency here.",
+    type: "Type", typeHint: "The wallet type is used for the Cash KPI and cash runway.",
+    balance: "Opening balance", cancel: "Cancel", create: "Create", save: "Save",
+    suggestion: "suggestion", intro: "Some wallets have no type. Select the correct type and apply.",
+    apply: "Apply",
+    typeOptions: { cash: "Cash", bank: "Bank", card: "Card", savings: "Savings", other: "Other" },
+  };
+}
+
+function _walletDialogError(message) {
+  if (window.tbGetLang?.() !== "en") return message || "Wallet invalide.";
+  return {
+    "Nom requis.": "Name is required.",
+    "Devise requise.": "Currency is required.",
+    "Devise invalide (ex: EUR, THB).": "Invalid currency (e.g. EUR, THB).",
+    "Type invalide.": "Invalid wallet type.",
+    "Solde invalide.": "Invalid balance.",
+  }[message] || "Invalid wallet.";
+}
+
 function tbOpenWalletDialog() {
   return new Promise(async (resolve) => {
     // inject styles once
@@ -442,6 +467,7 @@ function tbOpenWalletDialog() {
       ...(state?.wallets || []).map((wallet) => wallet.currency),
     ];
     backdrop.innerHTML = window.TBDashboardView?.renderWalletCreateDialog?.({
+      labels: _walletDialogLabels("create"),
       currencyCodes,
       defaultCurrency: state?.user?.baseCurrency || state?.period?.baseCurrency || "EUR",
     }) || "";
@@ -471,7 +497,7 @@ function tbOpenWalletDialog() {
         type: typeEl.value,
         balance: balEl.value,
       });
-      if (!result?.ok) return showErr(result?.error || "Wallet invalide.");
+      if (!result?.ok) return showErr(_walletDialogError(result?.error));
 
       showErr("");
       close(result.value);
@@ -527,7 +553,10 @@ function tbOpenWalletEditDialog(wallet) {
     const dlg = document.createElement("div");
     dlg.className = "tb-dlg";
 
-    dlg.innerHTML = window.TBDashboardView?.renderWalletEditDialog?.({ wallet: w }) || "";
+    dlg.setAttribute("role", "dialog");
+    dlg.setAttribute("aria-modal", "true");
+    dlg.setAttribute("aria-label", _walletDialogLabels("edit").title || "Modifier wallet");
+    dlg.innerHTML = window.TBDashboardView?.renderWalletEditDialog?.({ wallet: w, labels: _walletDialogLabels("edit") }) || "";
 
     back.appendChild(dlg);
     document.body.appendChild(back);
@@ -551,7 +580,7 @@ function tbOpenWalletEditDialog(wallet) {
         name: $("#tbWEditName").value,
         type: $("#tbWEditType").value,
       });
-      if (!result?.ok) return alert(result?.error || "Wallet invalide.");
+      if (!result?.ok) return alert(_walletDialogError(result?.error));
 
       close(result.value);
     };
@@ -574,10 +603,12 @@ async function openWalletTypesFix() {
   const dlg = document.createElement("div");
   dlg.className = "tb-dlg";
 
+  const labels = _walletDialogLabels("fix");
   dlg.innerHTML = window.TBDashboardView?.renderWalletTypesFixDialog?.({
+    labels,
     wallets: missing,
     inferType: window.TBDashboardWalletRules?.inferWalletTypeFromName || (() => "other"),
-    typeLabel: (type) => window.TBDashboardWalletRules?.walletTypeLabel?.(type, window.tbT) || "Autre",
+    typeLabel: (type) => labels.typeOptions?.[type] || window.TBDashboardWalletRules?.walletTypeLabel?.(type, window.tbT) || "Autre",
   }) || "";
 
   back.appendChild(dlg);

@@ -412,8 +412,8 @@
           ${badge(tx("Logs attente", "Pending logs"), String(d.pendingLogs.length))}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="btn primary" type="button" data-diag-sync-logs>${_esc(tx("Sync logs", "Sync logs"))}</button>
-          <button class="btn" type="button" data-diag-sync-queue>${_esc(tx("Sync actions", "Sync actions"))}</button>
+          <button class="btn primary" type="button" data-diag-sync-logs>${_esc(tx("Synchroniser les journaux", "Sync logs"))}</button>
+          <button class="btn" type="button" data-diag-sync-queue>${_esc(tx("Synchroniser les actions", "Sync actions"))}</button>
           <button class="btn" type="button" data-diag-clear-failed>${_esc(tx("Retirer erreurs action", "Remove failed actions"))}</button>
           <button class="btn danger" type="button" data-diag-clear-trip>${_esc(tx("Vider conflits Trip", "Clear Trip conflicts"))}</button>
           <button class="btn" type="button" data-diag-export>${_esc(tx("Exporter logs", "Export logs"))}</button>
@@ -548,10 +548,9 @@
         kt: "help.guide.analysis.title",
         kb: "help.guide.analysis.body",
         action: "analysis",
-        target: "#analysis-root",
+        target: "#analysis-summary",
         cmds: [
-          { cmd: "analysis_budget", label: tx("Lire budget", "Read budget") },
-          { cmd: "analysis_fx", label: tx("Décision change", "FX decision") }
+          { cmd: "analysis_budget", label: tx("Lire budget", "Read budget") }
         ]
       },
       {
@@ -580,7 +579,7 @@
         action: "assets",
         target: "#assets-root",
         cmds: [
-          { cmd: "asset_create", label: tx("Ajouter asset", "Add asset") },
+          { cmd: "asset_create", label: tx("Ajouter un actif", "Add asset") },
           { cmd: "asset_docs", label: tx("Documents liés", "Linked docs") }
         ]
       },
@@ -592,7 +591,7 @@
         cmds: [
           { cmd: "trip_member", label: tx("Ajouter membre", "Add member") },
           { cmd: "trip_expense", label: tx("Ajouter dépense", "Add expense") },
-          { cmd: "trip_balances", label: tx("Balances", "Balances") }
+          { cmd: "trip_balances", label: tx("Soldes", "Balances") }
         ]
       }
     ];
@@ -769,11 +768,7 @@
       return;
     }
     if (c === "analysis_budget") {
-      _afterView("analysis", () => _highlightFirst(["#analysis-root", "#view-analysis"]));
-      return;
-    }
-    if (c === "analysis_fx") {
-      _afterView("analysis", () => _highlightFirst(["#fx-decision-root", ".fx-decision-card", "#view-analysis"]));
+      _afterView("analysis", () => _highlightFirst(["#analysis-summary", "#view-analysis"]));
       return;
     }
     if (c === "documents_upload") {

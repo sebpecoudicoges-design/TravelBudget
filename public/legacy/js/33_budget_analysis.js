@@ -1,6 +1,6 @@
 (function () {
   const LS_KEY = 'tb_budget_analysis_filters_v1';
-  const charts = { trajectory: null, category: null, categoryBars: null, velocity: null, heatmap: null, referenceMix: null };
+  const charts = { trajectory: null, category: null, categoryBars: null, velocity: null, referenceMix: null };
   const referenceCache = { key: '', bySegment: {}, loaded: false };
   let resizeBound = false;
   let excludedCats = new Set();
@@ -607,10 +607,10 @@ function _analysisBucketOrder(){
     const total = _allAnalysisCategories().length;
     const count = excludedCats.size;
     if (summary) {
-      summary.textContent = window.TBAnalysisFilterView?.buildCategoryExcludeSummary?.({ total, count }) || '';
+      summary.textContent = window.TBAnalysisFilterView?.buildCategoryExcludeSummary?.({ total, count, isEn: _analysisIsEnglish() }) || '';
     }
     if (badge) badge.textContent = String(count);
-    if (toggle) toggle.textContent = excludePanelOpen ? 'Masquer' : 'Gérer';
+    if (toggle) toggle.textContent = _t(excludePanelOpen ? 'common.hide' : 'analysis.exclusions.manage');
     const panel = _el('analysis-category-panel');
     if (panel) panel.style.display = excludePanelOpen ? 'block' : 'none';
   }
@@ -988,7 +988,6 @@ if (sub) {
     const cumTarget = [];
     const cumReference = [];
     const velocity = [];
-    const heat = [];
     let runSpent = 0;
     let runTarget = 0;
     let runReference = 0;
@@ -1009,7 +1008,6 @@ if (sub) {
       cumReference.push(Number(runReference.toFixed(2)));
       const daySpent = Number(_safeNum(dailyMap[d]).toFixed(2));
       velocity.push(daySpent);
-      heat.push([idx, 0, daySpent]);
     });
 
     const periodDays = Math.max(days.length, 1);
@@ -1217,7 +1215,7 @@ deltaProjectedWithBudget,
   totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod,
   remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay,
   referenceMiscPerDay, comparablePerDay, unmappedPerDay, excludedPerDay,
-  projection, credits: -bd, cumSpent, cumTarget, cumReference, velocity, heat,
+  projection, credits: -bd, cumSpent, cumTarget, cumReference, velocity,
   topCategories, categorySeries, subcategorySeries, referenceCategorySeries,
   referenceComparisonSeries, unmappedCategorySeries, outAmount,
   spentToToday, targetToToday, referenceToToday, referenceGap,
@@ -1434,13 +1432,14 @@ function _entryTripLabel(tx){
 }
 
 function _entryBudgetLabel(tx){
-  return _txOut(tx) ? 'Hors budget' : 'Budget';
+  return _txOut(tx) ? (_analysisIsEnglish() ? 'Out of budget' : 'Hors budget') : 'Budget';
 }
 
 function _entryPaidLabel(tx){
-  if (_txPaid(tx)) return 'Payé';
-  if (_isTripAnalyticRealExpense(tx)) return 'Part Trip réelle';
-  return 'À payer';
+  const isEn = _analysisIsEnglish();
+  if (_txPaid(tx)) return isEn ? 'Paid' : 'Payé';
+  if (_isTripAnalyticRealExpense(tx)) return isEn ? 'Actual split share' : 'Part Trip réelle';
+  return isEn ? 'To pay' : 'À payer';
 }
 
 function _ensureTxDrilldownStyles(){
@@ -1461,7 +1460,8 @@ function _openTxDrilldown(kind, key, model, opener){
   const entries = map instanceof Map ? (map.get(key) || []) : [];
   const base = sourceModel.base || _currency();
 
-  const title = window.TBAnalysisDrilldownView?.buildTransactionDrilldownTitle?.(kind, key)
+  const isEn = _analysisIsEnglish();
+  const title = window.TBAnalysisDrilldownView?.buildTransactionDrilldownTitle?.(kind, key, isEn)
     || String(key || 'Catégorie');
 
   const total = entries.reduce((sum, row) => sum + _safeNum(row?.visibleAmount), 0);
@@ -1497,12 +1497,12 @@ function _openTxDrilldown(kind, key, model, opener){
       budgetLabel: _entryBudgetLabel(tx),
       tripLabel: _entryTripLabel(tx),
       visibleAmount: _fmtMoney(row.visibleAmount, base),
-      originalAmount: `${_safeNum(tx.amount).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} ${_upper(tx.currency || base)}`,
+      originalAmount: `${_safeNum(tx.amount).toLocaleString(isEn ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 2 })} ${_upper(tx.currency || base)}`,
     };
   });
 
   overlay.innerHTML = window.TBAnalysisDrilldownView?.renderTransactionDrilldown?.({
-    title,
+    title, isEn,
     rows,
     total: _fmtMoney(total, base),
     start: sourceModel.start,
@@ -1649,6 +1649,7 @@ function _openTxDrilldown(kind, key, model, opener){
     model,
     formatCurrency: _fmtMoney,
     accent: _theme('accent'),
+    isEn: _analysisIsEnglish(),
   }) || '';
 
   if (!(model.subcategorySeries || []).length) return;
@@ -1675,15 +1676,6 @@ function _openTxDrilldown(kind, key, model, opener){
       formatCurrency: _fmtMoney,
     }) || {});
   }
-  function _renderHeatmap(model){
-    const chart = _ensureChart('heatmap','analysis-heatmap-chart');
-    if (!chart) return;
-    chart.setOption(window.TBAnalysisCharts?.buildAnalysisHeatmapOption?.({
-      model,
-      theme: _analysisChartTheme(),
-      formatCurrency: _fmtMoney,
-    }) || {});
-  }
   function _renderReferencePanel(model){
     const summary = _el('analysis-reference-summary');
     const chartEl = _el('analysis-reference-mix-chart');
@@ -1699,7 +1691,7 @@ function _openTxDrilldown(kind, key, model, opener){
     if (chart && chart.dispose) { try { chart.dispose(); } catch(_) {} delete charts.referenceMix; }
     if (!chartEl) return;
     chartEl.innerHTML = analysisView?.renderAnalysisReferenceMix?.({
-      model,
+      model, isEn,
       formatCurrency: _fmtMoney,
     }) || '';
   }
@@ -1708,7 +1700,7 @@ function _openTxDrilldown(kind, key, model, opener){
     const host = _el('analysis-night-covered');
     if (!host) return;
     host.innerHTML = window.TBAnalysisView?.renderAnalysisNightCovered?.({
-      model,
+      model, isEn: _analysisIsEnglish(),
       formatCurrency: _fmtMoney,
     }) || '';
   }
@@ -1810,12 +1802,11 @@ function _openTxDrilldown(kind, key, model, opener){
     safe('trajectory', _renderTrajectory);
     safe('reference-panel', _renderReferencePanel);
     safe('velocity', _renderVelocity);
-    safe('heatmap', _renderHeatmap);
 
     const view = _el('view-analysis');
     const summaryHostPre = _el('analysis-summary');
     if (summaryHostPre && model && Array.isArray(model.txs) && model.txs.length === 0) {
-      summaryHostPre.innerHTML = `<div class="muted">Aucune dépense visible pour ce scope, cette plage, ou ces filtres.</div>`;
+      summaryHostPre.innerHTML = `<div class="muted">${_analysisIsEnglish() ? 'No expenses match this scope, date range or filters.' : 'Aucune dépense pour ce périmètre, cette plage ou ces filtres.'}</div>`;
     }
     if (summaryHostPre && usesExchangeRates) {
       const note = document.createElement('p');
@@ -1837,7 +1828,6 @@ function _openTxDrilldown(kind, key, model, opener){
     const referenceSummaryHost = _el('analysis-reference-summary');
     const referenceMixHost = _el('analysis-reference-mix-chart');
     const velocityHost = _el('analysis-velocity-chart');
-    const heatmapHost = _el('analysis-heatmap-chart');
     const summaryHost = _el('analysis-summary');
 
     function _cardFor(host){
@@ -1853,14 +1843,12 @@ function _openTxDrilldown(kind, key, model, opener){
     const trajectoryCard = _cardFor(trajectoryHost);
     const referenceCard = _cardFor(referenceSummaryHost) || _cardFor(referenceMixHost);
     const velocityCard = _cardFor(velocityHost);
-    const heatmapCard = _cardFor(heatmapHost);
 
     let layout = _el('analysis-custom-layout');
     if (!layout) {
       layout = document.createElement('div');
       layout.id = 'analysis-custom-layout';
       layout.style.display = 'grid';
-      layout.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
       layout.style.gap = '18px';
       layout.style.alignItems = 'stretch';
       layout.style.width = '100%';
@@ -1880,8 +1868,7 @@ function _openTxDrilldown(kind, key, model, opener){
       subcategoryCard,
       trajectoryCard,
       referenceCard,
-      velocityCard,
-      heatmapCard
+      velocityCard
     ].filter(Boolean);
 
     const oldContainers = [];
@@ -1915,11 +1902,6 @@ function _openTxDrilldown(kind, key, model, opener){
       trajectoryHost.style.width = '100%';
     }
 
-    if (heatmapHost) {
-      heatmapHost.style.height = '320px';
-      heatmapHost.style.width = '100%';
-    }
-
     oldContainers.forEach((node) => {
       if (!node || node === layout || node.contains(layout)) return;
       if (node.children.length === 0 || node.textContent.trim() === '') {
@@ -1936,7 +1918,6 @@ function _openTxDrilldown(kind, key, model, opener){
     try { charts.category && charts.category.resize(); } catch (_) {}
     try { charts.categoryBars && charts.categoryBars.resize(); } catch (_) {}
     try { charts.velocity && charts.velocity.resize(); } catch (_) {}
-    try { charts.heatmap && charts.heatmap.resize(); } catch (_) {}
   }
 
   function _toggleRangeBox(){
@@ -1959,11 +1940,14 @@ function _openTxDrilldown(kind, key, model, opener){
     if (!sel) return;
     const periods = _periodList(travelId).slice().sort((a,b)=>String(a.start_date || a.start || '').localeCompare(String(b.start_date || b.start || '')));
     const activePeriod = _getActivePeriodForTravel(travelId);
+    const isEn = _analysisIsEnglish();
+    const active = isEn ? 'Active period' : 'Période active';
     const activeLabel = activePeriod
-      ? `Période active (${_norm(activePeriod.start_date || activePeriod.start)} → ${_norm(activePeriod.end_date || activePeriod.end)})`
-      : 'Période active';
+      ? `${active} (${_norm(activePeriod.start_date || activePeriod.start)} → ${_norm(activePeriod.end_date || activePeriod.end)})`
+      : active;
     sel.innerHTML = window.TBAnalysisFilterView?.renderPeriodFilterOptions?.({
       activeLabel,
+      labels: isEn ? ['Period', 'Whole trip', 'This month', 'Previous month', 'This week', 'Previous week', 'Custom range'] : undefined,
       periods: periods.map((p) => ({
         id: p.id,
         start: _norm(p.start_date || p.start),

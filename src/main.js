@@ -157,7 +157,6 @@ const LEGACY_DOMAIN_SCRIPTS = {
     '/legacy/js/33_analysis_filter_view.js',
     '/legacy/js/33_analysis_drilldown_view.js',
     '/legacy/js/33_budget_analysis.js',
-    '/legacy/js/34_fx_decision.js',
   ],
   subscriptions: [
     '/legacy/js/15_recurring_rules_ui.js',

@@ -116,7 +116,7 @@ describe('Settings view helpers', () => {
     expect(html).toContain('id="tb-user-delete-account"');
     expect(html).toContain('id="tb-user-cancel-deletion"');
     expect(html).toContain('id="tb-user-deletion-status"');
-    expect(html).toContain('délai de 7 jours');
+    expect(html).toContain('settings.account.deletion_help');
   });
 
   it('renders the settings hero with escaped state values and counters', () => {
