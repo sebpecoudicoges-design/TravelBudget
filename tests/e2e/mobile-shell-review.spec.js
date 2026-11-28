@@ -6,11 +6,11 @@ test.use({ serviceWorkers: 'block' });
 const cases = [
   { width: 1440, theme: 'light', native: false, initialTransactions: true },
   { width: 1440, theme: 'dark', native: false, initialTransactions: false },
-  { width: 390, theme: 'light', native: false, initialTransactions: false },
-  { width: 390, theme: 'dark', native: true, initialTransactions: true },
+  { width: 390, theme: 'light', native: true, buildId: 'fr.pecloud.travelbudget', initialTransactions: false },
+  { width: 390, theme: 'dark', native: true, buildId: 'com.travelbudget.app', initialTransactions: true },
 ];
 
-for (const { width, theme, native, initialTransactions } of cases) {
+for (const { width, theme, native, buildId, initialTransactions } of cases) {
   test(`Dashboard and Transactions at ${width}px, ${theme}, native=${native}`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 900 });
     const tables = structuredClone(fixtureTables);
@@ -19,11 +19,11 @@ for (const { width, theme, native, initialTransactions } of cases) {
     tables.transactions = initialTransactions ? tables.transactions.slice(0, 1) : [];
     await installConnectedFixture(page, baseURL, { tables });
     await page.routeWebSocket(url => url.origin === baseURL.replace('http', 'ws'), ws => ws.connectToServer());
-    await page.addInitScript(({ user, native }) => {
+    await page.addInitScript(({ user, native, buildId }) => {
       localStorage.setItem('tb_lang_v1', 'fr');
       localStorage.setItem('travelbudget_guided_tour_done_v2_' + user, '1');
-      if (native) window.Capacitor = {};
-    }, { user: fixtureUser, native });
+      if (native) window.Capacitor = { getPlatform: () => 'android', Plugins: { App: { getInfo: async () => ({ id: buildId, version: '10.5.399' }) } } };
+    }, { user: fixtureUser, native, buildId });
 
     let finishLoad;
     const hold = new Promise(resolve => { finishLoad = resolve; });
@@ -53,10 +53,19 @@ for (const { width, theme, native, initialTransactions } of cases) {
     await expect(page.locator('#wallets-container [data-wallet-id]').first()).toBeVisible();
     await expect(page.locator('#daily-budget-container')).not.toBeEmpty();
     await expect(page.locator('#dashboard-hero-shell, .tb-overview-greeting')).toHaveCount(0);
+    const channel = page.locator('#tb-direct-apk-channel');
+    if (buildId === 'com.travelbudget.app') {
+      await expect(channel).toBeVisible();
+      await expect(channel).toHaveText('APK 10.5.399');
+    } else await expect(channel).toBeHidden();
     const health = page.locator('#kpi .kpi-health-card');
     await expect(health).toHaveCount(1);
     await expect(page.locator('body')).toHaveClass(new RegExp('theme-' + theme));
     if (native) await expect(page.locator('body')).toHaveClass(/tb-capacitor-app/);
+    const logo = page.locator('header img.tb-app-brand-icon');
+    await expect(logo).toBeVisible();
+    await expect(logo).toHaveAttribute('src', '/pwa-icon.svg');
+    await expect.poll(() => logo.evaluate(el => el.complete && el.naturalWidth > 0 && el.getBoundingClientRect().width >= 32)).toBe(true);
     if (width === 390) {
       await expect(health).toBeHidden();
       await expect(menu).toBeVisible();
@@ -74,11 +83,23 @@ for (const { width, theme, native, initialTransactions } of cases) {
       });
       expect(frames).toEqual(Array(7).fill(['grid', 'fixed', 2]));
       await expect(page.locator('#tab-dashboard')).toBeFocused();
+      for (const name of ['dashboard', 'transactions', 'subscriptions', 'analysis', 'assets', 'accounting', 'settings']) {
+        const icon = nav.locator('#tab-' + name + ' .tab-icon');
+        await expect(icon).toBeVisible();
+        await expect(icon.locator('use')).toHaveAttribute('href', '#tb-icon-' + name);
+        expect(await icon.evaluate(el => el.getBBox().width)).toBeGreaterThan(0);
+      }
       await expect(page.locator('#tab-members')).toBeHidden();
       await page.keyboard.press('Escape');
       await expect(menu).toBeFocused();
       await expect(nav).toBeHidden();
       await menu.click();
+      await page.evaluate(() => {
+        document.getElementById('view-dashboard').style.minHeight = '2400px';
+        document.getElementById('view-transactions').style.minHeight = '2400px';
+        window.scrollTo({top: 900, behavior: 'instant'});
+      });
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
     } else {
       await expect(health).toBeVisible();
       await expect(menu).toBeHidden();
@@ -89,6 +110,7 @@ for (const { width, theme, native, initialTransactions } of cases) {
     if (width === 390) {
       await expect(menu).toHaveAttribute('aria-expanded', 'false');
       await expect(nav).toBeHidden();
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     }
     const add = page.getByRole('button', { name: 'Ajouter une transaction', exact: true });
     await expect(add).toBeEnabled();

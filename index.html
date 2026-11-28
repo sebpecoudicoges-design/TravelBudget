@@ -2725,27 +2725,25 @@
       background:rgba(15,23,42,.84) !important;
       border-color:rgba(226,232,240,.10) !important;
     }
-    .brand h1{
-      position:relative;
-      min-height:42px;
-      padding-left:52px;
-      display:flex;
+    #app-root .brand{
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr);
       align-items:center;
+      column-gap:10px;
+    }
+    .tb-app-brand-icon{
+      grid-row:1 / span 2;
+      width:40px;
+      height:40px;
+      display:block;
+    }
+    .tb-app-channel{ grid-column:2; font-size:10px; font-weight:800; color:var(--tb-muted); }
+    .brand h1{
+      display:block;
       font-size:22px !important;
       line-height:1;
     }
-    .brand h1::before{
-      content:"";
-      position:absolute;
-      left:0;
-      top:50%;
-      transform:translateY(-50%);
-      width:40px;
-      height:40px;
-      border-radius:12px;
-      background:url("/pwa-icon.svg") center / contain no-repeat;
-    }
-    .brand .sub{ padding-left:52px; color:var(--bp-demo-muted) !important; }
+    .brand .sub{ color:var(--bp-demo-muted) !important; }
     body.theme-dark .brand .sub{ color:#94a3b8 !important; }
     .top-actions .lang-switch{
       display:inline-flex;
@@ -3016,17 +3014,8 @@
       margin-bottom:12px !important;
       padding:10px 12px !important;
     }
-    .brand h1{
-      min-height:38px;
-      padding-left:48px;
-      font-size:20px !important;
-    }
-    .brand h1::before{
-      width:36px;
-      height:36px;
-      border-radius:13px;
-    }
-    .brand .sub{ padding-left:48px; }
+    .brand h1{ font-size:20px !important; }
+    .tb-app-brand-icon{ width:36px; height:36px; }
     #kpi.premium-kpi-shell{
       padding:16px 18px !important;
       margin-bottom:12px !important;
@@ -3530,6 +3519,10 @@
 </style>
 <style id="tb-critical-mobile-navigation">
   #tb-mobile-nav-toggle { display: none !important; }
+  @media (min-width: 1180px) {
+    #tb-app-navigation .tab:has(.tb-beta-badge--version) { flex-wrap: wrap; min-height: 43px; row-gap: 0; padding-block: 2px !important; }
+    #tb-app-navigation .tab:has(.tb-beta-badge--version) .tab-label { flex: 1 1 calc(100% - 37px); }
+  }
   body.tb-capacitor-app #kpi .kpi-health-card { display: none !important; }
   @media (max-width: 760px), (max-height: 600px) and (pointer: coarse) {
     #kpi .kpi-health-card, #tb-app-navigation { display: none !important; }
@@ -3597,7 +3590,8 @@
       background: var(--tb-lagoon-soft, var(--tb-surface-soft));
     }
     #tb-app-navigation .tab[data-icon]::before { display: none !important; }
-    #tb-app-navigation .tab-icon { flex: 0 0 18px; width: 18px; height: 18px; }
+    #tb-app-navigation .tab-icon { display: inline-block; flex: 0 0 18px; width: 18px; height: 18px; }
+    #tb-app-navigation .tab-label { overflow-wrap: anywhere; }
     body.theme-dark #tb-mobile-nav-toggle,
     body.theme-dark #tb-app-navigation {
       background: var(--panel, #162536);
@@ -3765,6 +3759,7 @@
     <symbol id="tb-icon-transactions" viewBox="0 0 24 24"><path d="M7 7h13m0 0-3-3m3 3-3 3M17 17H4m0 0 3 3m-3-3 3-3"/></symbol>
     <symbol id="tb-icon-subscriptions" viewBox="0 0 24 24"><path d="M4 7h16v12H4V7Z"/><path d="M8 4v6m8-6v6M4 11h16m-12 4h3m2 0h3"/></symbol>
     <symbol id="tb-icon-analysis" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></symbol>
+    <symbol id="tb-icon-accounting" viewBox="0 0 24 24"><path d="M6 4h13v16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm2 0v16m3-11h5m-5 4h5"/></symbol>
     <symbol id="tb-icon-assets" viewBox="0 0 24 24"><path d="m3 10 9-6 9 6M5 10v8m5-8v8m4-8v8m5-8v8M3 20h18"/></symbol>
     <symbol id="tb-icon-sport" viewBox="0 0 24 24"><path d="M6 9v6m12-6v6M3 10v4m18-4v4M6 12h12"/></symbol>
     <symbol id="tb-icon-nutrition" viewBox="0 0 24 24"><path d="M12 8c-1.8-2.2-5.8-2-7.2.6C2.6 12.7 6.4 21 12 21s9.4-8.3 7.2-12.4C17.8 6 13.8 5.8 12 8Z"/><path d="M12 8c0-2.5 1.4-4.3 4-5"/></symbol>
@@ -3787,8 +3782,10 @@
     <div class="wrap">
       <header>
         <div class="brand">
+          <img class="tb-app-brand-icon" src="/pwa-icon.svg" width="40" height="40" alt="" />
           <h1 data-t="app.title">TravelBudget</h1>
           <div class="sub" data-t="app.subtitle">Outil de suivi de budget pendant tes voyages</div>
+          <div class="tb-app-channel" id="tb-direct-apk-channel" hidden><span class="tb-beta-badge">APK</span> <span id="tb-direct-apk-version"></span></div>
         </div>
 
         <div class="top-actions">
@@ -3811,10 +3808,10 @@
         <button type="button" id="tab-dashboard" class="tab active" aria-current="page" data-icon="🧭" onclick="showView('dashboard')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-dashboard"></use></svg><span class="tab-label" data-t="nav.dashboard">Dashboard</span></button>
         <div class="tab-group-label">Finances</div>
         <button type="button" id="tab-transactions" class="tab" data-icon="💳" onclick="showView('transactions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-transactions"></use></svg><span class="tab-label" data-t="nav.transactions">Transactions</span></button>
-        <button type="button" id="tab-subscriptions" class="tab" data-icon="📅" onclick="showView('subscriptions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-subscriptions"></use></svg><span class="tab-label">Abonnements</span></button>
+        <button type="button" id="tab-subscriptions" class="tab" data-icon="📅" onclick="showView('subscriptions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-subscriptions"></use></svg><span class="tab-label">Abonnements</span> <span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span></button>
         <button type="button" id="tab-analysis" class="tab" data-icon="📊" onclick="showView('analysis')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-analysis"></use></svg><span class="tab-label" data-t="nav.analysis">Analyse</span></button>
-        <button type="button" id="tab-assets" class="tab" data-icon="💎" onclick="showView('assets')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-assets"></use></svg><span class="tab-label" data-t="nav.assets">Patrimoine</span></button>
-        <button id="tab-accounting" type="button" class="tab" data-icon="📒" onclick="showView('accounting')"><span class="tab-icon" aria-hidden="true">📒</span><span class="tab-label">Comptabilité</span></button>
+        <button type="button" id="tab-assets" class="tab" data-icon="💎" onclick="showView('assets')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-assets"></use></svg><span class="tab-label" data-t="nav.assets">Patrimoine</span> <span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span></button>
+        <button id="tab-accounting" type="button" class="tab" data-icon="📒" onclick="showView('accounting')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-accounting"></use></svg><span class="tab-label" data-t="nav.accounting">Comptabilité</span> <span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span></button>
         <div class="tab-group-label" data-t="nav.daily">Quotidien</div>
         <button type="button" id="tab-sport" class="tab" data-icon="🏋️" onclick="showView('sport')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-sport"></use></svg><span class="tab-label" data-t="nav.sport">Sport</span> <span class="tb-beta-badge" data-t="common.beta">BÊTA</span></button>
         <button type="button" id="tab-nutrition" class="tab" data-icon="🍎" onclick="showView('nutrition')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-nutrition"></use></svg><span class="tab-label" data-t="nav.nutrition">Alimentation</span> <span class="tb-beta-badge" data-t="common.beta">BÊTA</span></button>
@@ -3870,13 +3867,16 @@
 
       <!-- ASSETS / PATRIMOINE -->
       <div id="view-subscriptions" class="hidden">
+        <p class="tb-module-maturity"><span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span><span data-t="daily.beta_note">Module en cours de test</span></p>
         <div id="subscriptions-root"></div>
       </div>
 
       <div id="view-assets" class="hidden">
+        <p class="tb-module-maturity"><span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span><span data-t="daily.beta_note">Module en cours de test</span></p>
         <div id="assets-root" class="card"></div>
       </div>
       <div id="view-accounting" class="hidden">
+        <p class="tb-module-maturity"><span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span><span data-t="daily.beta_note">Module en cours de test</span></p>
         <div id="accounting-root"></div>
       </div>
 

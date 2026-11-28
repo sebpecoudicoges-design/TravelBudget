@@ -12,6 +12,7 @@
       "app.lang_en": "English",
       "app.reload_hint": "Tip: refresh applies everything.",
       "common.beta": "BETA",
+      "common.beta_2": "Beta 2.0",
       "daily.beta_note": "Module in testing",
       "nav.daily": "Daily life",
       "nav.sport": "Sport",
@@ -41,6 +42,8 @@
       "nav.settings": "Settings",
       "nav.analysis": "Analysis",
       "nav.assets": "Assets",
+      "nav.accounting": "Accounting",
+      "nav.subscriptions": "Subscriptions",
       "nav.trip": "Split",
       "nav.members": "Members",
 

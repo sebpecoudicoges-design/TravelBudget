@@ -243,8 +243,15 @@ export function registerPwa() {
       if (!mobile.matches || !root.hasAttribute("data-tb-nav-ready") || doc.querySelector("#tb-boot-overlay, .tb-ad-launch")) return;
       setOpen(!isOpen());
     });
+    let viewBeforeMenuClick;
+    nav.addEventListener("click", () => {
+      viewBeforeMenuClick = doc.body.dataset.tbView;
+    }, { capture: true });
     nav.addEventListener("click", (event) => {
-      if (isOpen() && event.target.closest?.(".tab")) setOpen(false, true);
+      if (!isOpen() || !event.target.closest?.(".tab")) return;
+      // The tab handler has selected the visible view by the time this bubbles.
+      setOpen(false, true);
+      if (doc.body.dataset.tbView !== viewBeforeMenuClick) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     });
     doc.addEventListener("click", (event) => {
       if (isOpen() && !btn.contains(event.target) && !nav.contains(event.target)) setOpen(false);
@@ -322,12 +329,29 @@ export function registerPwa() {
     } catch (_) {}
   };
 
+  const showDirectApkChannel = async () => {
+    try {
+      const capacitor = window.Capacitor;
+      if (capacitor?.getPlatform?.() !== "android") return;
+      const info = await capacitor.Plugins?.App?.getInfo?.();
+      // Gradle overrides the debug/direct applicationId; Play keeps the release id.
+      if (info?.id !== "com.travelbudget.app") return;
+      const badge = document.getElementById("tb-direct-apk-channel");
+      const version = document.getElementById("tb-direct-apk-version");
+      if (badge && version) {
+        version.textContent = info.version || window.TB_VERSION || "";
+        badge.hidden = false;
+      }
+    } catch (_) {}
+  };
+
   const markRuntimeMode = () => {
     try {
       const isCapacitor = !!window.Capacitor
         || String(window.location?.protocol || "").startsWith("capacitor")
         || !!globalThis.document.querySelector('html[data-capacitor], body[data-capacitor]');
       globalThis.document.body.classList.toggle("tb-capacitor-app", !!isCapacitor);
+      if (isCapacitor) void showDirectApkChannel();
       if (!globalThis.document.body.dataset.tbView) {
         const activeTab = globalThis.document.querySelector(".app-tabs .tab.active, .tabs .tab.active");
         const id = String(activeTab?.id || "").replace(/^tab-/, "");

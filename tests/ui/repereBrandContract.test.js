@@ -9,7 +9,7 @@ it('uses the name-independent Repère for the app shell and standalone PWA', () 
   expect(svg).toContain('stroke="#78F1CB"');
   expect(svg).not.toMatch(/<text[\s>]/i);
   const html = read('index.html');
-  expect(html).toContain('background:url("/pwa-icon.svg") center / contain no-repeat');
+  expect(html).toContain('class="tb-app-brand-icon" src="/pwa-icon.svg" width="40" height="40" alt=""');
   expect(html).not.toContain('content:"BP"');
   expect(html).toContain('href="/apple-touch-icon.png"');
   expect(read('public/offline.html')).toContain('src="/pwa-icon.svg"');
