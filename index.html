@@ -4127,12 +4127,12 @@
           </div>
           <div class="row">
             <div class="field">
-              <label data-t="transactions.filters.from">Du</label>
-              <input id="f-from" type="date" />
+              <label for="f-from" data-t="transactions.filters.from">Du</label>
+              <input id="f-from" class="tx-filter-date" type="date" />
             </div>
             <div class="field">
-              <label data-t="transactions.filters.to">Au</label>
-              <input id="f-to" type="date" />
+              <label for="f-to" data-t="transactions.filters.to">Au</label>
+              <input id="f-to" class="tx-filter-date" type="date" />
             </div>
             <div class="field">
               <label data-t="transactions.filters.wallet">Wallet</label>
@@ -4794,14 +4794,17 @@
         margin:0!important;
         min-width:0!important;
       }
-      body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(1),
-      body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(2),
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(5),
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(8),
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(9),
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(10),
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field[data-tx-invoice-filter="1"]{
         display:none!important;
+      }
+      body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card .tx-filter-date{
+        width:100%;
+        min-width:0;
+        box-sizing:border-box;
       }
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .tx-filter-search{
         grid-column:1 / -1!important;
