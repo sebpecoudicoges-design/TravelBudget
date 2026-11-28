@@ -3,6 +3,20 @@
 ====================================================== */
 
 let __membersCache = { users: [], loadedAt: 0 };
+// Page-local protection only. This is not evidence that the server rolled back.
+const __memberResetPending = new Set();
+const __memberResetUncertain = new Set();
+
+function _memberResetText(fr, en) {
+  return document.documentElement.lang.toLowerCase().startsWith("en") ? en : fr;
+}
+
+function _memberResetUncertainMessage() {
+  return _memberResetText(
+    "Réinitialisation non confirmée. Certaines données ont pu être supprimées. Ne relancez pas avant vérification.",
+    "Reset not confirmed. Some data may already have been removed. Do not retry before checking."
+  );
+}
 
 /* =========================
    DOM / UI
@@ -195,7 +209,11 @@ function renderUsers() {
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <button class="btn" onclick="adminSetUserRole('${_escapeHtml(u.id)}','test')">Passer testeur</button>
           <button class="btn" onclick="adminSetUserRole('${_escapeHtml(u.id)}','user')">Retirer testeur</button>
-          <button class="btn danger" onclick="adminWipeUser('${_escapeHtml(u.id)}','${_escapeHtml(u.email || "")}')">Vider compte</button>
+          <button class="btn danger" onclick="adminWipeUser('${_escapeHtml(u.id)}','${_escapeHtml(u.email || "")}')"
+            ${__memberResetUncertain.has(String(u.id)) ? 'disabled aria-describedby="member-reset-warning-' + _escapeHtml(u.id) + '"' : ""}>${_memberResetText("Vider compte", "Reset account")}</button>
+          ${__memberResetUncertain.has(String(u.id))
+            ? '<span id="member-reset-warning-' + _escapeHtml(u.id) + '">' + _memberResetUncertainMessage() + '</span>'
+            : ''}
         </div>
       </div>
     </div>
@@ -208,65 +226,65 @@ function renderUsers() {
 
 
 async function adminWipeUser(userId, email, mode = "all") {
-  await guard("Wipe user", async () => {
-    console.log("[MembersAdmin] adminWipeUser:start", { userId, email, mode });
+  const target = String(userId);
+  if (__memberResetUncertain.has(target)) {
+    _setStatus(_memberResetUncertainMessage());
+    return;
+  }
+  if (__memberResetPending.has(target)) return;
+  __memberResetPending.add(target);
+  try {
+    await guard("Reset account", async () => {
+      const { data: u } = await sb.auth.getUser();
+      const me = u?.user?.id;
+      if (me && String(me) === target) {
+        throw new Error(_memberResetText(
+          "Vous ne pouvez pas vider votre propre compte ici.",
+          "You cannot reset your own account here."
+        ));
+      }
 
-    const { data: u } = await sb.auth.getUser();
-    const me = u?.user?.id;
-    if (me && String(me) === String(userId)) {
-      throw new Error("Refusé : tu ne peux pas vider ton compte courant via cette action.");
-    }
-
-    const label = (email ? `${email} (${userId})` : userId);
-    const isAll = (mode === "all");
-    const word = isAll ? "WIPE" : "RESET";
-
-    const explain = isAll
-      ? `Supprime : périodes, wallets, transactions, trips, settings, catégories.\nLe login reste.`
-      : `Supprime : périodes, wallets, transactions, trips, settings.\nConserve : catégories.\nLe login reste.`;
-
-    const token = prompt(
-      `⚠️ Action admin : ${isAll ? "VIDER COMPTE" : "RESET TRAVEL"}
-${label}
+      const label = email ? `${email} (${userId})` : userId;
+      const isAll = mode === "all";
+      const word = isAll ? "WIPE" : "RESET";
+      const explain = isAll
+        ? _memberResetText("Supprime notamment les périodes, wallets, transactions, voyages, réglages et catégories. Le login reste.",
+          "Removes data including periods, wallets, transactions, trips, settings and categories. Sign-in is kept.")
+        : _memberResetText("Supprime notamment les périodes, wallets, transactions et voyages. Le login, les réglages et les catégories restent.",
+          "Removes data including periods, wallets, transactions and trips. Sign-in, settings and categories are kept.");
+      const instruction = _memberResetText("Tapez exactement", "Type exactly");
+      const token = prompt(`${label}
 
 ${explain}
 
-Tape EXACTEMENT ${word} pour confirmer :`
-    );
+${instruction} ${word}.`);
+      if (token !== word) {
+        _setStatus(_memberResetText("Action annulée.", "Action cancelled."));
+        return;
+      }
 
-    console.log("[MembersAdmin] adminWipeUser:promptResult", { token });
+      _setStatus(_memberResetText("Réinitialisation en cours…", "Reset in progress…"));
+      try {
+        const out = await callEdge("admin-wipe-user", { targetUserId: userId, mode, confirm: token });
+        if (out?.success !== true) throw new Error("Reset was not confirmed");
+      } catch (_) {
+        __memberResetUncertain.add(target);
+        renderUsers();
+        const warning = _memberResetUncertainMessage();
+        _setStatus(warning);
+        alert(warning);
+        return;
+      }
 
-    if (token !== word) {
-      _setStatus("Action annulée.");
-      return;
-    }
-
-    _setStatus(isAll ? "Wipe en cours..." : "Reset travel en cours...");
-    console.log("[MembersAdmin] adminWipeUser:beforeCallEdge");
-
-    const out = await callEdge("admin-wipe-user", {
-      targetUserId: userId,
-      mode,
-      confirm: token
+      const message = _memberResetText("Réinitialisation confirmée.", "Reset confirmed.");
+      _setStatus(message);
+      alert(message);
+      __membersCache.loadedAt = 0;
+      await adminRefreshUsers();
     });
-
-    console.log("[MembersAdmin] adminWipeUser:callEdgeResult", out);
-
-    const msg = out?.message
-      || (out?.success
-        ? (isAll ? "✅ Compte vidé avec succès." : "✅ Données Travel réinitialisées avec succès.")
-        : "✅ Action terminée.");
-
-    _setStatus(msg);
-    alert(msg); // feedback visible immédiat
-
-    console.log("[MembersAdmin] adminWipeUser:beforeRefreshUsers");
-
-    __membersCache.loadedAt = 0;
-    await adminRefreshUsers();
-
-    console.log("[MembersAdmin] adminWipeUser:done");
-  });
+  } finally {
+    __memberResetPending.delete(target);
+  }
 }
 
 async function adminSetUserRole(userId, role) {

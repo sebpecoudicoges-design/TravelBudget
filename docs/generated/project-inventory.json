@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "fb1080e4ab593b1c77e6e40651beba1c3dd7a057",
-  "snapshotFingerprint": "a1aad2ed49c5decbf21847f05a5163be29a0312c5316181ab10b9ae4d0f05266",
-  "generatedAt": "2026-11-28T11:01:57.152Z",
+  "commit": "542be56d220d5614f0e2e1ea35de566f5bfaf943",
+  "snapshotFingerprint": "8d53925e78f8124f8a2730ac65a62c613a0976130048aabae625e5b8f71b3591",
+  "generatedAt": "2026-11-28T12:03:22.460Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.396"
@@ -289,6 +289,7 @@
     "src/features/work/workView.js"
   ],
   "testFiles": [
+    "tests/core/adminMemberReset.test.js",
     "tests/core/adsSession.test.js",
     "tests/core/assetRules.test.js",
     "tests/core/assistantRules.test.js",
