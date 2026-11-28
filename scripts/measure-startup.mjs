@@ -75,23 +75,29 @@ try {
     session.on('Network.responseReceived', e => requests.set(e.requestId, { url: e.response.url, type: e.type, status: e.response.status, decodedBytes: 0, transferredBytes: 0 }));
     session.on('Network.dataReceived', e => { const r = requests.get(e.requestId); if (r) r.decodedBytes += e.dataLength; });
     session.on('Network.loadingFinished', e => { const r = requests.get(e.requestId); if (r) { r.transferredBytes = e.encodedDataLength; r.finished = true; } });
+    session.on('Network.loadingFailed', e => { const r = requests.get(e.requestId); if (r) r.loadError = e.errorText; });
     page.on('pageerror', e => errors.push(e.message));
-    await page.goto(`${localOrigin}/`, { waitUntil: 'load', timeout: 60000 });
-    await page.waitForFunction(() => window.__tbBootReady === true, null, { timeout: 30000 });
-    if (!fixture) {
-      await page.waitForFunction(() => {
-        const overlay = document.querySelector('#auth-overlay');
-        const email = document.querySelector('#auth-email');
-        const ready = window.__TB_BOOT_COMPLETED__ === true && !window.sbUser
-          && overlay && getComputedStyle(overlay).display !== 'none'
-          && email && !email.disabled && email.getClientRects().length > 0;
-        if (ready && !performance.getEntriesByName('tb:anonymous-ready').length) performance.mark('tb:anonymous-ready');
-        return Boolean(ready);
-      }, null, { timeout: 30000 });
-      // Check actionability, not just styles: the boot overlay must not intercept input.
-      await page.locator("#auth-email").click({ trial: true, timeout: 5000 });
-    } else {
-      try {
+    let stage = 'navigation';
+    try {
+      await page.goto(`${localOrigin}/`, { waitUntil: 'load', timeout: 60000 });
+      stage = 'legacy-ready';
+      await page.waitForFunction(() => window.__tbBootReady === true, null, { timeout: 30000 });
+      if (!fixture) {
+        stage = 'anonymous-ready';
+        await page.waitForFunction(() => {
+          const overlay = document.querySelector('#auth-overlay');
+          const email = document.querySelector('#auth-email');
+          const ready = window.__TB_BOOT_COMPLETED__ === true && !window.sbUser
+            && overlay && getComputedStyle(overlay).display !== 'none'
+            && email && !email.disabled && email.getClientRects().length > 0;
+          if (ready && !performance.getEntriesByName('tb:anonymous-ready').length) performance.mark('tb:anonymous-ready');
+          return Boolean(ready);
+        }, null, { timeout: 30000 });
+        // Check actionability, not just styles: the boot overlay must not intercept input.
+        stage = 'anonymous-actionable';
+        await page.locator('#auth-email').click({ trial: true, timeout: 5000 });
+      } else {
+        stage = 'connected-ready';
         await page.waitForFunction(({ fixtureUser, transactionCount }) => {
           const ready = window.__TB_BOOT_COMPLETED__ && window.sbUser?.id === fixtureUser
             && window.activeView === 'dashboard' && window.state?.transactions?.length === transactionCount
@@ -103,11 +109,27 @@ try {
           if (ready && !performance.getEntriesByName('tb:connected-ready').length) performance.mark('tb:connected-ready');
           return Boolean(ready);
         }, { fixtureUser, transactionCount }, { timeout: 45000 });
-      } catch (error) {
-        const state = await page.evaluate(() => ({ boot: window.__TB_BOOT_COMPLETED__, user: window.sbUser?.id, view: window.activeView, tx: window.state?.transactions?.length, wallets: window.state?.wallets?.length, chart: Boolean(window.__cashflowChart) }));
-        reports.push({ journey, profile, errors, state, fixture });
-        throw new Error(`Connected startup failed: ${JSON.stringify({ state, failures: fixture.failures })}`, { cause: error });
       }
+    } catch (error) {
+      // Preserve the first failing profile; diagnostics must not mask its original error.
+      const state = await page.evaluate(() => {
+        const overlay = document.querySelector('#auth-overlay');
+        const email = document.querySelector('#auth-email');
+        return {
+          legacyReady: window.__tbBootReady === true,
+          bootCompleted: window.__TB_BOOT_COMPLETED__ === true,
+          signedIn: Boolean(window.sbUser),
+          view: window.activeView,
+          transactions: window.state?.transactions?.length,
+          wallets: window.state?.wallets?.length,
+          chart: Boolean(window.__cashflowChart),
+          authVisible: Boolean(overlay && getComputedStyle(overlay).display !== 'none'),
+          emailVisible: Boolean(email?.getClientRects().length),
+          emailEnabled: Boolean(email && !email.disabled),
+        };
+      }).catch(() => null);
+      reports.push({ journey, profile, failure: { stage, name: error.name }, state, errors, fixture, unexpectedRequests, resources: [...requests.values()] });
+      throw new Error(`Startup failed: ${journey}/${profile.name} at ${stage}`, { cause: error });
     }
     await page.waitForTimeout(1500); // same observation window for deferred KPI imports in both profiles
     if (captureCpu) {
