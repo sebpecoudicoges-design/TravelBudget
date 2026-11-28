@@ -215,7 +215,7 @@ try {
       },
     });
     await verifyDeletedDraftInBrowser({ executablePath: resolve(chromiumBin), userId: userA,
-      syncId: deletedDraft.syncId, replay: deleted, draft: deletedDraft });
+      syncId: deletedDraft.syncId, replay: deleted, draft: { header: deletedDraft.meal, items: deletedDraft.items } });
     console.log('Chromium + IndexedDB + PostgREST + PostgreSQL: stale preview retained draft, explicit choice committed it.');
   }
   console.log('PostgREST: lost response, retry, rollback, refreshed conflict snapshot and retired key verified.');

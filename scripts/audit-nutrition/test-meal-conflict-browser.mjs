@@ -94,13 +94,17 @@ export async function verifyConflictInBrowser({ executablePath, pending, replay,
 export async function verifyDeletedDraftInBrowser({ executablePath, userId, syncId, replay, draft }) {
   const browser = await chromium.launch({ executablePath });
   try {
-    const context = await browser.newContext();
+    const context = await browser.newContext({ viewport: { width: 390, height: 820 } });
     const origin = 'http://127.0.0.1:41872';
     const script = await readFile(new URL('local-conflict-store.mjs', import.meta.url));
+    const review = await readFile(new URL('meal-conflict-review.mjs', import.meta.url));
+    const css = await readFile(new URL('meal-conflict-review.css', import.meta.url));
     await context.route('**/*', route => {
       if (route.request().method() !== 'GET') return route.abort();
       const url = route.request().url();
-      if (url === origin + '/') return route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Local fixture</title>' });
+      if (url === origin + '/') return route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Local fixture</title><link rel="stylesheet" href="/review.css"><main data-meal-conflict-audit></main>' });
+      if (url === origin + '/review.mjs') return route.fulfill({ contentType: 'text/javascript', body: review });
+      if (url === origin + '/review.css') return route.fulfill({ contentType: 'text/css', body: css });
       if (url === origin + '/store.mjs') return route.fulfill({ contentType: 'text/javascript', body: script });
       return route.abort();
     });
@@ -140,6 +144,39 @@ export async function verifyDeletedDraftInBrowser({ executablePath, userId, sync
     await open();
     const stored = await page.evaluate(({ userId, syncId }) => window.fixture.transact('readonly', store => store.get([userId, syncId])), entry);
     assert.deepEqual(stored, { ...entry, status: 'deleted-conflict' });
+    for (const [locale, heading, retained] of [
+      ['fr', 'Repas supprimé', 'Ta saisie est conservée'],
+      ['en', 'Meal deleted', 'Your draft is still on this device'],
+    ]) {
+      await page.evaluate(async ({ userId, syncId, locale }) => {
+        const { mountMealConflictReview } = await import('/review.mjs');
+        await mountMealConflictReview(document.querySelector('main'), {
+          locale,
+          load: async () => ({ entry: await window.fixture.transact('readonly', store => store.get([userId, syncId])) }),
+          resolve: () => { throw new Error('A deleted-draft notice must not have a write action'); },
+        });
+      }, { ...entry, locale });
+      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+      await expect(page.getByRole('status')).toContainText(retained);
+      await expect(page.getByText(draft.header.label, { exact: false })).toBeVisible();
+      await expect(page.getByRole('radio')).toHaveCount(0);
+      await expect(page.getByRole('button')).toHaveCount(0);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390);
+    }
+    assert.deepEqual(await page.evaluate(({ userId, syncId }) => window.fixture.transact('readonly', store => store.get([userId, syncId])), entry), stored);
+    await page.evaluate(async entry => {
+      const { mountMealConflictReview } = await import('/review.mjs');
+      await mountMealConflictReview(document.querySelector('main'), {
+        locale: 'en',
+        load: async () => ({ entry }), // pending on this device; no confirmed remote state
+        resolve: () => { throw new Error('Missing remote data must not enable a write action'); },
+      });
+    }, entry);
+    await expect(page.getByRole('heading', { level: 1, name: 'Compare meal versions' })).toBeVisible();
+    await expect(page.getByRole('status')).toHaveText('Could not verify the versions. No removal was confirmed.');
+    await expect(page.getByRole('radio')).toHaveCount(0);
+
+
   } finally {
     await browser.close();
   }

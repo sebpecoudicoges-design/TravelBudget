@@ -3,6 +3,7 @@ const copy = {
   fr: {
     title: 'Comparer les versions du repas', local: 'Saisie sur cet appareil', remote: 'Version synchronisée',
     choice: 'Que veux-tu garder ?', keep: 'Laisser ma saisie en attente', accept: 'Garder la version synchronisée',
+    deletedTitle: 'Repas supprimé', deleted: 'Le repas synchronisé a été supprimé. Ta saisie est conservée sur cet appareil et n’a pas été renvoyée.',
     caution: 'Ce choix retire uniquement cette saisie de cet appareil.',
     submit: 'Confirmer le choix', refresh: 'Actualiser la comparaison',
     pending: 'Ta saisie reste en attente.', done: 'Version synchronisée gardée. Saisie locale retirée.',
@@ -16,6 +17,7 @@ const copy = {
   en: {
     title: 'Compare meal versions', local: 'Draft on this device', remote: 'Synced version',
     choice: 'Which version do you want to keep?', keep: 'Leave my draft pending', accept: 'Keep the synced version',
+    deletedTitle: 'Meal deleted', deleted: 'The synced meal was deleted. Your draft is still on this device and has not been resubmitted.',
     caution: 'This choice removes only this draft from this device.',
     submit: 'Confirm choice', refresh: 'Refresh comparison',
     pending: 'Your draft stays pending.', done: 'Synced version kept. Local draft removed.',
@@ -95,12 +97,22 @@ export async function mountMealConflictReview(host, { locale = 'fr', load, resol
     if (busy) return;
     busy = true;
     preview = null;
+    title.textContent = t.title;
     form.hidden = true;
     refresh.hidden = true;
     versions.replaceChildren();
     status.textContent = t.loading;
     try {
       const result = await load();
+      // Only a matching local record explicitly marked by the audit replay
+      // may use this view. Missing remote data alone is not proof of deletion.
+      if (result?.entry?.status === 'deleted-conflict') {
+        versions.replaceChildren(render(t.local, result.entry.snapshot));
+        title.textContent = t.deletedTitle;
+        status.textContent = t.deleted;
+        if (focus) title.focus();
+        return;
+      }
       if (!result?.preview) throw new Error('Unavailable meal review');
       versions.replaceChildren(render(t.local, result.local), render(t.remote, result.remote));
       preview = result.preview;
