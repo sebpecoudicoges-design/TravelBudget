@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `383eb2fb5dcec7e7635523f1d788b4c9eab120df`
-> Empreinte du snapshot : `9bdf85fdd0d5b755ec64a2e25d4b71f7f2b3d784bafc093189307cedb7e5606e`
-> Généré le : `2026-11-28T01:30:58.827Z`
+> Commit analysé : `90abefb671e356b93019ced0d14b8413d07ee3cb`
+> Empreinte du snapshot : `39f45e6d78065d643cb86987bc3e74039706453083e4a4652f7b25f8b440ef77`
+> Généré le : `2026-11-28T01:39:22.225Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 65 |
-| Fichiers de tests | 214 |
+| Fichiers de tests | 218 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -374,6 +374,7 @@ Modules :
 
 - `tests/e2e/accounting.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
+- `tests/e2e/analysis-language.spec.js`
 - `tests/e2e/android-ads.spec.js`
 - `tests/e2e/android-release.spec.js`
 - `tests/e2e/asset-budget-loading.spec.js`
@@ -386,8 +387,10 @@ Modules :
 - `tests/e2e/first-steps-replay.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
+- `tests/e2e/localization-finance.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
 - `tests/e2e/mobile-shell-review.spec.js`
+- `tests/e2e/nav-wallet-language.spec.js`
 - `tests/e2e/nutrition-edit-storage.spec.js`
 - `tests/e2e/nutrition-pending-persistence.spec.js`
 - `tests/e2e/nutrition-storage-recovery.spec.js`
@@ -396,6 +399,7 @@ Modules :
 - `tests/e2e/project-demo.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/trip-expense-entry.spec.js`
+- `tests/e2e/trip-localization.spec.js`
 - `tests/e2e/wallet-currency-ui.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
@@ -465,6 +469,7 @@ Modules :
 - `tests/data/tripRepository.test.js`
 - `tests/e2e/accounting.spec.js`
 - `tests/e2e/analysis-audit.spec.js`
+- `tests/e2e/analysis-language.spec.js`
 - `tests/e2e/android-ads.spec.js`
 - `tests/e2e/android-release.spec.js`
 - `tests/e2e/asset-budget-loading.spec.js`
@@ -477,8 +482,10 @@ Modules :
 - `tests/e2e/first-steps-replay.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
+- `tests/e2e/localization-finance.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
 - `tests/e2e/mobile-shell-review.spec.js`
+- `tests/e2e/nav-wallet-language.spec.js`
 - `tests/e2e/nutrition-edit-storage.spec.js`
 - `tests/e2e/nutrition-pending-persistence.spec.js`
 - `tests/e2e/nutrition-storage-recovery.spec.js`
@@ -487,6 +494,7 @@ Modules :
 - `tests/e2e/project-demo.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/trip-expense-entry.spec.js`
+- `tests/e2e/trip-localization.spec.js`
 - `tests/e2e/wallet-currency-ui.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
