@@ -32,7 +32,7 @@ for (const { lang, width, theme, deleteLabel } of [
   await page.goto('/');
   await page.locator('#wallets-container [data-dashboard-action="create-wallet"]').click();
   const dialog = page.locator('.tb-dlg[role=dialog]');
-  const currency = dialog.getByLabel('Devise', { exact: true });
+  const currency = dialog.getByLabel(lang === 'en' ? 'Currency' : 'Devise', { exact: true });
   await expect(currency).toHaveJSProperty('tagName', 'SELECT');
   await expect(currency).toHaveValue('CHF');
   await dialog.locator('#tbWName').fill('Voyage Pacifique');

@@ -3833,11 +3833,11 @@
 
       <div id="kpi" class="card premium-kpi-shell"></div>
       <div class="tabs app-tabs" id="tb-app-navigation" role="navigation" aria-label="TravelBudget">
-        <div class="tab-group-label">Vue d’ensemble</div>
+        <div class="tab-group-label" data-t="nav.overview">Vue d’ensemble</div>
         <button type="button" id="tab-dashboard" class="tab active" aria-current="page" data-icon="🧭" onclick="showView('dashboard')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-dashboard"></use></svg><span class="tab-label" data-t="nav.dashboard">Dashboard</span></button>
-        <div class="tab-group-label">Finances</div>
+        <div class="tab-group-label" data-t="nav.finance">Finances</div>
         <button type="button" id="tab-transactions" class="tab" data-icon="💳" onclick="showView('transactions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-transactions"></use></svg><span class="tab-label" data-t="nav.transactions">Transactions</span></button>
-        <button type="button" id="tab-subscriptions" class="tab" data-icon="📅" onclick="showView('subscriptions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-subscriptions"></use></svg><span class="tab-label">Abonnements</span> <span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span></button>
+        <button type="button" id="tab-subscriptions" class="tab" data-icon="📅" onclick="showView('subscriptions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-subscriptions"></use></svg><span class="tab-label" data-t="nav.subscriptions">Abonnements</span> <span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span></button>
         <button type="button" id="tab-analysis" class="tab" data-icon="📊" onclick="showView('analysis')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-analysis"></use></svg><span class="tab-label" data-t="nav.analysis">Analyse</span></button>
         <button type="button" id="tab-assets" class="tab" data-icon="💎" onclick="showView('assets')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-assets"></use></svg><span class="tab-label" data-t="nav.assets">Patrimoine</span> <span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span></button>
         <button id="tab-accounting" type="button" class="tab" data-icon="📒" onclick="showView('accounting')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-accounting"></use></svg><span class="tab-label" data-t="nav.accounting">Comptabilité</span> <span class="tb-beta-badge tb-beta-badge--version" data-t="common.beta_2">Bêta 2.0</span></button>
@@ -3845,14 +3845,14 @@
         <button type="button" id="tab-sport" class="tab" data-icon="🏋️" onclick="showView('sport')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-sport"></use></svg><span class="tab-label" data-t="nav.sport">Sport</span> <span class="tb-beta-badge" data-t="common.beta">BÊTA</span></button>
         <button type="button" id="tab-nutrition" class="tab" data-icon="🍎" onclick="showView('nutrition')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-nutrition"></use></svg><span class="tab-label" data-t="nav.nutrition">Alimentation</span> <span class="tb-beta-badge" data-t="common.beta">BÊTA</span></button>
         <button type="button" id="tab-work" class="tab" data-icon="💼" onclick="showView('work')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-work"></use></svg><span class="tab-label" data-t="nav.work">Travail</span> <span class="tb-beta-badge" data-t="common.beta">BÊTA</span></button>
-        <div class="tab-group-label">Ressources</div>
-        <button type="button" id="tab-documents" class="tab" data-icon="📁" onclick="showView('documents')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-documents"></use></svg><span class="tab-label">Documents</span></button>
-        <button type="button" id="tab-inbox" class="tab" data-icon="📥" onclick="showView('inbox')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-inbox"></use></svg><span class="tab-label tb-inbox-tab-label">À traiter</span></button>
-        <button type="button" id="tab-notifications" class="tab" data-icon="🔔" onclick="showView('notifications')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-notifications"></use></svg><span class="tab-label">Notifications</span></button>
+        <div class="tab-group-label" data-t="nav.resources">Ressources</div>
+        <button type="button" id="tab-documents" class="tab" data-icon="📁" onclick="showView('documents')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-documents"></use></svg><span class="tab-label" data-t="nav.documents">Documents</span></button>
+        <button type="button" id="tab-inbox" class="tab" data-icon="📥" onclick="showView('inbox')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-inbox"></use></svg><span class="tab-label tb-inbox-tab-label" data-t="nav.inbox">À traiter</span></button>
+        <button type="button" id="tab-notifications" class="tab" data-icon="🔔" onclick="showView('notifications')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-notifications"></use></svg><span class="tab-label" data-t="nav.notifications">Notifications</span></button>
         <button type="button" id="tab-help" class="tab" data-icon="❓" onclick="showView('help')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-help"></use></svg><span class="tab-label" data-t="nav.help">Aide</span></button>
         <button type="button" id="tab-trip" class="tab" data-icon="✈️" onclick="showView('trip')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-trip"></use></svg><span class="tab-label" data-t="nav.trip">Partage</span></button>
         <button type="button" id="tab-settings" class="tab" data-icon="⚙️" onclick="showView('settings')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-settings"></use></svg><span class="tab-label" data-t="nav.settings">Settings</span></button>
-        <button type="button" id="tab-testing" class="tab" data-icon="🧪" style="display:none" onclick="showView('testing')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-testing"></use></svg><span class="tab-label">Tests</span></button>
+        <button type="button" id="tab-testing" class="tab" data-icon="🧪" style="display:none" onclick="showView('testing')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-testing"></use></svg><span class="tab-label" data-t="nav.testing">Tests</span></button>
         <button type="button" id="tab-members" class="tab" data-icon="👥" style="display:none" onclick="showView('members')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-members"></use></svg><span class="tab-label" data-t="nav.members">Membres</span></button>
       </div>
 
