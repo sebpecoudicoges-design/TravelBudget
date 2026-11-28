@@ -21,6 +21,12 @@ describe('Help view contract', () => {
     expect(help).toContain('exporte les logs puis joins-les');
   });
 
+  it('links to the Analyse summary without advertising the disabled FX widget', () => {
+    expect(help).toContain('target: "#analysis-summary"');
+    expect(help).toContain('cmd: "analysis_budget"');
+    expect(help).not.toContain('analysis_fx');
+  });
+
   it('uses premium responsive styles for the treated Help and Documents surfaces', () => {
     expect(theme).toContain('.tb-help-setup-card');
     expect(theme).toContain('.tb-help-diag-help');

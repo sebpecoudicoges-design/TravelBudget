@@ -548,10 +548,9 @@
         kt: "help.guide.analysis.title",
         kb: "help.guide.analysis.body",
         action: "analysis",
-        target: "#analysis-root",
+        target: "#analysis-summary",
         cmds: [
-          { cmd: "analysis_budget", label: tx("Lire budget", "Read budget") },
-          { cmd: "analysis_fx", label: tx("Décision change", "FX decision") }
+          { cmd: "analysis_budget", label: tx("Lire budget", "Read budget") }
         ]
       },
       {
@@ -769,11 +768,7 @@
       return;
     }
     if (c === "analysis_budget") {
-      _afterView("analysis", () => _highlightFirst(["#analysis-root", "#view-analysis"]));
-      return;
-    }
-    if (c === "analysis_fx") {
-      _afterView("analysis", () => _highlightFirst(["#fx-decision-root", ".fx-decision-card", "#view-analysis"]));
+      _afterView("analysis", () => _highlightFirst(["#analysis-summary", "#view-analysis"]));
       return;
     }
     if (c === "documents_upload") {
