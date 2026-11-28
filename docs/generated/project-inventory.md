@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `aeabd0f2dae39686f8d3c59bdfed2896255077dc`
-> Empreinte du snapshot : `2fbdefc6927fa11a0a945cb5a9752dc72377972b206a72ceb2623e4b22327493`
-> Généré le : `2026-11-27T23:33:54.320Z`
+> Commit analysé : `aad33488c2200d195bafbfca8338e173a7f2790f`
+> Empreinte du snapshot : `14c3eb192f62df1e914f9dd22499f821d12bbaf8461a6c72b1572e4c062b48f3`
+> Généré le : `2026-11-28T00:02:15.148Z`
 
 # Inventaire du projet TravelBudget
 
@@ -17,7 +17,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 65 |
-| Fichiers de tests | 219 |
+| Fichiers de tests | 220 |
 | Migrations Supabase | 179 |
 | Fonctions Edge | 15 |
 | Projet Android présent | Oui |
@@ -388,6 +388,7 @@ Modules :
 - `tests/e2e/financial-trip-budget.spec.js`
 - `tests/e2e/first-setup.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
+- `tests/e2e/legacy-script-evaluation.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
 - `tests/e2e/nutrition-conflict-review-audit.spec.js`
@@ -484,6 +485,7 @@ Modules :
 - `tests/e2e/financial-trip-budget.spec.js`
 - `tests/e2e/first-setup.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
+- `tests/e2e/legacy-script-evaluation.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
 - `tests/e2e/nutrition-conflict-review-audit.spec.js`

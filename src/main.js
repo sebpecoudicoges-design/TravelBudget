@@ -292,15 +292,26 @@ function waitForBridgeReady() {
   return bridgeReadyPromise;
 }
 
+// Network failures are retryable; a partially evaluated classic script is not.
+const scriptEvaluationFailures = new Map();
 const scriptLoader = createRetryableLoader((src) => {
+  const previousFailure = scriptEvaluationFailures.get(src);
+  if (previousFailure) throw previousFailure;
+
   return new Promise((resolve, reject) => {
     const s = globalThis.document.createElement('script');
     s.src = src;
     s.async = false; // enforce execution order
-    s.onload = () => resolve(src);
-    s.onerror = () => {
+    let evaluationFailed = false;
+    const onEvaluationError = (event) => { if (event.filename === s.src) evaluationFailed = true; };
+    window.addEventListener('error', onEvaluationError);
+    s.onload = s.onerror = (event) => {
+      window.removeEventListener('error', onEvaluationError);
+      if (!evaluationFailed && event.type === 'load') return resolve(src);
       s.remove();
-      reject(new Error(`Failed to load legacy script: ${src}`));
+      const failure = new Error(`Failed to ${evaluationFailed ? 'evaluate' : 'load'} legacy script: ${src}`);
+      if (evaluationFailed) scriptEvaluationFailures.set(src, failure);
+      reject(failure);
     };
     globalThis.document.head.appendChild(s);
   });
