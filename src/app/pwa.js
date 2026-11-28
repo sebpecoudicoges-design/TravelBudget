@@ -225,38 +225,38 @@ export function registerPwa() {
   };
 
   const ensureMobileNav = () => {
-    try {
-      if (globalThis.document.getElementById("tb-mobile-nav-toggle")) return;
-      const header = globalThis.document.querySelector("header");
-      const tabs = globalThis.document.querySelector(".tabs, .app-tabs");
-      if (!header || !tabs) return;
-      const btn = globalThis.document.createElement("button");
-      btn.id = "tb-mobile-nav-toggle";
-      btn.className = "btn";
-      btn.type = "button";
-      btn.setAttribute("aria-label", "Menu");
-      btn.setAttribute("aria-expanded", "false");
-      btn.innerHTML = '<span></span><span></span><span></span>';
-      btn.addEventListener("click", () => {
-        const open = !globalThis.document.body.classList.contains("tb-mobile-nav-open");
-        globalThis.document.body.classList.toggle("tb-mobile-nav-open", open);
-        btn.setAttribute("aria-expanded", open ? "true" : "false");
-      });
-      tabs.addEventListener("click", (ev) => {
-        if (ev.target && ev.target.closest && ev.target.closest(".tab")) {
-          globalThis.document.body.classList.remove("tb-mobile-nav-open");
-          btn.setAttribute("aria-expanded", "false");
-        }
-      });
-      globalThis.document.addEventListener("click", (ev) => {
-        const target = ev.target;
-        if (!globalThis.document.body.classList.contains("tb-mobile-nav-open")) return;
-        if (target && target.closest && (target.closest("#tb-mobile-nav-toggle") || target.closest(".tabs, .app-tabs"))) return;
-        globalThis.document.body.classList.remove("tb-mobile-nav-open");
-        btn.setAttribute("aria-expanded", "false");
-      });
-      globalThis.document.body.appendChild(btn);
-    } catch (_) {}
+    const doc = globalThis.document;
+    const root = doc.getElementById("app-root");
+    const btn = doc.getElementById("tb-mobile-nav-toggle");
+    const nav = doc.getElementById("tb-app-navigation");
+    if (!root || !btn || !nav || !btn.disabled) return;
+    const mobile = window.matchMedia("(max-width: 760px), (max-height: 600px) and (pointer: coarse)");
+    const isOpen = () => btn.getAttribute("aria-expanded") === "true";
+    const setOpen = (open, returnFocus = false) => {
+      doc.body.classList.toggle("tb-mobile-nav-open", open);
+      btn.setAttribute("aria-expanded", String(open));
+      if (open) {
+        (nav.querySelector('[aria-current="page"]') || nav.querySelector(".tab"))?.focus({ preventScroll: true });
+      } else if (returnFocus) btn.focus({ preventScroll: true });
+    };
+    btn.addEventListener("click", () => {
+      if (!mobile.matches || !root.hasAttribute("data-tb-nav-ready") || doc.querySelector("#tb-boot-overlay, .tb-ad-launch")) return;
+      setOpen(!isOpen());
+    });
+    nav.addEventListener("click", (event) => {
+      if (isOpen() && event.target.closest?.(".tab")) setOpen(false, true);
+    });
+    doc.addEventListener("click", (event) => {
+      if (isOpen() && !btn.contains(event.target) && !nav.contains(event.target)) setOpen(false);
+    });
+    doc.addEventListener("keydown", (event) => {
+      if (!isOpen() || event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false, true);
+    });
+    mobile.addEventListener?.("change", () => setOpen(false));
+    window.addEventListener("tb:nav-suspend", () => setOpen(false));
+    btn.disabled = false;
   };
 
   const getLang = () => {

@@ -1,4 +1,4 @@
-const TB_SW_VERSION = "travelbudget-pwa-10.5.398";
+const TB_SW_VERSION = "travelbudget-pwa-10.5.399";
 const TB_STATIC_CACHE = `${TB_SW_VERSION}-mcp-safe-audit-r1-static`;
 const TB_RUNTIME_CACHE = `${TB_SW_VERSION}-mcp-safe-audit-r1-runtime`;
 

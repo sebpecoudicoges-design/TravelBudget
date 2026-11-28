@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `d5db08c68806f9cd609fcc201e215e9c35800fef`
-> Empreinte du snapshot : `209456139e8a84303a81e289f9efb1425d6322e80c7f826c978b1c19f59a44ad`
-> Généré le : `2026-11-27T00:28:03.985Z`
+> Commit analysé : `a603969bcfd783fdf2dd5261644d23020a8034a8`
+> Empreinte du snapshot : `4ac9a90aabbffcfbb1001ea8527f92d9b10085585277a2a63a0782e010fbb833`
+> Généré le : `2026-11-28T00:20:17.649Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.398` |
+| Version | `10.5.399` |
 | Écrans déclarés | 18 |
 | Scripts legacy référencés | 56 |
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 65 |
-| Fichiers de tests | 210 |
+| Fichiers de tests | 213 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -381,11 +381,13 @@ Modules :
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/cashflow-controls.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/daily-beta-badges.spec.js`
 - `tests/e2e/financial-trip-budget.spec.js`
 - `tests/e2e/first-setup.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
+- `tests/e2e/mobile-shell-review.spec.js`
 - `tests/e2e/nutrition-edit-storage.spec.js`
 - `tests/e2e/nutrition-pending-persistence.spec.js`
 - `tests/e2e/nutrition-storage-recovery.spec.js`
@@ -394,6 +396,7 @@ Modules :
 - `tests/e2e/project-demo.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/trip-expense-entry.spec.js`
+- `tests/e2e/wallet-currency-ui.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 
@@ -468,11 +471,13 @@ Modules :
 - `tests/e2e/assistant-ai.spec.js`
 - `tests/e2e/cashflow-controls.spec.js`
 - `tests/e2e/critical-flows.spec.js`
+- `tests/e2e/daily-beta-badges.spec.js`
 - `tests/e2e/financial-trip-budget.spec.js`
 - `tests/e2e/first-setup.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
+- `tests/e2e/mobile-shell-review.spec.js`
 - `tests/e2e/nutrition-edit-storage.spec.js`
 - `tests/e2e/nutrition-pending-persistence.spec.js`
 - `tests/e2e/nutrition-storage-recovery.spec.js`
@@ -481,6 +486,7 @@ Modules :
 - `tests/e2e/project-demo.spec.js`
 - `tests/e2e/trip-analysis.spec.js`
 - `tests/e2e/trip-expense-entry.spec.js`
+- `tests/e2e/wallet-currency-ui.spec.js`
 - `tests/e2e/wallet-journal.spec.js`
 - `tests/e2e/wallet-layout.spec.js`
 - `tests/features/accounting/accountingChargeRegression.test.js`
@@ -832,7 +838,9 @@ Modules :
 - `docs/ANDROID_10_5_392.md`
 - `docs/ANDROID_10_5_394.md`
 - `docs/ANDROID_10_5_395.md`
+- `docs/ANDROID_EDGE_TO_EDGE_TRIAGE.md`
 - `docs/ANDROID_FINANCIAL_AUDIT_2026_11_25.md`
+- `docs/ANDROID_RELEASE_OPTIMIZATION.md`
 - `docs/ANDROID_SECURITY_10_5_373.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/ASSISTANT_AI_OPERATIONS.md`

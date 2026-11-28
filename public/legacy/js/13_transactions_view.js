@@ -1214,6 +1214,14 @@ function renderTransactions() {
   const from = document.getElementById("f-from").value;
   const to = document.getElementById("f-to").value;
   const walletId = document.getElementById("f-wallet").value;
+  const addButton = _txEl("tb-tx-add");
+  if (addButton) {
+    const activeWallets = (state.wallets || []).filter((wallet) => wallet.archived !== true);
+    const defaultWallet = activeWallets.find((wallet) => wallet.id === walletId) || activeWallets[0];
+    addButton.disabled = !defaultWallet;
+    addButton.title = defaultWallet ? "" : _txT("transactions.action.wallet_required");
+    addButton.onclick = defaultWallet ? () => openTxModal("expense", defaultWallet.id) : null;
+  }
   const cat = document.getElementById("f-category").value;
   const subcategory = document.getElementById("f-subcategory")?.value || "all";
   const type = document.getElementById("f-type").value;
@@ -1349,18 +1357,10 @@ if (isBudgetOnlyInternalTransferFee) return false;
     </div>`;
 
   if (!txs.length) {
-    const w0 = state.wallets?.[0]?.id || null;
+    const hasWallet = (state.wallets || []).some((wallet) => wallet.archived !== true);
     list.innerHTML = bulkToolbarHtml + `
       <div class="muted" style="margin-bottom:10px;">${_txT("transactions.empty.filtered")}</div>
-      ${w0 ? `
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn primary" onclick="openTxModal('expense','${w0}')">${_txT("transactions.action.add_expense")}</button>
-          <button class="btn" onclick="openTxModal('income','${w0}')">${_txT("transactions.action.add_income")}</button>
-          <button class="btn" onclick="openInternalTransferModal()">
-           ${_txT("transactions.action.internal_transfer")}
-          </button>
-        </div>
-      ` : ""}
+      ${hasWallet ? `<button class="btn" type="button" onclick="openInternalTransferModal()">${_txT("transactions.action.internal_transfer")}</button>` : ""}
     `;
   } else {
     list.innerHTML = bulkToolbarHtml;

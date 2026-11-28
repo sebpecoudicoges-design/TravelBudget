@@ -29,7 +29,11 @@ function setActiveTab(view) {
   for (const [name, tabId, viewId] of tabs) {
     const tab = document.getElementById(tabId);
     const viewEl = document.getElementById(viewId);
-    if (tab) tab.classList.toggle("active", name === view);
+    if (tab) {
+      tab.classList.toggle("active", name === view);
+      if (name === view) tab.setAttribute("aria-current", "page");
+      else tab.removeAttribute("aria-current");
+    }
     if (viewEl) viewEl.classList.toggle("hidden", name !== view);
   }
 }

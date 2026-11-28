@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="TravelBudget">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.398";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.399";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -464,7 +464,6 @@
     .auth-msg.error{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.22);color:#b91c1c;}
     .auth-msg.success{background:rgba(16,185,129,.10);border-color:rgba(16,185,129,.22);color:#047857;}
     body.tb-auth-visible{overflow:hidden;}
-    body.tb-auth-visible #tb-mobile-nav-toggle,
     body.tb-auth-visible .tb-assist-btn{display:none!important;}
     body.tb-capacitor-app #auth-overlay{overflow:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,rgba(15,23,42,.90),rgba(100,116,139,.72));padding:calc(8px + env(safe-area-inset-top,0px)) 8px calc(10px + env(safe-area-inset-bottom,0px));}
     body.tb-capacitor-app .auth-box{width:min(100%,440px)!important;min-height:auto!important;margin:0 auto!important;border-radius:18px!important;padding:8px!important;box-shadow:0 16px 42px rgba(0,0,0,.24)!important;}
@@ -759,24 +758,7 @@
     /* =========================
        Budget Analysis View
        ========================= */
-        .dashboard-hero-shell{ display:grid; gap:16px; margin-bottom:18px; }
-    .dashboard-hero-card{ position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.25fr) minmax(320px,.95fr); gap:20px; padding:24px 24px 22px; border-radius:30px; border:1px solid rgba(255,255,255,.46); background:linear-gradient(135deg, rgba(15,23,42,.92), rgba(37,99,235,.88) 46%, rgba(139,92,246,.82) 100%); box-shadow:0 26px 60px rgba(15,23,42,.18); color:#f8fafc; }
-    .dashboard-hero-card::before{ content:""; position:absolute; inset:-20% auto auto -8%; width:240px; height:240px; border-radius:999px; background:radial-gradient(circle, rgba(255,255,255,.26), rgba(255,255,255,0) 70%); opacity:.8; }
-    .dashboard-hero-card::after{ content:""; position:absolute; right:-90px; bottom:-110px; width:260px; height:260px; border-radius:999px; background:radial-gradient(circle, rgba(191,219,254,.20), rgba(191,219,254,0) 72%); }
-    .dashboard-hero-copy,.dashboard-hero-focus{ position:relative; z-index:1; }
-    .dashboard-hero-kicker,.dashboard-card-kicker{ font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.16em; opacity:.76; }
-    .dashboard-hero-title{ margin:10px 0 8px; font-size:34px; line-height:1.02; letter-spacing:-.04em; }
-    .dashboard-hero-text{ margin:0; max-width:640px; line-height:1.55; color:rgba(248,250,252,.84); }
-    .dashboard-hero-meta{ display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
-    .dashboard-hero-pill{ display:inline-flex; align-items:center; gap:8px; padding:9px 12px; border-radius:999px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); font-size:12px; font-weight:700; }
-    .dashboard-hero-pill strong{ color:#fff; }
-    .dashboard-hero-actions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
-    .dashboard-hero-actions .btn{ box-shadow:none; }
-    .dashboard-hero-focus{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-content:start; }
-    .dashboard-focus-card{ padding:14px 14px 13px; border-radius:22px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.18); backdrop-filter:blur(12px); min-height:112px; display:flex; flex-direction:column; justify-content:space-between; }
-    .dashboard-focus-label{ font-size:11px; text-transform:uppercase; letter-spacing:.14em; font-weight:800; color:rgba(248,250,252,.74); }
-    .dashboard-focus-value{ margin-top:8px; font-size:25px; line-height:1.08; font-weight:900; letter-spacing:-.04em; color:#fff; }
-    .dashboard-focus-meta{ margin-top:6px; font-size:12px; color:rgba(248,250,252,.78); line-height:1.4; }
+    .dashboard-card-kicker{ font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.16em; opacity:.76; }
     .dashboard-grid-main{ gap:20px; }
     .dashboard-analysis-cta{ min-height:0; }
     .dashboard-analysis-cta h2{ margin:8px 0 10px; font-size:26px; letter-spacing:-.03em; }
@@ -883,7 +865,7 @@
     .analysis-insight-badge{ width:34px; height:34px; border-radius:14px; display:grid; place-items:center; font-size:16px; background:rgba(37,99,235,.14); flex:none; }
     .analysis-insight-title{ font-size:14px; font-weight:800; margin:0 0 4px; }
     .analysis-insight-body{ margin:0; color:var(--muted); font-size:13px; line-height:1.45; }
-    @media (max-width: 1120px){ .dashboard-hero-card{ grid-template-columns:1fr; } .dashboard-hero-focus{ grid-template-columns:repeat(2,minmax(0,1fr)); } .analysis-overview-strip,.analysis-summary-grid{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-toolbar{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-main-grid,.analysis-bottom-grid{ grid-template-columns:1fr; } .analysis-side-stack{ grid-template-rows:none; grid-template-columns:1fr 1fr; } .trip-analysis-summary{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 1120px){ .analysis-overview-strip,.analysis-summary-grid{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-toolbar{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-main-grid,.analysis-bottom-grid{ grid-template-columns:1fr; } .analysis-side-stack{ grid-template-rows:none; grid-template-columns:1fr 1fr; } .trip-analysis-summary{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
     .analysis-filter-hint{font-size:11px;color:var(--muted);margin-top:4px;}
     .analysis-category-compact{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,.60), rgba(255,255,255,.38));box-shadow:inset 0 1px 0 rgba(255,255,255,.40);}
     .analysis-category-copy{display:flex;flex-direction:column;gap:3px;min-width:0;}
@@ -902,7 +884,7 @@
     .analysis-chip-tool{appearance:none;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;padding:0;}
     .analysis-chip-tool:hover{color:var(--text);}
 
-    @media (max-width: 780px){ .dashboard-hero-card{ padding:20px 18px; } .dashboard-hero-title{ font-size:28px; } .dashboard-hero-focus,.analysis-overview-strip,.analysis-summary-grid,.analysis-toolbar,.analysis-side-stack,.trip-analysis-summary{ grid-template-columns:1fr; } .analysis-hero{ padding:18px; min-height:0; } .analysis-hero h2{ font-size:28px; } .analysis-live-pill{ position:relative; top:auto; right:auto; margin-top:16px; width:max-content; } .analysis-chart{ height:280px; } .analysis-chart--lg{ height:320px; } .analysis-category-compact{flex-direction:column;align-items:stretch;} .analysis-category-actions{justify-content:space-between;} .trip-tabs{ width:100%; justify-content:space-between; } .trip-history-row{ flex-direction:column; } .trip-history-actions{ width:100%; justify-content:flex-start; } }
+    @media (max-width: 780px){.analysis-overview-strip,.analysis-summary-grid,.analysis-toolbar,.analysis-side-stack,.trip-analysis-summary{ grid-template-columns:1fr; } .analysis-hero{ padding:18px; min-height:0; } .analysis-hero h2{ font-size:28px; } .analysis-live-pill{ position:relative; top:auto; right:auto; margin-top:16px; width:max-content; } .analysis-chart{ height:280px; } .analysis-chart--lg{ height:320px; } .analysis-category-compact{flex-direction:column;align-items:stretch;} .analysis-category-actions{justify-content:space-between;} .trip-tabs{ width:100%; justify-content:space-between; } .trip-history-row{ flex-direction:column; } .trip-history-actions{ width:100%; justify-content:flex-start; } }
 
     .analysis-reference-shell{ display:grid; grid-template-columns:minmax(300px,.84fr) minmax(0,1.16fr); gap:22px; align-items:start; }
     .analysis-reference-side{ display:flex; flex-direction:column; gap:14px; min-width:0; }
@@ -2056,30 +2038,6 @@
       letter-spacing:-.03em;
     }
     .tb-tx-shared-modal .modal-grid{ gap:12px; }
-    .dashboard-hero-card{
-      border-radius:28px;
-      background:
-        linear-gradient(135deg, rgba(15,23,42,.96), rgba(30,64,175,.92) 54%, rgba(8,145,178,.86)) !important;
-      box-shadow:0 24px 68px rgba(15,23,42,.20);
-      min-height:270px;
-      align-items:stretch;
-    }
-    .dashboard-hero-title{
-      max-width:720px;
-      font-size:clamp(30px, 3.5vw, 46px) !important;
-    }
-    .dashboard-hero-text{
-      max-width:760px;
-      font-size:14px;
-    }
-    .dashboard-focus-card{
-      border-radius:18px !important;
-      background:rgba(255,255,255,.13) !important;
-      box-shadow:none !important;
-    }
-    .dashboard-focus-value{
-      letter-spacing:-.04em;
-    }
     .analysis-hero{
       background:
         linear-gradient(135deg, rgba(15,23,42,.95), rgba(30,64,175,.88) 56%, rgba(8,145,178,.82)) !important;
@@ -2965,7 +2923,6 @@
     .tb-asset-progress i{
       background:linear-gradient(90deg, var(--bp-demo-green), var(--bp-demo-cyan), var(--bp-demo-blue)) !important;
     }
-    .dashboard-hero-card,
     .analysis-hero{
       border-radius:34px !important;
       background:
@@ -3085,29 +3042,6 @@
     }
     #view-dashboard{
       gap:12px !important;
-    }
-    .dashboard-hero-shell{
-      margin-bottom:12px !important;
-      gap:12px !important;
-    }
-    .dashboard-hero-card{
-      min-height:0 !important;
-      padding:18px !important;
-      border-radius:28px !important;
-    }
-    .dashboard-hero-title{
-      font-size:clamp(26px, 2.8vw, 38px) !important;
-    }
-    .dashboard-hero-focus{
-      gap:10px !important;
-    }
-    .dashboard-focus-card{
-      min-height:92px !important;
-      padding:12px !important;
-      border-radius:18px !important;
-    }
-    .dashboard-focus-value{
-      font-size:22px !important;
     }
     #solde-projection-container{
       margin-bottom:12px !important;
@@ -3397,91 +3331,6 @@
         grid-column:span 1;
         width:100%;
       }
-      .tabs,
-      .app-tabs{
-        position:fixed;
-        top:calc(76px + env(safe-area-inset-top, 0px));
-        right:10px;
-        left:10px;
-        bottom:auto;
-        z-index:120;
-        width:auto;
-        max-width:none;
-        max-height:calc(100vh - 104px - env(safe-area-inset-top, 0px));
-        display:flex !important;
-        flex-direction:column;
-        flex-wrap:nowrap !important;
-        gap:8px !important;
-        margin:0 !important;
-        padding:12px !important;
-        overflow:auto;
-        background:rgba(15,23,42,.92);
-        border:1px solid rgba(255,255,255,.12);
-        border-radius:18px;
-        box-shadow:0 18px 44px rgba(0,0,0,.34);
-        backdrop-filter:blur(14px);
-        -webkit-overflow-scrolling:touch;
-        opacity:0;
-        pointer-events:none;
-        transform:translateY(-8px) scale(.98);
-        transition:opacity .16s ease, transform .16s ease;
-      }
-      body.tb-mobile-nav-open .tabs,
-      body.tb-mobile-nav-open .app-tabs{
-        opacity:1;
-        pointer-events:auto;
-        transform:translateY(0) scale(1);
-      }
-      body.tb-mobile-nav-open{
-        overflow:hidden;
-      }
-      html body .tabs .tab,
-      html body .app-tabs .tab{
-        flex:0 0 auto;
-        width:100%;
-        min-height:46px;
-        display:flex;
-        align-items:center;
-        justify-content:flex-start;
-        padding:10px 12px !important;
-        border-radius:12px !important;
-        border:1px solid rgba(255,255,255,.12) !important;
-        font-size:13px !important;
-        font-weight:850 !important;
-        text-align:left;
-        color:#f8fafc !important;
-        background:rgba(255,255,255,.10) !important;
-        box-shadow:none !important;
-        white-space:normal;
-        line-height:1.2;
-      }
-      html body .tabs .tab.active,
-      html body .app-tabs .tab.active{
-        background:var(--accent) !important;
-        color:#fff !important;
-        border-color:rgba(255,255,255,.20) !important;
-        outline:0;
-      }
-      #tb-mobile-nav-toggle{
-        display:inline-flex;
-        grid-column:2;
-        grid-row:1;
-        width:44px;
-        height:42px;
-        padding:0 !important;
-        align-items:center;
-        justify-content:center;
-        flex-direction:column;
-        gap:4px;
-        border-radius:14px !important;
-      }
-      #tb-mobile-nav-toggle span{
-        display:block;
-        width:20px;
-        height:2px;
-        border-radius:999px;
-        background:currentColor;
-      }
       .grid,
       .dashboard-grid-main,
       .dashboard-grid,
@@ -3610,83 +3459,8 @@
     width:100% !important;
   }
 
-  body.tb-mobile-nav-open .tabs.app-tabs,
-  body.tb-mobile-nav-open .app-tabs,
-  body.tb-mobile-nav-open .tabs{
-    position:fixed !important;
-    inset:calc(82px + env(safe-area-inset-top, 0px)) 12px auto 12px !important;
-    z-index:99990 !important;
-    width:auto !important;
-    max-width:none !important;
-    max-height:calc(100vh - 104px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
-    display:flex !important;
-    flex-direction:column !important;
-    flex-wrap:nowrap !important;
-    gap:8px !important;
-    margin:0 !important;
-    padding:12px !important;
-    overflow:auto !important;
-    border-radius:22px !important;
-    border:1px solid rgba(148,163,184,.28) !important;
-    background:linear-gradient(180deg, rgba(15,23,42,.98), rgba(30,41,59,.96)) !important;
-    box-shadow:0 24px 72px rgba(2,6,23,.44) !important;
-    backdrop-filter:blur(18px) !important;
-    opacity:1 !important;
-    pointer-events:auto !important;
-    transform:none !important;
-  }
-  body:not(.tb-mobile-nav-open) .tabs.app-tabs,
-  body:not(.tb-mobile-nav-open) .app-tabs,
-  body:not(.tb-mobile-nav-open) .tabs{
-    position:fixed !important;
-    top:calc(82px + env(safe-area-inset-top, 0px)) !important;
-    left:12px !important;
-    right:12px !important;
-    opacity:0 !important;
-    pointer-events:none !important;
-    transform:translateY(-8px) !important;
-  }
-  body.tb-mobile-nav-open .tabs.app-tabs .tab,
-  body.tb-mobile-nav-open .app-tabs .tab,
-  body.tb-mobile-nav-open .tabs .tab{
-    display:flex !important;
-    align-items:center !important;
-    justify-content:flex-start !important;
-    width:100% !important;
-    min-height:48px !important;
-    padding:12px 14px !important;
-    border-radius:14px !important;
-    border:1px solid rgba(255,255,255,.12) !important;
-    background:rgba(255,255,255,.09) !important;
-    color:#f8fafc !important;
-    font-size:15px !important;
-    font-weight:850 !important;
-    line-height:1.15 !important;
-    text-align:left !important;
-    text-shadow:none !important;
-    opacity:1 !important;
-    box-shadow:none !important;
-    white-space:normal !important;
-  }
-  body.tb-mobile-nav-open .tabs.app-tabs .tab.active,
-  body.tb-mobile-nav-open .app-tabs .tab.active,
-  body.tb-mobile-nav-open .tabs .tab.active{
-    background:linear-gradient(135deg, #2563eb, #0ea5e9) !important;
-    color:#fff !important;
-    border-color:rgba(255,255,255,.24) !important;
-  }
-  body.tb-mobile-nav-open .app-tabs .tab::before{
-    display:none !important;
-  }
-  #tb-mobile-nav-toggle{
-    position:relative;
-    z-index:99991 !important;
-    flex:0 0 auto !important;
-  }
-
   .card,
   .dashboard-panel,
-  .dashboard-hero-card,
   .analysis-stat,
   .analysis-chart-card,
   .tb-period-card,
@@ -3738,7 +3512,6 @@
   }
   h1{ font-size:28px !important; line-height:1.08 !important; }
   h2{ font-size:18px !important; line-height:1.16 !important; }
-  .dashboard-hero-title,
   .analysis-hero h2{
     font-size:24px !important;
   }
@@ -3753,6 +3526,98 @@
     white-space:nowrap !important;
   }
 }
+</style>
+<style id="tb-critical-mobile-navigation">
+  #tb-mobile-nav-toggle { display: none !important; }
+  body.tb-capacitor-app #kpi .kpi-health-card { display: none !important; }
+  @media (max-width: 760px), (max-height: 600px) and (pointer: coarse) {
+    #kpi .kpi-health-card, #tb-app-navigation { display: none !important; }
+    #app-root[data-tb-nav-ready] #tb-mobile-nav-toggle:enabled {
+      display: inline-flex !important;
+      position: fixed;
+      inset: auto auto calc(12px + env(safe-area-inset-bottom, 0px)) 12px;
+      z-index: 105;
+      align-items: center;
+      gap: 7px;
+      min-height: 46px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      color: var(--tb-ink, #20313a);
+      background: var(--tb-surface, #fff);
+      border: 1px solid var(--tb-line, #f0dccb);
+      box-shadow: var(--tb-shadow, 0 8px 24px rgba(15,23,42,.16));
+    }
+    #app-root[data-tb-nav-ready] .wrap { padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px)) !important; }
+    body.tb-mobile-nav-open #app-root[data-tb-nav-ready] #tb-app-navigation {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      position: fixed !important;
+      inset: auto 12px calc(66px + env(safe-area-inset-bottom, 0px)) 12px !important;
+      z-index: 104;
+      box-sizing: border-box;
+      width: auto;
+      max-height: 60vh;
+      max-height: min(65dvh, 520px);
+      gap: 6px;
+      padding: 10px !important;
+      margin: 0 !important;
+      overflow: auto;
+      overscroll-behavior: contain;
+      border: 1px solid var(--tb-line, #f0dccb);
+      border-radius: 18px;
+      background: var(--tb-surface, #fff);
+      box-shadow: var(--tb-shadow, 0 8px 24px rgba(15,23,42,.16));
+      transition: none;
+    }
+    #tb-app-navigation .tab-group-label {
+      display: block;
+      grid-column: 1 / -1;
+      margin: 4px 6px 0;
+      color: var(--tb-muted, #687c86);
+      font-size: 11px;
+      font-weight: 750;
+    }
+    #tb-app-navigation .tab {
+      min-width: 0;
+      width: 100%;
+      min-height: 44px;
+      margin: 0;
+      justify-content: flex-start;
+      padding: 5px 8px !important;
+      gap: 6px;
+      text-align: left;
+      white-space: normal;
+      border-radius: 11px !important;
+      color: var(--tb-ink, #20313a);
+      background: var(--tb-surface-soft, #fff1e3);
+    }
+    #tb-app-navigation .tab.active {
+      border-color: var(--tb-lagoon, #23b5af);
+      background: var(--tb-lagoon-soft, var(--tb-surface-soft));
+    }
+    #tb-app-navigation .tab[data-icon]::before { display: none !important; }
+    #tb-app-navigation .tab-icon { flex: 0 0 18px; width: 18px; height: 18px; }
+    body.theme-dark #tb-mobile-nav-toggle,
+    body.theme-dark #tb-app-navigation {
+      background: var(--panel, #162536);
+      border-color: var(--border, #334155);
+      color: var(--text, #f1f5f9);
+    }
+    body.theme-dark #tb-app-navigation .tab {
+      color: var(--text, #f1f5f9);
+      background: var(--panel2, #223044);
+    }
+    body.theme-dark #tb-app-navigation .tab.active {
+      border-color: var(--tb-lagoon, #23b5af);
+      background: var(--accent-soft, rgba(35,181,175,.18));
+    }
+    /* The early overlay precedes the app; :has also covers re-created overlays and native launch. */
+    #tb-boot-overlay ~ #app-root #tb-mobile-nav-toggle,
+    #tb-boot-overlay ~ #app-root #tb-app-navigation { visibility: hidden !important; }
+    body:has(#tb-boot-overlay, .tb-ad-launch) #app-root #tb-mobile-nav-toggle,
+    body:has(#tb-boot-overlay, .tb-ad-launch) #app-root #tb-app-navigation { visibility: hidden !important; }
+  }
+  .tb-tx-primary-actions { flex-wrap: wrap; }
 </style>
 </head>
 
@@ -3914,6 +3779,10 @@
 
   <!-- App -->
   <div id="app-root">
+    <button class="btn" id="tb-mobile-nav-toggle" type="button" aria-label="Menu" aria-controls="tb-app-navigation" aria-expanded="false" disabled>
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <span>Menu</span>
+    </button>
     <div class="wrap">
       <header>
         <div class="brand">
@@ -3936,33 +3805,32 @@
       </header>
 
       <div id="kpi" class="card premium-kpi-shell"></div>
-      <div class="tabs app-tabs">
+      <div class="tabs app-tabs" id="tb-app-navigation" role="navigation" aria-label="TravelBudget">
         <div class="tab-group-label">Vue d’ensemble</div>
-        <div id="tab-dashboard" class="tab active" data-icon="🧭" onclick="showView('dashboard')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-dashboard"></use></svg><span class="tab-label" data-t="nav.dashboard">Dashboard</span></div>
+        <button type="button" id="tab-dashboard" class="tab active" aria-current="page" data-icon="🧭" onclick="showView('dashboard')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-dashboard"></use></svg><span class="tab-label" data-t="nav.dashboard">Dashboard</span></button>
         <div class="tab-group-label">Finances</div>
-        <div id="tab-transactions" class="tab" data-icon="💳" onclick="showView('transactions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-transactions"></use></svg><span class="tab-label" data-t="nav.transactions">Transactions</span></div>
-        <div id="tab-subscriptions" class="tab" data-icon="📅" onclick="showView('subscriptions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-subscriptions"></use></svg><span class="tab-label">Abonnements</span></div>
-        <div id="tab-analysis" class="tab" data-icon="📊" onclick="showView('analysis')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-analysis"></use></svg><span class="tab-label" data-t="nav.analysis">Analyse</span></div>
-        <div id="tab-assets" class="tab" data-icon="💎" onclick="showView('assets')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-assets"></use></svg><span class="tab-label" data-t="nav.assets">Patrimoine</span></div>
+        <button type="button" id="tab-transactions" class="tab" data-icon="💳" onclick="showView('transactions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-transactions"></use></svg><span class="tab-label" data-t="nav.transactions">Transactions</span></button>
+        <button type="button" id="tab-subscriptions" class="tab" data-icon="📅" onclick="showView('subscriptions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-subscriptions"></use></svg><span class="tab-label">Abonnements</span></button>
+        <button type="button" id="tab-analysis" class="tab" data-icon="📊" onclick="showView('analysis')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-analysis"></use></svg><span class="tab-label" data-t="nav.analysis">Analyse</span></button>
+        <button type="button" id="tab-assets" class="tab" data-icon="💎" onclick="showView('assets')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-assets"></use></svg><span class="tab-label" data-t="nav.assets">Patrimoine</span></button>
         <button id="tab-accounting" type="button" class="tab" data-icon="📒" onclick="showView('accounting')"><span class="tab-icon" aria-hidden="true">📒</span><span class="tab-label">Comptabilité</span></button>
-        <div class="tab-group-label">Quotidien</div>
-        <div id="tab-sport" class="tab" data-icon="🏋️" onclick="showView('sport')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-sport"></use></svg><span class="tab-label">Sport</span></div>
-        <div id="tab-nutrition" class="tab" data-icon="🍎" onclick="showView('nutrition')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-nutrition"></use></svg><span class="tab-label">Alimentation</span></div>
-        <div id="tab-work" class="tab" data-icon="💼" onclick="showView('work')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-work"></use></svg><span class="tab-label">Travail</span></div>
+        <div class="tab-group-label" data-t="nav.daily">Quotidien</div>
+        <button type="button" id="tab-sport" class="tab" data-icon="🏋️" onclick="showView('sport')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-sport"></use></svg><span class="tab-label" data-t="nav.sport">Sport</span> <span class="tb-beta-badge" data-t="common.beta">BÊTA</span></button>
+        <button type="button" id="tab-nutrition" class="tab" data-icon="🍎" onclick="showView('nutrition')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-nutrition"></use></svg><span class="tab-label" data-t="nav.nutrition">Alimentation</span> <span class="tb-beta-badge" data-t="common.beta">BÊTA</span></button>
+        <button type="button" id="tab-work" class="tab" data-icon="💼" onclick="showView('work')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-work"></use></svg><span class="tab-label" data-t="nav.work">Travail</span> <span class="tb-beta-badge" data-t="common.beta">BÊTA</span></button>
         <div class="tab-group-label">Ressources</div>
-        <div id="tab-documents" class="tab" data-icon="📁" onclick="showView('documents')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-documents"></use></svg><span class="tab-label">Documents</span></div>
-        <div id="tab-inbox" class="tab" data-icon="📥" onclick="showView('inbox')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-inbox"></use></svg><span class="tab-label tb-inbox-tab-label">À traiter</span></div>
-        <div id="tab-notifications" class="tab" data-icon="🔔" onclick="showView('notifications')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-notifications"></use></svg><span class="tab-label">Notifications</span></div>
-        <div id="tab-help" class="tab" data-icon="❓" onclick="showView('help')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-help"></use></svg><span class="tab-label" data-t="nav.help">Aide</span></div>
-        <div id="tab-trip" class="tab" data-icon="✈️" onclick="showView('trip')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-trip"></use></svg><span class="tab-label" data-t="nav.trip">Partage</span></div>
-        <div id="tab-settings" class="tab" data-icon="⚙️" onclick="showView('settings')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-settings"></use></svg><span class="tab-label" data-t="nav.settings">Settings</span></div>
-        <div id="tab-testing" class="tab" data-icon="🧪" style="display:none" onclick="showView('testing')"><span class="tab-icon" aria-hidden="true">🧪</span><span class="tab-label">Tests</span></div>
-        <div id="tab-members" class="tab" data-icon="👥" style="display:none" onclick="showView('members')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-members"></use></svg><span class="tab-label" data-t="nav.members">Membres</span></div>
+        <button type="button" id="tab-documents" class="tab" data-icon="📁" onclick="showView('documents')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-documents"></use></svg><span class="tab-label">Documents</span></button>
+        <button type="button" id="tab-inbox" class="tab" data-icon="📥" onclick="showView('inbox')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-inbox"></use></svg><span class="tab-label tb-inbox-tab-label">À traiter</span></button>
+        <button type="button" id="tab-notifications" class="tab" data-icon="🔔" onclick="showView('notifications')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-notifications"></use></svg><span class="tab-label">Notifications</span></button>
+        <button type="button" id="tab-help" class="tab" data-icon="❓" onclick="showView('help')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-help"></use></svg><span class="tab-label" data-t="nav.help">Aide</span></button>
+        <button type="button" id="tab-trip" class="tab" data-icon="✈️" onclick="showView('trip')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-trip"></use></svg><span class="tab-label" data-t="nav.trip">Partage</span></button>
+        <button type="button" id="tab-settings" class="tab" data-icon="⚙️" onclick="showView('settings')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-settings"></use></svg><span class="tab-label" data-t="nav.settings">Settings</span></button>
+        <button type="button" id="tab-testing" class="tab" data-icon="🧪" style="display:none" onclick="showView('testing')"><span class="tab-icon" aria-hidden="true">🧪</span><span class="tab-label">Tests</span></button>
+        <button type="button" id="tab-members" class="tab" data-icon="👥" style="display:none" onclick="showView('members')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-members"></use></svg><span class="tab-label" data-t="nav.members">Membres</span></button>
       </div>
 
       <!-- DASHBOARD -->
       <div id="view-dashboard">
-        <div id="dashboard-hero-shell" class="dashboard-hero-shell"></div>
         <div id="solde-projection-container" style="margin-bottom:16px;"></div>
 
         <div class="grid dashboard-grid-main">
@@ -4024,16 +3892,19 @@
 
       <!-- SPORT -->
       <div id="view-sport" class="hidden">
+        <p class="tb-module-maturity"><span class="tb-beta-badge" data-t="common.beta">BÊTA</span><span data-t="daily.beta_note">Module en cours de test</span></p>
         <div id="sport-root" class="card"></div>
       </div>
 
       <!-- WORK -->
       <div id="view-work" class="hidden">
+        <p class="tb-module-maturity"><span class="tb-beta-badge" data-t="common.beta">BÊTA</span><span data-t="daily.beta_note">Module en cours de test</span></p>
         <div id="work-root" class="card"></div>
       </div>
 
       <!-- NUTRITION -->
       <div id="view-nutrition" class="hidden">
+        <p class="tb-module-maturity"><span class="tb-beta-badge" data-t="common.beta">BÊTA</span><span data-t="daily.beta_note">Module en cours de test</span></p>
         <div id="nutrition-root" class="card"></div>
       </div>
 
@@ -4258,7 +4129,10 @@
       <!-- TRANSACTIONS -->
       <div id="view-transactions" class="hidden">
         <div class="card toolbar-card tx-filters-card tx-workspace-card">
-          <h2 data-t="transactions.filters.title">Filtres</h2>
+          <div class="tx-list-head tb-tx-primary-actions">
+            <h2 data-t="transactions.filters.title">Filtres</h2>
+            <button id="tb-tx-add" class="btn primary" type="button" data-t="transactions.action.add" disabled>Ajouter une transaction</button>
+          </div>
           <div class="row">
             <div class="field">
               <label data-t="transactions.filters.from">Du</label>
@@ -4593,90 +4467,7 @@
       .top-actions .btn,.top-actions select,.top-actions input{width:100%!important;min-height:42px!important;padding:9px 10px!important;border-radius:16px!important;font-size:13px!important;line-height:1.12!important;white-space:normal!important;}
       .top-actions .lang-switch{width:100%!important;}
 
-      body.tb-mobile-nav-open .tabs.app-tabs,
-      body.tb-mobile-nav-open .app-tabs,
-      body.tb-mobile-nav-open .tabs{
-        position:fixed!important;
-        inset:calc(82px + env(safe-area-inset-top,0px)) 8px auto 8px!important;
-        z-index:99990!important;
-        width:auto!important;
-        max-width:none!important;
-        max-height:calc(100vh - 104px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;
-        display:flex!important;
-        flex-direction:column!important;
-        flex-wrap:nowrap!important;
-        gap:8px!important;
-        margin:0!important;
-        padding:12px!important;
-        overflow:auto!important;
-        box-sizing:border-box!important;
-        border-radius:22px!important;
-        border:1px solid rgba(15,23,42,.10)!important;
-        background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,252,.96))!important;
-        box-shadow:0 24px 72px rgba(2,6,23,.22)!important;
-        backdrop-filter:blur(18px)!important;
-        opacity:1!important;
-        pointer-events:auto!important;
-        transform:none!important;
-      }
-      body.theme-dark.tb-mobile-nav-open .tabs.app-tabs,
-      body.theme-dark.tb-mobile-nav-open .app-tabs,
-      body.theme-dark.tb-mobile-nav-open .tabs{
-        border-color:rgba(148,163,184,.28)!important;
-        background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(30,41,59,.96))!important;
-        box-shadow:0 24px 72px rgba(2,6,23,.44)!important;
-      }
-      body:not(.tb-mobile-nav-open) .tabs.app-tabs,
-      body:not(.tb-mobile-nav-open) .app-tabs,
-      body:not(.tb-mobile-nav-open) .tabs{
-        position:fixed!important;
-        top:calc(82px + env(safe-area-inset-top,0px))!important;
-        left:8px!important;
-        right:8px!important;
-        opacity:0!important;
-        pointer-events:none!important;
-        transform:translateY(-8px)!important;
-      }
-      body.tb-mobile-nav-open .tabs.app-tabs .tab,
-      body.tb-mobile-nav-open .app-tabs .tab,
-      body.tb-mobile-nav-open .tabs .tab{
-        display:flex!important;
-        align-items:center!important;
-        justify-content:flex-start!important;
-        width:100%!important;
-        min-height:48px!important;
-        padding:12px 14px!important;
-        border-radius:14px!important;
-        border:1px solid rgba(15,23,42,.08)!important;
-        background:rgba(15,23,42,.04)!important;
-        color:#0f172a!important;
-        font-size:15px!important;
-        font-weight:850!important;
-        line-height:1.15!important;
-        text-align:left!important;
-        text-shadow:none!important;
-        opacity:1!important;
-        box-shadow:none!important;
-        white-space:normal!important;
-      }
-      body.theme-dark.tb-mobile-nav-open .tabs.app-tabs .tab,
-      body.theme-dark.tb-mobile-nav-open .app-tabs .tab,
-      body.theme-dark.tb-mobile-nav-open .tabs .tab{
-        border-color:rgba(255,255,255,.12)!important;
-        background:rgba(255,255,255,.09)!important;
-        color:#f8fafc!important;
-      }
-      body.tb-mobile-nav-open .tabs.app-tabs .tab.active,
-      body.tb-mobile-nav-open .app-tabs .tab.active,
-      body.tb-mobile-nav-open .tabs .tab.active{
-        background:linear-gradient(135deg,#2563eb,#0ea5e9)!important;
-        color:#fff!important;
-        border-color:rgba(255,255,255,.24)!important;
-      }
-      body.tb-mobile-nav-open .app-tabs .tab::before{display:none!important;}
-      #tb-mobile-nav-toggle{position:relative!important;z-index:99991!important;flex:0 0 auto!important;}
-
-      .card,.dashboard-panel,.dashboard-hero-card,.analysis-stat,.analysis-chart-card,.tb-period-card,.tb-settings-card,.tb-settings-summary,.tb-settings-stat,.tb-recurring-item,.tb-category-card{
+      .card,.dashboard-panel,.analysis-stat,.analysis-chart-card,.tb-period-card,.tb-settings-card,.tb-settings-summary,.tb-settings-stat,.tb-recurring-item,.tb-category-card{
         max-width:100%!important;min-width:0!important;border-radius:16px!important;padding:14px!important;overflow:hidden!important;
       }
       .grid,.row,.form-row,.dashboard-grid-main,.dashboard-grid,.analysis-toolbar,.analysis-overview-strip,.analysis-summary-grid,.tb-settings-inline-grid,.tb-settings-inline-strip,.tb-travel-edit-grid,.tb-period-ref-grid,.tb-period-editor,.tb-doc-shell,.tb-inbox-head,.tb-sport-grid{
@@ -4686,7 +4477,6 @@
       .field,.field input,.field select,input,select,textarea,button{max-width:100%!important;min-width:0!important;box-sizing:border-box!important;}
       h1{font-size:28px!important;line-height:1.08!important;}
       h2{font-size:18px!important;line-height:1.16!important;}
-      .dashboard-hero-title,.analysis-hero h2{font-size:24px!important;}
       .analysis-chart,.analysis-chart--lg{height:300px!important;min-height:300px!important;}
       .table{display:block!important;overflow-x:auto!important;white-space:nowrap!important;}
 
@@ -4767,102 +4557,9 @@
       }
       body.tb-capacitor-app:not(.tb-view-dashboard) #kpi,
       body.tb-capacitor-app:not(.tb-view-dashboard) .premium-kpi-shell,
-      body.tb-capacitor-app:not(.tb-view-dashboard) #dashboard-hero-shell,
       body.tb-capacitor-app:not(.tb-view-dashboard) #cashflowChart,
       body.tb-capacitor-app:not(.tb-view-dashboard) .cashflow-card{
         display:none!important;
-      }
-      body.tb-capacitor-app #tb-mobile-nav-toggle{
-        position:fixed!important;
-        top:auto!important;
-        left:12px!important;
-        right:auto!important;
-        bottom:calc(14px + env(safe-area-inset-bottom,0px))!important;
-        z-index:99992!important;
-        width:58px!important;
-        height:50px!important;
-        border-radius:20px!important;
-        background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(37,99,235,.92))!important;
-        border:1px solid rgba(15,23,42,.08)!important;
-        box-shadow:0 16px 38px rgba(15,23,42,.26)!important;
-        transform:translateZ(0)!important;
-      }
-      body.tb-capacitor-app #tb-mobile-nav-toggle span{
-        background:#fff!important;
-      }
-      body.theme-dark.tb-capacitor-app #tb-mobile-nav-toggle{
-        background:linear-gradient(135deg,rgba(2,6,23,.98),rgba(14,165,233,.72))!important;
-        border-color:rgba(255,255,255,.10)!important;
-      }
-      body.tb-capacitor-app.tb-mobile-nav-open .tabs.app-tabs,
-      body.tb-capacitor-app.tb-mobile-nav-open .app-tabs,
-      body.tb-capacitor-app.tb-mobile-nav-open .tabs{
-        inset:auto 12px calc(76px + env(safe-area-inset-bottom,0px)) 12px!important;
-        max-height:38vh!important;
-        padding:12px!important;
-        border-radius:22px!important;
-        display:flex!important;
-        flex-direction:row!important;
-        flex-wrap:wrap!important;
-        justify-content:center!important;
-        align-content:flex-start!important;
-        gap:8px!important;
-      }
-      body.tb-capacitor-app.tb-mobile-nav-open .tabs.app-tabs .tab,
-      body.tb-capacitor-app.tb-mobile-nav-open .app-tabs .tab,
-      body.tb-capacitor-app.tb-mobile-nav-open .tabs .tab{
-        width:auto!important;
-        flex:0 0 auto!important;
-        min-width:0!important;
-        max-width:calc(50vw - 28px)!important;
-        min-height:30px!important;
-        padding:7px 10px!important;
-        border-radius:999px!important;
-        font-size:10px!important;
-        gap:5px!important;
-        justify-content:center!important;
-        text-align:center!important;
-        color:#0f172a!important;
-        background:rgba(15,23,42,.045)!important;
-        border:1px solid rgba(15,23,42,.06)!important;
-        box-shadow:0 8px 22px rgba(15,23,42,.08)!important;
-        white-space:nowrap!important;
-      }
-      body.tb-capacitor-app.tb-mobile-nav-open .tabs.app-tabs .tab::before,
-      body.tb-capacitor-app.tb-mobile-nav-open .app-tabs .tab::before,
-      body.tb-capacitor-app.tb-mobile-nav-open .tabs .tab::before{
-        content:""!important;
-        display:inline-block!important;
-        width:7px!important;
-        height:7px!important;
-        flex:0 0 7px!important;
-        border-radius:999px!important;
-        background:#38bdf8!important;
-        box-shadow:0 0 0 3px rgba(56,189,248,.12)!important;
-      }
-      body.tb-capacitor-app.tb-mobile-nav-open #tab-dashboard::before{background:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,.13)!important;}
-      body.tb-capacitor-app.tb-mobile-nav-open #tab-transactions::before{background:#14b8a6!important;box-shadow:0 0 0 3px rgba(20,184,166,.13)!important;}
-      body.tb-capacitor-app.tb-mobile-nav-open #tab-settings::before{background:#64748b!important;box-shadow:0 0 0 3px rgba(100,116,139,.14)!important;}
-      body.tb-capacitor-app.tb-mobile-nav-open #tab-analysis::before{background:#8b5cf6!important;box-shadow:0 0 0 3px rgba(139,92,246,.13)!important;}
-      body.tb-capacitor-app.tb-mobile-nav-open #tab-assets::before{background:#f59e0b!important;box-shadow:0 0 0 3px rgba(245,158,11,.14)!important;}
-      body.tb-capacitor-app.tb-mobile-nav-open #tab-documents::before{background:#06b6d4!important;box-shadow:0 0 0 3px rgba(6,182,212,.14)!important;}
-      body.tb-capacitor-app.tb-mobile-nav-open #tab-inbox::before{background:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.13)!important;}
-      body.tb-capacitor-app.tb-mobile-nav-open #tab-sport::before{background:#22c55e!important;box-shadow:0 0 0 3px rgba(34,197,94,.13)!important;}
-      body.tb-capacitor-app.tb-mobile-nav-open #tab-help::before{background:#0ea5e9!important;box-shadow:0 0 0 3px rgba(14,165,233,.13)!important;}
-      body.tb-capacitor-app.tb-mobile-nav-open #tab-trip::before{background:#ec4899!important;box-shadow:0 0 0 3px rgba(236,72,153,.13)!important;}
-      body.tb-capacitor-app.tb-mobile-nav-open .tabs.app-tabs .tab.active,
-      body.tb-capacitor-app.tb-mobile-nav-open .app-tabs .tab.active,
-      body.tb-capacitor-app.tb-mobile-nav-open .tabs .tab.active{
-        background:linear-gradient(135deg,#111827,#2563eb)!important;
-        color:#fff!important;
-        border-color:rgba(255,255,255,.22)!important;
-        box-shadow:0 12px 30px rgba(37,99,235,.26)!important;
-      }
-      body.tb-capacitor-app.tb-mobile-nav-open .tabs.app-tabs .tab.active::before,
-      body.tb-capacitor-app.tb-mobile-nav-open .app-tabs .tab.active::before,
-      body.tb-capacitor-app.tb-mobile-nav-open .tabs .tab.active::before{
-        background:#fff!important;
-        box-shadow:0 0 0 3px rgba(255,255,255,.18)!important;
       }
       body.tb-capacitor-app.tb-view-dashboard #view-dashboard{
         gap:10px!important;

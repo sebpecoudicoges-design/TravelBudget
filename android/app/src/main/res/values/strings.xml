@@ -4,4 +4,9 @@
     <string name="title_activity_main">TravelBudget</string>
     <string name="package_name">fr.pecloud.travelbudget</string>
     <string name="custom_url_scheme">fr.pecloud.travelbudget</string>
+    <string name="play_update_available">A TravelBudget update is available.</string>
+    <string name="play_update_download">Download</string>
+    <string name="play_update_ready">Update ready to install.</string>
+    <string name="play_update_restart">Restart</string>
+    <string name="play_update_restart_failed">The update could not be installed. You can try again later in Google Play.</string>
 </resources>

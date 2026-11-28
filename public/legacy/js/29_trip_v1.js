@@ -1834,7 +1834,7 @@ function _openSettlementModal({ fromId, toId, currency, amount, members }) {
     opt.textContent = `${w.name || "Wallet"} • ${String(w.currency||"").toUpperCase()}`;
     sel.appendChild(opt);
   }
-  const defaultWalletId = state.activeWalletId || (wallets[0]?.id || "");
+  const defaultWalletId = wallets.find(w => w.id === state.activeWalletId)?.id || wallets[0]?.id || "";
   if (defaultWalletId) sel.value = defaultWalletId;
 
   const inputAmt = modal.querySelector("#tripSettleAmount");
@@ -1842,27 +1842,21 @@ function _openSettlementModal({ fromId, toId, currency, amount, members }) {
   const debtRow = modal.querySelector("#tripSettleDebtRow");
   const debtAmount = modal.querySelector("#tripSettleDebtAmount");
   const debtCur = String(currency || "").toUpperCase();
-  let currencyDirty = false;
   let previousCurrency = null;
-  inputCur.innerHTML = _tripCurrencyOptionsHTML(debtCur);
-  inputCur.value = debtCur;
   debtAmount.value = String(_round2(amount));
   modal.querySelector("#tripSettleDebtLabel").textContent = `Montant à déduire du Trip (${debtCur})`;
-  inputCur.onchange = () => { currencyDirty = true; refreshNote(); };
 
   const refreshNote = () => {
-    const wCur = String(wallets.find(x => x.id === sel.value)?.currency || "").toUpperCase();
-    if (!currencyDirty) inputCur.value = wCur || debtCur;
-    const txCur = String(inputCur.value || "").toUpperCase();
+    const txCur = String(_activeWallets().find(x => x.id === sel.value)?.currency || "").trim().toUpperCase();
+    inputCur.value = txCur;
     if (txCur !== previousCurrency) inputAmt.value = txCur === debtCur ? String(_round2(amount)) : "";
     previousCurrency = txCur;
     const crossCurrency = Boolean(txCur && txCur !== debtCur);
     debtRow.classList.toggle("hidden", !crossCurrency);
     const note = modal.querySelector("#tripSettleWalletNote");
-    const messages = [];
-    if (crossCurrency) messages.push(`Saisis le montant réellement payé ou reçu en ${txCur} et le montant à déduire du Trip en ${debtCur}.`);
-    if (wCur && txCur && wCur !== txCur) messages.push(`Wallet en ${wCur} : la transaction sera créée en ${txCur}.`);
-    note.textContent = messages.join(" ");
+    note.textContent = crossCurrency
+      ? `Saisis le montant réellement payé ou reçu en ${txCur} et le montant à déduire du Trip en ${debtCur}.`
+      : txCur ? "La devise suit le wallet sélectionné." : "Aucun wallet disponible. Tu peux régler sans wallet.";
   };
   sel.onchange = refreshNote;
   refreshNote();
@@ -1886,11 +1880,14 @@ function _openSettlementModal({ fromId, toId, currency, amount, members }) {
       const wallets2 = _activeWallets();
       const w = wallets2.find(x => x.id === wid);
       if (!w) throw new Error("Wallet introuvable.");
-      const walletCur = String(w.currency || "").toUpperCase();
-      const txCur = String((inputCur.value || walletCur)).toUpperCase().slice(0,3);
+      const txCur = String(w.currency || "").trim().toUpperCase();
+      if (!/^[A-Z]{3}$/.test(txCur)) throw new Error("Devise du wallet invalide.");
+      if (txCur !== inputCur.value) {
+        refreshNote();
+        throw new Error("La devise du wallet a changé. Vérifie le montant avant de valider.");
+      }
       const amtW = _round2(_tripParseLocaleAmount(inputAmt.value));
       if (!(amtW > 0)) throw new Error("Montant invalide.");
-      if (!txCur) throw new Error("Devise invalide.");
       const tripAmount = txCur === debtCur ? amtW : _round2(_tripParseLocaleAmount(debtAmount.value));
       if (!(tripAmount > 0)) throw new Error("Montant à déduire du Trip invalide.");
       await _persistSettlementWithWallet({ walletId: wid, walletCurrency: txCur, walletAmount: amtW, tripAmount });

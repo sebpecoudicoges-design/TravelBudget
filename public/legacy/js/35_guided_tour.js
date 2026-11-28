@@ -184,7 +184,7 @@
   function baseSteps() {
     return [
       { view: "dashboard", selectors: [".app-tabs", "#tab-dashboard"], title: "s1t", body: "s1b" },
-      { view: "dashboard", selectors: ["#view-dashboard", "#dashboard-hero-shell", "#kpi"], title: "s2t", body: "s2b" },
+      { view: "dashboard", selectors: ["#view-dashboard", "#kpi"], title: "s2t", body: "s2b" },
       { view: "dashboard", selectors: ["#wallets-container", ".dashboard-panel--wallets"], title: "s3t", body: "s3b", action: "wallet_create", actionLabel: "actionWallet" },
       { view: "dashboard", selectors: ["#daily-budget-container", ".dashboard-panel--budget"], title: "s4t", body: "s4b" },
       { view: "transactions", selectors: ["#view-transactions .toolbar-card", "#view-transactions"], title: "s5t", body: "s5b", action: "tx_add_expense", actionLabel: "actionExpense" },
@@ -197,7 +197,7 @@
   function moduleSteps(mode) {
     const map = {
       dashboard: [
-        { view: "dashboard", selectors: ["#view-dashboard", "#dashboard-hero-shell", "#kpi"], title: "m_dashboard_t", body: "m_dashboard_b" },
+        { view: "dashboard", selectors: ["#view-dashboard", "#kpi"], title: "m_dashboard_t", body: "m_dashboard_b" },
         { view: "dashboard", selectors: ["#wallets-container", ".dashboard-panel--wallets"], title: "m_wallets_t", body: "m_wallets_b", action: "wallet_create", actionLabel: "actionWallet" },
         { view: "dashboard", selectors: ["#daily-budget-container", ".dashboard-panel--budget"], title: "m_daily_t", body: "m_daily_b" }
       ],

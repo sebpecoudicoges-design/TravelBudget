@@ -70,13 +70,18 @@ for (const [width, colorScheme] of [[1440, 'light'], [390, 'dark']]) {
 test('project timeline leads with verified dates and keeps version as secondary information', async ({ page }) => {
   await page.goto('/projet.html');
   const rows = page.locator('#releaseTimeline [data-release-entry]');
-  await expect(rows.first().locator('.release-version')).toHaveText('27/11/2026');
-  await expect(rows.first().locator('small')).toContainText('10.5.398');
+  const releases = await page.locator('#releaseSource .release-row[data-release-date]').evaluateAll(els =>
+    els.map(el => ({ date: el.dataset.releaseDate, version: el.querySelector('strong')?.textContent })).sort((a, b) => b.date.localeCompare(a.date))
+  );
+  const { date, version } = releases[0];
+  const formatted = date.split('-').reverse().join('/');
+  await expect(rows.first().locator('.release-version')).toHaveText(formatted);
+  await expect(rows.first().locator('small')).toContainText(version);
   const dates = await rows.evaluateAll(els => els.map(el => el.dataset.releaseDate).filter(Boolean));
   expect(dates.length).toBeGreaterThan(10);
   expect(dates).toEqual([...dates].sort().reverse());
-  await expect(page.locator('#releaseSpotlight strong').first()).toHaveText('27/11/2026');
-  await expect(page.locator('.release-pulse-card').first()).toContainText('27/11/2026');
+  await expect(page.locator('#releaseSpotlight strong').first()).toHaveText(formatted);
+  await expect(page.locator('.release-pulse-card').first()).toContainText(formatted);
 });
 
 for (const width of [1440, 390]) {

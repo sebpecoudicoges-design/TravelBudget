@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   renderDashboardOnboardingPanel,
-  renderDashboardOverview,
   renderDailyBudgetControls,
   renderDailyBudgetDay,
   getWalletDialogStyles,
@@ -35,31 +34,6 @@ describe('Dashboard view helpers', () => {
     };
     return dict[key] || key;
   };
-
-  it('renders the premium overview from live dashboard values', () => {
-    const html = renderDashboardOverview({
-      firstName: 'Sébastien',
-      travelName: 'Australie',
-      dateLabel: 'samedi 1 août',
-      syncLabel: 'Synchronisé à 11:12',
-      budgetToday: 128,
-      dailyBudget: 178,
-      baseCurrency: 'AUD',
-      activeWallets: 4,
-      daysRemaining: 23,
-      transactionCount: 146,
-    });
-
-    expect(html).toContain('Bonjour Sébastien');
-    expect(html).toContain('Vue d’ensemble');
-    expect(html).toContain('128 <small>AUD</small>');
-    expect(html).toContain('width:72%');
-    expect(html).toContain('data-dashboard-action="add-transaction"');
-    expect(html).toContain('data-dashboard-action="open-analysis"');
-    expect(html).not.toContain('Devises du voyage');
-    expect(html).not.toContain('tb-currency-switcher');
-    expect(html).not.toContain('onclick=');
-  });
 
   it('renders the onboarding checklist with stable dashboard actions', () => {
     const html = renderDashboardOnboardingPanel({

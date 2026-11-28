@@ -75,6 +75,7 @@ function tbSetBootProgress(progress, text, phase) {
 }
 
 function tbShowBootOverlay(text, progress, phase) {
+  window.dispatchEvent(new Event("tb:nav-suspend"));
   tbSetBootProgress(progress == null ? (window.__TB_BOOT_PROGRESS__ || 8) : progress, text, phase);
 }
 

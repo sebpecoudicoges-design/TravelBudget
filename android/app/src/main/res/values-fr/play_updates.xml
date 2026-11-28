@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="play_update_available">Une mise à jour de TravelBudget est disponible.</string>
+    <string name="play_update_download">Télécharger</string>
+    <string name="play_update_ready">Mise à jour prête à installer.</string>
+    <string name="play_update_restart">Redémarrer</string>
+    <string name="play_update_restart_failed">La mise à jour n’a pas pu être installée. Tu peux réessayer plus tard dans Google Play.</string>
+</resources>
