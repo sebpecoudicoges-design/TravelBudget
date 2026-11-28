@@ -87,12 +87,26 @@ for (const { width, theme, native, buildId, initialTransactions } of cases) {
       });
       expect(frames).toEqual(Array(7).fill(['grid', 'fixed', 2]));
       await expect(page.locator('#tab-dashboard')).toBeFocused();
-      for (const name of ['dashboard', 'transactions', 'subscriptions', 'analysis', 'assets', 'accounting', 'settings']) {
+      const colors = [];
+      for (const name of ['dashboard', 'transactions', 'subscriptions', 'analysis', 'assets', 'accounting', 'sport', 'nutrition', 'work', 'documents', 'inbox', 'notifications', 'help', 'trip', 'settings', 'testing']) {
         const icon = nav.locator('#tab-' + name + ' .tab-icon');
         await expect(icon).toBeVisible();
         await expect(icon.locator('use')).toHaveAttribute('href', '#tb-icon-' + name);
-        expect(await icon.evaluate(el => el.getBBox().width)).toBeGreaterThan(0);
+        const computed = await icon.evaluate(el => {
+          const style = getComputedStyle(el);
+          return { background: style.backgroundColor, foreground: style.color, width: el.getBBox().width };
+        });
+        expect(computed.width, name).toBeGreaterThan(0);
+        expect(computed.foreground, name).toBe('rgb(255, 255, 255)');
+        const rgb = computed.background.match(/\d+/g).slice(0, 3).map(Number);
+        const luminance = rgb.map(channel => {
+          const value = channel / 255;
+          return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        }).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+        expect(1.05 / (luminance + 0.05), name).toBeGreaterThanOrEqual(4.5);
+        colors.push(computed.background);
       }
+      expect(new Set(colors).size).toBe(colors.length);
       await expect(page.locator('#tab-members')).toBeHidden();
       await page.keyboard.press('Escape');
       await expect(menu).toBeFocused();

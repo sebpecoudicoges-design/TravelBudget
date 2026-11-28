@@ -3587,7 +3587,38 @@
       background: var(--tb-lagoon-soft, var(--tb-surface-soft));
     }
     #tb-app-navigation .tab[data-icon]::before { display: none !important; }
-    #tb-app-navigation .tab-icon { display: inline-block; flex: 0 0 18px; width: 18px; height: 18px; }
+    #tb-app-navigation .tab-icon {
+      display: inline-block;
+      flex: 0 0 26px;
+      width: 26px;
+      height: 26px;
+      box-sizing: border-box;
+      padding: 4px;
+      border-radius: 7px;
+      color: #fff;
+      background: var(--tb-nav-icon-tone, #44546a);
+    }
+    /* Shapes and text remain distinct independently of these high-contrast accent tiles. */
+    #tab-dashboard { --tb-nav-icon-tone: #075b64; }
+    #tab-transactions { --tb-nav-icon-tone: #1655aa; }
+    #tab-subscriptions { --tb-nav-icon-tone: #7436a3; }
+    #tab-analysis { --tb-nav-icon-tone: #ad431f; }
+    #tab-assets { --tb-nav-icon-tone: #2f683b; }
+    #tab-accounting { --tb-nav-icon-tone: #845426; }
+    #tab-sport { --tb-nav-icon-tone: #b31f54; }
+    #tab-nutrition { --tb-nav-icon-tone: #52691c; }
+    #tab-work { --tb-nav-icon-tone: #265078; }
+    #tab-documents { --tb-nav-icon-tone: #8d304a; }
+    #tab-inbox { --tb-nav-icon-tone: #8a4d09; }
+    #tab-notifications { --tb-nav-icon-tone: #633f89; }
+    #tab-help { --tb-nav-icon-tone: #196853; }
+    #tab-trip { --tb-nav-icon-tone: #14658c; }
+    #tab-settings { --tb-nav-icon-tone: #4c5066; }
+    #tab-testing { --tb-nav-icon-tone: #8c225f; }
+    #tab-members { --tb-nav-icon-tone: #3c53a4; }
+    @media (forced-colors: active) {
+      #tb-app-navigation .tab-icon { color: ButtonText; background: ButtonFace; }
+    }
     #tb-app-navigation .tab-label { overflow-wrap: anywhere; }
     body.theme-dark #tb-mobile-nav-toggle,
     body.theme-dark #tb-app-navigation {
@@ -3767,6 +3798,7 @@
     <symbol id="tb-icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.5 2.1c-.9.5-1.3 1-1.3 2M12 17h.01"/></symbol>
     <symbol id="tb-icon-trip" viewBox="0 0 24 24"><path d="m3 11 18-7-7 18-3-8-8-3Z"/><path d="m11 14 5-5"/></symbol>
     <symbol id="tb-icon-settings" viewBox="0 0 24 24"><path d="M4 6h10m4 0h2M4 12h2m4 0h10M4 18h7m4 0h5"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></symbol>
+    <symbol id="tb-icon-testing" viewBox="0 0 24 24"><path d="M9 3h6m-5 0v7l-5 8a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-8V3M8 14h8"/><path d="M10 17h.01m4 1h.01"/></symbol>
     <symbol id="tb-icon-members" viewBox="0 0 24 24"><path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-1a3 3 0 1 0 0-6m-8 9c-4 0-6 2-6 5v2h12v-2c0-3-2-5-6-5Zm8-1c3 0 5 2 5 5v2h-5"/></symbol>
   </svg>
 
@@ -3820,7 +3852,7 @@
         <button type="button" id="tab-help" class="tab" data-icon="❓" onclick="showView('help')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-help"></use></svg><span class="tab-label" data-t="nav.help">Aide</span></button>
         <button type="button" id="tab-trip" class="tab" data-icon="✈️" onclick="showView('trip')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-trip"></use></svg><span class="tab-label" data-t="nav.trip">Partage</span></button>
         <button type="button" id="tab-settings" class="tab" data-icon="⚙️" onclick="showView('settings')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-settings"></use></svg><span class="tab-label" data-t="nav.settings">Settings</span></button>
-        <button type="button" id="tab-testing" class="tab" data-icon="🧪" style="display:none" onclick="showView('testing')"><span class="tab-icon" aria-hidden="true">🧪</span><span class="tab-label">Tests</span></button>
+        <button type="button" id="tab-testing" class="tab" data-icon="🧪" style="display:none" onclick="showView('testing')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-testing"></use></svg><span class="tab-label">Tests</span></button>
         <button type="button" id="tab-members" class="tab" data-icon="👥" style="display:none" onclick="showView('members')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-members"></use></svg><span class="tab-label" data-t="nav.members">Membres</span></button>
       </div>
 
