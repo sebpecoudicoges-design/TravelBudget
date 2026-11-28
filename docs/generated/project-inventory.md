@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `6d0540aa98b03f21e2a1674cd1291789155a37f8`
-> Empreinte du snapshot : `8966f950cd0fd08e270e5b4ffa33f5cba2f618cf1a1f755ed41c23f6d52ac7f0`
-> Généré le : `2026-11-28T00:42:41.088Z`
+> Commit analysé : `181b983f34f1c9db1989e73599fca99fb72dcdf5`
+> Empreinte du snapshot : `edba14608479f1509f225fc1a9cb9b5f2ecf6f1e3a5bce77872a76df2779b8d6`
+> Généré le : `2026-11-28T01:10:57.740Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.399` |
+| Version | `10.5.400` |
 | Écrans déclarés | 18 |
-| Scripts legacy référencés | 56 |
+| Scripts legacy référencés | 55 |
 | Modules core | 28 |
 | Modules data | 14 |
 | Modules features | 65 |
-| Fichiers de tests | 213 |
+| Fichiers de tests | 214 |
 | Migrations Supabase | 176 |
 | Fonctions Edge | 14 |
 | Projet Android présent | Oui |
@@ -160,7 +160,6 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `public/legacy/js/33_analysis_drilldown_view.js`
 - `public/legacy/js/33_analysis_filter_view.js`
 - `public/legacy/js/33_budget_analysis.js`
-- `public/legacy/js/34_fx_decision.js`
 - `public/legacy/js/35_guided_tour.js`
 - `public/legacy/js/41_assets_core.js`
 - `public/legacy/js/42_assets_ui.js`
@@ -384,6 +383,7 @@ Modules :
 - `tests/e2e/daily-beta-badges.spec.js`
 - `tests/e2e/financial-trip-budget.spec.js`
 - `tests/e2e/first-setup.spec.js`
+- `tests/e2e/first-steps-replay.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`
@@ -474,6 +474,7 @@ Modules :
 - `tests/e2e/daily-beta-badges.spec.js`
 - `tests/e2e/financial-trip-budget.spec.js`
 - `tests/e2e/first-setup.spec.js`
+- `tests/e2e/first-steps-replay.spec.js`
 - `tests/e2e/kpi-account-scope.spec.js`
 - `tests/e2e/local-vendors.spec.js`
 - `tests/e2e/mcp-consent.spec.js`

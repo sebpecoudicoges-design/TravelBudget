@@ -336,8 +336,8 @@ export function registerPwa() {
       const info = await capacitor.Plugins?.App?.getInfo?.();
       // Gradle overrides the debug/direct applicationId; Play keeps the release id.
       if (info?.id !== "com.travelbudget.app") return;
-      const badge = document.getElementById("tb-direct-apk-channel");
-      const version = document.getElementById("tb-direct-apk-version");
+      const badge = globalThis.document.getElementById("tb-direct-apk-channel");
+      const version = globalThis.document.getElementById("tb-direct-apk-version");
       if (badge && version) {
         version.textContent = info.version || window.TB_VERSION || "";
         badge.hidden = false;
