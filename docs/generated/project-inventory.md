@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `28e83442480cfcad84b5f9c022926e68e8d92853`
-> Empreinte du snapshot : `63beca48f27593923c431dbdcfcb550794f4a23a5ae20a14c4e9811a471fb731`
-> Généré le : `2026-11-28T12:31:37.729Z`
+> Commit analysé : `20991a159152d70dd054695f8f61ff55d38b6be2`
+> Empreinte du snapshot : `781c5a3cb78cfb9e853c79400043977910ace9ecf0b33a3b9260f91d6abc973d`
+> Généré le : `2026-11-28T13:01:23.296Z`
 
 # Inventaire du projet TravelBudget
 
@@ -853,6 +853,7 @@ Modules :
 - `docs/ACCOUNTING_RESTORE_F14.md`
 - `docs/ACCOUNT_DATA_LIFECYCLE.md`
 - `docs/ACCOUNT_DELETION_RECOVERY.md`
+- `docs/ADMIN_RESET_STORAGE_F13.md`
 - `docs/ADMIN_TEST_RETURNS.md`
 - `docs/ADMOB_ANDROID.md`
 - `docs/ANALYSE_GRAPH_AUDIT_2026_11_25.md`
