@@ -3700,80 +3700,80 @@
 
     <div class="modal-grid">
       <div class="field">
-        <label for="m-type">Type <span class="tb-help" title="Dépense = sort du wallet. Entrée = ajoute au wallet.">?</span></label>
+        <label for="m-type"><span data-t="transactions.form.type">Type</span> <span class="tb-help" data-t-title="transactions.form.tip.type" title="Une dépense débite le wallet. Une entrée le crédite.">?</span></label>
         <select id="m-type">
-          <option value="expense">Dépense</option>
-          <option value="income">Entrée</option>
+          <option value="expense" data-t="transactions.form.expense">Dépense</option>
+          <option value="income" data-t="transactions.form.income">Entrée</option>
         </select>
       </div>
 
       <div class="field">
-        <label for="m-wallet">Wallet <span class="tb-help" title="Le wallet concerné par la transaction.">?</span></label>
+        <label for="m-wallet"><span data-t="transactions.form.wallet">Wallet</span> <span class="tb-help" data-t-title="transactions.form.tip.wallet" title="Choisis le wallet concerné par cette transaction.">?</span></label>
         <select id="m-wallet"></select>
       </div>
 
       <div class="field">
-        <label for="m-amount">Montant</label>
+        <label for="m-amount"><span data-t="transactions.form.amount">Montant</span></label>
         <input id="m-amount" type="number" step="0.01" placeholder="0" />
       </div>
 
       <div class="field">
-        <label for="m-category">Catégorie <span class="tb-help" title="Sert aux stats (camembert). Choisis 'Autre' si tu hésites.">?</span></label>
+        <label for="m-category"><span data-t="transactions.form.category">Catégorie</span> <span class="tb-help" data-t-title="transactions.form.tip.category" title="La catégorie sert à regrouper tes opérations dans Analyse.">?</span></label>
         <select id="m-category"></select>
       </div>
 
       <div class="field">
-        <label for="m-subcategory">Sous-catégorie</label>
+        <label for="m-subcategory"><span data-t="transactions.form.subcategory">Sous-catégorie</span></label>
         <select id="m-subcategory">
-          <option value="">Aucune</option>
+          <option value="" data-t="transactions.form.none">Aucune</option>
         </select>
       </div>
 
       <div class="field">
-        <label for="m-cash-date">Date trésorerie</label>
+        <label for="m-cash-date"><span data-t="transactions.form.cash-date">Date de trésorerie</span></label>
         <input id="m-cash-date" type="date" />
       </div>
 
       <div class="field">
-        <label for="m-budget-start">Date budget début</label>
+        <label for="m-budget-start"><span data-t="transactions.form.budget-start">Début de la période budgétaire</span></label>
         <input id="m-budget-start" type="date" />
       </div>
 
       <div class="field">
-        <label for="m-budget-end">Date budget fin</label>
+        <label for="m-budget-end"><span data-t="transactions.form.budget-end">Fin de la période budgétaire</span></label>
         <input id="m-budget-end" type="date" />
       </div>
 
       <div class="field" style="grid-column:1/-1;">
-        <label for="m-label">Label</label>
-        <input id="m-label" type="text" placeholder="Optionnel" />
+        <label for="m-label"><span data-t="transactions.form.label">Libellé</span></label>
+        <input id="m-label" type="text" data-t-placeholder="transactions.form.optional" placeholder="Facultatif" />
       </div>
 
       <div class="field" style="grid-column:1/-1;">
-        <label for="m-recurring-rule">Abonnement lié <span class="tb-help" title="Les échéances créées par une règle sont liées automatiquement. Pour une transaction manuelle, choisis ici l'abonnement correspondant.">?</span></label>
-        <select id="m-recurring-rule"><option value="">Aucun abonnement</option></select>
-        <small id="m-recurring-rule-help" class="muted">Optionnel pour une transaction créée manuellement.</small>
+        <label for="m-recurring-rule"><span data-t="transactions.form.recurring-rule">Abonnement lié</span> <span class="tb-help" data-t-title="transactions.form.tip.recurring-rule" title="Les échéances récurrentes sont liées automatiquement. Tu peux aussi associer une saisie manuelle.">?</span></label>
+        <select id="m-recurring-rule"><option value="" data-t="transactions.form.no_subscription">Aucun abonnement</option></select>
+        <small id="m-recurring-rule-help" class="muted" data-t="transactions.form.subscription_help">Facultatif pour une transaction manuelle.</small>
       </div>
 
       <div class="field tb-tx-create-docs" id="m-documents-block" style="grid-column:1/-1;">
-        <label for="m-documents">Documents <span class="tb-help" title="Ajoute une ou plusieurs factures, photos ou pièces justificatives. Elles seront enregistrées après la création de la transaction.">?</span></label>
+        <label for="m-documents"><span data-t="transactions.form.documents">Documents</span> <span class="tb-help" data-t-title="transactions.form.tip.documents" title="Les justificatifs seront enregistrés après la création de la transaction.">?</span></label>
         <input id="m-documents" type="file" multiple accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
         <div id="m-documents-list" class="tb-tx-create-docs__list muted" aria-live="polite">Aucun document sélectionné.</div>
-        <small class="muted">Optionnel · plusieurs fichiers possibles · connexion requise pour l’envoi.</small>
+        <small class="muted" data-t="transactions.form.files_help">Facultatif. L’envoi de fichiers nécessite une connexion.</small>
       </div>
 
       <div class="field">
-        <label for="m-paynow">Payé maintenant <span class="tb-help" title="Coché : impact immédiat sur le solde. Décoché : c'est à payer/recevoir plus tard (prévision).">?</span></label>
+        <label for="m-paynow"><span data-t="transactions.form.paynow">Payé maintenant</span> <span class="tb-help" data-t-title="transactions.form.tip.paynow" title="Coché : le solde est mis à jour immédiatement. Décoché : le règlement reste prévu.">?</span></label>
         <input id="m-paynow" type="checkbox" checked />
       </div>
 
       <div class="field">
-        <label for="m-out">Hors budget/jour <span class="tb-help" title="Coché : n'impacte pas le budget quotidien (ex: dépense exceptionnelle).">?</span></label>
+        <label for="m-out"><span data-t="transactions.form.out">Hors budget quotidien</span> <span class="tb-help" data-t-title="transactions.form.tip.out" title="Cette opération ne compte pas dans le budget quotidien.">?</span></label>
         <input id="m-out" type="checkbox" />
       </div>
 
       <div class="field hidden" id="m-night-block">
-        <label for="m-night">Remplace une nuit d'hébergement <span class="tb-help" title="Signal analytique uniquement : n'impacte ni le budget, ni les KPI, ni la projection. Sert à afficher une économie potentielle de logement.">?</span></label>
+        <label for="m-night"><span data-t="transactions.form.night">Remplace une nuit d’hébergement</span> <span class="tb-help" data-t-title="transactions.form.tip.night" title="Indication pour Analyse uniquement. Elle ne modifie ni le budget ni le solde.">?</span></label>
         <input id="m-night" type="checkbox" />
       </div>
     </div>
@@ -4231,8 +4231,8 @@
           </div>
           <div class="tx-list-card tx-list-card--embedded">
           <div class="tx-list-head">
-            <h2>Liste</h2>
-            <span class="muted">Transactions filtrées</span>
+            <h2 data-t="transactions.list.title">Liste</h2>
+            <span class="muted" data-t="transactions.list.filtered">Transactions filtrées</span>
           </div>
           <div id="tx-list"></div>
         </div>

@@ -48,7 +48,7 @@
       // Navigation
       "nav.dashboard": "Tableau",
       "nav.transactions": "Transactions",
-      "nav.settings": "Settings",
+      "nav.settings": "Réglages",
       "nav.analysis": "Analyse",
       "nav.assets": "Patrimoine",
       "nav.accounting": "Comptabilité",
@@ -609,7 +609,7 @@
       "settings.hero.title": "Reglages",
       "settings.hero.body": "Un espace plus simple a parcourir : ouvre uniquement le bloc utile, garde les textes courts, et concentre-toi sur le voyage actif.",
       "settings.card.account": "Compte",
-      "settings.card.account_summary": "Devise de base {base} ? securite et preferences",
+      "settings.card.account_summary": "Devise de base {base} · sécurité et préférences",
       "settings.card.travel": "Voyage",
       "settings.card.travel_summary": "{name} ? reglages generaux et budget de reference",
       "settings.card.periods": "Periodes",
@@ -700,6 +700,41 @@
       "transactions.expense_one": "depense",
       "transactions.expense_plural": "depenses",
       "transactions.filters.title": "Filtres",
+      "transactions.form.type": "Type",
+      "transactions.form.wallet": "Wallet",
+      "transactions.form.amount": "Montant",
+      "transactions.form.category": "Catégorie",
+      "transactions.form.subcategory": "Sous-catégorie",
+      "transactions.form.cash-date": "Date de trésorerie",
+      "transactions.form.budget-start": "Début de la période budgétaire",
+      "transactions.form.budget-end": "Fin de la période budgétaire",
+      "transactions.form.label": "Libellé",
+      "transactions.form.recurring-rule": "Abonnement lié",
+      "transactions.form.documents": "Documents",
+      "transactions.form.paynow": "Payé maintenant",
+      "transactions.form.out": "Hors budget quotidien",
+      "transactions.form.night": "Remplace une nuit d’hébergement",
+      "transactions.form.expense": "Dépense",
+      "transactions.form.income": "Entrée",
+      "transactions.form.none": "Aucune",
+      "transactions.form.no_subscription": "Aucun abonnement",
+      "transactions.form.optional": "Facultatif",
+      "transactions.form.files_help": "Facultatif. L’envoi de fichiers nécessite une connexion.",
+      "transactions.form.subscription_help": "Facultatif pour une transaction manuelle.",
+      "transactions.form.tip.type": "Une dépense débite le wallet. Une entrée le crédite.",
+      "transactions.form.tip.wallet": "Choisis le wallet concerné par cette transaction.",
+      "transactions.form.tip.category": "La catégorie sert à regrouper tes opérations dans Analyse.",
+      "transactions.form.tip.recurring-rule": "Les échéances récurrentes sont liées automatiquement. Tu peux aussi associer une saisie manuelle.",
+      "transactions.form.tip.documents": "Les justificatifs seront enregistrés après la création de la transaction.",
+      "transactions.form.tip.paynow": "Coché : le solde est mis à jour immédiatement. Décoché : le règlement reste prévu.",
+      "transactions.form.tip.out": "Cette opération ne compte pas dans le budget quotidien.",
+      "transactions.form.tip.night": "Indication pour Analyse uniquement. Elle ne modifie ni le budget ni le solde.",
+      "transactions.action.duplicate": "Dupliquer",
+      "transactions.action.edit": "Modifier",
+      "transactions.action.delete": "Supprimer",
+      "transactions.action.choose_category": "Choisir d’abord une catégorie",
+      "transactions.list.title": "Liste",
+      "transactions.list.filtered": "Transactions filtrées",
       "transactions.filters.from": "Du",
       "transactions.filters.to": "Au",
       "transactions.filters.wallet": "Wallet",
@@ -977,6 +1012,7 @@
     if (!isSupportedLang(lang)) return;
     try { localStorage.setItem(LANG_KEY, lang); } catch (_) {}
     window.TB_LANG = lang;
+    document.documentElement.lang = lang;
   }
 
   function loadLangDict(lang) {
@@ -1064,6 +1100,7 @@
   }
 
   window.TB_LANG = getLang();
+  document.documentElement.lang = window.TB_LANG;
   window.tbT = t;
   window.tbOnLangChange = window.tbOnLangChange || [];
 

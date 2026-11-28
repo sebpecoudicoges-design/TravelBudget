@@ -10,7 +10,7 @@
     "vendorJsMaxKiB": 2340
   },
   "sourceGroups": [
-    { "name": "guided-setup-on-demand", "maxKiB": 8, "paths": ["public/guided-setup/account.js"] },
+    { "name": "guided-setup-on-demand", "maxKiB": 10, "paths": ["public/guided-setup/account.js"] },
     {
       "name": "accounting-domain",
       "maxKiB": 139.5,

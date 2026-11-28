@@ -328,10 +328,12 @@ function renderSettings(){
 
   // labels
   // Settings view now has multiple cards (Compte + Voyage + ...).
-  // Ensure we only rename the Voyage card title.
+  // Use the current language before the accordion copies the headings.
   try {
+    const accountTitle = view.querySelector('#tb-account-card h2');
+    if (accountTitle) accountTitle.textContent = T("settings.card.account");
     const h2s = Array.from(view.querySelectorAll('h2'));
-    const voyageH2 = h2s.find(x => String(x.textContent||'').trim().toLowerCase() === 'voyage');
+    const voyageH2 = view.querySelector('#tb-travel-card h2') || h2s.find(x => String(x.textContent||'').trim().toLowerCase() === 'voyage');
     if (voyageH2) voyageH2.textContent = (window.tbT ? tbT("settings.title") : "Voyage");
   } catch(_) {}
 
@@ -512,6 +514,7 @@ function renderSettings(){
       })();
 
       box.innerHTML = window.TBSettingsView?.renderSettingsAccountPanel?.({
+        lang: _tbSettingsLang(),
         baseCurrency: cur,
         currencies: opts,
         savedBirthDate,
@@ -2651,6 +2654,7 @@ async function tbOpenGuidedAccountSetup() {
       sb: _tbGetSB(),
       tables: TB_CONST.TABLES,
       currencies: window.tbGetAvailableCurrencies?.(),
+      language: _tbSettingsLang(),
       onSave(saved) {
         state.profile = { ...state.profile, whatsapp_phone_e164: saved.phone };
         state.user = { ...state.user, baseCurrency: saved.baseCurrency, whatsappPhone: saved.phone, birthDate: saved.birthDate };
@@ -2670,7 +2674,7 @@ async function tbOpenGuidedAccountSetup() {
       }
     });
   } catch (_) {
-    alert('Le paramétrage guidé n’a pas pu s’ouvrir. Réessaie depuis le tutoriel.');
+    alert(_tbSettingsLang() === 'en' ? 'Guided setup could not open. Try again from Settings.' : 'Le paramétrage guidé n’a pas pu s’ouvrir. Réessaie depuis les Réglages.');
   }
 }
 window.tbOpenGuidedAccountSetup = tbOpenGuidedAccountSetup;

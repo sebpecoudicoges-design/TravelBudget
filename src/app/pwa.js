@@ -288,21 +288,6 @@ export function registerPwa() {
     } catch (_) {}
   };
 
-  const setLabelFor = (id, fr, en) => {
-    try {
-      const el = globalThis.document.getElementById(id);
-      const field = el?.closest?.(".field");
-      const label = field?.querySelector?.("label");
-      if (!label) return;
-      const help = label.querySelector(".tb-help");
-      label.textContent = getLang() === "en" ? en : fr;
-      if (help) {
-        label.appendChild(globalThis.document.createTextNode(" "));
-        label.appendChild(help);
-      }
-    } catch (_) {}
-  };
-
   const applyMobileCopy = () => {
     try {
       if (!globalThis.document.body.classList.contains("tb-capacitor-app")) return;
@@ -312,19 +297,6 @@ export function registerPwa() {
       setText(".top-actions > button:nth-of-type(1)", "Theme", "Theme");
       setText(".top-actions > button:nth-of-type(2)", "Taux", "Rates");
       setText(".top-actions > button:nth-of-type(5)", "Sortir", "Logout");
-
-      setLabelFor("m-type", "Type", "Type");
-      setLabelFor("m-wallet", "Wallet", "Wallet");
-      setLabelFor("m-amount", "Montant", "Amount");
-      setLabelFor("m-category", "Categorie", "Category");
-      setLabelFor("m-subcategory", "Sous-cat.", "Subcat.");
-      setLabelFor("m-cash-date", "Tresorerie", "Cash date");
-      setLabelFor("m-budget-start", "Budget debut", "Budget start");
-      setLabelFor("m-budget-end", "Budget fin", "Budget end");
-      setLabelFor("m-label", "Note", "Note");
-      setLabelFor("m-paynow", "Paye maintenant", "Paid now");
-      setLabelFor("m-out", "Hors budget", "Out of budget");
-      setLabelFor("m-night", "Remplace nuit", "Replaces night");
 
     } catch (_) {}
   };

@@ -110,3 +110,24 @@ test('leaving the exercise saves real Settings only after explicit confirmation'
   await expect(page.getByRole('dialog').getByLabel('Devise de base du compte')).toHaveValue('AUD');
   expect(updates).toHaveLength(1);
 });
+
+test('guided settings reopen in English without saving anything on cancel', async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installConnectedFixture(page, baseURL);
+  await page.addInitScript(() => localStorage.setItem('tb_lang_v1', 'en'));
+  const writes = [];
+  page.on('request', request => {
+    if (['PATCH', 'POST', 'DELETE'].includes(request.method()) && /\/rest\/v1\/(settings|profiles|wallets|travels|transactions)/.test(request.url())) writes.push(request.url());
+  });
+  await page.goto('/index.html?premiers-pas=configuration');
+  const dialog = page.getByRole('dialog', { name: 'Your account', exact: true });
+  await expect(dialog.getByLabel('Sign-in email')).toHaveValue('startup@example.invalid', { timeout: 20_000 });
+  await expect(dialog.getByLabel('Account base currency')).toHaveValue('EUR');
+  await dialog.getByLabel('Account base currency').selectOption('AUD');
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  const replay = page.getByRole('button', { name: 'Restart guided setup' });
+  if (!await replay.isVisible()) await page.locator('#tb-account-card .tb-settings-panel-head').click();
+  await replay.click();
+  await expect(dialog.getByLabel('Account base currency')).toHaveValue('EUR');
+  expect(writes).toEqual([]);
+});
