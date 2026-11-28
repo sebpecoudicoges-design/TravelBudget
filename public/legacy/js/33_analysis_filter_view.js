@@ -10,10 +10,6 @@
   function tr(t, key) {
     return typeof t === 'function' ? t(key) : key;
   }
-  function num(value) {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : 0;
-  }
   function renderCategoryFilterOptions({ categories = [], t, normalizeKey } = {}) {
     const norm = typeof normalizeKey === 'function' ? normalizeKey : (value) => String(value || '').trim().toLowerCase();
     const rows = (Array.isArray(categories) ? categories : [])
@@ -28,33 +24,26 @@
       .join('');
     return `<option value="all">${esc(tr(t, 'common.all'))}</option><option value="__none__">${esc(tr(t, 'analysis.filter.no_subcategory'))}</option>${rows}`;
   }
-  function renderPeriodFilterOptions({ periods = [], isEn = false, activeLabel = isEn ? 'Active period' : 'Période active' } = {}) {
-    const shortcuts = isEn
-      ? ['Whole trip', 'This month', 'Previous month', 'This week', 'Previous week', 'Custom range']
-      : ['Tout le voyage', 'Ce mois', 'Mois précédent', 'Cette semaine', 'Semaine précédente', 'Date à date'];
+  function renderPeriodFilterOptions({ periods = [], activeLabel = 'Période active', labels = ['Période', 'Tout le voyage', 'Ce mois', 'Mois précédent', 'Cette semaine', 'Semaine précédente', 'Date à date'] } = {}) {
     const option = (value, label) => `<option value="${esc(value)}">${esc(label)}</option>`;
     const rows = (Array.isArray(periods) ? periods : []).map((period, idx) => {
       const id = String(period?.id ?? '');
       const start = String(period?.start ?? '');
       const end = String(period?.end ?? '');
       const base = String(period?.base ?? '').trim().toUpperCase();
-      const label = `${isEn ? 'Period' : 'Période'} ${idx + 1} • ${start} → ${end}${base ? ' • ' + base : ''}`;
+      const label = `${labels[0]} ${idx + 1} • ${start} → ${end}${base ? ' • ' + base : ''}`;
       return `<option value="${esc(id)}">${esc(label)}</option>`;
     }).join('');
     return option('active', activeLabel)
-      + ['all', 'month', 'previous-month', 'week', 'previous-week'].map((value, idx) => option(value, shortcuts[idx])).join('')
-      + rows + option('range', shortcuts[5]);
+      + ['all', 'month', 'previous-month', 'week', 'previous-week'].map((value, idx) => option(value, labels[idx + 1])).join('')
+      + rows + option('range', labels[6]);
   }
   function buildCategoryExcludeSummary({ total = 0, count = 0, isEn = false } = {}) {
-    const safeTotal = Math.max(0, Math.round(num(total)));
-    const safeCount = Math.max(0, Math.round(num(count)));
-    if (isEn) {
-      if (!safeTotal) return 'No categories';
-      if (!safeCount) return `No category excluded • ${safeTotal} available`;
-      return `${safeCount} excluded • ${Math.max(safeTotal - safeCount, 0)} included`;
-    }
-    if (!safeCount) return safeTotal ? `Aucune catégorie exclue • ${safeTotal} catégories disponibles` : 'Aucune catégorie';
+    const safeTotal = Math.max(0, Math.round(safeNum(total)));
+    const safeCount = Math.max(0, Math.round(safeNum(count)));
     const included = Math.max(safeTotal - safeCount, 0);
+    if (isEn) return safeCount ? `${safeCount} excluded • ${included} included` : (safeTotal ? `No category excluded • ${safeTotal} available` : 'No categories');
+    if (!safeCount) return safeTotal ? `Aucune catégorie exclue • ${safeTotal} catégories disponibles` : 'Aucune catégorie';
     return `${safeCount} catégorie${safeCount > 1 ? 's' : ''} exclue${safeCount > 1 ? 's' : ''} • ${included} incluse${included > 1 ? 's' : ''}`;
   }
   function renderCategoryExcludeChips({ categories = [], excluded = [] } = {}) {
@@ -66,14 +55,7 @@
       return `<button type="button" class="analysis-chip${isExcluded ? ' is-excluded' : ''}" data-cat="${esc(name)}"><span class="analysis-chip-dot"></span>${esc(name)}</button>`;
     }).join('');
   }
-  const escapeHTML = window.escapeHTML || function(value){
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  };
+  const escapeHTML = window.escapeHTML || esc;
 
   function safeNum(value){
     const n = Number(value);

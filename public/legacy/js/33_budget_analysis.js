@@ -1946,7 +1946,8 @@ function _openTxDrilldown(kind, key, model, opener){
       ? `${active} (${_norm(activePeriod.start_date || activePeriod.start)} → ${_norm(activePeriod.end_date || activePeriod.end)})`
       : active;
     sel.innerHTML = window.TBAnalysisFilterView?.renderPeriodFilterOptions?.({
-      activeLabel, isEn,
+      activeLabel,
+      labels: isEn ? ['Period', 'Whole trip', 'This month', 'Previous month', 'This week', 'Previous week', 'Custom range'] : undefined,
       periods: periods.map((p) => ({
         id: p.id,
         start: _norm(p.start_date || p.start),
