@@ -514,7 +514,6 @@ function renderSettings(){
       })();
 
       box.innerHTML = window.TBSettingsView?.renderSettingsAccountPanel?.({
-        lang: _tbSettingsLang(),
         baseCurrency: cur,
         currencies: opts,
         savedBirthDate,

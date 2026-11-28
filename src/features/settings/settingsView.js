@@ -114,12 +114,10 @@ export function renderSettingsAccountPanel({
   thresholdDisplay = '',
   thresholdEur = 500,
   simpleMode = false,
-  lang = 'fr',
   t = fallbackT,
   esc = defaultEsc,
 } = {}) {
   const tr = typeof t === 'function' ? t : fallbackT;
-  const copy = (fr, en) => lang === 'en' ? en : fr;
   const cur = String(baseCurrency || 'EUR').toUpperCase();
   const opts = Array.isArray(currencies) && currencies.length ? currencies : ['EUR', 'USD', 'THB'];
   const simpleSelected = !!simpleMode;
@@ -143,22 +141,22 @@ export function renderSettingsAccountPanel({
               value=""
               autocomplete="tel"
             />
-            <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">${copy("Format international, ex. +33612345678.", "International format, e.g. +33612345678.")}</small>
+            <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">${tr('settings.account.phone_hint')}</small>
           </div>
 
           <div class="field">
-            <label>${copy("Date de naissance", "Date of birth")}</label>
+            <label>${tr('settings.account.birth_date')}</label>
             <input id="tb-account-birthdate" type="date" value="${esc(savedBirthDate)}" />
-            <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">${copy("Utilisee pour le BMR et le suivi sante.", "Used for basal metabolism and health tracking.")}</small>
+            <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">${tr('settings.account.birth_hint')}</small>
           </div>
 
           <div class="field">
-            <label>${copy("Poids kg", "Weight (kg)")}</label>
+            <label>${tr('settings.account.weight')}</label>
             <input id="tb-account-body-weight" type="number" min="1" step="0.1" value="${esc(savedBodyWeight)}" />
           </div>
 
           <div class="field">
-            <label>${copy("Taille cm", "Height (cm)")}</label>
+            <label>${tr('settings.account.height')}</label>
             <input id="tb-account-body-height" type="number" min="60" step="1" value="${esc(savedBodyHeight)}" />
           </div>
 
@@ -186,26 +184,26 @@ export function renderSettingsAccountPanel({
 
         <div class="tb-settings-account-proxies" hidden aria-hidden="true">
           <button id="tb-user-basecur-save" type="button" tabindex="-1">${tr('settings.account.save')}</button>
-          <button id="tb-user-whatsapp-save" type="button" tabindex="-1">${copy("Enregistrer WhatsApp", "Save WhatsApp number")}</button>
-          <button id="tb-user-birthdate-save" type="button" tabindex="-1">${copy("Enregistrer santé", "Save health profile")}</button>
+          <button id="tb-user-whatsapp-save" type="button" tabindex="-1">${tr('settings.account.save_phone')}</button>
+          <button id="tb-user-birthdate-save" type="button" tabindex="-1">${tr('settings.account.save_health')}</button>
           <button id="tb-user-uimode-save" type="button" tabindex="-1">${tr('settings.account.save_mode')}</button>
           <button id="tb-user-cfthr-save" type="button" tabindex="-1">${tr('settings.account.save_threshold')}</button>
         </div>
 
         <div class="tb-settings-account-tools">
           <button class="btn" id="tb-user-resetpwd" type="button">${tr('settings.account.reset_password')}</button>
-          <button class="btn" id="tb-user-export-all" type="button">${copy("Exporter toutes mes données", "Export all my data")}</button>
-          <a class="btn" href="/privacy.html" target="_blank" rel="noopener">${copy("Confidentialité", "Privacy")}</a>
+          <button class="btn" id="tb-user-export-all" type="button">${tr('settings.account.export')}</button>
+          <a class="btn" href="/privacy.html" target="_blank" rel="noopener">${tr('settings.account.privacy')}</a>
         </div>
 
         <div style="margin-top:14px;padding:12px;border:1px solid rgba(220,38,38,.35);border-radius:14px;background:rgba(220,38,38,.05);">
-          <strong>${copy("Suppression du compte", "Account deletion")}</strong>
+          <strong>${tr('settings.account.deletion_title')}</strong>
           <div class="muted" style="margin-top:4px;line-height:1.4;">
-${copy("La demande couvre les données synchronisées et les fichiers. Un délai de 7 jours permet de l'annuler. Pense à exporter tes données avant de confirmer.", "This request covers synced data and files. You have seven days to cancel it. Export your data before confirming.")}
+${tr('settings.account.deletion_help')}
           </div>
           <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-            <button class="btn" id="tb-user-delete-account" type="button" style="border-color:rgba(220,38,38,.65);color:#b91c1c;">${copy("Demander la suppression", "Request deletion")}</button>
-            <button class="btn" id="tb-user-cancel-deletion" type="button" hidden>${copy("Annuler la demande", "Cancel the request")}</button>
+            <button class="btn" id="tb-user-delete-account" type="button" style="border-color:rgba(220,38,38,.65);color:#b91c1c;">${tr('settings.account.delete')}</button>
+            <button class="btn" id="tb-user-cancel-deletion" type="button" hidden>${tr('settings.account.cancel_delete')}</button>
             <span id="tb-user-deletion-status" class="muted" style="font-size:12px;"></span>
           </div>
         </div>
