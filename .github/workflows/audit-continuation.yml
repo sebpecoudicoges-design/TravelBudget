@@ -26,6 +26,7 @@ on:
       - 'tests/e2e/document-preview-audit.spec.js'
       - 'tests/e2e/admin-member-reset-audit.spec.js'
       - 'tests/e2e/assistant-ai.spec.js'
+      - 'public/legacy/js/10_navigation.js'
       - 'public/legacy/js/31_help_faq.js'
       - 'public/legacy/js/32_help_assistant.js'
       - 'src/features/assistant/assistantAiClient.js'

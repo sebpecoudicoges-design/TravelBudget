@@ -224,8 +224,7 @@ function showView(view) {
   if (view === "help") {
     if (typeof renderHelpFaq === "function") renderHelpFaq();
     else if (typeof window.tbLoadLegacyDomain === "function") {
-      const root = document.getElementById("help-root");
-      if (root) root.innerHTML = `<div class="muted">Chargement aide...</div>`;
+      // Keep the FAQ shell: the lazy renderer fills its existing controls and lists.
       window.tbLoadLegacyDomain("help").then(() => {
         if ((window.activeView || activeView) === "help" && typeof window.renderHelpFaq === "function") window.renderHelpFaq("navigation:lazy");
       }).catch((e) => {
